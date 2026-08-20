@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use App\Core\Logging\Middleware\RequestLogging;
 use App\Core\Security\Middleware\SecurityHeaders;
 use App\Core\Security\Middleware\SecurityValidation;
@@ -40,7 +41,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.validation' => SecurityValidation::class,
             'security.headers' => SecurityHeaders::class,
             'request.logging' => RequestLogging::class,
+            // Exige token de ação sensível válido (ADR-006) — uso único.
+            'sensitive.token' => RequiresSensitiveActionToken::class,
         ]);
+
+        // Deny-by-default (checklist 13): convidado em rota `auth` vai para
+        // o login; `redirect()->intended()` devolve ao destino original.
+        $middleware->redirectGuestsTo(fn (): string => route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
