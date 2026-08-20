@@ -91,8 +91,6 @@ final class ResolveTenant
     /**
      * 401 padronizado. O request log fica SEM tenant (sinal de ataque —
      * ADR-010); nenhum detalhe do motivo é exposto (não oracular).
-     *
-     * @return never
      */
     private function deny(): never
     {

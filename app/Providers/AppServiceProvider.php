@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Support\Platform;
 use App\Core\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -43,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
         // Comandos próprios do kit (fora de app/Console/Commands).
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \App\Core\ApiKeys\Console\ProcessApiKeyInactivity::class,
+                ProcessApiKeyInactivity::class,
             ]);
         }
 

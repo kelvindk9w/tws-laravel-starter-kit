@@ -6,6 +6,7 @@ use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Auth\Models\User;
+use App\Core\Tenancy\Models\Project;
 use Illuminate\Support\Facades\Mail;
 
 // Endpoints do motor de chaves da API v1 (ADR-006/010): criar (ação
@@ -220,7 +221,7 @@ it('exige ação sensível para rotacionar', function () {
 it('rotação herda scopes e projetos da chave antiga', function () {
     ['user' => $user] = tenantBootstrap();
 
-    $projeto = \App\Core\Tenancy\Models\Project::createWithPublicCodeRetry([
+    $projeto = Project::createWithPublicCodeRetry([
         'user_id' => $user->id,
         'name' => 'Loja A',
     ]);
@@ -247,9 +248,9 @@ it('rotação herda scopes e projetos da chave antiga', function () {
 it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', function () {
     ['user' => $user, 'api_key' => $key, 'secret_key' => $secret] = tenantBootstrap();
 
-    $projetoA = \App\Core\Tenancy\Models\Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
-    $projetoB = \App\Core\Tenancy\Models\Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja B']);
-    $projetoAlheio = \App\Core\Tenancy\Models\Project::createWithPublicCodeRetry(['user_id' => User::factory()->create()->id, 'name' => 'Alheio']);
+    $projetoA = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
+    $projetoB = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja B']);
+    $projetoAlheio = Project::createWithPublicCodeRetry(['user_id' => User::factory()->create()->id, 'name' => 'Alheio']);
 
     // Vincula dois projetos do tenant.
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [

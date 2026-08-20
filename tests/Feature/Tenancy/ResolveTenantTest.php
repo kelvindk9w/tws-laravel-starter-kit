@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
+use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
@@ -84,7 +85,7 @@ it('rejeita chave revogada, expirada por data ou com usuário bloqueado', functi
     match ($cenario) {
         'revogada' => $key->forceFill(['status' => ApiKeyStatus::Revoked])->save(),
         'expirada' => $key->forceFill(['expires_at' => now()->subMinute()])->save(),
-        'usuario bloqueado' => $user->forceFill(['status' => \App\Core\Auth\Enums\UserStatus::Blocked])->save(),
+        'usuario bloqueado' => $user->forceFill(['status' => UserStatus::Blocked])->save(),
     };
 
     $this->getJson('/api/v1/_test/tenant', headersApi($key, $secret))

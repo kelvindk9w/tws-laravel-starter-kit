@@ -175,15 +175,16 @@ SELECT * FROM request_logs WHERE status = 'INICIADA' AND created_at < now() - in
 ```
 
 Da mesma forma, log **BLOQUEADA** = tentativa de ataque registrada (ver `attack_type`, `ip`,
-`endpoint`), e log **sem `tenant_uuid`** (a partir da Fase 4, quando o tenant for resolvido) =
-possível tentativa de acesso sem credencial válida.
+`endpoint`), e log **sem `tenant_uuid`** (credencial inválida/ausente — o tenant não foi
+resolvido, Fase 4) = possível tentativa de acesso sem credencial válida.
 
 ### Append-only
 
 `request_logs` é imutável pela aplicação: `update()`/`delete()` via Eloquent lançam
 `AppendOnlyViolationException`. As únicas mutações são as transições controladas do model
-(`markFinished()`, `bindTenant()`/`bindTenantByCorrelationId()` — gancho para a Fase 4 vincular
-o tenant ao log quando a secret key for resolvida). Em produção, complementar com
+(`markFinished()`, `bindTenant()`/`bindTenantByCorrelationId()` — usado pelo middleware
+`resolve.tenant` da Fase 4 para vincular o tenant ao log quando a secret key é resolvida).
+Em produção, complementar com
 `REVOKE UPDATE, DELETE` da role da aplicação no PostgreSQL.
 
 ### Health check
@@ -275,6 +276,126 @@ cookie, deny-by-default, logout, CSRF (419 sem token), recuperação de senha
 completo de ação sensível (`Mail::fake()` — código válido/inválido/expirado/
 tentativas esgotadas, cooldown de reenvio, token uso único/expirado/de outro
 usuário).
+
+## API Keys & Tenancy (Fase 4 — ADR-005/006/010)
+
+Motor de chaves de API em `app/Core/ApiKeys/` + resolução de tenant em
+`app/Core/Tenancy/`. A autenticação da API é por **par de chaves no header**
+(não por sessão):
+
+| Chave | Formato | Papel |
+|---|---|---|
+| **Pública** | `pk_live_...` / `pk_test_...` | Identificação/lookup (indexada, única). Vai no header `X-Api-Key`. |
+| **Secreta** | `sk_live_...` / `sk_test_...` | Credencial. Vai no `Authorization: Bearer`. **Só o hash no banco** — exibida UMA única vez (criação/rotação); perdeu = rotaciona. |
+
+```http
+X-Api-Key: pk_test_9fK2...
+Authorization: Bearer sk_test_xQ7...
+```
+
+O prefixo de ambiente (`live`/`test`) vem de `API_KEYS_ENVIRONMENT`
+(`config/api_keys.php` — ADR-007).
+
+### Hash da secreta (checklist item 5) — decisão documentada
+
+**HMAC-SHA256 com pepper** (`ApiKeyHasher`), no espírito do Sanctum (SHA-256):
+a sk_ tem ~285 bits de entropia aleatória — KDF lenta (Argon2id) protege
+segredos de BAIXA entropia (senhas humanas); aqui só adicionaria latência a
+cada request. O pepper (`API_KEYS_HASH_PEPPER`, fallback `APP_KEY`) garante que
+vazamento SÓ do banco não permita verificar chaves. Comparação SEMPRE
+timing-safe via `hash_equals()`, e pk_ inexistente também passa pela
+verificação (hash fictício) para não vazar existência por tempo de resposta.
+
+### Tenancy (ADR-010)
+
+Middleware **`resolve.tenant`** (`ResolveTenant`, grupo `api/v1`): valida o par
+pk_/sk_ (existência → hash timing-safe → status → validade → grace de rotação
+→ inatividade) → resolve o **tenant** (usuário dono da chave) no container
+(helpers `tenant()` / `tenantKey()`, `TenantContext`) e no user resolver da
+request → **vincula o request log ao tenant** (`tenant_uuid` = uuid do dono)
+→ atualiza `last_used_at` **throttled** (máx. 1 escrita a cada
+`API_KEYS_LAST_USED_THROTTLE_SECONDS`, padrão 60s).
+
+**Chave inválida = 401 padronizado** (mensagem única, não oracular) e o request
+log permanece **SEM tenant** — exatamente o sinal de ataque/tentativa de burla
+do ADR-010 (o log INICIADA é gravado antes, sem vínculo; a identificação falhou).
+
+### Scopes (permissões granulares — ADR-006)
+
+Formato `recurso:acao` (ex.: `customers:read`, `pix:create`, `withdrawals:*`),
+jsonb na coluna `scopes`. **Padrão na criação: tudo habilitado (`['*:*']`)** —
+o usuário restringe pelo menor privilégio. Wildcards: `*:*` e `recurso:*`.
+Checagem no model: `$apiKey->allows('pix:create')`. Proteção de rota:
+
+```php
+Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
+```
+
+### Endpoints da API v1 (`routes/api.php`)
+
+Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
+(checklist 11 — recurso de outro tenant = **404 uniforme**, nunca 403).
+
+| Endpoint | Scope | Observação |
+|---|---|---|
+| `GET /api/v1/api-keys` | `api-keys:read` | lista paginada do tenant |
+| `POST /api/v1/api-keys` | `api-keys:create` | **ação sensível** (abaixo); secreta sai 1x no campo `secret_key` |
+| `DELETE /api/v1/api-keys/{uuid}` | `api-keys:revoke` | revogação irreversível |
+| `POST /api/v1/api-keys/{uuid}/rotate` | `api-keys:rotate` | **ação sensível**; `grace_period_minutes` no corpo |
+| `PUT /api/v1/api-keys/{uuid}/projects` | `api-keys:assign` | vínculo N:N (lista vazia = conta toda — ADR-005) |
+| `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome (ADR-005) |
+
+**Ação sensível** (criação e rotação de chave — ADR-010): exigem o token de
+curta duração da Fase 3 (senha de transação + 2FA por e-mail) no header
+`X-Sensitive-Action-Token`, obtido via `POST /sensitive-actions/code` +
+`POST /sensitive-actions/confirm` (rotas web, sessão). Uso único.
+
+**Bootstrap (primeira chave):** os endpoints exigem uma chave existente. A
+primeira chave do usuário é criada pelo painel (fase futura) ou, em dev, via
+`tinker` com o `ApiKeyService`:
+
+```php
+app(App\Core\ApiKeys\Services\ApiKeyService::class)
+    ->create($user, ['name' => 'Bootstrap']); // retorna a sk_ em claro 1x
+```
+
+### Rotação (ADR-006)
+
+Gera substituta herdando nome, scopes e projetos (`rotated_from_id`/
+`rotated_to_id` encadeiam). No ato, o usuário escolhe a morte da antiga:
+`grace_period_minutes` **nulo/0 = morte imediata**; **positivo = janela de
+coexistência** (antiga segue ativa até `grace_ends_at` — troca sem downtime).
+Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
+
+### Validade e expiração por inatividade (ADR-006)
+
+- **Validade 100% do usuário**: `expires_at` vazio = sem validade; o sistema
+  NUNCA impõe prazo.
+- **Inatividade**: job diário `api-keys:process-inactivity` (scheduler em
+  `routes/console.php`, `daily()` + `withoutOverlapping()` + `onOneServer()`)
+  desativa chaves sem uso há `API_KEYS_INACTIVITY_MONTHS` meses (padrão 3) com
+  status `expired_inactivity`. **Aviso prévio por e-mail**
+  `API_KEYS_INACTIVITY_WARNING_DAYS` dias antes (padrão 7), UMA vez por ciclo —
+  a flag `inactivity_warning_sent_at` impede repetição e é rearmada quando a
+  chave volta a ser usada. O middleware `resolve.tenant` também rejeita chave
+  inativa (defesa em profundidade caso o scheduler atrase). Tudo em UTC.
+
+### Projetos (multi-empresa organizacional — ADR-005)
+
+`projects` (PRJ-xxxxxx): 1 login gerencia N projetos; nascem só com nome. O
+vínculo chave↔projeto é **N:N** e **opcional**: chave sem vínculo enxerga a
+conta toda; vinculada restringe àqueles projetos. No MVP são metadados
+organizacionais — a custódia segue uma por conta.
+
+### Testes
+
+`tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` (Pest): geração/hash (só
+hash no banco, formato por ambiente, pepper), ciclo criar/usar/revogar,
+rotação com e sem grace (`travel()`), scopes (exato/wildcards/negado = 403 com
+mensagem), validade por data, inatividade (aviso 1x, expiração, rearme,
+config off), isolamento de tenant (invisibilidade total + 404 uniforme),
+chave inválida = 401 + request log sem tenant, last_used_at throttled e
+timing-safe estrutural (`hash_equals`).
 
 ## Estrutura
 

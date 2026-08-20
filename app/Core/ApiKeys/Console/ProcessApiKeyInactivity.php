@@ -7,6 +7,7 @@ namespace App\Core\ApiKeys\Console;
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Mail\ApiKeyInactivityWarningMail;
 use App\Core\ApiKeys\Models\ApiKey;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
@@ -63,7 +64,7 @@ final class ProcessApiKeyInactivity extends Command
     /**
      * Passa 1 — e-mail de aviso prévio (uma única vez por ciclo).
      */
-    private function sendWarnings(\Carbon\CarbonInterface $warnBefore, \Carbon\CarbonInterface $expireBefore, int $warningDays): int
+    private function sendWarnings(CarbonInterface $warnBefore, CarbonInterface $expireBefore, int $warningDays): int
     {
         $warned = 0;
 
@@ -93,7 +94,7 @@ final class ProcessApiKeyInactivity extends Command
     /**
      * Passa 2 — desativação das chaves que cruzaram o limite de inatividade.
      */
-    private function expireInactive(\Carbon\CarbonInterface $expireBefore): int
+    private function expireInactive(CarbonInterface $expireBefore): int
     {
         $expired = 0;
 
@@ -116,7 +117,7 @@ final class ProcessApiKeyInactivity extends Command
      * Última atividade (last_used_at ?? created_at) anterior ao limite —
      * somente bindings, portável (sqlite/pgsql), sem concatenação (item 7).
      */
-    private function lastActivityBefore(Builder $query, \Carbon\CarbonInterface $limit): void
+    private function lastActivityBefore(Builder $query, CarbonInterface $limit): void
     {
         $query->where(function (Builder $q) use ($limit): void {
             $q->whereNotNull('last_used_at')->where('last_used_at', '<', $limit);
@@ -129,7 +130,7 @@ final class ProcessApiKeyInactivity extends Command
      * Última atividade dentro da janela de aviso: já entrou no período de
      * aviso (mais antiga que warnBefore) mas AINDA não cruzou a expiração.
      */
-    private function lastActivityBetween(Builder $query, \Carbon\CarbonInterface $lowerBound, \Carbon\CarbonInterface $upperBound): void
+    private function lastActivityBetween(Builder $query, CarbonInterface $lowerBound, CarbonInterface $upperBound): void
     {
         $query->where(function (Builder $q) use ($lowerBound, $upperBound): void {
             $q->whereNotNull('last_used_at')

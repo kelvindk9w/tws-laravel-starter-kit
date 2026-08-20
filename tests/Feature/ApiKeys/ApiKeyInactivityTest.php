@@ -22,7 +22,7 @@ beforeEach(function () {
  * Força a "última atividade" da chave via banco (uso → last_used_at;
  * nunca usada → created_at).
  */
-function envelhecerChave(ApiKey $key, \DateTimeInterface $atividade, bool $usada = false): void
+function envelhecerChave(ApiKey $key, DateTimeInterface $atividade, bool $usada = false): void
 {
     ApiKey::query()->where('id', $key->id)->update(
         $usada

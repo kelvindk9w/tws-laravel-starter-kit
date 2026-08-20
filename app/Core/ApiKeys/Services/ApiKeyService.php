@@ -36,7 +36,7 @@ final class ApiKeyService
      *
      * @param  array{name: string, scopes?: list<string>|null, expires_at?: string|null, project_uuids?: list<string>|null}  $data
      * @return array{api_key: ApiKey, secret_key: string} A secreta em claro —
-     *         exibir UMA vez e descartar. Não há recuperação.
+     *                                                    exibir UMA vez e descartar. Não há recuperação.
      */
     public function create(User $user, array $data): array
     {
@@ -72,10 +72,10 @@ final class ApiKeyService
      * Rotaciona a chave: gera substituta herdando nome, scopes e projetos.
      *
      * @param  int|null  $gracePeriodMinutes  Morte da antiga: nulo/0 = imediata;
-     *                                         positivo = janela de coexistência
-     *                                         (escolha do usuário — ADR-006).
+     *                                        positivo = janela de coexistência
+     *                                        (escolha do usuário — ADR-006).
      * @return array{api_key: ApiKey, secret_key: string} Nova chave + secreta
-     *         em claro (exibida UMA vez).
+     *                                                    em claro (exibida UMA vez).
      *
      * @throws InvalidArgumentException A chave não está ativa (não rotacionável).
      */
