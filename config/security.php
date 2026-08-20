@@ -30,6 +30,15 @@ return [
             ."frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         ),
 
+        // CSP do super admin (/admin — Filament): o Filament 5 usa expressões
+        // Alpine incompatíveis com o build CSP-safe (sem eval) — os modais e
+        // ações não abrem sem 'unsafe-eval'. DECISÃO DOCUMENTADA: 'unsafe-eval'
+        // é adicionado SOMENTE às rotas /admin* (painel interno, restrito por
+        // is_admin + IP allowlist em produção). O painel do usuário e a API
+        // seguem com a CSP estrita acima (Livewire em modo csp_safe).
+        // Vazio = CSP padrão + 'unsafe-eval' automático no script-src.
+        'content_security_policy_admin' => env('SECURITY_CSP_ADMIN', ''),
+
         // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
@@ -43,6 +52,15 @@ return [
         // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
         // middleware throttle:sensitive.
         'sensitive' => (int) env('RATE_LIMIT_SENSITIVE', 5),
+    ],
+
+    // --- Super admin (/admin — Filament) ---------------------------------------
+    'admin' => [
+        // IP allowlist do painel super admin (ADR-011: obrigatória desde o
+        // go-live em produção — checklist item 25). Lista de IPs separados
+        // por vírgula no .env (ADMIN_ALLOWED_IPS); VAZIO = sem restrição
+        // (apenas para desenvolvimento). Middleware: EnsureAdminIpAllowed.
+        'allowed_ips' => array_filter(explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))),
     ],
 
     // --- Pipeline de logs de requisição (ADR-004) ------------------------------

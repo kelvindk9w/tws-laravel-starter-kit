@@ -35,6 +35,20 @@ final class SecurityHeaders
 
         $csp = config('security.headers.content_security_policy');
 
+        // Super admin (/admin — Filament): 'unsafe-eval' é exigido pelo
+        // Alpine do Filament 5 (ver config/security.php →
+        // content_security_policy_admin, decisão documentada). Somente nas
+        // rotas /admin*; o resto da aplicação segue com a CSP estrita.
+        if ($request->is('admin*')) {
+            $adminCsp = config('security.headers.content_security_policy_admin');
+
+            if (is_string($adminCsp) && $adminCsp !== '') {
+                $csp = $adminCsp;
+            } elseif (is_string($csp) && ! str_contains($csp, 'unsafe-eval')) {
+                $csp = (string) preg_replace('/script-src /', "script-src 'unsafe-eval' ", (string) $csp, 1);
+            }
+        }
+
         if (is_string($csp) && $csp !== '') {
             $response->headers->set('Content-Security-Policy', $csp);
         }
