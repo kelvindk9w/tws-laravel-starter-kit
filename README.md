@@ -2,7 +2,7 @@
 
 Base estrutural reutilizável para projetos Laravel — segurança primeiro, Docker autocontido, convenções rígidas de configuração e testes.
 
-**Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Pest 4 · Playwright · nginx+php-fpm · (planejado: Livewire 4 painel cliente, Filament 5 super admin — ADR-011).
+**Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Pest 4 · Playwright · Livewire 4 (painel do usuário) · Filament 5 (super admin) · Horizon (filas) · spatie/laravel-backup (backup → R2) · nginx+php-fpm.
 
 ## Pré-requisitos
 
@@ -29,6 +29,9 @@ docker compose up -d --force-recreate app queue scheduler
 # 4) Banco e testes
 docker compose exec app php artisan migrate
 docker compose exec app ./vendor/bin/pest
+
+# 5) (Opcional) Promover um usuário a super admin do /admin:
+docker compose exec app php artisan user:make-admin email@exemplo.com
 ```
 
 Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
@@ -49,11 +52,24 @@ docker run --rm -v $(pwd):/app -w /app node:24-alpine npm run build
 
 ### Testes E2E (Playwright)
 
-Com a stack de dev no ar:
+Com a stack de dev no ar, crie o usuário E2E (uma única vez por banco):
 
 ```bash
-# em container (não exige Node local):
-docker run --rm --network host -v $(pwd):/work -w /work \
+docker compose exec app php artisan tinker --execute='
+  \App\Core\Auth\Models\User::factory()->create([
+    "email" => "e2e@example.com",
+    "password" => "E2eSenhaForte123",
+  ]);'
+# (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD)
+```
+
+Depois rode a suíte:
+
+```bash
+# em container (não exige Node local) — o --user evita artefatos
+# root-owned (test-results/, tests/e2e/.auth/) no repositório:
+docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/work -w /work \
   mcr.microsoft.com/playwright:v1.62.1-noble sh -c "npm install --ignore-scripts && npx playwright test"
 
 # ou localmente, se tiver Node:  npx playwright test
@@ -197,8 +213,8 @@ de segurança, headers e rate limit, e fica no access log do nginx.
 ## Autenticação (Fase 3 — ADR-006/010)
 
 Implementação própria e enxuta em `app/Core/Auth/` — **sem** Breeze/Jetstream/Fortify.
-Autenticação web por **sessão** (o painel usa sessão/cookie; a API de chaves vem na fase
-de ApiKeys).
+Autenticação web por **sessão** (os painéis usam sessão/cookie; a API pública usa
+o par de chaves pk_/sk_ no header — ver *API Keys & Tenancy*).
 
 ### Model User (`app/Core/Auth/Models/User.php`)
 
@@ -351,7 +367,7 @@ curta duração da Fase 3 (senha de transação + 2FA por e-mail) no header
 `POST /sensitive-actions/confirm` (rotas web, sessão). Uso único.
 
 **Bootstrap (primeira chave):** os endpoints exigem uma chave existente. A
-primeira chave do usuário é criada pelo painel (fase futura) ou, em dev, via
+primeira chave do usuário é criada pelo painel (`/api-keys`, Fase 6) ou, em dev, via
 `tinker` com o `ApiKeyService`:
 
 ```php
@@ -670,6 +686,33 @@ webhook com `Http::fake` (payload de sucesso + nenhuma chamada com URL
 vazia) — sem chamadas reais ao R2. Horizon: gating (guest/usuário comum =
 403, admin = 200), IP allowlist aplicada às rotas, CSP dedicada e
 supervisores por ambiente.
+
+## Pendências conhecidas (conscientes — não são bugs)
+
+O kit está completo para ser herdado. Os itens abaixo foram **decisões de
+escopo documentadas**, a endereçar no projeto filho (gatPay) ou na
+infraestrutura:
+
+1. **PITR/WAL archiving → R2** (RPO de segundos): camada de **infraestrutura**
+   (pgBackRest/WAL-G no PostgreSQL de produção) — documentada na seção
+   *Backup*, intencionalmente fora da aplicação.
+2. **Receptor do webhook de validação cruzada no sandbox**: o contrato do
+   payload está na seção *Backup*; o endpoint que baixa/restaura/valida o
+   dump é responsabilidade do projeto filho.
+3. **Canais de verificação TOTP/WhatsApp** (checklist item 24): o contrato
+   `VerificationChannelDriver` está pronto; hoje só e-mail.
+4. **IP allowlist por chave de API** (checklist item 25 — roadmap ADR-006):
+   essencial quando existirem chaves com permissão de saque.
+5. **Append-only em nível de banco**: `REVOKE UPDATE, DELETE` da role da
+   aplicação no PostgreSQL de produção (a imutabilidade hoje é garantida
+   pela aplicação — ver seção *Segurança e Logs*).
+6. **Endurecimento da CSP**: remover `'unsafe-inline'` do `script-src` com
+   nonces (a CSP atual já não usa `unsafe-eval` fora de /admin e /horizon).
+7. **Borda e e-mail (operação, não código)**: WAF Cloudflare no domínio
+   (checklist 29) e SPF/DKIM/DMARC (checklist 30).
+8. **Octane/FrankenPHP**: reavaliar só com volume relevante e auditoria de
+   worker-safety (checklist 28) — php-fpm foi escolha deliberada.
+9. **Docs públicas da API**: site estático separado — fora do escopo do kit.
 
 ## Estrutura
 
