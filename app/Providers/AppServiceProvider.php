@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
+use App\Core\Auth\Console\MakeAdminUser;
 use App\Core\Support\Platform;
 use App\Core\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -45,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 ProcessApiKeyInactivity::class,
+                MakeAdminUser::class,
             ]);
         }
 

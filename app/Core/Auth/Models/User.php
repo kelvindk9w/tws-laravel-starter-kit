@@ -6,11 +6,15 @@ namespace App\Core\Auth\Models;
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Identifiers\HasPublicCode;
+use App\Core\Uploads\Models\Upload;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -32,7 +36,7 @@ use Illuminate\Notifications\Notifiable;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasPublicCode, HasUuids, Notifiable;
@@ -41,6 +45,17 @@ class User extends Authenticatable
      * Prefixo do código público legível (ADR-010): USR-xxxxxx.
      */
     protected const PUBLIC_CODE_PREFIX = 'USR';
+
+    /**
+     * Defaults da instância nova (espelham os defaults das migrations) — sem
+     * eles, status/is_admin ficam null até o primeiro refresh após o INSERT.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'active',
+        'is_admin' => false,
+    ];
 
     /**
      * Coluna preenchida automaticamente com UUID na criação (HasUuids).
@@ -74,7 +89,52 @@ class User extends Authenticatable
             'transaction_password' => 'hashed',
             'transaction_password_set_at' => 'datetime',
             'status' => UserStatus::class,
+            'is_admin' => 'boolean',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Avatar do perfil (upload validado pela função global da Fase 5).
+     *
+     * @return BelongsTo<Upload, $this>
+     */
+    public function avatar(): BelongsTo
+    {
+        return $this->belongsTo(Upload::class, 'avatar_upload_id');
+    }
+
+    /**
+     * URL (assinada) do avatar, ou null quando não definido.
+     */
+    public function avatarUrl(): ?string
+    {
+        return $this->avatar?->url();
+    }
+
+    /**
+     * Acesso ao super admin Filament (/admin — ADR-011). Deny-by-default:
+     * somente a flag is_admin (concedida pelo comando `user:make-admin`)
+     * E conta ativa liberam o painel; os demais recebem 403.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->is_admin && $this->isActive();
+    }
+
+    /**
+     * Preferência de notificação efetiva (escolha gravada → default do
+     * config/notifications.php). Chaves desconhecidas = false.
+     */
+    public function notificationPreference(string $key): bool
+    {
+        $saved = $this->notification_preferences[$key] ?? null;
+
+        if (is_bool($saved)) {
+            return $saved;
+        }
+
+        return (bool) data_get(config('notifications.preferences'), "{$key}.default", false);
     }
 
     /**

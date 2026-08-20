@@ -54,4 +54,14 @@ return [
     // restringir por recurso:ação (menor privilégio) informando `scopes`.
     'default_scopes' => ['*:*'],
 
+    // Catálogo de scopes oferecidos na UI do painel (seleção granular).
+    // Recursos novos do domínio entram aqui para aparecer na tela de chaves.
+    // A API aceita qualquer "recurso:acao" bem formado (StoreApiKeyRequest);
+    // este catálogo governa apenas o que a UI oferece como toggle.
+    'scopes_catalog' => [
+        'api-keys' => ['read', 'create', 'rotate', 'revoke', 'assign'],
+        'projects' => ['read', 'create', 'update', 'delete'],
+        'uploads' => ['create'],
+    ],
+
 ];
