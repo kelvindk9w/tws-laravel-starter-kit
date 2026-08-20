@@ -42,6 +42,8 @@ final class Redactor
         'token', 'access_token', 'refresh_token', 'id_token', 'api_key', 'api_secret',
         'secret', 'client_secret', 'authorization', 'private_key', 'webhook_secret',
         'card_number', 'card_cvv', 'cvv', 'cvc', 'card_expiry',
+        // Códigos de verificação (2FA) também são credenciais temporárias.
+        'code', 'verification_code', 'codigo', 'codigo_verificacao',
     ];
 
     /**

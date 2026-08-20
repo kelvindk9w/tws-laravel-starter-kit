@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Core\Auth\Models\User;
 
 return [
 
@@ -113,5 +113,52 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Políticas de autenticação do starter kit (ADR-006/010)
+    |--------------------------------------------------------------------------
+    |
+    | Seções próprias do kit (não fazem parte do config padrão do Laravel).
+    | Todos os valores são ajustáveis por .env — NUNCA hardcodar (ADR-007).
+    |
+    */
+
+    // Regras de força da senha de LOGIN (Form Requests usam Password::min()).
+    'password_rules' => [
+        'min_length' => (int) env('AUTH_PASSWORD_MIN', 12),
+    ],
+
+    // Bloqueio por tentativas de login (throttle + contador — checklist 10).
+    'login' => [
+        // Tentativas consecutivas antes do bloqueio.
+        'max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
+        // Duração do bloqueio (decay do rate limiter), em minutos.
+        'lockout_minutes' => (int) env('AUTH_LOGIN_LOCKOUT_MINUTES', 15),
+    ],
+
+    // Senha de TRANSAÇÃO (separada da senha de login — ADR-006/010).
+    'transaction_password' => [
+        'min_length' => (int) env('AUTH_TRANSACTION_PASSWORD_MIN', 8),
+    ],
+
+    // Código de verificação (2FA por e-mail — checklist 24; canais futuros:
+    // TOTP/WhatsApp via drivers de VerificationChannel).
+    'verification' => [
+        // Canal padrão de envio do código.
+        'default_channel' => env('AUTH_VERIFICATION_CHANNEL', 'email'),
+        // Validade do código, em minutos.
+        'code_ttl_minutes' => (int) env('AUTH_VERIFICATION_CODE_TTL_MINUTES', 10),
+        // Máximo de tentativas de confirmação antes de invalidar o código.
+        'max_attempts' => (int) env('AUTH_VERIFICATION_CODE_MAX_ATTEMPTS', 5),
+        // Intervalo mínimo entre reenvios, em segundos (cooldown).
+        'resend_cooldown_seconds' => (int) env('AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS', 60),
+    ],
+
+    // Token de ação sensível: emitido após senha de transação + código válido;
+    // curta duração e USO ÚNICO.
+    'sensitive_action' => [
+        'token_ttl_minutes' => (int) env('AUTH_SENSITIVE_TOKEN_TTL_MINUTES', 10),
+    ],
 
 ];
