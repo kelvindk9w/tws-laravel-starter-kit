@@ -15,6 +15,7 @@ final readonly class Platform
 {
     public function __construct(
         public string $name,
+        public string $version,
         public ?string $logoUrl,
         public string $officialUrl,
         public ?string $supportEmail,
@@ -34,6 +35,7 @@ final readonly class Platform
 
         return new self(
             name: (string) $config['name'],
+            version: (string) $config['version'],
             logoUrl: $config['logo_url'] !== null ? (string) $config['logo_url'] : null,
             officialUrl: (string) $config['official_url'],
             supportEmail: $config['support_email'] !== null ? (string) $config['support_email'] : null,

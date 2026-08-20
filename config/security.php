@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+// =============================================================================
+// Segurança HTTP e pipeline de logs de requisição (ADR-004/005/010).
+//
+// Todos os valores são ajustáveis por .env — NUNCA hardcodar no código
+// (ADR-007). Referência: checklist de segurança da pesquisa de stack (§3).
+// =============================================================================
+
+return [
+
+    // --- Headers HTTP de segurança (OWASP Secure Headers — item 20) -----------
+    'headers' => [
+        'enabled' => env('SECURITY_HEADERS_ENABLED', true),
+
+        'frame_options' => env('SECURITY_FRAME_OPTIONS', 'DENY'),
+
+        'referrer_policy' => env('SECURITY_REFERRER_POLICY', 'strict-origin-when-cross-origin'),
+
+        'permissions_policy' => env('SECURITY_PERMISSIONS_POLICY', 'camera=(), microphone=(), geolocation=()'),
+
+        // CSP básica. Endurecer em produção (remover 'unsafe-inline' com nonces)
+        // quando o frontend estiver pronto para isso.
+        'content_security_policy' => env(
+            'SECURITY_CSP',
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+            ."img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; "
+            ."frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        ),
+
+        // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).
+        'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
+    ],
+
+    // --- Rate limiting (item 10) — requisições por minuto ----------------------
+    // Aplicado por usuário autenticado ou, na ausência, por IP.
+    'rate_limit' => [
+        // Global da API (grupo api inteiro).
+        'api' => (int) env('RATE_LIMIT_API', 60),
+
+        // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
+        // middleware throttle:sensitive.
+        'sensitive' => (int) env('RATE_LIMIT_SENSITIVE', 5),
+    ],
+
+    // --- Pipeline de logs de requisição (ADR-004) ------------------------------
+    'request_logging' => [
+        // Rotas excluídas do log pesado em banco (health checks barulhentos).
+        // Continuam passando pela validação de segurança, headers e rate limit,
+        // e ficam no access log do nginx. Preflights OPTIONS também são
+        // excluídos (decisão do middleware).
+        'excluded_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_EXCLUDED_PATHS', 'up,api/health'))),
+    ],
+
+];

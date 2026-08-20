@@ -82,9 +82,11 @@ final class Redactor
     /**
      * Mascara CPF, CNPJ e e-mails dentro de uma string livre.
      *
-     * CPF:  123.456.789-09  → 123.***.***-09
-     * CNPJ: 12.345.678/0001-90 → 12.3**.***/****-90 (3 primeiros + 2 últimos dígitos)
-     * E-mail: kelvin@exemplo.com → k***@exemplo.com
+     * Mantém os 3 primeiros e os 2 últimos dígitos do documento; o resto
+     * vira '*', preservando a pontuação original. Exemplos:
+     * CPF:  123.456.789-09    → 123.xxx.xxx-09 (x = dígito mascarado)
+     * CNPJ: 12.345.678/0001-90 → 12.3xx.xxx/xxxx-90
+     * E-mail: kelvin@exemplo.com → kXXX@exemplo.com (X = caracteres mascarados)
      */
     public function redactString(string $value): string
     {
