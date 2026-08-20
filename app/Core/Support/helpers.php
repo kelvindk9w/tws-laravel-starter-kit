@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
+use App\Core\Settings\SettingsManager;
 use App\Core\Support\Platform;
 use App\Core\Tenancy\TenantContext;
 
@@ -21,6 +22,18 @@ if (! function_exists('platform')) {
     function platform(): Platform
     {
         return app(Platform::class);
+    }
+}
+
+if (! function_exists('setting')) {
+    /**
+     * Valor efetivo de uma configuração editável pelo super admin
+     * (tabela settings → fallback do .env/config). Somente chaves da
+     * whitelist de config/settings.php.
+     */
+    function setting(string $key): mixed
+    {
+        return app(SettingsManager::class)->get($key);
     }
 }
 
