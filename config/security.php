@@ -39,6 +39,12 @@ return [
         // Vazio = CSP padrão + 'unsafe-eval' automático no script-src.
         'content_security_policy_admin' => env('SECURITY_CSP_ADMIN', ''),
 
+        // CSP do Horizon (/horizon — Fase 7): a SPA Vue do dashboard usa
+        // template in-DOM ('unsafe-eval') e fontes do fonts.bunny.net.
+        // Vazio = CSP base + derivações automáticas (ver SecurityHeaders).
+        // Aplica-se SOMENTE às rotas do Horizon (is_admin + IP allowlist).
+        'content_security_policy_horizon' => env('SECURITY_CSP_HORIZON', ''),
+
         // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],

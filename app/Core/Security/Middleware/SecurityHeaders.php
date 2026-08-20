@@ -49,6 +49,29 @@ final class SecurityHeaders
             }
         }
 
+        // Horizon (/horizon — Fase 7): o dashboard é uma SPA Vue com template
+        // in-DOM (precisa de 'unsafe-eval' no script-src) e carrega fontes do
+        // fonts.bunny.net (style-src/font-src). Somente nas rotas do Horizon
+        // (restritas a is_admin + IP allowlist); o resto segue estrito.
+        // CSP própria configurável por SECURITY_CSP_HORIZON (vazio = deriva
+        // da CSP base, como acima).
+        $horizonPath = trim((string) config('horizon.path', 'horizon'), '/');
+
+        if ($horizonPath !== '' && $request->is($horizonPath.'*')) {
+            $horizonCsp = config('security.headers.content_security_policy_horizon');
+
+            if (is_string($horizonCsp) && $horizonCsp !== '') {
+                $csp = $horizonCsp;
+            } elseif (is_string($csp) && $csp !== '') {
+                if (! str_contains($csp, 'unsafe-eval')) {
+                    $csp = (string) preg_replace('/script-src /', "script-src 'unsafe-eval' ", $csp, 1);
+                }
+
+                $csp = (string) preg_replace('/style-src /', 'style-src https://fonts.bunny.net ', $csp, 1);
+                $csp = (string) preg_replace('/font-src /', 'font-src https://fonts.bunny.net ', $csp, 1);
+            }
+        }
+
         if (is_string($csp) && $csp !== '') {
             $response->headers->set('Content-Security-Policy', $csp);
         }

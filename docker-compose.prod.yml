@@ -145,7 +145,10 @@ services:
     networks:
       - backend
 
-  queue:
+  # Filas em produção = Horizon (Fase 7): supervisor que gerencia os
+  # workers com balanceamento, métricas e retry — dashboard em /horizon
+  # (restrito a is_admin + IP allowlist). Substitui o queue:work simples.
+  horizon:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
@@ -155,7 +158,7 @@ services:
         required: false
     environment:
       <<: *app-env
-    command: php artisan queue:work --sleep=3 --tries=3 --backoff=5 --max-time=3600
+    command: php artisan horizon
     depends_on:
       - app
       - redis
