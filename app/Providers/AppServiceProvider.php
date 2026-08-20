@@ -40,6 +40,13 @@ class AppServiceProvider extends ServiceProvider
             URL::forceHttps();
         }
 
+        // Comandos próprios do kit (fora de app/Console/Commands).
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \App\Core\ApiKeys\Console\ProcessApiKeyInactivity::class,
+            ]);
+        }
+
         // Rate limiting (checklist item 10) — valores via config/security.php.
         // Chave: usuário autenticado quando houver; caso contrário, IP.
         RateLimiter::for('api', function (Request $request): Limit {

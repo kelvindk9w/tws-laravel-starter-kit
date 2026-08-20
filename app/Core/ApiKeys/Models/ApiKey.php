@@ -175,7 +175,7 @@ class ApiKey extends Model
             return false;
         }
 
-        return $this->lastActivityAt()->lt(now()->subMonths($config['months']));
+        return $this->lastActivityAt()->lt(now()->subMonthsNoOverflow($config['months']));
     }
 
     /**
