@@ -8,6 +8,7 @@
 #
 # Base pinada: php:8.4.24-fpm-alpine (nunca usar `latest`).
 # Extensões: pgsql, redis, intl, bcmath, gd, zip, opcache, pcntl (filas).
+# postgresql18-client: pg_dump/pg_restore 18 para os backups (Fase 7).
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -26,6 +27,7 @@ RUN apk add --no-cache \
         freetype \
         oniguruma \
         postgresql-libs \
+        postgresql18-client \
         sqlite-libs \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
