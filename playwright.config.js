@@ -12,6 +12,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests/e2e',
+    // Autentica UMA vez e compartilha a sessão (o login tem rate limit —
+    // throttle:sensitive). Ver tests/e2e/global-setup.js.
+    globalSetup: './tests/e2e/global-setup.js',
     timeout: 30_000,
     retries: process.env.CI ? 1 : 0,
     reporter: [['list']],

@@ -66,3 +66,14 @@ function fixtureArquivoEnviado(string $bytes, string $name): UploadedFile
 
     return new UploadedFile($tmp, $name, null, null, true);
 }
+
+/**
+ * Variante para testes de componentes Livewire (WithFileUploads): o harness
+ * de teste do Livewire exige a propriedade pública ->name, presente apenas
+ * nos fake files do Laravel. createWithContent grava os bytes REAIS no
+ * disco, então a validação por conteúdo (finfo/GD) continua exercitada.
+ */
+function fixtureArquivoLivewire(string $bytes, string $name): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent($name, $bytes);
+}

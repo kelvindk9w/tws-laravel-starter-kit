@@ -47,3 +47,28 @@ it('CORS não libera origem nenhuma por padrão (restritivo)', function () {
 
     expect($response->headers->has('Access-Control-Allow-Origin'))->toBeFalse();
 });
+
+it('CSP estrita (sem unsafe-eval) nas rotas comuns — Livewire roda CSP-safe', function () {
+    $response = $this->get('/login');
+
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->not->toContain('unsafe-eval');
+});
+
+it('CSP do /admin inclui unsafe-eval (Filament 5 exige — decisão documentada)', function () {
+    $response = $this->get('/admin/login');
+
+    $csp = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($csp)->toContain("script-src 'unsafe-eval'")
+        ->and($csp)->toContain("frame-ancestors 'none'");
+});
+
+it('CSP customizada do admin (SECURITY_CSP_ADMIN) prevalece quando definida', function () {
+    config()->set('security.headers.content_security_policy_admin', "default-src 'none'");
+
+    $response = $this->get('/admin/login');
+
+    expect((string) $response->headers->get('Content-Security-Policy'))->toBe("default-src 'none'");
+});
