@@ -49,6 +49,15 @@ class ApiKey extends Model
     protected const PUBLIC_CODE_PREFIX = 'KEY';
 
     /**
+     * Default da instância nova (espelha o default da migration).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'active',
+    ];
+
+    /**
      * Coluna preenchida automaticamente com UUID v7 na criação (HasUuids).
      *
      * @return list<string>

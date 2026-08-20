@@ -11,6 +11,9 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// Helpers compartilhados da suíte de API Keys/Tenancy (Fase 4).
+require_once __DIR__.'/Feature/ApiKeys/Helpers.php';
+
 // Unit: sobe a aplicação (sem banco) para helpers que dependem do container
 // (ex.: platform()). Testes puramente isolados continuam funcionando.
 pest()->extend(TestCase::class)

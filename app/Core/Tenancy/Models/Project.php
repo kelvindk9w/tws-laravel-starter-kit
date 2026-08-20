@@ -35,6 +35,16 @@ class Project extends Model
     protected const PUBLIC_CODE_PREFIX = 'PRJ';
 
     /**
+     * Default da instância nova (espelha o default da migration) — sem isso,
+     * o status ficaria null até o primeiro refresh após o INSERT.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'active',
+    ];
+
+    /**
      * Coluna preenchida automaticamente com UUID v7 na criação (HasUuids).
      *
      * @return list<string>
