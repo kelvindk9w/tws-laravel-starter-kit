@@ -64,8 +64,8 @@ docker run --rm --network host -v $(pwd):/work -w /work \
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,
 `docker compose -f docker-compose.prod.yml up -d --build` sobe tudo — app
 PHP-FPM com OPcache (imagem imutável), nginx nas portas 80/443 (TLS com
-certificado **autoassinado** embutido na imagem), migrate one-shot, queue
-worker, scheduler, PostgreSQL e Redis — **banco e Redis sem porta exposta no
+certificado **autoassinado** embutido na imagem), migrate one-shot,
+Horizon (filas), scheduler, PostgreSQL e Redis — **banco e Redis sem porta exposta no
 host** (rede interna apenas). Nenhuma configuração de SO adicional é exigida
 pelo projeto — firewall/DNS são responsabilidade de quem administra o servidor.
 
@@ -564,13 +564,120 @@ revogar chave, filtros de request logs) e Settings (override, fallback ao
 .env, whitelist). E2E Playwright: login → dashboard → chaves de API,
 gating do /admin (`tests/e2e/panel.spec.js`).
 
+## Backup e Filas (Fase 7 — ADR-010)
+
+### Backup (spatie/laravel-backup → Cloudflare R2)
+
+**Estratégia em camadas** (a regra: *backup que não restaura não é backup*):
+
+| Camada | Frequência | Ferramenta | Onde |
+|---|---|---|---|
+| Dump lógico do PostgreSQL | Cron via `.env` (padrão: 1/1h) | `backup:run --only-db` (pg_dump 18, gzip, zip AES-256) | R2 |
+| **Validação cruzada produção→sandbox** | A cada dump bem-sucedido | Webhook nativo do pacote → endpoint privado no sandbox | produção→sandbox |
+| Health check (idade/tamanho) | Diário (cron via `.env`) | `backup:monitor` | alerta e-mail + webhook |
+| Retenção (7d todos → 16d diários → 8 sem. semanais → 4m mensais → 2a anuais) | Diário | `backup:clean` | R2 |
+| **PITR/WAL archiving** | Contínuo | **Camada de INFRA** (pgBackRest/WAL-G → R2) — documentada, NÃO implementada na aplicação | R2 |
+
+O dump lógico é portátil e restaurável no sandbox — é ele que alimenta a
+validação cruzada. O PITR (RPO de segundos/minutos) é a camada de desastre
+da infraestrutura: configurar `archive_command`/pgBackRest no PostgreSQL de
+produção é responsabilidade de quem opera o servidor, não do app.
+
+**Configuração** (tudo por `.env` — ver `.env.example`, seção Backups):
+
+- `BACKUP_DISKS` — destino do dump. Dev: `local`. Produção: `backup`
+  (disco Flysystem S3 do `config/filesystems.php` que reutiliza as
+  credenciais R2 `AWS_*`; bucket dedicado opcional via `BACKUP_R2_BUCKET`).
+- `BACKUP_ARCHIVE_PASSWORD` — senha da criptografia do zip (AES-256).
+  **Obrigatória em produção** (o dump contém o banco inteiro).
+- `BACKUP_RUN_CRON` / `BACKUP_CLEAN_CRON` / `BACKUP_MONITOR_CRON` —
+  frequências (UTC). Começar em 1h e reduzir quando o banco crescer (o PITR
+  cobre o RPO).
+- `BACKUP_ALERT_EMAIL` — destino dos alertas de falha (padrão:
+  `PLATFORM_SUPPORT_EMAIL`).
+- `BACKUP_WEBHOOK_URL` — URL do webhook da validação cruzada (abaixo).
+
+**Política de notificações** (decisão documentada): sucesso do dump → SÓ
+webhook (é o gatilho da validação cruzada; e-mail de sucesso é ruído);
+falhas e backup não saudável → e-mail + webhook; rotina boa é silenciosa.
+
+**Comandos** (no container: `docker compose exec app php artisan ...`):
+
+```bash
+php artisan backup:run --only-db   # dump manual
+php artisan backup:list            # backups existentes, saúde e espaço
+php artisan backup:monitor         # health check (idade/tamanho)
+```
+
+**Restauração manual** (desastre ou restore no sandbox):
+
+```bash
+# 1) Localize o zip (backup:list) e baixe do R2 (ou copie de storage/app/private/<APP_NAME>/)
+# 2) Descriptografe/descompacte (a senha é BACKUP_ARCHIVE_PASSWORD):
+unzip -P "$BACKUP_ARCHIVE_PASSWORD" backup.zip -d restore/
+# 3) Restaure o dump (db-dumps/<database>.sql.gz) em um PostgreSQL 18 vazio:
+gunzip -c restore/db-dumps/*.sql.gz | psql -h <host> -U <user> <database>
+```
+
+**Contrato do webhook de validação cruzada (produção→sandbox):** a cada
+evento, o app faz `POST BACKUP_WEBHOOK_URL` com JSON:
+
+```json
+{
+  "type": "backup_successful",
+  "application_name": "TWS Starter Kit (production)",
+  "disk_name": "backup",
+  "backup_name": "TWS Starter Kit"
+}
+```
+
+- `type`: `backup_successful` | `backup_failed` | `cleanup_successful` |
+  `cleanup_failed` | `healthy_backup_found` | `unhealthy_backup_found`.
+- `backup_failed`/`cleanup_failed` incluem `exception` (mensagem do erro);
+  `unhealthy_backup_found` inclui `failures` (lista de motivos).
+- O gatilho da validação cruzada é `backup_successful`: o sandbox deve
+  baixar o zip mais recente do R2, descriptografar, restaurar em banco
+  descartável e rodar as checagens (contagens, integridade) — **o endpoint
+  receptor no sandbox NÃO faz parte deste kit** (implementação na fase do
+  gatPay; proteger com segredo compartilhado + IP allowlist — não é rota
+  pública comum). URL vazia = webhook desativado (nenhuma chamada é feita).
+
+### Filas com Horizon (/horizon)
+
+- **Dashboard `/horizon`**: restrito a `is_admin` (gate `viewHorizon` no
+  `HorizonServiceProvider` — fora do ambiente `local`, guest e usuário
+  comum recebem 403) + a MESMA IP allowlist do /admin
+  (`EnsureAdminIpAllowed` nas rotas do Horizon). CSP própria: a SPA Vue do
+  dashboard precisa de `unsafe-eval` e das fontes do fonts.bunny.net —
+  liberados SOMENTE nas rotas do Horizon (configurável por
+  `SECURITY_CSP_HORIZON`); o resto da aplicação segue com a CSP estrita.
+- **Dev**: o serviço `queue` do `docker-compose.yml` segue com
+  `queue:work` simples; para ver o dashboard com dados reais, troque o
+  comando do serviço por `php artisan horizon` (opcional).
+- **Produção**: o serviço `horizon` do `docker-compose.prod.yml` roda
+  `php artisan horizon` (supervisor com balanceamento; processos via
+  `HORIZON_MAX_PROCESSES`). `tries=1` por padrão — fintech não faz retry
+  cego em job financeiro (checklist §7.9).
+- Assets: o Horizon serve CSS/JS inline (não exige publicação em
+  `public/vendor`).
+
+### Testes
+
+Suíte Pest (Feature): configuração de backup (disco de destino, disco R2,
+compressão/criptografia, política de notificações, health check,
+agendamentos com `onOneServer`+`withoutOverlapping`) e o contrato do
+webhook com `Http::fake` (payload de sucesso + nenhuma chamada com URL
+vazia) — sem chamadas reais ao R2. Horizon: gating (guest/usuário comum =
+403, admin = 200), IP allowlist aplicada às rotas, CSP dedicada e
+supervisores por ambiente.
+
 ## Estrutura
 
 ```
 docker/
   php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
                        # intl (icu-data-full p/ pt_BR), bcmath, gd, zip,
-                       # opcache, pcntl, sqlite (testes)
+                       # opcache, pcntl, sqlite (testes), pg_dump 18 (backups)
   php/*.ini            # configs PHP dev/prod + opcache
   nginx/Dockerfile     # nginx dev (HTTP) e prod (HTTPS + headers OWASP)
 docker-compose.yml       # DESENVOLVIMENTO
