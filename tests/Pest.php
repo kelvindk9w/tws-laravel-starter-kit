@@ -14,6 +14,9 @@ pest()->extend(TestCase::class)
 // Helpers compartilhados da suíte de API Keys/Tenancy (Fase 4).
 require_once __DIR__.'/Feature/ApiKeys/Helpers.php';
 
+// Fixtures programáticas de arquivos da suíte de Uploads (Fase 5).
+require_once __DIR__.'/Fixtures/uploads.php';
+
 // Unit: sobe a aplicação (sem banco) para helpers que dependem do container
 // (ex.: platform()). Testes puramente isolados continuam funcionando.
 pest()->extend(TestCase::class)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Http\Controllers\ApiKeyController;
 use App\Core\Http\Controllers\HealthController;
 use App\Core\Tenancy\Http\Controllers\ProjectController;
+use App\Core\Uploads\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 // Saúde da aplicação (excluída do request log em banco — ver config/security.php
@@ -67,4 +68,11 @@ Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(functi
     Route::delete('projects/{uuid}', [ProjectController::class, 'destroy'])
         ->middleware('scope:projects:delete')
         ->name('projects.destroy');
+
+    // --- Uploads seguros (Fase 5 — ADR-010, checklist item 14) -----------------
+    // Função global única: validação de formulário (Form Request) → validação
+    // de segurança do arquivo (magic bytes, polyglot, PDF c/ script) → upload.
+    Route::post('uploads', [UploadController::class, 'store'])
+        ->middleware('scope:uploads:create')
+        ->name('uploads.store');
 });

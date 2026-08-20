@@ -8,6 +8,7 @@ use App\Core\Auth\Http\Controllers\PasswordResetLinkController;
 use App\Core\Auth\Http\Controllers\RegisteredUserController;
 use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
+use App\Core\Uploads\Http\Controllers\AvatarController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -65,4 +66,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('sensitive-actions/confirm', [SensitiveActionController::class, 'confirm'])
         ->middleware('throttle:sensitive')
         ->name('sensitive-actions.confirm');
+
+    // Avatar do perfil (Fase 5): mesma função global de upload seguro da API
+    // (SecureUploadService), restrita a imagens — re-encode GD antes de gravar.
+    Route::post('settings/avatar', [AvatarController::class, 'update'])
+        ->middleware('throttle:sensitive')
+        ->name('settings.avatar');
 });
