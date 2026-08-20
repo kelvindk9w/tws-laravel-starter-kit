@@ -1,0 +1,192 @@
+# =============================================================================
+# Docker Compose — PRODUÇÃO (autocontido)
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Sobe a stack completa funcional em qualquer host com Docker instalado,
+# sem nenhuma configuração de SO adicional:
+#   - nginx nas portas 80/443 (TLS com certificado autoassinado embutido na
+#     imagem — substituir por certificado real montando em /etc/nginx/certs);
+#   - app PHP-FPM com OPcache (imagem imutável: código+vendor+assets dentro);
+#   - postgres e redis SEM porta publicada no host (rede interna apenas);
+#   - migrate (one-shot), worker de fila e scheduler como containers dedicados;
+#   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco — ADR-010).
+#
+# Configuração sensível (APP_KEY, senhas) via arquivo .env na raiz (opcional;
+# valores abaixo são apenas fallbacks de primeira subida — troque-os).
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-https://localhost}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-tws_starter}
+      DB_USERNAME: ${POSTGRES_USER:-tws}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-troque-esta-senha}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      target: prod
+    ports:
+      - "80:80"
+      - "443:443"
+    # Para TLS real, descomentar e apontar para seus certificados:
+    # volumes:
+    #   - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - backend
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-tws_starter}
+      DB_USERNAME: ${POSTGRES_USER:-tws}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-troque-esta-senha}
+    command: php artisan migrate --force --no-interaction
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tws_starter}
+      POSTGRES_USER: ${POSTGRES_USER:-tws}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # SEM `ports:` — banco inacessível fora da rede interna (ADR-010).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tws} -d ${POSTGRES_DB:-tws_starter}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - backend
+
+  redis:
+    image: redis:8.10-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-troque-esta-senha}
+    volumes:
+      - redis_data:/data
+    # SEM `ports:` — redis inacessível fora da rede interna (CVEs históricos).
+    restart: unless-stopped
+    networks:
+      - backend
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-tws_starter}
+      DB_USERNAME: ${POSTGRES_USER:-tws}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-troque-esta-senha}
+    command: php artisan queue:work --sleep=3 --tries=3 --backoff=5 --max-time=3600
+    depends_on:
+      - app
+      - redis
+    restart: unless-stopped
+    networks:
+      - backend
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-tws_starter}
+      DB_USERNAME: ${POSTGRES_USER:-tws}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-troque-esta-senha}
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-troque-esta-senha}
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

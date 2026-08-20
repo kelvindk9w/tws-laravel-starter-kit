@@ -1,0 +1,15 @@
+# Contexto de build Docker: nunca enviar segredos nem artefatos locais.
+.git
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+public/build
+public/hot
+storage/logs/*
+test-results
+playwright-report
+docker/data
+.playwright-mcp
+*.log

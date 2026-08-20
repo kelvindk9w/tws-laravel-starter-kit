@@ -1,0 +1,120 @@
+# =============================================================================
+# Docker Compose — DESENVOLVIMENTO
+#
+# Sobe a stack completa local: app (PHP-FPM 8.4), nginx, PostgreSQL 18,
+# Redis 8, Mailpit, worker de fila e scheduler.
+#
+#   docker compose up -d --build
+#   docker compose exec app php artisan migrate
+#
+# Banco e Redis usam VOLUMES NOMEADOS persistentes (ADR-010): reiniciar ou
+# derrubar os containers NUNCA apaga os dados (só `down -v`, proibido aqui).
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    env_file: .env
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      target: dev
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html:ro
+    depends_on:
+      - app
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-tws_starter}
+      POSTGRES_USER: ${DB_USERNAME:-tws}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tws_dev_password}
+      # PGDATA explícito dentro do volume nomeado (persistência garantida).
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-tws} -d ${DB_DATABASE:-tws_starter}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  redis:
+    image: redis:8.10-alpine
+    # AOF ligado: reduz a janela de perda de jobs em reinício (ADR-010).
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+  mailpit:
+    image: axllent/mailpit:v1.30.7
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Interface web
+    networks:
+      - backend
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    env_file: .env
+    command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+      - redis
+    networks:
+      - backend
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    env_file: .env
+    # Loop do scheduler nativo do Laravel (equivale ao cron de 1 em 1 minuto).
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
