@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use App\Core\Logging\Middleware\RequestLogging;
 use App\Core\Security\Middleware\SecurityHeaders;
 use App\Core\Security\Middleware\SecurityValidation;
+use App\Core\Tenancy\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,6 +45,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'request.logging' => RequestLogging::class,
             // Exige token de ação sensível válido (ADR-006) — uso único.
             'sensitive.token' => RequiresSensitiveActionToken::class,
+            // Tenancy da API (ADR-010): resolve o tenant pela pk_/sk_ no
+            // header, vincula o request log e atualiza o last_used_at.
+            'resolve.tenant' => ResolveTenant::class,
+            // Autorização por scope da chave (ADR-006): 'scope:recurso:acao'.
+            'scope' => EnsureApiKeyScope::class,
         ]);
 
         // Deny-by-default (checklist 13): convidado em rota `auth` vai para
