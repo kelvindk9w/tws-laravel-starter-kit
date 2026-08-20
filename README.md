@@ -1,64 +1,143 @@
 # TWS Laravel Starter Kit
 
-Base estrutural reutilizável para projetos Laravel — segurança primeiro, Docker autocontido, convenções rígidas de configuração e testes.
+Starter kit Laravel para projetos TWS — base estrutural com Docker, convenções
+de segurança e padrões de engenharia definidos nos ADRs do projeto.
 
-**Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Livewire 4 · Filament 5 · Pest 4 · Playwright · nginx+php-fpm.
+**Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · nginx + PHP-FPM ·
+Pest 4 · Playwright · Mailpit (dev)
+
+---
 
 ## Pré-requisitos
 
-Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
+- **Docker** (com Compose v2+). Nada mais: PHP, Composer e Node rodam em containers.
 
-## Clonar e rodar (desenvolvimento)
+## Subindo o ambiente de DESENVOLVIMENTO
 
 ```bash
-git clone <repo> meu-projeto && cd meu-projeto
-cp .env.example .env
-
-# 1) Dependências PHP (roda em container, nada local)
-docker run --rm -v $(pwd):/app -w /app composer:latest composer install --no-interaction
-
-# 2) Subir a stack
+cp .env.example .env          # primeira vez apenas
 docker compose up -d --build
 
-# 3) Gerar a chave da aplicação no .env e RECRIAR os containers
-#    (o compose injeta o .env como variáveis de ambiente no start —
-#     editar o .env sem recriar não surte efeito)
-docker compose exec app php artisan key:generate --force
-docker compose up -d --force-recreate app queue scheduler
+# dependências PHP (roda em container — a máquina não precisa de PHP/Composer):
+docker run --rm -v $(pwd):/app -w /app composer:latest composer install
 
-# 4) Banco e testes
+docker compose exec app php artisan key:generate   # primeira vez apenas
 docker compose exec app php artisan migrate
-docker compose exec app ./vendor/bin/pest
 ```
 
-Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
+Serviços de dev (portas do host configuráveis via `.env`, ver `DEV_*_PORT`):
 
-Portas conflitando? Ajuste no `.env` (`DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT`, `DEV_MAILPIT_*`) e recrie os containers.
+| Serviço | Onde |
+|---|---|
+| Aplicação (nginx → php-fpm) | http://localhost:8180 |
+| Mailpit (caixa de entrada fake) | http://localhost:18025 (SMTP na 11025) |
+| PostgreSQL 18 | localhost:15432 |
+| Redis 8 | localhost:16379 |
 
-## Produção
+Também sobem automaticamente: **queue worker** (`queue:work`) e **scheduler**
+(loop de `schedule:run` a cada minuto).
 
-`docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado, `docker compose -f docker-compose.prod.yml up -d` sobe tudo (app, nginx, postgres com volume persistente, redis, filas, scheduler). Nenhuma configuração de SO adicional é exigida pelo projeto — firewall/DNS/HTTPS são responsabilidade de quem administra o servidor.
+### Comandos do dia a dia (sempre em container)
 
-## Convenções (resumo — ver planejamento/decisoes no projeto de origem)
+```bash
+docker compose exec app php artisan <comando>          # artisan
+docker compose exec app php artisan test               # testes (Pest 4)
+docker run --rm -v $(pwd):/app -w /app composer:latest composer <cmd>   # composer
 
-1. **Nada hardcoded:** nome da plataforma, logo, URLs, dados institucionais → `config/platform.php` + `.env`, acesso via helper `platform()`.
-2. **Dinheiro é inteiro** (centavos, bigint) — `App\Core\Money\Money`. Nunca float.
-3. **Identificadores:** `id` interno nunca exposto; `uuid` externo; código público legível (`XXX-000000`) via `HasPublicCode`.
-4. **Respostas de API** sempre via Resources (`App\Core\Http\Resources`) — nunca modelo cru.
-5. **Logs de requisição** append-only com status INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
-6. **i18n:** toda string de UI via `__()` (pt-BR padrão).
-7. **Testes** (Pest + Playwright) validam conteúdo, não só status HTTP.
+# Build do frontend (Node 24 em container):
+docker run --rm -v $(pwd):/app -w /app node:24-alpine npm install
+docker run --rm -v $(pwd):/app -w /app node:24-alpine npm run build
+```
+
+### Testes E2E (Playwright)
+
+Com a stack de dev no ar:
+
+```bash
+# em container (não exige Node local):
+docker run --rm --network host -v $(pwd):/work -w /work \
+  mcr.microsoft.com/playwright:v1.62.1-noble sh -c "npm install --ignore-scripts && npx playwright test"
+
+# ou localmente, se tiver Node:  npx playwright test
+```
+
+## Subindo o ambiente de PRODUÇÃO (autocontido)
+
+Em qualquer host com Docker instalado, sem nenhuma configuração de SO:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Sobe: nginx (80/443, TLS com certificado **autoassinado** embutido na imagem),
+app PHP-FPM com OPcache, migrate (one-shot), queue worker, scheduler,
+PostgreSQL e Redis — **banco e Redis sem porta exposta no host** (rede interna).
+
+Para produção real:
+
+1. `cp .env.prod.example .env.prod` e defina `APP_KEY` (sem ela cada container
+   gera uma chave efêmera própria — só para teste da stack).
+2. Senhas/portas padrão: defina `PROD_*` no shell ou no `.env` da raiz
+   (o Compose interpola `${PROD_*}` dali — ver cabeçalho do
+   `docker-compose.prod.yml` e `.env.prod.example`).
+3. TLS real: monte seus certificados em `/etc/nginx/certs`
+   (`server.crt`/`server.key`) — ver comentário no `docker-compose.prod.yml`.
+
+> **Dados NUNCA se perdem ao reiniciar/recriar containers** (ADR-010): banco,
+> Redis e assets ficam em volumes nomeados. Nunca use `down -v`.
 
 ## Estrutura
 
-- `app/Core/` — tudo que é genérico e reutilizável (Auth, ApiKeys, Tenancy, Security, Logging, Uploads, Money, Identifiers, Resources, Support)
-- `app/Domain/` — regras de negócio do projeto filho
-- `docker/` — Dockerfiles e configs (php, nginx)
+```
+docker/
+  php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
+                       # intl, bcmath, gd, zip, opcache, pcntl, sqlite (testes)
+  php/*.ini            # configs PHP dev/prod + opcache
+  nginx/Dockerfile     # nginx dev (HTTP) e prod (HTTPS + headers OWASP)
+docker-compose.yml       # DESENVOLVIMENTO
+docker-compose.prod.yml  # PRODUÇÃO autocontida
+app/
+  Core/                # fundações reutilizáveis (convenções abaixo)
+    Support/           # Platform (config tipada) + helpers globais
+    Identifiers/       # HasPublicCode (PREFIXO-XXXXXX)
+    Money/             # MoneyAsCents + Money (int centavos, nunca float)
+    Http/Resources/    # BaseResource (padronização de API)
+    Auth/ ApiKeys/ Tenancy/ Security/ Logging/ Uploads/   # (fases futuras)
+  Domain/              # domínios de negócio (fases futuras)
+config/platform.php    # config centralizada da plataforma (ADR-007)
+lang/pt_BR/            # traduções pt-BR (idioma padrão)
+tests/                 # Pest (Unit/Feature) + e2e/ (Playwright)
+```
 
-## Branches
+## Convenções (resumo dos ADRs — lei do projeto)
 
-`desenvolvimento` → `sandbox` → `producao`. Nunca commit direto nas protegidas.
+1. **Nada hardcoded (ADR-007):** nome da plataforma, logo, URLs, CNPJ, e-mail
+   de suporte etc. vêm de `config/platform.php` ← `.env` (`PLATFORM_*`).
+   Acesso tipado via helper global `platform()` (ex.: `platform()->name`).
+   Nunca texto institucional/URL fixa em código ou views.
+2. **i18n (ADR-007):** locale padrão `pt_BR`; TODA string de UI via `__()`
+   apontando para `lang/pt_BR/`. Multi-idioma = adicionar pasta em `lang/`.
+3. **Identificadores em 3 camadas (ADR-010):** `id` interno nunca exposto;
+   `uuid` (trait nativa `HasUuids`, UUID v7) nas APIs; `codigo_publico`
+   legível (`PREFIXO-XXXXXX`) via trait `App\Core\Identifiers\HasPublicCode`
+   — alfabeto sem ambiguidade, unicidade garantida por constraint UNIQUE +
+   retry (`createWithPublicCodeRetry()`).
+4. **Dinheiro (ADR-004/005):** SEMPRE inteiro em centavos (`bigint` no banco,
+   cast `App\Core\Money\MoneyAsCents` no model). NUNCA float. Conversões só
+   via `App\Core\Money\Money` (`Money::format()`, `Money::parse()`,
+   `Money::toApiResponse()` — API retorna inteiro canônico + formatado).
+5. **API (ADR-010):** nenhum endpoint retorna modelo Eloquent cru — toda
+   entidade tem seu Resource estendendo `App\Core\Http\Resources\BaseResource`.
+6. **Segredos:** somente em `.env` (gitignored), nunca no código nem na imagem.
+7. **Git flow (ADR-010):** `desenvolvimento` → `sandbox` → `producao`.
+   Nunca direto para produção.
 
-## Licença
+## Testes
 
-MIT (ver LICENSE).
+```bash
+docker compose exec app php artisan test   # Pest 4 (unit + feature)
+npx playwright test                        # E2E (ver seção acima)
+```
+
+Os testes rodam com SQLite em memória (phpunit.xml força `DB_*` para isolar
+do PostgreSQL de dev) e validam **conteúdo** das respostas, não só status.

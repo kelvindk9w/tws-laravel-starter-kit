@@ -10,5 +10,5 @@ test('página inicial responde e exibe o nome da plataforma', async ({ page }) =
 
     // O nome vem de PLATFORM_NAME no .env da stack de dev.
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Bem-vindo');
-    await expect(page.locator('title')).toContainText('TWS Starter Kit');
+    await expect(page).toHaveTitle(/TWS Starter Kit/);
 });

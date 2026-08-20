@@ -7,7 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 // Rodar local (Node instalado):  npx playwright test
 // Rodar em container (sem Node local):
 //   docker run --rm --network host -v $(pwd):/work -w /work \
-//     mcr.microsoft.com/playwright:v1.56.0-noble npx playwright test
+//     mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test
 // =============================================================================
 
 export default defineConfig({

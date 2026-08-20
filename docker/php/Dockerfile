@@ -110,8 +110,8 @@ COPY --from=assets --chown=www-data:www-data /app/public/build /var/www/html/pub
 # Entrypoint: gera APP_KEY se ausente e garante o symlink de storage.
 COPY docker/php/entrypoint-prod.sh /usr/local/bin/entrypoint-prod.sh
 RUN chmod +x /usr/local/bin/entrypoint-prod.sh \
-    && mkdir -p storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
+    && mkdir -p storage/logs bootstrap/cache /app-public \
+    && chown -R www-data:www-data storage bootstrap/cache /app-public
 
 USER www-data
 
