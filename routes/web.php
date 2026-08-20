@@ -9,6 +9,11 @@ use App\Core\Auth\Http\Controllers\RegisteredUserController;
 use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
+use App\Livewire\ApiKeys\Index as ApiKeysIndex;
+use App\Livewire\Dashboard;
+use App\Livewire\Notifications\Preferences as NotificationPreferences;
+use App\Livewire\Profile;
+use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -47,11 +52,19 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    // =====================================================================
+    // Painel do usuário (Livewire 4 — Fase 6, ADR-005/011).
+    // UI direta: tudo se resolve na mesma tela, modais em vez de navegação.
+    // =====================================================================
+    Route::get('dashboard', Dashboard::class)->name('dashboard');
+    Route::get('api-keys', ApiKeysIndex::class)->name('panel.api-keys');
+    Route::get('projects', ProjectsIndex::class)->name('panel.projects');
+    Route::get('notifications', NotificationPreferences::class)->name('panel.notifications');
+    Route::get('profile', Profile::class)->name('panel.profile');
 
     // Senha de transação (hash separado da senha de login — ADR-006).
+    // Rota standalone mantida da Fase 3; o painel Livewire (Perfil) usa o
+    // MESMO TransactionPasswordService.
     Route::get('settings/transaction-password', [TransactionPasswordController::class, 'edit'])
         ->name('transaction-password.edit');
     Route::put('settings/transaction-password', [TransactionPasswordController::class, 'update'])
