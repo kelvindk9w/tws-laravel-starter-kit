@@ -1,58 +1,64 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# TWS Laravel Starter Kit
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Base estrutural reutilizável para projetos Laravel — segurança primeiro, Docker autocontido, convenções rígidas de configuração e testes.
 
-## About Laravel
+**Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Livewire 4 · Filament 5 · Pest 4 · Playwright · nginx+php-fpm.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Pré-requisitos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Clonar e rodar (desenvolvimento)
 
 ```bash
-composer require laravel/boost --dev
+git clone <repo> meu-projeto && cd meu-projeto
+cp .env.example .env
 
-php artisan boost:install
+# 1) Dependências PHP (roda em container, nada local)
+docker run --rm -v $(pwd):/app -w /app composer:latest composer install --no-interaction
+
+# 2) Subir a stack
+docker compose up -d --build
+
+# 3) Gerar a chave da aplicação no .env e RECRIAR os containers
+#    (o compose injeta o .env como variáveis de ambiente no start —
+#     editar o .env sem recriar não surte efeito)
+docker compose exec app php artisan key:generate --force
+docker compose up -d --force-recreate app queue scheduler
+
+# 4) Banco e testes
+docker compose exec app php artisan migrate
+docker compose exec app ./vendor/bin/pest
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
 
-## Contributing
+Portas conflitando? Ajuste no `.env` (`DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT`, `DEV_MAILPIT_*`) e recrie os containers.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Produção
 
-## Code of Conduct
+`docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado, `docker compose -f docker-compose.prod.yml up -d` sobe tudo (app, nginx, postgres com volume persistente, redis, filas, scheduler). Nenhuma configuração de SO adicional é exigida pelo projeto — firewall/DNS/HTTPS são responsabilidade de quem administra o servidor.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Convenções (resumo — ver planejamento/decisoes no projeto de origem)
 
-## Security Vulnerabilities
+1. **Nada hardcoded:** nome da plataforma, logo, URLs, dados institucionais → `config/platform.php` + `.env`, acesso via helper `platform()`.
+2. **Dinheiro é inteiro** (centavos, bigint) — `App\Core\Money\Money`. Nunca float.
+3. **Identificadores:** `id` interno nunca exposto; `uuid` externo; código público legível (`XXX-000000`) via `HasPublicCode`.
+4. **Respostas de API** sempre via Resources (`App\Core\Http\Resources`) — nunca modelo cru.
+5. **Logs de requisição** append-only com status INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
+6. **i18n:** toda string de UI via `__()` (pt-BR padrão).
+7. **Testes** (Pest + Playwright) validam conteúdo, não só status HTTP.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Estrutura
 
-## License
+- `app/Core/` — tudo que é genérico e reutilizável (Auth, ApiKeys, Tenancy, Security, Logging, Uploads, Money, Identifiers, Resources, Support)
+- `app/Domain/` — regras de negócio do projeto filho
+- `docker/` — Dockerfiles e configs (php, nginx)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Branches
+
+`desenvolvimento` → `sandbox` → `producao`. Nunca commit direto nas protegidas.
+
+## Licença
+
+MIT (ver LICENSE).
