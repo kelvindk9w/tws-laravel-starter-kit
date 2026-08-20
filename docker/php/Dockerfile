@@ -70,6 +70,11 @@ CMD ["php-fpm"]
 # -----------------------------------------------------------------------------
 FROM composer:2 AS composer-prod
 
+# ext-intl é exigida pelo filament/support: a imagem composer:2 não a traz,
+# então instalamos aqui para o `composer install` passar na checagem de
+# plataforma (a imagem final PHP, stage base, já tem intl compilada).
+RUN apk add --no-cache icu-dev && docker-php-ext-install intl
+
 WORKDIR /app
 
 COPY . .
