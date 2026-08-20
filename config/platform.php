@@ -19,7 +19,7 @@ return [
     'logo_url' => env('PLATFORM_LOGO_URL'),
 
     // URL institucional oficial do produto.
-    'official_url' => env('PLATFORM_OFFICIAL_URL', env('APP_URL', 'http://localhost:8080')),
+    'official_url' => env('PLATFORM_OFFICIAL_URL', env('APP_URL', 'http://localhost:8180')),
 
     // E-mail público de suporte.
     'support_email' => env('PLATFORM_SUPPORT_EMAIL'),

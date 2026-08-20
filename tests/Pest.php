@@ -8,3 +8,8 @@ declare(strict_types=1);
 pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
+
+// Unit: sobe a aplicação (sem banco) para helpers que dependem do container
+// (ex.: platform()). Testes puramente isolados continuam funcionando.
+pest()->extend(Tests\TestCase::class)
+    ->in('Unit');

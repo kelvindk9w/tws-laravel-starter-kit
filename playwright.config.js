@@ -16,8 +16,8 @@ export default defineConfig({
     retries: process.env.CI ? 1 : 0,
     reporter: [['list']],
     use: {
-        // URL da stack de dev (nginx publica na 8080 do host).
-        baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:8080',
+        // URL da stack de dev (nginx publica na 8180 do host).
+        baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:8180',
         trace: 'retain-on-failure',
     },
     projects: [

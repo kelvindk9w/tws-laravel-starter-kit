@@ -60,9 +60,13 @@ final class Money
         $parsed = $formatter->parseCurrency($formattedAmount, $parsedCurrency);
 
         if ($parsed === false) {
-            // Tenta como decimal puro (sem símbolo de moeda).
+            // Fallback: remove símbolo de moeda/espaços (inclui o espaço
+            // não-quebrável U+00A0 que o intl usa no formato pt-BR) e faz
+            // parse do decimal puro.
+            $numericOnly = preg_replace('/[^\d,\.\-]/u', '', $formattedAmount) ?? '';
+
             $decimalFormatter = new NumberFormatter($locale, NumberFormatter::DECIMAL);
-            $parsed = $decimalFormatter->parse($formattedAmount);
+            $parsed = $decimalFormatter->parse($numericOnly);
         }
 
         if ($parsed === false) {

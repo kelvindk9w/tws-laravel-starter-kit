@@ -19,6 +19,7 @@ FROM php:8.4.24-fpm-alpine AS base
 # .build-deps é removido ao final para manter a imagem enxuta.
 RUN apk add --no-cache \
         icu-libs \
+        icu-data-full \
         libzip \
         libpng \
         libjpeg-turbo \
