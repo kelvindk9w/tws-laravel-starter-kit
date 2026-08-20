@@ -490,6 +490,80 @@ rejeitados; nome seguro sem nome original; sha256 do retorno confere com o
 disco; re-encode elimina trailing payload; vínculo tenant (API) vs user_id
 (web); scope `uploads:create` exigido.
 
+## Painéis (Fase 6 — ADR-011)
+
+Dois frontends na mesma codebase: **painel do usuário em Livewire 4** e
+**super admin em Filament 5**. Branding 100% via `platform()` (nome, logo e
+cor primária — `PLATFORM_NAME`/`PLATFORM_LOGO_URL`/`PLATFORM_PRIMARY_COLOR`
+no .env; ADR-007/010). Toda string via `__()` (pt-BR). Tema claro/escuro no
+painel do usuário (toggle no topo, default = preferência do SO).
+
+### Painel do usuário (Livewire 4)
+
+| Rota | Tela |
+|---|---|
+| `/dashboard` | Boas-vindas, código público, contadores e ações rápidas |
+| `/profile` | Dados, senha de login, senha de transação e avatar (mesma tela) |
+| `/api-keys` | Chaves de API: criar (scopes + vínculo N:N com projetos), visualização única da secreta, rotacionar (grace period), revogar |
+| `/projects` | Projetos: CRUD só com nome, tudo inline (ADR-005) |
+| `/notifications` | Preferências de e-mail (esqueleto p/ notificações de pagamento) |
+
+Princípio de UI (ADR-005): tudo se resolve na MESMA tela — formulários
+inline e modais em vez de navegação. Ações sensíveis (criar/rotacionar
+chave) abrem o modal de confirmação: senha de transação → código por e-mail
+→ executa. Nada de lógica duplicada: as telas consomem `ApiKeyService`
+(Fase 4) e `SensitiveActionService` (Fase 3); a senha de transação usa o
+`TransactionPasswordService` compartilhado com o controller da Fase 3.
+
+### Super admin (Filament 5) — `/admin`
+
+- **Acesso**: somente `is_admin` + conta ativa (`User::canAccessPanel`) —
+  qualquer outro usuário recebe **403**; guest vai ao login do painel.
+- **Criar o primeiro admin** (a flag NUNCA é mass-assignable nem editável
+  por telas — a única porta é o comando):
+
+```bash
+docker compose exec app php artisan user:make-admin email@exemplo.com
+# revogar:  ... user:make-admin email@exemplo.com --remove
+```
+
+- **Resources**: Usuários (listar/ver/bloquear), Chaves de API (visão
+  global de todos os tenants + revogar), Projetos, Request Logs (consulta
+  de auditoria read-only com filtros de status/tenant/endpoint/período —
+  logs órfãos, sem tenant, destacados em vermelho) e Uploads.
+- **Configurações** (`/admin/settings`): parâmetros operacionais editáveis
+  pela UI (meses de inatividade p/ expirar chaves, dias de aviso prévio,
+  limites de upload, rate limits) gravados na tabela `settings` — sem
+  editar .env. Somente a whitelist de `config/settings.php` é gravável;
+  campo vazio = volta ao valor do .env. Os overrides são aplicados no boot
+  (`SettingsServiceProvider`, cacheados) e lidos pelo helper `setting()`.
+- **IP allowlist** (ADR-011, checklist 25 — obrigatória em produção):
+  `ADMIN_ALLOWED_IPS` no .env (IPs ou CIDRs separados por vírgula). Vazio =
+  sem restrição (apenas desenvolvimento). Middleware: `EnsureAdminIpAllowed`.
+
+### CSP e JavaScript (decisão documentada)
+
+O painel do usuário roda o **bundle CSP-safe do Livewire** (`csp_safe` em
+`config/livewire.php`) — a CSP estrita (sem `unsafe-eval`) segue íntegra.
+O Filament 5 usa expressões Alpine incompatíveis com esse bundle (modais e
+ações não abrem), então SOMENTE as rotas `/admin*`: (1) recebem o bundle
+normal do Livewire (middleware `UseEvalBundleForAdmin`, com assets
+publicados em `public/vendor/livewire` via `post-install-cmd`) e (2) ganham
+`'unsafe-eval'` no `script-src` (SecurityHeaders, configurável por
+`SECURITY_CSP_ADMIN`). Mitigação: /admin é painel interno, atrás de
+`is_admin` + IP allowlist em produção.
+
+### Testes
+
+`./vendor/bin/pest` (Pest): telas Livewire (renderização + ações com
+conteúdo — criar projeto, criar/rotacionar/revogar chave com o fluxo 2FA
+real e código capturado do mailable, avatar, preferências, isolamento
+anti-IDOR entre tenants), acesso ao /admin (403 a não-admin, comando de
+promoção, IP allowlist), resources Filament (listagens, bloquear usuário,
+revogar chave, filtros de request logs) e Settings (override, fallback ao
+.env, whitelist). E2E Playwright: login → dashboard → chaves de API,
+gating do /admin (`tests/e2e/panel.spec.js`).
+
 ## Estrutura
 
 ```
@@ -506,7 +580,10 @@ lang/pt_BR/              # traduções pt-BR (idioma padrão)
 app/
   Core/    # tudo que é genérico e reutilizável: Auth, ApiKeys, Tenancy,
            # Security, Logging, Uploads, Money, Identifiers, Http/Resources,
-           # Support (Platform + helpers globais)
+           # Settings (configs editáveis pelo admin), Support (Platform +
+           # helpers globais)
+  Livewire/   # painel do usuário (Fase 6)
+  Filament/   # super admin /admin (Fase 6)
   Domain/  # regras de negócio do projeto filho
 tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
 ```
