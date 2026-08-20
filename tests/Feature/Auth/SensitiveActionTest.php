@@ -201,6 +201,10 @@ it('rejeita código expirado', function () {
 it('impõe cooldown de reenvio e invalida o código anterior ao reenviar', function () {
     Mail::fake();
     config()->set('auth.verification.resend_cooldown_seconds', 60);
+    // Relógio congelado: o cooldown restante é calculado por
+    // created_at->diffInSeconds(now()) — sem freeze, >1s decorrido entre criar
+    // o código e tentar reenviar tornava a asserção de "60s restantes" flake.
+    $this->freezeTime();
     $user = userComSenhaDeTransacao();
 
     $primeiroCodigo = solicitarCodigo($user);
