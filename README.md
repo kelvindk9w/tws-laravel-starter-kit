@@ -193,6 +193,89 @@ o tenant ao log quando a secret key for resolvida). Em produção, complementar 
 barulhentos) — configurável em `REQUEST_LOG_EXCLUDED_PATHS`. Continua protegido por validação
 de segurança, headers e rate limit, e fica no access log do nginx.
 
+## Autenticação (Fase 3 — ADR-006/010)
+
+Implementação própria e enxuta em `app/Core/Auth/` — **sem** Breeze/Jetstream/Fortify.
+Autenticação web por **sessão** (o painel usa sessão/cookie; a API de chaves vem na fase
+de ApiKeys).
+
+### Model User (`app/Core/Auth/Models/User.php`)
+
+- Identificadores em 3 camadas (ADR-010): `id` interno nunca exposto, `uuid` (HasUuids)
+  e `codigo_publico` `USR-xxxxxx` (HasPublicCode).
+- **Duas senhas separadas** (ADR-006): `password` (login) e `transaction_password`
+  (ações sensíveis), ambas com cast `hashed` → **Argon2id** (checklist item 4;
+  `config/hashing.php`, `HASH_DRIVER`). Parâmetros Argon por `.env` (`ARGON_*`);
+  `rehash_on_login` faz upgrade gradual de hashes antigos.
+- **Dados pessoais criptografados em repouso** (checklist 12): `name` com cast
+  `encrypted` (AES-256-GCM da `APP_KEY`). `email` fica em texto (é a chave de lookup
+  do login; UNIQUE no banco). Classificação de dados do ADR-006: o que pode ser texto
+  é texto; o que exige criptografia é criptografado; segredos ficam só como hash.
+- `status` (`UserStatus`): login é **deny-by-default** — só conta `active` autentica.
+
+### Fluxos web (rotas em `routes/web.php`, Form Requests em `Http/Requests`)
+
+| Fluxo | Rotas | Observações |
+|---|---|---|
+| Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada |
+| Login | `GET/POST /login` | **bloqueio por tentativas** (RateLimiter, e-mail+IP — `AUTH_LOGIN_MAX_ATTEMPTS`/`AUTH_LOGIN_LOCKOUT_MINUTES`); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
+| Logout | `POST /logout` | invalida sessão + renova token CSRF |
+| Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
+| Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
+| Ação sensível | `POST /sensitive-actions/code` + `POST /sensitive-actions/confirm` | ver abaixo |
+
+Todas as rotas sensíveis passam por `throttle:sensitive` (5/min padrão,
+`config/security.php`) além dos limites de negócio próprios.
+
+### Ação sensível: senha de transação + código por e-mail (2FA — checklist 24)
+
+Fluxo (ADR-006: saque, rotação de chave de API, alterações críticas):
+
+1. `POST /sensitive-actions/code` com a senha de transação → gera código de
+   **6 dígitos**, persiste **somente o hash** (`verification_codes`) com
+   expiração (`AUTH_VERIFICATION_CODE_TTL_MINUTES`, padrão 10 min) e envia por
+   **e-mail enfileirado** (Redis; Mailpit em dev). Reenvio com cooldown
+   (`AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS`, padrão 60s); código novo
+   invalida os anteriores.
+2. `POST /sensitive-actions/confirm` com o código → valida (expiração +
+   máx. `AUTH_VERIFICATION_CODE_MAX_ATTEMPTS` tentativas, padrão 5 — ao esgotar,
+   o código morre) e emite o **token de ação sensível**: 64 chars aleatórios,
+   só hash SHA-256 no banco, curta duração (`AUTH_SENSITIVE_TOKEN_TTL_MINUTES`,
+   padrão 10 min), **uso único** (consumido na validação).
+3. Rotas de operação sensível usam o middleware **`sensitive.token`**
+   (`RequiresSensitiveActionToken`): exige o token no header
+   `X-Sensitive-Action-Token` (ou campo `sensitive_action_token`), sempre
+   combinado com `auth`:
+
+```php
+Route::post('/saque', ...)->middleware(['auth', 'sensitive.token']);
+```
+
+**Canais de verificação plugáveis** (TOTP/WhatsApp futuros — ADR-006): contrato
+`App\Core\Auth\Contracts\VerificationChannelDriver` + `VerificationChannelManager`.
+Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no enum
+`VerificationChannel`, sem tocar no fluxo.
+
+### Sessão e CSRF (checklist 22/23)
+
+- Cookies de sessão: `HttpOnly` + `SameSite=Lax` sempre; `Secure` por padrão em
+  produção (`config/session.php` — `SESSION_SECURE_COOKIE`, default
+  `APP_ENV=production`). Sessão regenerada no login, invalidada no logout.
+- CSRF nativo do grupo `web` (Laravel 13: `PreventRequestForgery` — token +
+  validação de origem `Sec-Fetch-Site`/`Origin`), testado com e sem token.
+- Credenciais nunca aparecem em logs: `password`, `transaction_password`, `code`
+  e afins são `[REDACTED]` pelo Redactor (testado na pipeline de request log).
+
+### Testes
+
+`tests/Feature/Auth/` (Pest): registro, login ok/errado, bloqueio após N
+tentativas + liberação após o decay, conta inativa, sessão regenerada, flags do
+cookie, deny-by-default, logout, CSRF (419 sem token), recuperação de senha
+(`Notification::fake()`), senha de transação (definir/alterar/erros), fluxo
+completo de ação sensível (`Mail::fake()` — código válido/inválido/expirado/
+tentativas esgotadas, cooldown de reenvio, token uso único/expirado/de outro
+usuário).
+
 ## Estrutura
 
 ```
