@@ -25,6 +25,7 @@ RUN apk add --no-cache \
         freetype \
         oniguruma \
         postgresql-libs \
+        sqlite-libs \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         icu-dev \
@@ -34,10 +35,12 @@ RUN apk add --no-cache \
         freetype-dev \
         postgresql-dev \
         oniguruma-dev \
+        sqlite-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_pgsql \
         pgsql \
+        pdo_sqlite \
         intl \
         bcmath \
         gd \
