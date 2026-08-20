@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Core\Support\Platform;
+use App\Core\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -20,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
     {
         // Configuração centralizada da plataforma (ADR-007) — singleton tipado.
         $this->app->singleton(Platform::class, fn (): Platform => Platform::fromConfig());
+
+        // Contexto do tenant da requisição (ADR-010) — preenchido pelo
+        // middleware ResolveTenant. PHP-FPM garante o ciclo por requisição;
+        // se Octane entrar um dia, resetar entre requisições (checklist 28).
+        $this->app->singleton(TenantContext::class);
     }
 
     /**
