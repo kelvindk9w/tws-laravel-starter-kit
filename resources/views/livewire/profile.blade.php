@@ -36,6 +36,22 @@
         </form>
     </section>
 
+    {{-- Aparência (tema claro/escuro/sistema) -------------------------------- --}}
+    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <h2 class="font-semibold">{{ __('panel.profile.theme_heading') }}</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.profile.theme_hint') }}</p>
+
+        <div class="mt-4 inline-flex gap-1 rounded-lg border border-gray-200 p-1 dark:border-gray-700" role="group" aria-label="{{ __('panel.profile.theme_heading') }}">
+            @foreach (['system' => 'computer-desktop', 'light' => 'sun', 'dark' => 'moon'] as $themeValue => $themeIcon)
+                <button type="button" data-theme-set="{{ $themeValue }}" aria-pressed="false"
+                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-600 transition-[background-color,color] duration-150 ease-(--ease-out) dark:text-gray-300">
+                    <x-ui-icon :name="$themeIcon" class="h-4 w-4" />
+                    {{ __("ui.theme.{$themeValue}") }}
+                </button>
+            @endforeach
+        </div>
+    </section>
+
     {{-- Avatar (função global de upload da Fase 5) --------------------------- --}}
     <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
         <h2 class="font-semibold">{{ __('panel.profile.avatar_heading') }}</h2>

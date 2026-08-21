@@ -1,32 +1,23 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-default="{{ auth()->user()?->theme ?? 'system' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? __('panel.nav.dashboard') }} — {{ platform()->name }}</title>
 
     {{-- Branding 100% via platform() (ADR-007/010): nome, logo e cor primária
          vêm do .env (config/platform.php). Nada hardcoded. --}}
     <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
 
-    {{-- Tema claro/escuro: aplica a classe ANTES do primeiro paint (sem flash).
-         Default = preferência do SO; escolha persiste em localStorage. --}}
-    <script>
-        (function () {
-            var dark = localStorage.theme === 'dark'
-                || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.classList.toggle('dark', dark);
-        })();
-        function toggleTheme() {
-            var dark = !document.documentElement.classList.contains('dark');
-            document.documentElement.classList.toggle('dark', dark);
-            localStorage.theme = dark ? 'dark' : 'light';
-        }
-    </script>
+    {{-- Tema claro/escuro/sistema: aplica a classe ANTES do primeiro paint
+         (sem flash). Default = preferência do SO; escolha persiste em
+         localStorage (dispositivo) e na conta (users.theme). --}}
+    @include('partials.theme-script')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
+<body data-authenticated class="min-h-screen bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
     <header class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2 font-semibold">
@@ -48,10 +39,7 @@
 
             <div class="flex items-center gap-3">
                 <x-locale-switcher />
-                <button type="button" onclick="toggleTheme()" title="{{ __('panel.nav.toggle_theme') }}"
-                        class="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
-                    <span class="dark:hidden">🌙</span><span class="hidden dark:inline">☀️</span>
-                </button>
+                <x-theme-toggle />
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">{{ __('auth.ui.logout') }}</button>

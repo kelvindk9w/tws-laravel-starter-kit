@@ -9,12 +9,6 @@ return [
     'title' => 'Componentes UI',
     'subtitle' => 'Documentación viva de los componentes Blade del kit. Copia y usa: <x-button>, <x-alert> y compañía.',
 
-    'theme' => [
-        'toggle' => 'Alternar tema',
-        'light' => 'Claro',
-        'dark' => 'Oscuro',
-    ],
-
     'snippets' => [
         'copy' => 'Copiar',
         'copied' => '¡Copiado!',

@@ -15,6 +15,13 @@ return [
         ],
     ],
 
+    'theme' => [
+        'toggle' => 'Theme: switch between system, light and dark',
+        'system' => 'System',
+        'light' => 'Light',
+        'dark' => 'Dark',
+    ],
+
     'footer' => [
         'operated_by' => 'Operated by :platform',
         'support' => 'Support',

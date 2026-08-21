@@ -1,23 +1,23 @@
 @props([
     'title' => null,
-    // Landing é sempre escura (decisão de design); o showcase (/ui) deixa o
-    // visitante alternar claro/escuro (toggle persiste em localStorage).
-    'forceDark' => false,
 ])
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" @if ($forceDark) data-force-dark @endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-default="{{ auth()->user()?->theme ?? 'system' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? platform()->name }}</title>
 
     {{-- Branding 100% via platform() (ADR-007/010). --}}
     <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
 
+    @include('partials.theme-script')
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
+<body @auth data-authenticated @endauth class="min-h-screen bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
     <header class="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur dark:border-gray-800 dark:bg-gray-950/80">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3">
             <a href="{{ url('/') }}" class="flex items-center gap-2 font-display font-semibold tracking-tight">
@@ -39,6 +39,7 @@
 
             <div class="flex items-center gap-2">
                 <x-locale-switcher />
+                <x-theme-toggle />
                 @auth
                     <x-button :href="route('dashboard')">{{ __('landing.nav.dashboard') }}</x-button>
                 @else

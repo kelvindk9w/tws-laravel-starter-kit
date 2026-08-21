@@ -10,7 +10,8 @@
 //   [data-copy="texto"]     copia o texto; feedback no próprio botão + toast
 //   [data-reveal]           scroll-reveal (IntersectionObserver, uma vez)
 //   [data-scrollspy]        nav cujos links #âncora ganham aria-current
-//   [data-theme-toggle]     alterna .dark no <html> (persiste em localStorage)
+//   [data-theme-toggle]     cicla o tema: sistema → claro → escuro
+//   [data-theme-set="…"]    define o tema diretamente (segmented control)
 //   [data-locale-switch]    <select> de idioma — navega para a URL da option
 // =============================================================================
 
@@ -201,21 +202,80 @@ if (spyNav && 'IntersectionObserver' in window) {
     });
 }
 
-// --- Tema claro/escuro (showcase) ----------------------------------------------
+// --- Tema claro/escuro/sistema -------------------------------------------------
+//
+// 3 estados: system (padrão, segue prefers-color-scheme) → light → dark.
+// Resolução: localStorage 'theme' (dispositivo) → data-theme-default no <html>
+// (preferência da conta, renderizada server-side) → 'system'. O script inline
+// do <head> (partials/theme-script) aplica a classe ANTES do primeiro paint;
+// aqui ficam o toggle, o segmented control e a persistência.
 
-// Páginas com data-force-dark (landing) ignoram a preferência e ficam escuras.
-if (document.documentElement.hasAttribute('data-force-dark')) {
-    document.documentElement.classList.add('dark');
-} else if (localStorage.getItem('ui-theme') === 'light') {
-    document.documentElement.classList.remove('dark');
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+
+function themeSetting() {
+    let stored = null;
+    try { stored = localStorage.getItem('theme'); } catch { /* storage indisponível */ }
+
+    return ['light', 'dark', 'system'].includes(stored)
+        ? stored
+        : (document.documentElement.dataset.themeDefault || 'system');
 }
 
-document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
-    toggle.addEventListener('click', () => {
-        const dark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('ui-theme', dark ? 'dark' : 'light');
+function applyTheme(setting) {
+    const dark = setting === 'dark' || (setting === 'system' && themeMedia.matches);
+    document.documentElement.classList.toggle('dark', dark);
+
+    // Ícones do toggle e estado do segmented control refletem a PREFERÊNCIA
+    // (não o resultado resolvido): em 'system' mostramos o monitor.
+    document.querySelectorAll('[data-theme-icon]').forEach((icon) => {
+        icon.classList.toggle('hidden', icon.dataset.themeIcon !== setting);
     });
+    document.querySelectorAll('[data-theme-set]').forEach((button) => {
+        const active = button.dataset.themeSet === setting;
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        button.classList.toggle('is-active', active);
+    });
+}
+
+function setTheme(setting) {
+    try { localStorage.setItem('theme', setting); } catch { /* silencia */ }
+    applyTheme(setting);
+
+    // Logado: persiste na conta (padrão entre dispositivos) — fire-and-forget.
+    if (document.body.hasAttribute('data-authenticated')) {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        fetch('/settings/theme', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token ?? '',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ theme: setting }),
+            keepalive: true,
+        }).catch(() => {});
+    }
+}
+
+function cycleTheme() {
+    const order = { system: 'light', light: 'dark', dark: 'system' };
+    setTheme(order[themeSetting()] ?? 'system');
+}
+
+document.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-theme-toggle]');
+    if (toggle) { cycleTheme(); return; }
+
+    const setter = event.target.closest('[data-theme-set]');
+    if (setter) setTheme(setter.dataset.themeSet);
 });
+
+// Mudança do tema do SO reflete ao vivo quando a preferência é 'system'.
+themeMedia.addEventListener('change', () => {
+    if (themeSetting() === 'system') applyTheme('system');
+});
+
+applyTheme(themeSetting());
 
 // --- Seletor de idioma ---------------------------------------------------------
 

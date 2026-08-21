@@ -57,18 +57,9 @@
                     <p class="mt-2 max-w-xl text-gray-600 dark:text-gray-400">{{ __('showcase.subtitle') }}</p>
                 </div>
 
-                {{-- Toggle claro/escuro: prova os dois temas dos componentes --}}
-                <button
-                    type="button"
-                    data-theme-toggle
-                    title="{{ __('showcase.theme.toggle') }}"
-                    class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 transition-[transform,background-color,border-color,color] duration-150 ease-(--ease-out) hover:bg-gray-100 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                    <x-ui-icon name="sun" class="hidden h-4 w-4 dark:inline" />
-                    <x-ui-icon name="moon" class="h-4 w-4 dark:hidden" />
-                    <span class="hidden dark:inline">{{ __('showcase.theme.light') }}</span>
-                    <span class="dark:hidden">{{ __('showcase.theme.dark') }}</span>
-                </button>
+                {{-- Toggle de tema de 3 estados (sistema/claro/escuro): prova
+                     os dois temas dos componentes e segue o SO por padrão --}}
+                <x-theme-toggle />
             </header>
 
             {{-- Botões --}}

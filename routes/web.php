@@ -10,6 +10,7 @@ use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
+use App\Http\Controllers\ThemePreferenceController;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Dashboard;
 use App\Livewire\Notifications\Preferences as NotificationPreferences;
@@ -73,6 +74,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('projects', ProjectsIndex::class)->name('panel.projects');
     Route::get('notifications', NotificationPreferences::class)->name('panel.notifications');
     Route::get('profile', Profile::class)->name('panel.profile');
+
+    // Preferência de tema do usuário logado (claro/escuro/sistema) — a
+    // aplicação é instantânea via localStorage; aqui só persiste na conta.
+    Route::post('settings/theme', ThemePreferenceController::class)
+        ->name('settings.theme');
 
     // Senha de transação (hash separado da senha de login — ADR-006).
     // Rota standalone mantida da Fase 3; o painel Livewire (Perfil) usa o

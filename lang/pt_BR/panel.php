@@ -55,6 +55,8 @@ return [
         'email_readonly' => 'O e-mail é a chave de acesso da conta e não pode ser alterado por aqui.',
         'locale_label' => 'Idioma',
         'locale_hint' => 'Usado na interface e nos e-mails que você recebe.',
+        'theme_heading' => 'Aparência',
+        'theme_hint' => 'Sistema segue a preferência do dispositivo. A escolha é salva neste dispositivo e na sua conta.',
         'avatar_heading' => 'Foto do perfil',
         'avatar_hint' => 'Imagem JPG, PNG ou WebP. O arquivo é validado pelo conteúdo e reprocessado antes de ser salvo.',
         'avatar_updated' => 'Foto de perfil atualizada.',

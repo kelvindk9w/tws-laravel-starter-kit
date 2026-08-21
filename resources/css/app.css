@@ -109,6 +109,13 @@
         color: var(--brand);
         background: color-mix(in oklab, var(--brand) 12%, transparent);
     }
+
+    /* Segmented control de tema (Perfil): estado ativo via .is-active
+       (resources/js/ui.js). Só cor/fundo — motion-reduce não precisa agir. */
+    [data-theme-set].is-active {
+        background-color: var(--brand);
+        color: #fff;
+    }
 }
 
 /* Superfícies do navegador também carregam o design: seleção e foco. */

@@ -1,10 +1,10 @@
-<x-layouts.landing :title="platform()->name" :force-dark="true">
+<x-layouts.landing :title="platform()->name">
     {{-- Hero --}}
     <section class="mx-auto max-w-6xl px-4 pb-20 pt-16 text-center sm:pt-24">
         <h1 class="mx-auto max-w-3xl font-display text-4xl font-bold tracking-[-0.03em] text-balance sm:text-5xl">
             {{ __('landing.hero.title') }}
         </h1>
-        <p class="mx-auto mt-6 max-w-2xl text-lg text-gray-400">
+        <p class="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
             {{ __('landing.hero.subtitle') }}
         </p>
         <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -34,12 +34,12 @@
     </section>
 
     {{-- Barra de stack --}}
-    <section id="stack" class="scroll-mt-16 border-y border-gray-800 bg-gray-900/50">
+    <section id="stack" class="scroll-mt-16 border-y border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50">
         <div class="mx-auto max-w-6xl px-4 py-12" data-reveal>
             <h2 class="text-center text-sm font-semibold uppercase tracking-widest text-gray-500">{{ __('landing.stack.heading') }}</h2>
             <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
                 @foreach (__('landing.stack.items') as $tech)
-                    <x-badge class="border border-gray-800 px-3 py-1 text-sm">{{ $tech }}</x-badge>
+                    <x-badge class="border border-gray-200 px-3 py-1 text-sm dark:border-gray-800">{{ $tech }}</x-badge>
                 @endforeach
             </div>
         </div>
@@ -49,18 +49,18 @@
     <section id="horas" class="mx-auto max-w-6xl scroll-mt-16 px-4 py-20">
         <div class="mx-auto max-w-2xl text-center" data-reveal>
             <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('landing.hours.heading') }}</h2>
-            <p class="mt-3 text-balance text-gray-400">{{ __('landing.hours.subtitle') }}</p>
+            <p class="mt-3 text-balance text-gray-600 dark:text-gray-400">{{ __('landing.hours.subtitle') }}</p>
         </div>
-        <div class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-xl border border-gray-800" data-reveal>
-            <ul class="divide-y divide-gray-800">
+        <div class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800" data-reveal>
+            <ul class="divide-y divide-gray-200 dark:divide-gray-800">
                 @foreach (__('landing.hours.items') as $item)
-                    <li class="flex items-center justify-between gap-4 bg-gray-900/40 px-5 py-3">
-                        <span class="text-sm text-gray-300">{{ $item['task'] }}</span>
+                    <li class="flex items-center justify-between gap-4 bg-white px-5 py-3 dark:bg-gray-900/40">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['task'] }}</span>
                         <x-badge color="blue" class="shrink-0">{{ $item['hours'] }}h</x-badge>
                     </li>
                 @endforeach
             </ul>
-            <div class="flex items-center justify-between gap-4 border-t border-gray-700 bg-gray-900 px-5 py-4">
+            <div class="flex items-center justify-between gap-4 border-t border-gray-300 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
                 <span class="font-semibold">{{ __('landing.hours.total_label') }}</span>
                 <x-badge color="green" class="px-3 py-1 text-sm">{{ __('landing.hours.total_value', ['hours' => array_sum(array_column(__('landing.hours.items'), 'hours'))]) }}</x-badge>
             </div>
@@ -68,16 +68,16 @@
     </section>
 
     {{-- Grid de features --}}
-    <section id="recursos" class="scroll-mt-16 border-y border-gray-800 bg-gray-900/50">
+    <section id="recursos" class="scroll-mt-16 border-y border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50">
         <div class="mx-auto max-w-6xl px-4 py-20">
             <div class="mx-auto max-w-2xl text-center" data-reveal>
                 <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('landing.features.heading') }}</h2>
-                <p class="mt-3 text-balance text-gray-400">{{ __('landing.features.subtitle') }}</p>
+                <p class="mt-3 text-balance text-gray-600 dark:text-gray-400">{{ __('landing.features.subtitle') }}</p>
             </div>
             <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach (__('landing.features.items') as $feature)
                     <div
-                        class="rounded-xl border border-gray-800 bg-gray-950 p-6 transition-colors duration-200 ease-(--ease-out) hover:border-gray-700"
+                        class="rounded-xl border border-gray-200 bg-white p-6 transition-colors duration-200 ease-(--ease-out) hover:border-gray-300 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-gray-700"
                         data-reveal
                         style="transition-delay: {{ $loop->index % 3 * 60 }}ms"
                     >
@@ -85,7 +85,7 @@
                             <x-ui-icon :name="$feature['icon']" class="h-6 w-6" />
                         </div>
                         <h3 class="mt-4 font-display font-semibold tracking-[-0.01em]">{{ $feature['title'] }}</h3>
-                        <p class="mt-2 text-sm text-gray-400">{{ $feature['description'] }}</p>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ $feature['description'] }}</p>
                     </div>
                 @endforeach
             </div>
@@ -102,7 +102,7 @@
         <div class="relative mx-auto max-w-6xl px-4 py-24 text-center">
             <div data-reveal>
                 <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('landing.cta.heading') }}</h2>
-                <p class="mx-auto mt-3 max-w-xl text-gray-400">{{ __('landing.cta.subtitle') }}</p>
+                <p class="mx-auto mt-3 max-w-xl text-gray-600 dark:text-gray-400">{{ __('landing.cta.subtitle') }}</p>
             </div>
 
             {{-- Comando de instalação copiável (o quickstart real do README) --}}

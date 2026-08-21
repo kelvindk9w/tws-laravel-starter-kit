@@ -43,9 +43,15 @@ it('showcase renderiza snippets copiáveis, toggle de tema e scrollspy', functio
         ->assertSee('data-theme-toggle', false)
         ->assertSee('data-scrollspy', false)
         ->assertSee('data-toast-show', false)
-        ->assertSee('clipboard-toast', false)
-        // JS fica em resources/js (Vite) — nada de <script> inline na view.
-        ->assertDontSee('<script>', false);
+        ->assertSee('clipboard-toast', false);
+
+    // JS de UI fica em resources/js (Vite). A ÚNICA exceção inline é o script
+    // anti-flash de tema no <head> (partials/theme-script) — deliberado,
+    // coberto pela CSP base ('unsafe-inline' em script-src, config/security.php).
+    $html = $this->get('/ui')->getContent();
+
+    expect(substr_count((string) $html, '<script>'))->toBe(1)
+        ->and((string) $html)->toContain('prefers-color-scheme');
 });
 
 it('showcase responde 404 quando desabilitado', function () {

@@ -15,6 +15,13 @@ return [
         ],
     ],
 
+    'theme' => [
+        'toggle' => 'Tema: alterna entre sistema, claro y oscuro',
+        'system' => 'Sistema',
+        'light' => 'Claro',
+        'dark' => 'Oscuro',
+    ],
+
     'footer' => [
         'operated_by' => 'Operado por :platform',
         'support' => 'Soporte',

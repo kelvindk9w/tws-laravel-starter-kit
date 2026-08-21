@@ -55,6 +55,8 @@ return [
         'email_readonly' => 'The email is the account access key and cannot be changed here.',
         'locale_label' => 'Language',
         'locale_hint' => 'Used in the interface and in the emails you receive.',
+        'theme_heading' => 'Appearance',
+        'theme_hint' => 'System follows your device preference. The choice is saved on this device and on your account.',
         'avatar_heading' => 'Profile photo',
         'avatar_hint' => 'JPG, PNG or WebP image. The file is validated by content and reprocessed before being saved.',
         'avatar_updated' => 'Profile photo updated.',
