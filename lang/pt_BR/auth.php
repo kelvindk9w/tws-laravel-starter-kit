@@ -65,6 +65,10 @@ return [
         'dashboard_title' => 'Painel',
         'dashboard_greeting' => 'Olá, :name',
         'dashboard_code' => 'Seu código de usuário',
+
+        // Login demo: só quando config('ui.demo_login.enabled') — local/dev.
+        'demo_notice' => 'Ambiente de demonstração: as credenciais abaixo já vêm preenchidas, basta entrar.',
+        'demo_credentials' => 'Usuário demo',
     ],
 
 ];

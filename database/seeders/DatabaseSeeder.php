@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Core\Auth\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Usuário demo (credenciais conhecidas) apenas quando habilitado —
+        // padrão: APP_ENV=local (config/ui.php). Nunca em produção.
+        if (config('ui.demo_login.enabled')) {
+            $this->call(DemoUserSeeder::class);
+        }
     }
 }
