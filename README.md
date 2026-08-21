@@ -138,10 +138,11 @@ notas de acessibilidade): `<x-button>` (primary/secondary/outline/ghost/danger),
 `<x-card>`, `<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>`,
 `<x-skeleton>` (shimmer, com exemplo real via `wire:loading` em Projetos),
 `<x-loading-overlay>` (uso restrito documentado), `<x-snippet>`,
-`<x-locale-switcher>`, `<x-theme-toggle>` e `<x-ui-icon>` (em
-`resources/views/components/` — copie e use em qualquer tela). Abre com a
-seção **Tema** (design tokens vivos) e fecha com um **formulário completo**
-montado (o form de contato como exemplo).
+`<x-locale-switcher>`, `<x-theme-toggle>`, `<x-ui-icon>`, `<x-form-errors>` e
+`<x-flash-toast>` (em `resources/views/components/` — copie e use em qualquer
+tela). Abre com a seção **Tema** (design tokens vivos) e fecha com
+**Padrões de formulário**: os dois modos canônicos funcionais (Blade clássico
+e Livewire/AJAX) e as 4 estratégias de exibição de erros.
 
 - **Snippets copiáveis**: cada variante exibe o código `<x-…>` com botão de
   copiar (clipboard via `data-copy` em `resources/js/ui.js`, feedback no
@@ -158,6 +159,41 @@ defina `UI_SHOWCASE_ENABLED=false` (já está no `.env.prod.example`).
 
 > Nota: o nome `<x-icon>` pertence ao pacote `blade-icons` (dependência do
 > Filament) — por isso os ícones inline do kit usam `<x-ui-icon>`.
+
+### Padrões de formulário
+
+Dois padrões canônicos — **não invente um terceiro** (fetch/AJAX manual em
+Blade puro é redundante com o Livewire):
+
+1. **Blade clássico** — POST + redirect + `old()` + erros. Para formulários
+   públicos e simples (contato, login, cadastro). Referência viva: telas de
+   auth, form de contato da landing e o exemplo funcional do `/ui`
+   (`POST /ui/form-demo`, mesma flag do showcase).
+2. **Livewire (AJAX)** — `wire:submit` + `wire:model`, validação server-side
+   sem reload, estado preservado (não existe `old()` no Livewire). Para
+   interações ricas no painel. Referência viva: telas do painel e o form de
+   contato em versão Livewire no `/ui` (`App\Livewire\ContactForm` — mesmo
+   envio do `POST /contato`: validação, honeypot e e-mail enfileirado).
+
+**Regras do kit:**
+
+- **Repopulação**: `old()` em todos os campos, EXCETO senhas/segredos —
+  nunca repopular (segurança, não opção).
+- **Erros componentizados**: a estratégia de exibição vive em
+  `config/ui.php → error_display` (`UI_ERROR_DISPLAY` no .env):
+  - `inline` (padrão) — erro embaixo de cada campo, via
+    `:error="field_error('email')"` nos inputs;
+  - `summary` — só o resumo `<x-form-errors>` no topo, com **âncoras** que
+    rolam até o campo;
+  - `toast` — os erros disparam o toast do kit;
+  - `both` — inline + resumo (acessibilidade reforçada).
+- **Override por formulário**: `<x-form-errors display="summary" />` e
+  `field_error('email', 'summary')` vencem o config naquele form. A demo
+  clássica do `/ui` tem um seletor que troca a estratégia ao vivo.
+- **Flash de sessão → toast**: renderize `<x-flash-toast />` uma vez no
+  layout (já está nos 3 layouts do kit). Chaves padronizadas:
+  `session('status')`/`session('success')`/`session('contact_status')` →
+  toast de sucesso; `session('error')` → toast de erro.
 
 ### Login demo e admin demo (fricção zero em dev)
 
