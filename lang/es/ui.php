@@ -27,6 +27,11 @@ return [
         'hide' => 'Ocultar contraseña',
     ],
 
+    // Resumen de errores de validación (<x-form-errors>).
+    'form_errors' => [
+        'title' => 'Corrige los campos destacados',
+    ],
+
     'footer' => [
         'operated_by' => 'Operado por :platform',
         'support' => 'Soporte',

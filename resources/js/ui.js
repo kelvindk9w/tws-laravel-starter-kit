@@ -6,6 +6,7 @@
 //   [data-modal-open="id"]  abre o <x-modal id="id">
 //   [data-modal-close]      fecha o modal ancestral (backdrop, botões, Esc)
 //   [data-toast]            <x-toast> — controlado por showToast()
+//   [data-toast-sticky]     toast visível que NÃO auto-esconde (demos)
 //   [data-toast-show="id"]  botão que exibe o toast #id (auto-esconde)
 //   [data-copy="texto"]     copia o texto; feedback no próprio botão + toast
 //   [data-reveal]           scroll-reveal (IntersectionObserver, uma vez)
@@ -109,9 +110,13 @@ window.twsToast = (id, message = null, timeout = 3000) => {
 
 // Flash de sessão: toasts renderizados JÁ visíveis (sem .hidden — ex.:
 // confirmação do formulário de contato) entram visíveis e auto-escondem.
+// [data-toast-sticky] desliga o auto-esconder (demo estática no /ui).
 document.querySelectorAll('[data-toast]:not(.hidden)').forEach((toast) => {
     toast.classList.add('is-visible');
-    toastTimers.set(toast, setTimeout(() => hideToast(toast), 4000));
+
+    if (! toast.hasAttribute('data-toast-sticky')) {
+        toastTimers.set(toast, setTimeout(() => hideToast(toast), 4000));
+    }
 });
 
 document.addEventListener('click', (event) => {

@@ -28,6 +28,11 @@ return [
         'hide' => 'Ocultar senha',
     ],
 
+    // Resumo de erros de validação (<x-form-errors>).
+    'form_errors' => [
+        'title' => 'Corrija os campos destacados',
+    ],
+
     'footer' => [
         'operated_by' => 'Operado por :platform',
         'support' => 'Suporte',

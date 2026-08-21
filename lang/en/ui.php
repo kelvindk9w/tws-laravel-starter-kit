@@ -27,6 +27,11 @@ return [
         'hide' => 'Hide password',
     ],
 
+    // Validation error summary (<x-form-errors>).
+    'form_errors' => [
+        'title' => 'Review the highlighted fields',
+    ],
+
     'footer' => [
         'operated_by' => 'Operated by :platform',
         'support' => 'Support',
