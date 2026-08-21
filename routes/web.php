@@ -8,6 +8,7 @@ use App\Core\Auth\Http\Controllers\PasswordResetLinkController;
 use App\Core\Auth\Http\Controllers\RegisteredUserController;
 use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
+use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Dashboard;
@@ -17,6 +18,10 @@ use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing');
+
+// Troca de idioma (ADR-007): visitante → cookie; logado → também persiste
+// na conta. Whitelist: platform()->availableLocales (fora dela = 404).
+Route::get('locale/{locale}', LocaleController::class)->name('locale.switch');
 
 // Showcase de componentes UI (documentação viva do kit). Público apenas quando
 // habilitado (config/ui.php ← UI_SHOWCASE_ENABLED; padrão: só em local). Fora

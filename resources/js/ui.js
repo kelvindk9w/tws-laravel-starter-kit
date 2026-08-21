@@ -11,6 +11,7 @@
 //   [data-reveal]           scroll-reveal (IntersectionObserver, uma vez)
 //   [data-scrollspy]        nav cujos links #âncora ganham aria-current
 //   [data-theme-toggle]     alterna .dark no <html> (persiste em localStorage)
+//   [data-locale-switch]    <select> de idioma — navega para a URL da option
 // =============================================================================
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -214,4 +215,13 @@ document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
         const dark = document.documentElement.classList.toggle('dark');
         localStorage.setItem('ui-theme', dark ? 'dark' : 'light');
     });
+});
+
+// --- Seletor de idioma ---------------------------------------------------------
+
+// <x-locale-switcher>: a URL de troca (cookie + preferência da conta) vai no
+// value da <option> — navegar já resolve tudo server-side.
+document.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-locale-switch]');
+    if (select) window.location.assign(select.value);
 });

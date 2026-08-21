@@ -38,6 +38,7 @@
             </nav>
 
             <div class="flex items-center gap-2">
+                <x-locale-switcher />
                 @auth
                     <x-button :href="route('dashboard')">{{ __('landing.nav.dashboard') }}</x-button>
                 @else

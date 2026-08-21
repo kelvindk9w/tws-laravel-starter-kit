@@ -34,7 +34,7 @@ use Illuminate\Notifications\Notifiable;
  * - `name`: cast `encrypted` (AES-256-GCM da APP_KEY) — dado pessoal sensível.
  * - `email`: texto (é a chave de lookup do login; índice UNIQUE exige texto).
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'locale'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -135,6 +135,21 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return (bool) data_get(config('notifications.preferences'), "{$key}.default", false);
+    }
+
+    /**
+     * Locale preferido do usuário (interface + e-mails — ADR-007).
+     * Sem preferência salva (ou valor fora da whitelist) = padrão da plataforma.
+     */
+    public function preferredLocale(): string
+    {
+        $locale = $this->locale;
+
+        if (is_string($locale) && in_array($locale, platform()->availableLocales, true)) {
+            return $locale;
+        }
+
+        return platform()->locale;
     }
 
     /**

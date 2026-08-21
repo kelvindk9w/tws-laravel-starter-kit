@@ -17,6 +17,17 @@
                 @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
             <div>
+                <label for="locale" class="text-sm font-medium">{{ __('panel.profile.locale_label') }}</label>
+                <select id="locale" wire:model="locale"
+                        class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
+                    @foreach (platform()->availableLocales as $availableLocale)
+                        <option value="{{ $availableLocale }}">{{ __("ui.locale.names.{$availableLocale}") }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-xs text-gray-500">{{ __('panel.profile.locale_hint') }}</p>
+                @error('locale') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
                 <label class="text-sm font-medium">{{ __('auth.ui.email') }}</label>
                 <p class="mt-1 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $user->email }}</p>
                 <p class="mt-1 text-xs text-gray-500">{{ __('panel.profile.email_readonly') }}</p>

@@ -36,6 +36,11 @@ return [
     // Locale padrão da plataforma (MVP: pt-BR; multi-idioma preparado via lang/).
     'locale' => env('PLATFORM_LOCALE', 'pt_BR'),
 
+    // Idiomas disponíveis na UI (seletor de idioma + middleware SetLocale).
+    // O padrão do kit continua sendo 'locale' acima; visitantes escolhem via
+    // cookie e usuários logados persistem a preferência na conta (users.locale).
+    'available_locales' => array_values(array_filter(explode(',', (string) env('PLATFORM_AVAILABLE_LOCALES', 'pt_BR,en,es')))),
+
     // Timezone de EXIBIÇÃO (borda). Internamente tudo é UTC (ADR-010).
     'display_timezone' => env('PLATFORM_DISPLAY_TIMEZONE', 'America/Sao_Paulo'),
 

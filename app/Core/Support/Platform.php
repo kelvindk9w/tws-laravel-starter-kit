@@ -22,6 +22,8 @@ final readonly class Platform
         public ?string $supportEmail,
         public ?string $cnpj,
         public string $locale,
+        /** @var list<string> */
+        public array $availableLocales,
         public string $displayTimezone,
         public string $currency,
     ) {}
@@ -43,6 +45,7 @@ final readonly class Platform
             supportEmail: $config['support_email'] !== null ? (string) $config['support_email'] : null,
             cnpj: $config['cnpj'] !== null ? (string) $config['cnpj'] : null,
             locale: (string) $config['locale'],
+            availableLocales: array_values(array_map('strval', (array) $config['available_locales'])),
             displayTimezone: (string) $config['display_timezone'],
             currency: (string) $config['currency'],
         );

@@ -10,6 +10,7 @@ use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Services\SecureUploadService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -31,6 +32,8 @@ final class Profile extends Component
 
     public string $name = '';
 
+    public string $locale = '';
+
     public string $currentPassword = '';
 
     public string $password = '';
@@ -48,19 +51,27 @@ final class Profile extends Component
     public function mount(): void
     {
         $this->name = (string) $this->user()->name;
+        $this->locale = $this->user()->preferredLocale();
     }
 
     /**
-     * Atualiza os dados básicos (nome). O e-mail é a chave de acesso da
-     * conta — troca de e-mail exige fluxo próprio de verificação (futuro).
+     * Atualiza os dados básicos (nome, idioma). O e-mail é a chave de acesso
+     * da conta — troca de e-mail exige fluxo próprio de verificação (futuro).
      */
     public function updateProfile(): void
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
+            'locale' => ['required', 'string', Rule::in(platform()->availableLocales)],
+        ], [], [
+            'locale' => __('panel.profile.locale_label'),
         ]);
 
-        $this->user()->forceFill(['name' => $validated['name']])->save();
+        $this->user()->forceFill(['name' => $validated['name'], 'locale' => $validated['locale']])->save();
+
+        // Reflete imediatamente na interface da resposta (o middleware
+        // SetLocale garante nas próximas requisições).
+        app()->setLocale($validated['locale']);
 
         session()->flash('profile_status', __('panel.common.saved'));
     }

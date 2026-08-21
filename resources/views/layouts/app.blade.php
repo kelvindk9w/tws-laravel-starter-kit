@@ -47,6 +47,7 @@
             </nav>
 
             <div class="flex items-center gap-3">
+                <x-locale-switcher />
                 <button type="button" onclick="toggleTheme()" title="{{ __('panel.nav.toggle_theme') }}"
                         class="rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
                     <span class="dark:hidden">🌙</span><span class="hidden dark:inline">☀️</span>

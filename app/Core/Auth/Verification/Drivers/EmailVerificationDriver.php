@@ -27,6 +27,9 @@ final class EmailVerificationDriver implements VerificationChannelDriver
 
     public function send(User $user, string $code, VerificationPurpose $purpose): void
     {
-        Mail::to($user)->queue(new VerificationCodeMail($code, $purpose));
+        // Locale do destinatário (ADR-007): usuário com preferência salva
+        // recebe o código no idioma escolhido, mesmo em fluxo de visitante
+        // (ex.: reset de senha com cookie de idioma diferente).
+        Mail::to($user)->locale($user->preferredLocale())->queue(new VerificationCodeMail($code, $purpose));
     }
 }

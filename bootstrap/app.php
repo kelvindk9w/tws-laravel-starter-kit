@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
+use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Logging\Middleware\RequestLogging;
 use App\Core\Security\Middleware\SecurityHeaders;
 use App\Core\Security\Middleware\SecurityValidation;
@@ -37,6 +38,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Cadeia da API: rate limiting global (valores em config/security.php).
         $middleware->api(prepend: ['throttle:api']);
+
+        // Locale da interface web (ADR-007): usuário logado → preferência da
+        // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
+        $middleware->web(append: [SetLocale::class]);
 
         // Aliases para uso explícito em rotas/grupos.
         $middleware->alias([

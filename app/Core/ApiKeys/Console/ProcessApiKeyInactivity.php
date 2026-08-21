@@ -80,7 +80,11 @@ final class ProcessApiKeyInactivity extends Command
                         continue;
                     }
 
-                    Mail::to($key->owner)->queue(new ApiKeyInactivityWarningMail($key, $warningDays));
+                    // Locale do DESTINATÁRIO (ADR-007): o aviso sai no idioma
+                    // preferido do usuário, não no locale da requisição CLI.
+                    Mail::to($key->owner)
+                        ->locale($key->owner->preferredLocale())
+                        ->queue(new ApiKeyInactivityWarningMail($key, $warningDays));
 
                     $key->forceFill(['inactivity_warning_sent_at' => now()])->save();
 
