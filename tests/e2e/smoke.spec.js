@@ -23,17 +23,42 @@ test('link "Explorar componentes" leva ao showcase /ui', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Botões' })).toBeVisible();
 });
 
-test('landing tem CTA "Testar demo" e comando de instalação copiável', async ({ page }) => {
+test('landing tem CTA "Testar demo" e link do repositório', async ({ page }) => {
     await page.goto('/');
 
     // CTA demo (hero e CTA final) aponta para o login com credenciais demo.
     await expect(page.getByRole('link', { name: 'Testar demo' }).first()).toHaveAttribute('href', /\/login$/);
 
-    // Comando real do quickstart (README) visível no CTA final.
-    await expect(page.getByText(/git clone <repo> meu-projeto/)).toBeVisible();
+    // CTA do repositório (PLATFORM_REPO_URL) no CTA final, em nova aba.
+    const repo = page.getByRole('link', { name: 'Ver o código no repositório' });
+    await expect(repo).toBeVisible();
+    await expect(repo).toHaveAttribute('target', '_blank');
 
     // O hero usa o screenshot real do painel (asset local commitado).
     await expect(page.locator('img[src*="img/landing/dashboard.png"]')).toBeVisible();
+});
+
+test('seletor de idioma: landing renderiza em inglês e espanhol', async ({ page }) => {
+    await page.goto('/');
+
+    await page.locator('[data-locale-switch]').first().selectOption({ label: 'English' });
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Your Laravel SaaS');
+
+    await page.locator('[data-locale-switch]').first().selectOption({ label: 'Español' });
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Tu SaaS Laravel');
+});
+
+test('formulário de contato: envio válido mostra toast de sucesso', async ({ page }) => {
+    await page.goto('/#contato');
+
+    await page.getByLabel('Nome', { exact: true }).fill('Maria E2E');
+    await page.getByLabel('E-mail', { exact: true }).fill('maria-e2e@example.com');
+    await page.getByLabel('Assunto').selectOption('complaint');
+    await page.getByLabel('Mensagem').fill('Mensagem de teste E2E do formulário de contato.');
+    await page.getByRole('button', { name: 'Enviar mensagem' }).click();
+
+    // Redirect de volta + toast do kit com a confirmação.
+    await expect(page.locator('[data-toast]')).toContainText('Mensagem enviada');
 });
 
 test('showcase: snippets copiam com feedback e o tema alterna claro/escuro', async ({ page, context }) => {
@@ -50,12 +75,15 @@ test('showcase: snippets copiam com feedback e o tema alterna claro/escuro', asy
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(copied).toContain('<x-button');
 
-    // Toggle claro/escuro (persistido em localStorage entre páginas /ui).
+    // Toggle de 3 estados: sistema → claro → escuro → sistema
+    // (colorScheme padrão do Playwright = light, então 'system' não tem .dark).
     const html = page.locator('html');
-    await page.locator('[data-theme-toggle]').click();
+    await page.locator('[data-theme-toggle]').first().click(); // system → light
     await expect(html).not.toHaveClass(/dark/);
-    await page.reload();
-    await expect(html).not.toHaveClass(/dark/);
-    await page.locator('[data-theme-toggle]').click();
+    await page.locator('[data-theme-toggle]').first().click(); // light → dark
     await expect(html).toHaveClass(/dark/);
+    await page.reload(); // persistido em localStorage
+    await expect(html).toHaveClass(/dark/);
+    await page.locator('[data-theme-toggle]').first().click(); // dark → system
+    await expect(html).not.toHaveClass(/dark/);
 });

@@ -1,4 +1,5 @@
 // Screenshots de validação visual da landing e do showcase (dev).
+// Cobre: desktop+mobile, tema claro+escuro e os 3 idiomas na landing.
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -21,25 +22,66 @@ async function settle(page) {
     await page.waitForTimeout(700);
 }
 
+// Tema via localStorage ('light' | 'dark' | 'system') antes do primeiro load.
+async function themedPage(viewport, theme, locale = 'pt_BR') {
+    const context = await browser.newContext({ baseURL: base, viewport });
+    await context.addCookies([{ name: 'locale', value: locale, url: base }]);
+    const page = await context.newPage();
+    await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
+    return { context, page };
+}
+
+// --- Landing: 2 viewports × 2 temas ------------------------------------------
 for (const [name, viewport] of [['desktop', { width: 1440, height: 900 }], ['mobile', { width: 390, height: 844 }]]) {
-    const page = await browser.newPage({ baseURL: base, viewport });
+    for (const theme of ['dark', 'light']) {
+        const { context, page } = await themedPage(viewport, theme);
+        await page.goto('/', { waitUntil: 'networkidle' });
+        await settle(page);
+        await page.screenshot({ path: `test-results/shots/landing-${name}-${theme}.png`, fullPage: true });
+        await context.close();
+    }
+}
+
+// --- Landing nos 3 idiomas (desktop, escuro) ----------------------------------
+for (const locale of ['pt_BR', 'en', 'es']) {
+    const { context, page } = await themedPage({ width: 1440, height: 900 }, 'dark', locale);
     await page.goto('/', { waitUntil: 'networkidle' });
     await settle(page);
-    await page.screenshot({ path: `test-results/shots/landing-${name}.png`, fullPage: true });
+    await page.screenshot({ path: `test-results/shots/landing-lang-${locale}.png`, fullPage: true });
+    await context.close();
+}
+
+// --- Showcase: desktop 2 temas + mobile escuro --------------------------------
+{
+    const { context, page } = await themedPage({ width: 1440, height: 900 }, 'dark');
     await page.goto('/ui', { waitUntil: 'networkidle' });
     await settle(page);
-    await page.screenshot({ path: `test-results/shots/showcase-${name}.png`, fullPage: true });
-    if (name === 'desktop') {
-        await page.goto('/login', { waitUntil: 'networkidle' });
-        await page.screenshot({ path: 'test-results/shots/login-demo.png' });
+    await page.screenshot({ path: 'test-results/shots/showcase-desktop.png', fullPage: true });
+    await context.close();
+}
+{
+    const { context, page } = await themedPage({ width: 1440, height: 900 }, 'light');
+    await page.goto('/ui', { waitUntil: 'networkidle' });
+    await settle(page);
+    await page.screenshot({ path: 'test-results/shots/showcase-light.png', fullPage: true });
+    await context.close();
+}
+{
+    const { context, page } = await themedPage({ width: 390, height: 844 }, 'dark');
+    await page.goto('/ui', { waitUntil: 'networkidle' });
+    await settle(page);
+    await page.screenshot({ path: 'test-results/shots/showcase-mobile.png', fullPage: true });
+    await context.close();
+}
 
-        // Showcase em tema claro (toggle persiste em localStorage).
-        await page.goto('/ui', { waitUntil: 'networkidle' });
-        await page.locator('[data-theme-toggle]').click();
-        await page.waitForTimeout(300);
-        await page.screenshot({ path: 'test-results/shots/showcase-light.png', fullPage: true });
-        await page.locator('[data-theme-toggle]').click();
-    }
+// --- Login (credenciais demo) e login do admin demo ---------------------------
+{
+    const page = await browser.newPage({ baseURL: base, viewport: { width: 1440, height: 900 } });
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.screenshot({ path: 'test-results/shots/login-demo.png' });
+    await page.goto('/admin/login', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'test-results/shots/admin-login-demo.png' });
     await page.close();
 }
 
