@@ -40,11 +40,24 @@ it('landing renderiza os cards de features com ícones', function () {
     }
 });
 
-it('landing tem links para showcase, login e registro quando deslogado', function () {
+it('landing tem links para showcase, login, registro e demo quando deslogado', function () {
     $this->get('/')
         ->assertSee(route('ui.showcase'), false)
         ->assertSee(route('login'), false)
-        ->assertSee(route('register'), false);
+        ->assertSee(route('register'), false)
+        ->assertSee(__('landing.hero.cta_demo'))
+        ->assertSee(__('landing.nav.hours'))
+        ->assertSee('#horas', false);
+});
+
+it('landing mostra o screenshot real do painel e o comando de instalação copiável', function () {
+    expect(public_path('img/landing/dashboard.png'))->toBeFile();
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee(asset('img/landing/dashboard.png'), false)
+        ->assertSee(__('landing.cta.install_command'))
+        ->assertSee('data-copy', false);
 });
 
 it('landing mostra CTA do painel quando autenticado', function () {
@@ -60,6 +73,6 @@ it('toda string da landing passa pelo arquivo de idioma (sem fallback cru)', fun
     expect(__('landing.hero.title'))->not->toBe('landing.hero.title')
         ->and(__('landing.hours.heading'))->not->toBe('landing.hours.heading')
         ->and(__('landing.cta.heading'))->not->toBe('landing.cta.heading')
-        ->and(__('landing.features.items'))->toBeArray()->toHaveCount(10)
+        ->and(__('landing.features.items'))->toBeArray()->toHaveCount(12)
         ->and(__('landing.stack.items'))->toBeArray()->toHaveCount(10);
 });

@@ -34,6 +34,20 @@ it('showcase renderiza os componentes reais do kit', function () {
         ->assertSee('animate-spin', false);
 });
 
+it('showcase renderiza snippets copiáveis, toggle de tema e scrollspy', function () {
+    config()->set('ui.showcase_enabled', true);
+
+    $this->get('/ui')
+        ->assertOk()
+        ->assertSee('data-copy', false)
+        ->assertSee('data-theme-toggle', false)
+        ->assertSee('data-scrollspy', false)
+        ->assertSee('data-toast-show', false)
+        ->assertSee('clipboard-toast', false)
+        // JS fica em resources/js (Vite) — nada de <script> inline na view.
+        ->assertDontSee('<script>', false);
+});
+
 it('showcase responde 404 quando desabilitado', function () {
     config()->set('ui.showcase_enabled', false);
 
@@ -58,6 +72,7 @@ it('componentes Blade do kit existem e renderizam', function (string $component,
     'modal' => ['modal', '<x-modal id="m" title="T">corpo</x-modal>', 'data-modal'],
     'toast' => ['toast', '<x-toast type="success">OK</x-toast>', 'role="status"'],
     'empty-state' => ['empty-state', '<x-empty-state title="Vazio" />', 'border-dashed'],
+    'snippet' => ['snippet', '<x-snippet code="php artisan inspire" />', 'data-copy'],
     'spinner' => ['spinner', '<x-spinner />', 'animate-spin'],
     'ui-icon' => ['ui-icon', '<x-ui-icon name="key" />', '<svg'],
 ]);
