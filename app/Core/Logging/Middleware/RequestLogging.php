@@ -18,7 +18,10 @@ use Throwable;
 
 /**
  * Pipeline de logs de requisição (ADR-004/010) — segundo middleware da
- * cadeia global, logo após a validação de segurança.
+ * cadeia global, logo após a validação de segurança. Cobre TODAS as rotas:
+ * API, navegação web autenticada, super admin (/admin) e até rotas
+ * inexistentes (sinal de varredura — middleware de grupo não executa em 404,
+ * por isso este é global de propósito).
  *
  * - RECEBIMENTO: persiste o log com status INICIADA IMEDIATAMENTE, antes de
  *   qualquer processamento de negócio, com payload já redigido (LGPD).
@@ -29,10 +32,14 @@ use Throwable;
  * - tenant_uuid fica NULL até a Fase 4 (tenancy); log sem tenant = possível
  *   ataque (ADR-010). O gancho RequestLog::bindTenant() já existe.
  *
- * Exclusões (config security.request_logging.excluded_paths): health checks
- * (/up, /api/health) e preflights OPTIONS não geram log pesado para não
- * poluir a trilha — seguem no access log do nginx e passam normalmente
- * pela validação de segurança.
+ * Exclusões e resumos (config security.request_logging):
+ * - excluded_paths: health checks (/up, /api/health), assets estáticos
+ *   (build/*, storage/*, favicon) e preflights OPTIONS não geram log pesado
+ *   para não poluir a trilha — seguem no access log do nginx e passam
+ *   normalmente pela validação de segurança.
+ * - summarized_paths: updates genéricos do Livewire são registrados com o
+ *   payload RESUMIDO (só os nomes dos componentes) — o snapshot serializado
+ *   é enorme, repetitivo e sem valor de auditoria.
  *
  * Resiliência: se o banco falhar, a requisição NÃO é derrubada — a trilha
  * de arquivo (canal request_log, JSON estruturado) registra a falha.
@@ -107,11 +114,14 @@ final class RequestLogging
     }
 
     /**
-     * Grava o log INICIADA imediatamente, com payload redigido.
+     * Grava o log INICIADA imediatamente, com payload redigido (ou resumido
+     * nas rotas configuradas — ex.: updates genéricos do Livewire).
      */
     private function persistStarted(Request $request, string $correlationId): void
     {
-        $payload = $this->redactor->redactArray(RequestInputs::extract($request));
+        $payload = $this->shouldSummarize($request)
+            ? $this->summarizePayload($request)
+            : $this->redactor->redactArray(RequestInputs::extract($request));
 
         $context = [
             'correlation_id' => $correlationId,
@@ -144,14 +154,16 @@ final class RequestLogging
 
     /**
      * O que fica fora do log pesado:
-     * - tudo que não é api/* (o middleware é global para capturar 404 de
-     *   varredura na API, mas rotas web não entram neste log nesta fase);
      * - preflights CORS (OPTIONS);
-     * - rotas leves listadas em config/security.php (health checks).
+     * - rotas leves listadas em config/security.php: health checks
+     *   (/up, /api/health) e assets estáticos (build/*, storage/*, favicon).
+     *
+     * Todo o resto é auditado: API, navegação web autenticada, super admin
+     * e rotas inexistentes (varredura/ataque — ADR-010).
      */
     private function isExcluded(Request $request): bool
     {
-        if (! $request->is('api/*') || $request->isMethod('OPTIONS')) {
+        if ($request->isMethod('OPTIONS')) {
             return true;
         }
 
@@ -159,5 +171,51 @@ final class RequestLogging
         $excluded = config('security.request_logging.excluded_paths', []);
 
         return $excluded !== [] && $request->is(...$excluded);
+    }
+
+    /**
+     * Rotas com payload resumido (config security.request_logging
+     * .summarized_paths) — os updates genéricos do Livewire carregam
+     * snapshots enormes e repetitivos sem valor de auditoria.
+     */
+    private function shouldSummarize(Request $request): bool
+    {
+        /** @var list<string> $summarized */
+        $summarized = config('security.request_logging.summarized_paths', []);
+
+        return $summarized !== [] && $request->is(...$summarized);
+    }
+
+    /**
+     * Resumo do payload de updates Livewire: extrai apenas os nomes dos
+     * componentes envolvidos (do snapshot serializado) — o restante é
+     * ruído de transporte. Nunca passa pelo corpo bruto aqui.
+     *
+     * @return array<string, mixed>
+     */
+    private function summarizePayload(Request $request): array
+    {
+        $components = [];
+
+        /** @var mixed $updates */
+        $updates = $request->input('components', []);
+
+        if (is_array($updates)) {
+            foreach ($updates as $component) {
+                if (! is_array($component)) {
+                    continue;
+                }
+
+                $snapshot = json_decode((string) ($component['snapshot'] ?? ''), true);
+                $name = is_array($snapshot) ? ($snapshot['memo']['name'] ?? null) : null;
+
+                $components[] = is_string($name) ? $name : '[desconhecido]';
+            }
+        }
+
+        return [
+            '_resumo' => 'livewire.update',
+            'componentes' => $components,
+        ];
     }
 }

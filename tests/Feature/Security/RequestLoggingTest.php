@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\Auth\Models\User;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use App\Core\Logging\Models\RequestLog;
@@ -67,10 +68,73 @@ it('registra requisição para endpoint inexistente (sinal de varredura — ADR-
         ->and($log->tenant_uuid)->toBeNull();
 });
 
-it('não registra rotas web (log pesado é da API nesta fase)', function () {
-    $this->get('/')->assertOk();
+it('registra navegação web pública (landing) com ciclo completo', function () {
+    $response = $this->get('/');
+
+    $response->assertOk();
+
+    $log = RequestLog::query()->where('endpoint', '/')->sole();
+
+    expect($log->status)->toBe(RequestLogStatus::Concluida)
+        ->and($log->http_status_response)->toBe(200)
+        ->and($log->method)->toBe('GET')
+        ->and($log->duration_ms)->not->toBeNull();
+});
+
+it('registra navegação web autenticada (painel do usuário)', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/dashboard')->assertOk();
+
+    $log = RequestLog::query()->where('endpoint', 'dashboard')->sole();
+
+    expect($log->status)->toBe(RequestLogStatus::Concluida)
+        ->and($log->http_status_response)->toBe(200);
+});
+
+it('registra navegação do super admin (/admin)', function () {
+    $admin = User::factory()->create();
+    $admin->forceFill(['is_admin' => true])->save();
+
+    $this->actingAs($admin)->get('/admin')->assertOk();
+
+    expect(RequestLog::query()->where('endpoint', 'admin')->exists())->toBeTrue();
+});
+
+it('não registra assets estáticos nem health checks (config excluded_paths)', function () {
+    Route::get('/build/_test/app.css', fn () => response('/* css */', 200, ['Content-Type' => 'text/css']));
+    Route::get('/storage/_test/avatar.png', fn () => response('img', 200, ['Content-Type' => 'image/png']));
+
+    $this->get('/build/_test/app.css')->assertOk();
+    // /storage/* é rota assinada da Fase 5 (403 sem assinatura) — o que
+    // importa aqui é a ausência de log, não o status.
+    $this->get('/storage/_test/avatar.png');
+    $this->get('/up');
+    $this->get('/api/health');
+    $this->get('/favicon.ico');
 
     expect(RequestLog::query()->count())->toBe(0);
+});
+
+it('registra updates genéricos do Livewire com payload RESUMIDO', function () {
+    $snapshot = json_encode(['memo' => ['name' => 'contact-form'], 'data' => ['message' => 'segredo-que-nao-deve-vazar']]);
+
+    $response = $this->postJson('/livewire/update', [
+        '_token' => 'csrf-token',
+        'components' => [
+            ['snapshot' => $snapshot, 'updates' => ['message' => 'texto'], 'calls' => []],
+        ],
+    ]);
+
+    // A rota pode não existir no ambiente de teste (404) — o que importa é o log.
+    $log = RequestLog::query()->where('endpoint', 'livewire/update')->sole();
+
+    expect($log->payload['_resumo'])->toBe('livewire.update')
+        ->and($log->payload['componentes'])->toBe(['contact-form']);
+
+    $raw = (string) DB::table('request_logs')->value('payload');
+
+    expect($raw)->not->toContain('segredo-que-nao-deve-vazar');
 });
 
 it('marca ERRO com a mensagem quando a rota lança exceção', function () {

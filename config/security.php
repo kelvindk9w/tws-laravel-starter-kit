@@ -71,11 +71,19 @@ return [
 
     // --- Pipeline de logs de requisição (ADR-004) ------------------------------
     'request_logging' => [
-        // Rotas excluídas do log pesado em banco (health checks barulhentos).
-        // Continuam passando pela validação de segurança, headers e rate limit,
-        // e ficam no access log do nginx. Preflights OPTIONS também são
-        // excluídos (decisão do middleware).
-        'excluded_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_EXCLUDED_PATHS', 'up,api/health'))),
+        // Rotas excluídas do log pesado em banco: health checks barulhentos e
+        // assets estáticos (em produção o nginx serve direto; em dev local o
+        // servidor embutido as deixa chegar ao Laravel). Continuam passando
+        // pela validação de segurança, headers e rate limit, e ficam no access
+        // log do nginx. Preflights OPTIONS também são excluídos (middleware).
+        'excluded_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_EXCLUDED_PATHS', 'up,api/health,favicon.ico,build/*,storage/*,vendor/*'))),
+
+        // Rotas registradas com payload RESUMIDO: os updates genéricos do
+        // Livewire (/livewire/update — usado pelo painel e pelo /admin)
+        // carregam snapshots serializados enormes e repetitivos; o log guarda
+        // apenas os nomes dos componentes envolvidos. Continuam auditadas
+        // (método, endpoint, duração, status), só sem o payload bruto.
+        'summarized_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_SUMMARIZED_PATHS', 'livewire/*,admin/livewire/*'))),
     ],
 
 ];

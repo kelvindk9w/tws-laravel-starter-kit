@@ -28,10 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // 2º SecurityValidation (PRIMEIRA validação: rejeita payload malicioso
         //    antes de qualquer outro processamento, registrando a tentativa);
         // 3º RequestLogging (INICIADA imediato → CONCLUIDA/ERRO no terminate).
-        //    Global de propósito, com guarda interna para api/*: middleware de
-        //    grupo NÃO executa em rota não encontrada, e requisições para
-        //    endpoints inexistentes são exatamente o sinal de varredura/ataque
-        //    que o ADR-010 manda registrar.
+        //    Global de propósito: middleware de grupo NÃO executa em rota não
+        //    encontrada, e requisições para endpoints inexistentes são exatamente
+        //    o sinal de varredura/ataque que o ADR-010 manda registrar. Cobre
+        //    API + web autenticada + /admin; exclusões e resumos (assets,
+        //    health checks, updates Livewire) em config/security.php.
         $middleware->prepend(RequestLogging::class);
         $middleware->prepend(SecurityValidation::class);
         $middleware->prepend(SecurityHeaders::class);
