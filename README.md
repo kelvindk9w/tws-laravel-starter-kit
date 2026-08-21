@@ -137,6 +137,24 @@ docker compose exec app php artisan migrate --seed   # cria o usuário demo
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
 
+## Identidade visual / design tokens
+
+Rebranding de um projeto novo = **1 arquivo + .env**:
+
+- **`resources/css/theme.css`** — bloco `@theme` do Tailwind 4 com os tokens da
+  linguagem: cor de marca (`--color-brand`), tipografia (`--font-display`,
+  `--font-sans`), radii (`--radius-lg/xl`) e motion (`--ease-out`,
+  `--ease-in-out`, `--animate-spin/shimmer`). Importado pelo `app.css`.
+- **`.env` → `config/platform.php`** — nome (`PLATFORM_NAME`), logo
+  (`PLATFORM_LOGO_URL`) e cor primária (`PLATFORM_PRIMARY_COLOR`, injetada em
+  runtime como `--brand` no `<head>` — sem rebuild). Acesso tipado via
+  `platform()`.
+
+O showcase `/ui` abre com a seção **Tema** mostrando os tokens vivos e como
+editá-los. Tema claro/escuro/sistema: toggle de 3 estados nas navs e no Perfil,
+padrão = preferência do SO, sem flash no carregamento (script inline mínimo em
+`resources/views/partials/theme-script.blade.php`, coberto pela CSP base).
+
 ## Produção
 
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,

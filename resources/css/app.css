@@ -1,34 +1,17 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/space-grotesk';
 
+/* Identidade visual (cores de marca, fontes, radii, motion): UM arquivo —
+   resources/css/theme.css. Edite lá + .env para rebranding completo. */
+@import './theme.css';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-/* Tema claro/escuro por CLASSE (.dark no <html>) — o toggle fica no layout
-   do painel e persiste em localStorage. A preferência do SO é o default. */
+/* Tema claro/escuro por CLASSE (.dark no <html>) — toggle de 3 estados
+   (sistema/claro/escuro) em resources/js/ui.js; anti-flash no <head>
+   (partials/theme-script). A preferência do SO é o default. */
 @custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-
-    /* Voz display (títulos da landing/showcase) — self-hosted via @fontsource. */
-    --font-display: 'Space Grotesk Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-
-    /* Motion kit-wide: easings fortes (as padrão do CSS são fracas demais) e
-       durações por contexto. Regra: UI fica abaixo de 300ms. */
-    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-
-    /* Spinner mais rápido = percepção de carregamento mais rápido. */
-    --animate-spin: spin 0.7s linear infinite;
-
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-}
 
 @layer components {
     /*

@@ -16,6 +16,7 @@ return [
     ],
 
     'categories' => [
+        'theme' => 'Tema',
         'buttons' => 'Botones',
         'alerts' => 'Alertas',
         'badges' => 'Badges',
@@ -25,6 +26,22 @@ return [
         'toast' => 'Toast',
         'empty_state' => 'Estado vacío',
         'loading' => 'Carga',
+    ],
+
+    'theme_tokens' => [
+        'guide' => 'La identidad visual vive en UN archivo: resources/css/theme.css (bloque @theme de Tailwind 4: colores, fuentes, radios, motion) + config/platform.php alimentado por el .env (nombre, logo, color primario). Para rebrandear: edita ambos y todo el kit — landing, panel, admin y correos — lo refleja.',
+        'brand' => 'Color de marca',
+        'brand_hint' => 'PLATFORM_PRIMARY_COLOR en el .env se vuelve --brand en el <head> (sin rebuild) y --color-brand en las utilidades (bg-brand, text-brand).',
+        'fonts' => 'Tipografía',
+        'font_display_sample' => 'Display (Space Grotesk) — títulos',
+        'font_body_sample' => 'Cuerpo (Instrument Sans) — textos y UI',
+        'fonts_hint' => '--font-display y --font-sans en theme.css; clases font-display / font-sans.',
+        'radii' => 'Radios de borde',
+        'radii_hint' => '--radius-lg / --radius-xl en theme.css — el lenguaje usa rounded-lg y rounded-xl.',
+        'motion' => 'Motion',
+        'motion_hint' => '--ease-out / --ease-in-out fuertes; UI por debajo de 300ms; todo respeta prefers-reduced-motion.',
+        'modes' => 'Claro, oscuro o sistema',
+        'modes_hint' => 'Toggle de 3 estados arriba de esta página. Por defecto = preferencia del SO, sin flash al cargar; elección persistida en el dispositivo y en la cuenta.',
     ],
 
     'buttons' => [

@@ -1,0 +1,59 @@
+/* =============================================================================
+   IDENTIDADE VISUAL DO KIT — arquivo ÚNICO de design tokens (Tailwind 4 @theme).
+
+   Rebrand de um projeto novo = editar ESTE arquivo + o .env:
+   - Cor primária da marca: .env → PLATFORM_PRIMARY_COLOR (config/platform.php),
+     injetada em runtime como --brand (inline no <head> dos layouts). Aqui o
+     token --color-brand expõe utilitários (bg-brand, text-brand, ring-brand…).
+   - Tipografia: --font-sans (corpo) e --font-display (títulos da landing e
+     do showcase; Space Grotesk self-hosted via @fontsource-variable).
+   - Radii: escala usada pelos componentes (rounded-lg/xl).
+   - Motion: easings fortes e durações (regra: UI abaixo de 300ms).
+
+   Documentado no README ("Identidade visual / design tokens") e exibido no
+   showcase (/ui#theme).
+   ============================================================================= */
+
+@theme {
+    /* Marca — primária vem do .env; o fallback aqui é só para builds isolados. */
+    --color-brand: var(--brand, #0284c7);
+    --color-brand-foreground: #ffffff;
+
+    /* Tipografia */
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Voz display (títulos da landing/showcase) — self-hosted via @fontsource. */
+    --font-display: 'Space Grotesk Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Radii da linguagem (componentes usam rounded-lg/xl). */
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+
+    /* Motion kit-wide: easings fortes (as padrão do CSS são fracas demais). */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+    /* Spinner mais rápido = percepção de carregamento mais rápido. */
+    --animate-spin: spin 0.7s linear infinite;
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Skeleton: shimmer sutil (desligado com prefers-reduced-motion — ver
+       a classe .skeleton em app.css). */
+    --animate-shimmer: shimmer 1.6s var(--ease-in-out) infinite;
+
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
+    }
+}

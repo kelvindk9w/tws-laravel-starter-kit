@@ -62,6 +62,48 @@
                 <x-theme-toggle />
             </header>
 
+            {{-- Tema e tokens de design --}}
+            <section id="theme" class="mb-16 scroll-mt-24">
+                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.theme') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.guide') }}</p>
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <x-card :title="__('showcase.theme_tokens.brand')">
+                        <div class="flex items-center gap-3">
+                            <span class="h-10 w-10 rounded-lg bg-(--brand)"></span>
+                            <code class="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">PLATFORM_PRIMARY_COLOR={{ platform()->primaryColor }}</code>
+                        </div>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.brand_hint') }}</p>
+                    </x-card>
+
+                    <x-card :title="__('showcase.theme_tokens.fonts')">
+                        <p class="font-display text-lg font-semibold">{{ __('showcase.theme_tokens.font_display_sample') }}</p>
+                        <p class="mt-1 text-sm">{{ __('showcase.theme_tokens.font_body_sample') }}</p>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.fonts_hint') }}</p>
+                    </x-card>
+
+                    <x-card :title="__('showcase.theme_tokens.radii')">
+                        <div class="flex items-end gap-3">
+                            <span class="h-10 w-10 rounded-lg border border-gray-300 dark:border-gray-700"></span>
+                            <span class="h-10 w-10 rounded-xl border border-gray-300 dark:border-gray-700"></span>
+                            <code class="text-xs text-gray-500">rounded-lg / rounded-xl</code>
+                        </div>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.radii_hint') }}</p>
+                    </x-card>
+
+                    <x-card :title="__('showcase.theme_tokens.motion')">
+                        <code class="block text-xs text-gray-500">--ease-out: cubic-bezier(0.23, 1, 0.32, 1)</code>
+                        <code class="mt-1 block text-xs text-gray-500">--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)</code>
+                        <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.motion_hint') }}</p>
+                    </x-card>
+                </div>
+
+                <div class="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-800 dark:bg-gray-900/50">
+                    <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.theme_tokens.modes') }}</h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.modes_hint') }}</p>
+                </div>
+            </section>
+
             {{-- Botões --}}
             <section id="buttons" class="mb-16 scroll-mt-24">
                 <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.buttons') }}</h2>
