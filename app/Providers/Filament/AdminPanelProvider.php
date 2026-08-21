@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Security\Middleware\UseEvalBundleForAdmin;
 use App\Filament\Pages\Auth\Login;
@@ -15,6 +16,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -58,6 +60,13 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
+            // Seletor de idioma na topbar (mesmo formato compacto do resto
+            // do kit: bandeira + sigla). O locale é resolvido pelo SetLocale
+            // abaixo (preferência da conta → cookie → padrão da plataforma).
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => view('filament.topbar-locale-switcher')->render(),
+            )
             ->middleware([
                 // Bundle JS normal do Livewire (com eval) só no /admin — o
                 // Filament 5 não funciona com o build CSP-safe do Alpine.
@@ -71,6 +80,9 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                // Locale do painel (ADR-007): mesma resolução do app —
+                // preferência da conta → cookie → padrão da plataforma.
+                SetLocale::class,
                 // IP allowlist do super admin (ADR-011) — ver docblock acima.
                 EnsureAdminIpAllowed::class,
             ])
