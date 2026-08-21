@@ -8,6 +8,7 @@ return [
 
     'nav' => [
         'group_management' => 'Management',
+        'group_catalog' => 'Catalog',
         'group_security' => 'Security and audit',
         'group_system' => 'System',
     ],
@@ -60,6 +61,24 @@ return [
         'linked_keys' => 'Linked keys',
         'status_active' => 'Active',
         'status_archived' => 'Archived',
+    ],
+
+    'products' => [
+        'label' => 'Product',
+        'plural' => 'Products',
+        'image' => 'Photo',
+        'image_hint' => 'PNG, JPG or WebP up to 2 MB. No photo = placeholder.',
+        'title' => 'Title',
+        'price' => 'Price',
+        'price_hint' => 'Brazilian format: 1.234,56. Stored as cents (never float).',
+        'price_invalid' => 'Enter a valid amount (e.g. 1.234,56).',
+        'description' => 'Description',
+        'created_at' => 'Created at',
+        'filter_price' => 'Price range',
+        'price_up_to_100' => 'Up to R$ 100',
+        'price_100_to_500' => 'R$ 100 to R$ 500',
+        'price_above_500' => 'Above R$ 500',
+        'deleted' => 'Product deleted.',
     ],
 
     'request_logs' => [

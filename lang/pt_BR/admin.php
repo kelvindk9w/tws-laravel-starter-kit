@@ -8,6 +8,7 @@ return [
 
     'nav' => [
         'group_management' => 'Gestão',
+        'group_catalog' => 'Catálogo',
         'group_security' => 'Segurança e auditoria',
         'group_system' => 'Sistema',
     ],
@@ -60,6 +61,24 @@ return [
         'linked_keys' => 'Chaves vinculadas',
         'status_active' => 'Ativo',
         'status_archived' => 'Arquivado',
+    ],
+
+    'products' => [
+        'label' => 'Produto',
+        'plural' => 'Produtos',
+        'image' => 'Foto',
+        'image_hint' => 'PNG, JPG ou WebP até 2 MB. Sem foto = placeholder.',
+        'title' => 'Título',
+        'price' => 'Valor',
+        'price_hint' => 'Formato brasileiro: 1.234,56. Guardado em centavos (nunca float).',
+        'price_invalid' => 'Informe um valor válido (ex.: 1.234,56).',
+        'description' => 'Descrição',
+        'created_at' => 'Cadastrado em',
+        'filter_price' => 'Faixa de preço',
+        'price_up_to_100' => 'Até R$ 100',
+        'price_100_to_500' => 'R$ 100 a R$ 500',
+        'price_above_500' => 'Acima de R$ 500',
+        'deleted' => 'Produto excluído.',
     ],
 
     'request_logs' => [

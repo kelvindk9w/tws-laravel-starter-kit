@@ -8,6 +8,7 @@ return [
 
     'nav' => [
         'group_management' => 'Gestión',
+        'group_catalog' => 'Catálogo',
         'group_security' => 'Seguridad y auditoría',
         'group_system' => 'Sistema',
     ],
@@ -60,6 +61,24 @@ return [
         'linked_keys' => 'Claves vinculadas',
         'status_active' => 'Activo',
         'status_archived' => 'Archivado',
+    ],
+
+    'products' => [
+        'label' => 'Producto',
+        'plural' => 'Productos',
+        'image' => 'Foto',
+        'image_hint' => 'PNG, JPG o WebP hasta 2 MB. Sin foto = placeholder.',
+        'title' => 'Título',
+        'price' => 'Precio',
+        'price_hint' => 'Formato brasileño: 1.234,56. Guardado en centavos (nunca float).',
+        'price_invalid' => 'Ingrese un valor válido (ej.: 1.234,56).',
+        'description' => 'Descripción',
+        'created_at' => 'Registrado en',
+        'filter_price' => 'Rango de precio',
+        'price_up_to_100' => 'Hasta R$ 100',
+        'price_100_to_500' => 'R$ 100 a R$ 500',
+        'price_above_500' => 'Más de R$ 500',
+        'deleted' => 'Producto eliminado.',
     ],
 
     'request_logs' => [
