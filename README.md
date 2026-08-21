@@ -75,6 +75,44 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 # ou localmente, se tiver Node:  npx playwright test
 ```
 
+## Landing pública, showcase de componentes (/ui) e login demo
+
+A home `/` é uma **landing de vitrine** do kit (hero, stack, "horas
+economizadas", grid de features e CTA), com layout próprio
+(`resources/views/components/layouts/landing.blade.php` — público, sem auth,
+tema escuro). Strings em `lang/pt_BR/landing.php`; branding via `platform()`.
+
+### Showcase de componentes (`/ui`)
+
+Documentação viva dos **componentes Blade do kit** (estilo docs: sidebar com
+âncoras, variantes lado a lado): `<x-button>`, `<x-alert>`, `<x-badge>`,
+`<x-input>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`, `<x-card>`,
+`<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>` e `<x-ui-icon>`
+(em `resources/views/components/` — copie e use em qualquer tela).
+
+Kill switch: `UI_SHOWCASE_ENABLED` (config/ui.php). **Padrão: ligado só em
+`APP_ENV=local`**; desabilitado, a rota responde **404**. Em produção,
+defina `UI_SHOWCASE_ENABLED=false` (já está no `.env.prod.example`).
+
+> Nota: o nome `<x-icon>` pertence ao pacote `blade-icons` (dependência do
+> Filament) — por isso os ícones inline do kit usam `<x-ui-icon>`.
+
+### Login demo (fricção zero em dev)
+
+Quando `DEMO_LOGIN_ENABLED=true` (**padrão só em `APP_ENV=local`**), a tela de
+login mostra um aviso e vem com as credenciais demo pré-preenchidas — basta
+clicar em "Entrar" (padrão demo.filamentphp.com). O usuário é criado pelo
+`DemoUserSeeder`, chamado automaticamente pelo `DatabaseSeeder` quando o flag
+está ligado:
+
+```bash
+docker compose exec app php artisan migrate --seed   # cria o usuário demo
+# demo@tws.dev / demo-password  (sobreponíveis via DEMO_USER_EMAIL/PASSWORD)
+```
+
+**NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
+Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
+
 ## Produção
 
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,
