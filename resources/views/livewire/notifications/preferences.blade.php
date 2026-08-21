@@ -23,13 +23,13 @@
                     @else
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" wire:model="preferences.{{ $key }}" class="peer sr-only">
-                            <span class="h-6 w-11 rounded-full bg-gray-300 after:absolute after:start-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-(--brand) peer-checked:after:translate-x-full dark:bg-gray-700"></span>
+                            <span class="h-6 w-11 rounded-full bg-gray-300 after:absolute after:start-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-brand-foreground after:transition-all peer-checked:bg-brand peer-checked:after:translate-x-full dark:bg-gray-700"></span>
                         </label>
                     @endif
                 </div>
             @endforeach
         </div>
 
-        <button type="submit" class="mt-5 rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+        <button type="submit" class="mt-5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
     </form>
 </div>

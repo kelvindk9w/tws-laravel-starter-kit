@@ -21,8 +21,11 @@ return [
     // URL do logotipo oficial (nunca caminho hardcoded em views).
     'logo_url' => env('PLATFORM_LOGO_URL'),
 
-    // Cor primária da marca (hex) — painéis web e super admin refletem daqui.
-    'primary_color' => env('PLATFORM_PRIMARY_COLOR', '#0284C7'),
+    // Override OPCIONAL da cor primária da marca (hex). Vazio = identidade
+    // monocromática dos tokens (theme.css: preto no claro, branco no escuro —
+    // esquema Vercel/Linear), que se adapta ao tema; uma cor fixa não se
+    // adapta, por isso o padrão é NÃO definir esta chave.
+    'primary_color' => env('PLATFORM_PRIMARY_COLOR'),
 
     // URL institucional oficial do produto.
     'official_url' => env('PLATFORM_OFFICIAL_URL', env('APP_URL', 'http://localhost:8180')),

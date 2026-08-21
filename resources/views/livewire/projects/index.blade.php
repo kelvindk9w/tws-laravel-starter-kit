@@ -5,7 +5,7 @@
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.projects.subtitle') }}</p>
         </div>
         @unless ($showCreateForm)
-            <button type="button" wire:click="startCreate" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">
+            <button type="button" wire:click="startCreate" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">
                 {{ __('panel.projects.new') }}
             </button>
         @endunless
@@ -24,7 +24,7 @@
                        class="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
                 @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
-            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.create') }}</button>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.create') }}</button>
             <button type="button" wire:click="cancelCreate" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
         </form>
     @endif
@@ -53,7 +53,7 @@
                                    class="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
                             @error('editingName') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
-                        <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+                        <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
                         <button type="button" wire:click="cancelEdit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
                     </form>
                 @elseif ($confirmingDeleteUuid === $project->uuid)

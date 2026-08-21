@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
+use App\Core\Support\Platform;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\Dashboard;
 use Livewire\Livewire;
@@ -35,8 +36,30 @@ it('página completa carrega o branding via platform() no layout (ADR-007)', fun
         ->get('/dashboard')
         ->assertOk()
         ->assertSee(platform()->name)
-        ->assertSee(platform()->primaryColor)
         ->assertSee(__('panel.nav.api_keys'));
+});
+
+it('sem PLATFORM_PRIMARY_COLOR o layout NÃO injeta --brand (primária neutra dos tokens)', function () {
+    config(['platform.primary_color' => null]);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertDontSee('--brand:', false);
+});
+
+it('com PLATFORM_PRIMARY_COLOR definido o layout injeta o override --brand', function () {
+    config(['platform.primary_color' => '#0e7490']);
+    app()->forgetInstance(Platform::class);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/dashboard')
+        ->assertOk()
+        ->assertSee('--brand: #0e7490', false);
 });
 
 it('mostra os contadores de chaves ativas e projetos do próprio usuário', function () {

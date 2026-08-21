@@ -67,8 +67,8 @@ it('componentes Blade do kit existem e renderizam', function (string $component,
 
     expect($html)->toContain($expected);
 })->with([
-    'button' => ['button', '<x-button>OK</x-button>', 'bg-(--brand)'],
-    'button outline' => ['button', '<x-button variant="outline">OK</x-button>', 'border-(--brand)'],
+    'button' => ['button', '<x-button>OK</x-button>', 'bg-brand'],
+    'button outline' => ['button', '<x-button variant="outline">OK</x-button>', 'border-brand'],
     'alert' => ['alert', '<x-alert type="success">OK</x-alert>', 'role="alert"'],
     'badge' => ['badge', '<x-badge color="green">OK</x-badge>', 'rounded-full'],
     'input' => ['input', '<x-input label="Nome" name="nome" />', 'name="nome"'],

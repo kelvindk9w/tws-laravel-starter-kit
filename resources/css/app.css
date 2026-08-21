@@ -89,15 +89,15 @@
     }
 
     [data-scrollspy] a[aria-current='true'] {
-        color: var(--brand);
-        background: color-mix(in oklab, var(--brand) 12%, transparent);
+        color: var(--color-brand);
+        background: color-mix(in oklab, var(--color-brand) 12%, transparent);
     }
 
     /* Segmented control de tema (Perfil): estado ativo via .is-active
        (resources/js/ui.js). Só cor/fundo — motion-reduce não precisa agir. */
     [data-theme-set].is-active {
-        background-color: var(--brand);
-        color: #fff;
+        background-color: var(--color-brand);
+        color: var(--color-brand-foreground);
     }
 
     /* Skeleton (<x-skeleton>): barra base + shimmer via ::after (translateX,
@@ -136,10 +136,10 @@
 
 /* Superfícies do navegador também carregam o design: seleção e foco. */
 ::selection {
-    background: color-mix(in oklab, var(--brand) 40%, transparent);
+    background: color-mix(in oklab, var(--color-brand) 40%, transparent);
 }
 
 :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
 }

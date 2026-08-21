@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') — {{ platform()->name }}</title>
 
-    <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
+    {{-- Override de marca opcional (.env PLATFORM_PRIMARY_COLOR). Vazio =
+     identidade monocromática dos tokens (theme.css) — ver README. --}}
+    @if (platform()->primaryColor !== null)
+        <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
+    @endif
 
     @include('partials.theme-script')
 
@@ -17,7 +21,7 @@
             @if (platform()->logoUrl)
                 <img src="{{ platform()->logoUrl }}" alt="{{ platform()->name }}" class="h-8 w-auto">
             @else
-                <span class="inline-block h-8 w-8 rounded-lg bg-(--brand)"></span>
+                <span class="inline-block h-8 w-8 rounded-lg bg-brand"></span>
             @endif
             <span>{{ platform()->name }}</span>
         </a>

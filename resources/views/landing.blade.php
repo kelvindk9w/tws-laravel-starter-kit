@@ -85,7 +85,7 @@
                         data-reveal
                         style="transition-delay: {{ $loop->index % 3 * 60 }}ms"
                     >
-                        <div class="inline-flex rounded-lg bg-(--brand)/10 p-2.5 text-(--brand)">
+                        <div class="inline-flex rounded-lg bg-brand/10 p-2.5 text-brand">
                             <x-ui-icon :name="$feature['icon']" class="h-6 w-6" />
                         </div>
                         <h3 class="mt-4 font-display font-semibold tracking-[-0.01em]">{{ $feature['title'] }}</h3>
@@ -141,7 +141,7 @@
         <div
             aria-hidden="true"
             class="pointer-events-none absolute inset-0"
-            style="background: radial-gradient(ellipse 55% 60% at 50% 45%, color-mix(in oklab, var(--brand) 16%, transparent), transparent)"
+            style="background: radial-gradient(ellipse 55% 60% at 50% 45%, color-mix(in oklab, var(--color-brand) 16%, transparent), transparent)"
         ></div>
         <div class="relative mx-auto max-w-6xl px-4 py-24 text-center">
             <div data-reveal>

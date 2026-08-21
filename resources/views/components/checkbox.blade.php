@@ -13,7 +13,7 @@
         value="1"
         @checked($checked)
         @disabled($disabled)
-        class="h-4 w-4 rounded border-gray-300 text-(--brand) accent-(--brand) focus:ring-(--brand)/50 dark:border-gray-600"
+        class="h-4 w-4 rounded border-gray-300 text-brand accent-brand focus:ring-brand/50 dark:border-gray-600"
     >
     <span>{{ $label ?? $slot }}</span>
 </label>

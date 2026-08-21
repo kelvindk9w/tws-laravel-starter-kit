@@ -15,6 +15,6 @@
     </form>
 
     <p class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('login') }}" class="text-(--brand) hover:underline">{{ __('auth.ui.login_link') }}</a>
+        <a href="{{ route('login') }}" class="text-brand hover:underline">{{ __('auth.ui.login_link') }}</a>
     </p>
 @endsection

@@ -52,8 +52,12 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->brandName(platform()->name)
             ->brandLogo(platform()->logoUrl)
+            // Primária do painel: zinc neutro (identidade monocromática
+            // Vercel/Linear — claro e escuro) ou o override de marca do .env.
             ->colors([
-                'primary' => Color::hex(platform()->primaryColor),
+                'primary' => platform()->primaryColor !== null
+                    ? Color::hex(platform()->primaryColor)
+                    : Color::Zinc,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

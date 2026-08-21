@@ -2,9 +2,16 @@
    IDENTIDADE VISUAL DO KIT — arquivo ÚNICO de design tokens (Tailwind 4 @theme).
 
    Rebrand de um projeto novo = editar ESTE arquivo + o .env:
-   - Cor primária da marca: .env → PLATFORM_PRIMARY_COLOR (config/platform.php),
-     injetada em runtime como --brand (inline no <head> dos layouts). Aqui o
-     token --color-brand expõe utilitários (bg-brand, text-brand, ring-brand…).
+   - Cor primária da marca: MONOCROMÁTICA por padrão (esquema Vercel/Linear) —
+     quase-preto no tema claro, quase-branco no escuro, invertendo com a
+     classe .dark. Override opcional por .env → PLATFORM_PRIMARY_COLOR
+     (config/platform.php), injetado em runtime como --brand (inline no <head>
+     dos layouts, só quando definido) — uma cor fixa NÃO se adapta ao tema,
+     por isso o padrão neutro vive nos tokens abaixo, não no .env.
+   - O token --color-brand expõe utilitários (bg-brand, text-brand,
+     ring-brand…) e --color-brand-foreground é o texto SOBRE a primária
+     (branco no claro, preto no escuro) — use-o em vez de text-white.
+   - Azul sobrevive só como cor de status (badge/alert "info"). 
    - Tipografia: --font-sans (corpo) e --font-display (títulos da landing e
      do showcase; Space Grotesk self-hosted via @fontsource-variable).
    - Radii: escala usada pelos componentes (rounded-lg/xl).
@@ -15,9 +22,10 @@
    ============================================================================= */
 
 @theme {
-    /* Marca — primária vem do .env; o fallback aqui é só para builds isolados. */
-    --color-brand: var(--brand, #0284c7);
-    --color-brand-foreground: #ffffff;
+    /* Marca monocromática (tema claro): quase-preto. O override de marca
+       via .env (--brand) tem prioridade quando definido. */
+    --color-brand: var(--brand, var(--color-neutral-900));
+    --color-brand-foreground: var(--brand-foreground, #ffffff);
 
     /* Tipografia */
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
@@ -56,4 +64,12 @@
             transform: translateX(100%);
         }
     }
+}
+
+/* Tema escuro: a primária monocromática inverte (quase-branco sobre a
+   superfície escura, texto quase-preto sobre ela). O override de marca via
+   .env (--brand), quando definido, vale para os dois temas. */
+.dark {
+    --color-brand: var(--brand, var(--color-neutral-50));
+    --color-brand-foreground: var(--brand-foreground, var(--color-neutral-900));
 }

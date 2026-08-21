@@ -32,7 +32,7 @@
                 <p class="mt-1 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $user->email }}</p>
                 <p class="mt-1 text-xs text-gray-500">{{ __('panel.profile.email_readonly') }}</p>
             </div>
-            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
         </form>
     </section>
 
@@ -65,15 +65,15 @@
             @if ($user->avatarUrl())
                 <img src="{{ $user->avatarUrl() }}" alt="" class="h-16 w-16 rounded-full object-cover">
             @else
-                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-(--brand) text-xl font-semibold text-white">{{ mb_substr($user->name, 0, 1) }}</span>
+                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-brand text-xl font-semibold text-brand-foreground">{{ mb_substr($user->name, 0, 1) }}</span>
             @endif
             <div class="flex-1">
                 <input type="file" wire:model="avatar" accept="image/*"
-                       class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-(--brand) file:px-3 file:py-2 file:text-white">
+                       class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-brand-foreground">
                 @error('avatar') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 <div wire:loading wire:target="avatar" class="mt-1 text-xs text-gray-500">…</div>
             </div>
-            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white" @disabled(! $avatar)>{{ __('panel.common.save') }}</button>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground" @disabled(! $avatar)>{{ __('panel.common.save') }}</button>
         </form>
     </section>
 
@@ -97,7 +97,7 @@
                          wire:model="passwordConfirmation" autocomplete="new-password"
                          :error="$errors->first('passwordConfirmation')" />
             </div>
-            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
         </form>
     </section>
 
@@ -131,7 +131,7 @@
                          wire:model="transactionPasswordConfirmation" autocomplete="new-password"
                          :error="$errors->first('transactionPasswordConfirmation')" />
             </div>
-            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
         </form>
     </section>
 </div>

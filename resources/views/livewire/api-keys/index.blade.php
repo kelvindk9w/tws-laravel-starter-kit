@@ -5,7 +5,7 @@
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.api_keys.subtitle') }}</p>
         </div>
         @unless ($showCreateForm)
-            <button type="button" wire:click="startCreate" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">
+            <button type="button" wire:click="startCreate" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">
                 {{ __('panel.api_keys.new') }}
             </button>
         @endunless
@@ -37,7 +37,7 @@
                         <button type="button"
                                 data-copy="{{ $revealedSecretKey }}"
                                 data-copied-text="{{ __('panel.api_keys.copied') }}"
-                                class="rounded-lg bg-(--brand) px-3 py-1.5 text-sm font-medium text-white transition-[transform,filter] duration-150 ease-(--ease-out) hover:brightness-110 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100">{{ __('panel.api_keys.copy') }}</button>
+                                class="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-brand-foreground transition-[transform,filter] duration-150 ease-(--ease-out) hover:brightness-110 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100">{{ __('panel.api_keys.copy') }}</button>
                     </dd>
                 </div>
             </dl>
@@ -124,7 +124,7 @@
                 </fieldset>
 
                 <div class="flex gap-2">
-                    <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.create') }}</button>
+                    <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.create') }}</button>
                     <button type="button" wire:click="$set('showCreateForm', false)" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
                 </div>
             </form>
@@ -210,7 +210,7 @@
                 @error('gracePeriodMinutes') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
 
                 <div class="mt-4 flex gap-2">
-                    <button type="button" wire:click="requestRotate" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.confirm') }}</button>
+                    <button type="button" wire:click="requestRotate" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.confirm') }}</button>
                     <button type="button" wire:click="cancelRotate" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
                 </div>
             </div>
@@ -256,7 +256,7 @@
                 </div>
 
                 <div class="mt-4 flex gap-2">
-                    <button type="button" wire:click="saveProjects" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
+                    <button type="button" wire:click="saveProjects" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
                     <button type="button" wire:click="cancelEditProjects" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
                 </div>
             </div>
@@ -281,7 +281,7 @@
                             @error('transactionPassword') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div class="flex gap-2">
-                            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.api_keys.sensitive_send_code') }}</button>
+                            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.api_keys.sensitive_send_code') }}</button>
                             <button type="button" wire:click="cancelSensitiveAction" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
                         </div>
                     </form>
@@ -295,7 +295,7 @@
                             @error('verificationCode') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.api_keys.sensitive_confirm') }}</button>
+                            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.api_keys.sensitive_confirm') }}</button>
                             <button type="button" wire:click="sendSensitiveCode" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700" @disabled($this->resendCooldown() > 0)>
                                 @if ($this->resendCooldown() > 0)
                                     {{ __('panel.api_keys.sensitive_resend_in', ['seconds' => $this->resendCooldown()]) }}
