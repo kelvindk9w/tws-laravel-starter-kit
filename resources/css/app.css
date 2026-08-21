@@ -3,8 +3,8 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-// Tema claro/escuro por CLASSE (.dark no <html>) — o toggle fica no layout
-// do painel e persiste em localStorage. A preferência do SO é o default.
+/* Tema claro/escuro por CLASSE (.dark no <html>) — o toggle fica no layout
+   do painel e persiste em localStorage. A preferência do SO é o default. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
