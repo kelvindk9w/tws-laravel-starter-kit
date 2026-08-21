@@ -63,6 +63,21 @@ return [
         'status_archived' => 'Archivado',
     ],
 
+    'submissions' => [
+        'label' => 'Submisión de formulario',
+        'plural' => 'Submisiones de formulario',
+        'nickname' => 'Apodo',
+        'subject' => 'Asunto',
+        'message' => 'Mensaje',
+        'origin' => 'Origen',
+        'origin_classic' => 'Clásico (POST)',
+        'origin_livewire' => 'Livewire (AJAX)',
+        'security' => 'Seguridad',
+        'accepted' => 'Aceptada',
+        'blocked_attack' => 'Ataque bloqueado (:type)',
+        'received_at' => 'Recibida en',
+    ],
+
     'products' => [
         'label' => 'Producto',
         'plural' => 'Productos',

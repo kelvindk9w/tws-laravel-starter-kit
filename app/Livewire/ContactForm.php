@@ -4,28 +4,30 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Core\Contact\Http\Requests\ContactRequest;
-use App\Core\Contact\Mail\ContactMessageMail;
+use App\Core\Showcase\Models\FormSubmission;
+use App\Core\Showcase\Support\FormSubmissionGuard;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
- * Formulário de contato em versão Livewire (AJAX) — exemplo funcional do
- * padrão "Livewire" na seção "Padrões de formulário" do showcase /ui.
+ * Formulário demo em versão Livewire (AJAX) — exemplo funcional do padrão
+ * "Livewire" na seção "Padrões de formulário" do showcase /ui.
  *
- * Reusa a MESMA regra do POST clássico da landing: validação do
- * ContactRequest, honeypot com sucesso falso e e-mail enfileirado para
- * PLATFORM_CONTACT_EMAIL. A diferença é o transporte: wire:submit valida
- * server-side sem reload e o estado é preservado automaticamente (não
- * existe old() no mundo Livewire).
+ * Campos: apelido, assunto e mensagem (+ honeypot invisível "website").
+ * A submissão grava DE VERDADE em form_submissions (origem livewire) e
+ * aparece no super admin — inclusive as tentativas de ataque bloqueadas
+ * pela camada do formulário (vitrine de segurança — FormSubmissionGuard:
+ * payload inerte, sucesso falso, badge vermelho no topo da listagem).
+ * Este componente é autodefendido (config security.validation
+ * .delegated_components): o middleware global delega a detecção para cá.
+ *
+ * Diferença do padrão clássico: wire:submit valida server-side sem reload
+ * e o estado é preservado automaticamente (não existe old() no Livewire).
  */
 final class ContactForm extends Component
 {
-    public string $name = '';
-
-    public string $email = '';
+    public string $nickname = '';
 
     public string $subject = 'suggestion';
 
@@ -36,36 +38,31 @@ final class ContactForm extends Component
 
     public bool $sent = false;
 
-    public function send(): void
+    public function send(FormSubmissionGuard $guard): void
     {
-        $request = new ContactRequest;
+        /** @var array{nickname: string, subject: string, message: string, website?: ?string} $validated */
+        $validated = $this->validate([
+            'nickname' => ['required', 'string', 'max:120'],
+            'subject' => ['required', Rule::in(['suggestion', 'complaint', 'other'])],
+            'message' => ['required', 'string', 'min:10', 'max:2000'],
+            'website' => ['nullable', 'string', 'max:255'],
+        ], [], [
+            'nickname' => __('showcase.form_patterns.demo_nickname'),
+            'subject' => __('showcase.form_patterns.demo_subject'),
+            'message' => __('showcase.form_patterns.demo_message'),
+        ]);
 
-        /** @var array{name: string, email: string, subject: string, message: string, website?: ?string} $validated */
-        $validated = $this->validate($request->rules(), [], $request->attributes());
+        // Sucesso falso também para tentativas bloqueadas (honeypot/ataque) —
+        // não damos sinal de que a tentativa foi detectada.
+        $guard->submit(
+            origin: FormSubmission::ORIGIN_LIVEWIRE,
+            nickname: $validated['nickname'],
+            subject: $validated['subject'],
+            message: $validated['message'],
+            honeypot: $validated['website'] ?? null,
+        );
 
-        // Honeypot preenchido = bot: finge sucesso e não envia nada.
-        if (! empty($validated['website'])) {
-            Log::info('contact.honeypot', ['ip' => request()->ip(), 'via' => 'livewire']);
-            $this->reset('name', 'email', 'subject', 'message', 'website');
-            $this->sent = true;
-
-            return;
-        }
-
-        $recipient = platform()->contactEmail;
-
-        if ($recipient !== null) {
-            Mail::to($recipient)->queue(new ContactMessageMail(
-                senderName: $validated['name'],
-                senderEmail: $validated['email'],
-                subjectKey: $validated['subject'],
-                messageText: $validated['message'],
-            ));
-        } else {
-            Log::warning('contact.no_recipient', ['subject' => $validated['subject']]);
-        }
-
-        $this->reset('name', 'email', 'subject', 'message', 'website');
+        $this->reset('nickname', 'subject', 'message', 'website');
         $this->sent = true;
     }
 

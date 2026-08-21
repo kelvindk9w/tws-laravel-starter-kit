@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Contact\Mail\ContactMessageMail;
-use App\Core\Support\Platform;
 use App\Livewire\ContactForm;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 use Livewire\Livewire;
@@ -113,7 +110,7 @@ it('form clássico do /ui valida e retorna os erros', function () {
 
     $this->from('/ui')->post(route('ui.form-demo'), [])
         ->assertRedirect('/ui')
-        ->assertSessionHasErrors(['classic_name', 'classic_email', 'classic_password', 'classic_message']);
+        ->assertSessionHasErrors(['classic_nickname', 'classic_subject', 'classic_message']);
 });
 
 it('form clássico do /ui responde 404 quando o showcase está desabilitado', function () {
@@ -122,22 +119,20 @@ it('form clássico do /ui responde 404 quando o showcase está desabilitado', fu
     $this->post(route('ui.form-demo'), [])->assertNotFound();
 });
 
-it('form clássico repopula com old() e NUNCA repopula a senha', function () {
+it('form clássico repopula os campos com old() após erro de validação', function () {
     config()->set('ui.showcase_enabled', true);
 
     $this->followingRedirects()
         ->from('/ui')
         ->post(route('ui.form-demo'), [
-            'classic_name' => 'João Teste',
-            'classic_email' => 'joao@example.com',
-            'classic_password' => 'SuperSecreta9',
+            'classic_nickname' => 'joaoteste',
+            'classic_subject' => 'complaint',
             'classic_message' => 'curta', // inválida (min:10) → volta com erros
         ])
         ->assertOk()
-        ->assertSee('value="João Teste"', false)
-        ->assertSee('value="joao@example.com"', false)
+        ->assertSee('value="joaoteste"', false)
         ->assertSee('curta')
-        ->assertDontSee('SuperSecreta9');
+        ->assertSee('value="complaint" selected', false);
 });
 
 it('form clássico válido confirma via flash de sessão → toast', function () {
@@ -146,9 +141,8 @@ it('form clássico válido confirma via flash de sessão → toast', function ()
     $this->followingRedirects()
         ->from('/ui')
         ->post(route('ui.form-demo'), [
-            'classic_name' => 'João Teste',
-            'classic_email' => 'joao@example.com',
-            'classic_password' => 'SuperSecreta9',
+            'classic_nickname' => 'joaoteste',
+            'classic_subject' => 'suggestion',
             'classic_message' => 'Mensagem válida da demonstração.',
         ])
         ->assertOk()
@@ -161,12 +155,12 @@ it('estratégia inline (padrão): erro junto ao campo, sem resumo', function () 
 
     $response = $this->followingRedirects()
         ->from('/ui')
-        ->post(route('ui.form-demo'), ['classic_name' => 'João Teste']);
+        ->post(route('ui.form-demo'), ['classic_subject' => 'suggestion', 'classic_message' => 'Mensagem válida com dez caracteres.']);
 
-    $response->assertOk()->assertDontSee('href="#classic_email"', false);
+    $response->assertOk()->assertDontSee('href="#classic_nickname"', false);
 
     // Erro inline no <p> do próprio campo (markup do <x-input>).
-    $expected = __('validation.required', ['attribute' => __('showcase.form_patterns.demo_email')]);
+    $expected = __('validation.required', ['attribute' => __('showcase.form_patterns.demo_nickname')]);
     $response->assertSee('<p class="mt-1.5 text-sm text-red-600 dark:text-red-400">'.$expected.'</p>', false);
 });
 
@@ -178,9 +172,9 @@ it('override por formulário (classic_display) troca a estratégia de exibição
         ->from('/ui')
         ->post(route('ui.form-demo'), ['classic_display' => 'summary']);
 
-    $response->assertOk()->assertSee('href="#classic_email"', false);
+    $response->assertOk()->assertSee('href="#classic_nickname"', false);
 
-    $expected = __('validation.required', ['attribute' => __('showcase.form_patterns.demo_email')]);
+    $expected = __('validation.required', ['attribute' => __('showcase.form_patterns.demo_nickname')]);
     $response->assertDontSee('<p class="mt-1.5 text-sm text-red-600 dark:text-red-400">'.$expected.'</p>', false);
 
     // toast: erros disparam o toast do kit (sem resumo, sem inline)
@@ -193,7 +187,7 @@ it('override por formulário (classic_display) troca a estratégia de exibição
     $response->assertOk()
         ->assertSee('data-toast', false)
         ->assertSee($expected)
-        ->assertDontSee('href="#classic_email"', false);
+        ->assertDontSee('href="#classic_nickname"', false);
 });
 
 // --- Formulários reais migrados (auth + contato) ------------------------------
@@ -261,47 +255,32 @@ it('flash status aparece como toast nas telas de auth', function () {
 
 // --- Exemplo Livewire (AJAX) do showcase -------------------------------------
 
-it('contato Livewire valida server-side sem reload', function () {
+it('form Livewire do /ui valida server-side sem reload', function () {
     Livewire::test(ContactForm::class)
         ->set('subject', '') // tem default válido — esvaziar para falhar
         ->call('send')
-        ->assertHasErrors(['name', 'email', 'subject', 'message'])
+        ->assertHasErrors(['nickname', 'subject', 'message'])
         ->assertSet('sent', false);
 });
 
-it('contato Livewire enfileira o e-mail e confirma na própria tela', function () {
-    Mail::fake();
-    config()->set('platform.contact_email', 'contato@example.com');
-    app()->forgetInstance(Platform::class);
-
+it('form Livewire do /ui confirma na própria tela e limpa os campos', function () {
     Livewire::test(ContactForm::class)
-        ->set('name', 'Maria Silva')
-        ->set('email', 'maria@example.com')
+        ->set('nickname', 'maria_silva')
         ->set('subject', 'suggestion')
         ->set('message', 'Mensagem via Livewire no showcase.')
         ->call('send')
         ->assertHasNoErrors()
         ->assertSet('sent', true)
-        ->assertSet('name', '');
-
-    Mail::assertQueued(
-        ContactMessageMail::class,
-        fn (ContactMessageMail $mail): bool => $mail->hasTo('contato@example.com') && $mail->senderEmail === 'maria@example.com',
-    );
+        ->assertSet('nickname', '');
 });
 
-it('contato Livewire com honeypot preenchido finge sucesso e NÃO envia', function () {
-    Mail::fake();
-
+it('form Livewire com honeypot preenchido finge sucesso (registrada como bloqueada)', function () {
     Livewire::test(ContactForm::class)
-        ->set('name', 'Bot')
-        ->set('email', 'bot@example.com')
+        ->set('nickname', 'Bot')
         ->set('subject', 'other')
         ->set('message', 'Mensagem de bot com honeypot.')
         ->set('website', 'https://spam.example')
         ->call('send')
         ->assertHasNoErrors()
         ->assertSet('sent', true);
-
-    Mail::assertNothingQueued();
 });

@@ -34,6 +34,13 @@ use Throwable;
  *   detectado — item 32 do checklist) + X-Correlation-Id.
  * - É também quem resolve o correlation_id da requisição (primeira peça da
  *   cadeia), propagando para os demais middlewares e logs.
+ *
+ * Delegação (config security.validation): os formulários demo do /ui são
+ * uma vitrine de defesa EM CAMADAS — para eles, a detecção é feita pela
+ * própria aplicação (o MESMO AttackDetector), que registra a tentativa em
+ * form_submissions com payload inerte. Isso vale para o path do POST
+ * clássico (delegated_paths) e para updates Livewire em que TODOS os
+ * componentes envolvidos são autodefendidos (delegated_components).
  */
 final class SecurityValidation
 {
@@ -50,6 +57,12 @@ final class SecurityValidation
         $attackType = $this->detector->detect(RequestInputs::extract($request));
 
         if ($attackType !== null) {
+            // Rotas/componentes delegados: a camada da aplicação roda o MESMO
+            // detector e registra a tentativa (vitrine de segurança do /ui).
+            if ($this->isDelegated($request)) {
+                return $next($request);
+            }
+
             $this->registerBlockedAttempt($request, $correlationId, $attackType);
 
             return response()
@@ -61,6 +74,55 @@ final class SecurityValidation
         }
 
         return $next($request);
+    }
+
+    /**
+     * A detecção é delegada à camada da aplicação? Vale quando o path está
+     * em delegated_paths OU quando é um update Livewire em que TODOS os
+     * componentes envolvidos estão em delegated_components (autodefendidos:
+     * rodam o mesmo AttackDetector e registram a tentativa).
+     */
+    private function isDelegated(Request $request): bool
+    {
+        /** @var list<string> $paths */
+        $paths = config('security.validation.delegated_paths', []);
+
+        if ($paths !== [] && $request->is(...$paths)) {
+            return true;
+        }
+
+        if (! $request->is('livewire/*', 'admin/livewire/*')) {
+            return false;
+        }
+
+        /** @var list<string> $allowed */
+        $allowed = config('security.validation.delegated_components', []);
+
+        if ($allowed === []) {
+            return false;
+        }
+
+        /** @var mixed $components */
+        $components = $request->input('components', []);
+
+        if (! is_array($components) || $components === []) {
+            return false;
+        }
+
+        foreach ($components as $component) {
+            if (! is_array($component)) {
+                return false;
+            }
+
+            $snapshot = json_decode((string) ($component['snapshot'] ?? ''), true);
+            $name = is_array($snapshot) ? ($snapshot['memo']['name'] ?? null) : null;
+
+            if (! is_string($name) || ! in_array($name, $allowed, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

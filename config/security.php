@@ -69,6 +69,23 @@ return [
         'allowed_ips' => array_filter(explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))),
     ],
 
+    // --- Delegação de detecção de ataques (vitrine de segurança do /ui) ------
+    // Caminhos/componentes cuja detecção é feita pela PRÓPRIA camada da
+    // aplicação, em vez do bloqueio 422 do middleware SecurityValidation.
+    // A camada delegada roda o MESMO AttackDetector e registra a tentativa
+    // (form_submissions com blocked_at + payload inerte — vitrine exibida
+    // no super admin). NUNCA adicionar rotas de produção aqui sem
+    // implementar a detecção local correspondente.
+    'validation' => [
+        // POST clássico do form demo (Blade).
+        'delegated_paths' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_PATHS', 'ui/form-demo'))),
+
+        // Componentes Livewire "autodefendidos": quando TODOS os componentes
+        // de um /livewire/update estão nesta lista, a detecção é delegada a
+        // eles (o form demo Livewire roda o AttackDetector no send()).
+        'delegated_components' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_COMPONENTS', 'contact-form'))),
+    ],
+
     // --- Pipeline de logs de requisição (ADR-004) ------------------------------
     'request_logging' => [
         // Rotas excluídas do log pesado em banco: health checks barulhentos e

@@ -63,6 +63,21 @@ return [
         'status_archived' => 'Archived',
     ],
 
+    'submissions' => [
+        'label' => 'Form submission',
+        'plural' => 'Form submissions',
+        'nickname' => 'Nickname',
+        'subject' => 'Subject',
+        'message' => 'Message',
+        'origin' => 'Origin',
+        'origin_classic' => 'Classic (POST)',
+        'origin_livewire' => 'Livewire (AJAX)',
+        'security' => 'Security',
+        'accepted' => 'Accepted',
+        'blocked_attack' => 'Blocked attack (:type)',
+        'received_at' => 'Received at',
+    ],
+
     'products' => [
         'label' => 'Product',
         'plural' => 'Products',

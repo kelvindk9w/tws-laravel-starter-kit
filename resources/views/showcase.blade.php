@@ -83,8 +83,8 @@
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <x-card :title="__('showcase.theme_tokens.brand')">
                         <div class="flex items-center gap-3">
-                            <span class="h-10 w-10 rounded-lg bg-(--brand)"></span>
-                            <code class="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">PLATFORM_PRIMARY_COLOR={{ platform()->primaryColor }}</code>
+                            <span class="h-10 w-10 rounded-lg bg-brand"></span>
+                            <code class="rounded bg-gray-100 px-1.5 py-0.5 text-xs dark:bg-gray-800">PLATFORM_PRIMARY_COLOR={{ platform()->primaryColor ?? __('showcase.theme_tokens.brand_unset') }}</code>
                         </div>
                         <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.brand_hint') }}</p>
                     </x-card>
@@ -141,7 +141,7 @@
                 <p class="mb-3 text-sm text-gray-500">{{ __('showcase.buttons.states') }}</p>
                 <div class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-3">
                     <div class="flex flex-col items-center gap-2"><x-button :disabled="true">{{ __('showcase.buttons.disabled') }}</x-button><x-snippet :code="$snip['btn_disabled']" /></div>
-                    <div class="flex flex-col items-center gap-2"><x-button :disabled="true"><x-spinner size="sm" class="text-white" /> {{ __('showcase.buttons.loading') }}</x-button><x-snippet :code="$snip['btn_loading']" /></div>
+                    <div class="flex flex-col items-center gap-2"><x-button :disabled="true"><x-spinner size="sm" class="text-brand-foreground" /> {{ __('showcase.buttons.loading') }}</x-button><x-snippet :code="$snip['btn_loading']" /></div>
                     <div class="flex flex-col items-center gap-2"><x-button href="#buttons" variant="secondary">{{ __('showcase.buttons.as_link') }}</x-button><x-snippet :code="$snip['btn_link']" /></div>
                 </div>
             </section>
@@ -295,7 +295,7 @@
                 </div>
                 <p class="mb-3 text-sm text-gray-500">{{ __('showcase.loading.in_button') }}</p>
                 <div class="mb-10 flex flex-wrap items-center gap-3">
-                    <x-button :disabled="true"><x-spinner size="sm" class="text-white" /> {{ __('showcase.loading.saving') }}</x-button>
+                    <x-button :disabled="true"><x-spinner size="sm" class="text-brand-foreground" /> {{ __('showcase.loading.saving') }}</x-button>
                 </div>
 
                 <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.loading.skeleton_heading') }}</h3>
@@ -386,14 +386,22 @@
                         <x-form-errors :display="$demoDisplay" />
 
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <x-input :label="__('showcase.form_patterns.demo_name')" name="classic_name" :value="old('classic_name')" :error="field_error('classic_name', $demoDisplay)" required maxlength="120" />
-                            <x-input :label="__('showcase.form_patterns.demo_email')" name="classic_email" type="email" :value="old('classic_email')" :error="field_error('classic_email', $demoDisplay)" required />
+                            <x-input :label="__('showcase.form_patterns.demo_nickname')" name="classic_nickname" :value="old('classic_nickname')" :placeholder="__('showcase.form_patterns.demo_nickname_placeholder')" :error="field_error('classic_nickname', $demoDisplay)" required maxlength="120" />
+                            <x-select :label="__('showcase.form_patterns.demo_subject')" name="classic_subject" :error="field_error('classic_subject', $demoDisplay)" required>
+                                @foreach (['suggestion', 'complaint', 'other'] as $subjectKey)
+                                    <option value="{{ $subjectKey }}" @selected(old('classic_subject', 'suggestion') === $subjectKey)>{{ __("contact.subjects.{$subjectKey}") }}</option>
+                                @endforeach
+                            </x-select>
                         </div>
 
-                        {{-- Senha/segredo NUNCA é repopulada com old() — regra do kit. --}}
-                        <x-input :label="__('showcase.form_patterns.demo_password')" name="classic_password" type="password" :hint="__('showcase.form_patterns.demo_password_hint')" :error="field_error('classic_password', $demoDisplay)" required autocomplete="off" />
-
                         <x-textarea :label="__('showcase.form_patterns.demo_message')" name="classic_message" :placeholder="__('showcase.form_patterns.demo_message_placeholder')" :error="field_error('classic_message', $demoDisplay)" required minlength="10" maxlength="2000">{{ old('classic_message') }}</x-textarea>
+
+                        {{-- Honeypot anti-spam: invisível para humanos; bots o
+                             preenchem → bloqueio registrado (vitrine /admin). --}}
+                        <div class="hidden" aria-hidden="true">
+                            <label for="classic_website">{{ __('showcase.form_patterns.demo_honeypot_label') }}</label>
+                            <input id="classic_website" type="text" name="website" tabindex="-1" autocomplete="off">
+                        </div>
 
                         <x-select :label="__('showcase.form_patterns.display_field')" name="classic_display" :hint="__('showcase.form_patterns.display_field_hint')">
                             @foreach (['inline', 'summary', 'toast', 'both'] as $strategyOption)
