@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/space-grotesk';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -10,4 +11,112 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Voz display (títulos da landing/showcase) — self-hosted via @fontsource. */
+    --font-display: 'Space Grotesk Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Motion kit-wide: easings fortes (as padrão do CSS são fracas demais) e
+       durações por contexto. Regra: UI fica abaixo de 300ms. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+    /* Spinner mais rápido = percepção de carregamento mais rápido. */
+    --animate-spin: spin 0.7s linear infinite;
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+}
+
+@layer components {
+    /*
+        Modal: entrada scale(0.95) + opacity, transform-origin center (modais
+        não são ancorados num trigger). CSS transitions — interruptíveis,
+        diferente de keyframes que recomeçam do zero. Estados via .is-open
+        (resources/js/ui.js); o painel sai mais rápido do que entra.
+    */
+    .modal-backdrop {
+        transition: opacity 180ms var(--ease-out);
+    }
+
+    .modal-panel {
+        transform-origin: center;
+        transition:
+            opacity 220ms var(--ease-out),
+            transform 220ms var(--ease-out);
+    }
+
+    [data-modal]:not(.is-open) .modal-backdrop,
+    [data-modal]:not(.is-open) .modal-panel {
+        opacity: 0;
+    }
+
+    [data-modal]:not(.is-open) .modal-panel {
+        transition-duration: 160ms;
+    }
+
+    /*
+        Toast: desliza de fora da tela (de baixo, onde mora) com ease-out.
+        Estado visível via .is-visible (resources/js/ui.js).
+    */
+    .toast-item {
+        transition:
+            opacity 240ms var(--ease-out),
+            transform 240ms var(--ease-out);
+    }
+
+    .toast-item:not(.is-visible) {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-modal]:not(.is-open) .modal-panel {
+        transform: scale(0.95);
+    }
+
+    .toast-item:not(.is-visible) {
+        transform: translateY(calc(100% + 1rem));
+    }
+
+    /* Scroll-reveal discreto: a classe .reveal só é adicionada por JS
+       (sem JS ou com reduced-motion o conteúdo fica sempre visível). */
+    .reveal {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    .reveal.is-visible {
+        opacity: 1;
+        transform: none;
+        transition:
+            opacity 500ms var(--ease-out),
+            transform 500ms var(--ease-out);
+    }
+}
+
+/* Scrollspy: link ativo da sidebar (showcase). */
+@layer components {
+    [data-scrollspy] a {
+        transition:
+            color 150ms var(--ease-out),
+            background-color 150ms var(--ease-out);
+    }
+
+    [data-scrollspy] a[aria-current='true'] {
+        color: var(--brand);
+        background: color-mix(in oklab, var(--brand) 12%, transparent);
+    }
+}
+
+/* Superfícies do navegador também carregam o design: seleção e foco. */
+::selection {
+    background: color-mix(in oklab, var(--brand) 40%, transparent);
+}
+
+:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
 }

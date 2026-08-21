@@ -6,7 +6,9 @@
     'disabled' => false,
 ])
 
-{{-- Botão padrão do kit. <x-button>…</x-button> ou <x-button href="…"> (link). --}}
+{{-- Botão padrão do kit. <x-button>…</x-button> ou <x-button href="…"> (link).
+     Motion: transitions com propriedades explícitas (nunca `all`), :active
+     scale(0.97) = feedback instantâneo de pressão; desligado com reduced-motion. --}}
 @php
     $variantClasses = match ($variant) {
         'primary' => 'bg-(--brand) text-white hover:brightness-110',
@@ -20,7 +22,9 @@
         'lg' => 'px-6 py-3 text-base',
         default => 'px-4 py-2 text-sm',
     };
-    $classes = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition'
+    $classes = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium'
+        .' transition-[transform,background-color,border-color,color,filter] duration-150 ease-(--ease-out)'
+        .' active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100'
         .' disabled:cursor-not-allowed disabled:opacity-50 '.$sizeClasses.' '.$variantClasses;
 @endphp
 

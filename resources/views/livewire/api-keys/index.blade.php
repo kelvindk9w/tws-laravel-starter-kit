@@ -35,8 +35,9 @@
                     <dd class="mt-1 flex flex-wrap items-center gap-2">
                         <code class="break-all rounded bg-white px-2 py-1 text-sm font-semibold dark:bg-gray-900" data-testid="revealed-secret-key">{{ $revealedSecretKey }}</code>
                         <button type="button"
-                                onclick="navigator.clipboard.writeText('{{ $revealedSecretKey }}'); this.textContent = '{{ __('panel.api_keys.copied') }}';"
-                                class="rounded-lg bg-(--brand) px-3 py-1.5 text-sm font-medium text-white">{{ __('panel.api_keys.copy') }}</button>
+                                data-copy="{{ $revealedSecretKey }}"
+                                data-copied-text="{{ __('panel.api_keys.copied') }}"
+                                class="rounded-lg bg-(--brand) px-3 py-1.5 text-sm font-medium text-white transition-[transform,filter] duration-150 ease-(--ease-out) hover:brightness-110 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100">{{ __('panel.api_keys.copy') }}</button>
                     </dd>
                 </div>
             </dl>
