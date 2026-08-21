@@ -16,9 +16,16 @@ use App\Livewire\Profile;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::view('/', 'landing');
+
+// Showcase de componentes UI (documentação viva do kit). Público apenas quando
+// habilitado (config/ui.php ← UI_SHOWCASE_ENABLED; padrão: só em local). Fora
+// isso responde 404 — em produção deve estar desabilitado (ver .env.example).
+Route::get('ui', function () {
+    abort_unless(config('ui.showcase_enabled'), 404);
+
+    return view('showcase');
+})->name('ui.showcase');
 
 // =============================================================================
 // Autenticação web (sessão) — Fase 3 (ADR-006/010).
