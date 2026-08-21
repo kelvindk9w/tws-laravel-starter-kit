@@ -117,6 +117,15 @@ return [
         'open_hint' => 'Opens in a new tab with a short-lived signed URL.',
     ],
 
+    'profile' => [
+        'heading' => 'My profile',
+        'email_readonly_note' => 'The e-mail cannot be changed in this demo — changing the demo account login would break access for the next visitors.',
+        'password_section' => 'Password',
+        'password_note' => 'Password change is unavailable in the demo. This section is a UI preview — no field is submitted.',
+        'current_password' => 'Current password',
+        'saved' => 'Profile updated.',
+    ],
+
     'settings' => [
         'label' => 'Settings',
         'heading' => 'System settings',

@@ -117,6 +117,15 @@ return [
         'open_hint' => 'Abre em nova aba com URL assinada de curta duração.',
     ],
 
+    'profile' => [
+        'heading' => 'Meu perfil',
+        'email_readonly_note' => 'O e-mail não pode ser alterado nesta demonstração — mudar o login da conta demo quebraria o acesso dos próximos visitantes.',
+        'password_section' => 'Senha',
+        'password_note' => 'Troca de senha indisponível na demo. Esta seção é uma prévia da interface — nenhum campo é enviado.',
+        'current_password' => 'Senha atual',
+        'saved' => 'Perfil atualizado.',
+    ],
+
     'settings' => [
         'label' => 'Configurações',
         'heading' => 'Configurações do sistema',

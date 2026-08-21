@@ -8,14 +8,17 @@ use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Security\Middleware\UseEvalBundleForAdmin;
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Profile;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -67,6 +70,14 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => view('filament.topbar-locale-switcher')->render(),
             )
+            // Perfil demo-safe no menu do usuário (nome editável, e-mail
+            // read-only, seção de senha só prévia — ver Pages\Profile).
+            ->userMenuItems([
+                'profile' => MenuItem::make()
+                    ->label(fn (): string => __('admin.profile.heading'))
+                    ->url(fn (): string => Profile::getUrl())
+                    ->icon(Heroicon::OutlinedUserCircle),
+            ])
             ->middleware([
                 // Bundle JS normal do Livewire (com eval) só no /admin — o
                 // Filament 5 não funciona com o build CSP-safe do Alpine.

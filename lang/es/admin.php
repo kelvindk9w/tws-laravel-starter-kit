@@ -117,6 +117,15 @@ return [
         'open_hint' => 'Abre en nueva pestaña con URL firmada de corta duración.',
     ],
 
+    'profile' => [
+        'heading' => 'Mi perfil',
+        'email_readonly_note' => 'El e-mail no puede cambiarse en esta demostración — cambiar el login de la cuenta demo rompería el acceso de los próximos visitantes.',
+        'password_section' => 'Contraseña',
+        'password_note' => 'El cambio de contraseña no está disponible en la demo. Esta sección es una vista previa de la interfaz — ningún campo se envía.',
+        'current_password' => 'Contraseña actual',
+        'saved' => 'Perfil actualizado.',
+    ],
+
     'settings' => [
         'label' => 'Configuraciones',
         'heading' => 'Configuraciones del sistema',
