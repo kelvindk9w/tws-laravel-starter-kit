@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Contact\Mail\ContactMessageMail;
+use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Support\Platform;
 use Illuminate\Support\Facades\Mail;
 
@@ -35,6 +36,7 @@ it('envia a mensagem por fila para o e-mail de contato configurado', function ()
         ContactMessageMail::class,
         fn (ContactMessageMail $mail): bool => $mail->hasTo('contato@example.com')
             && $mail->senderEmail === 'maria@example.com'
+            && $mail->senderName === 'Maria Silva'
             && $mail->subjectKey === 'suggestion',
     );
 });
@@ -55,8 +57,8 @@ it('valida os campos obrigatórios e o assunto na whitelist', function () {
     $this->post(route('contact.store'), [])
         ->assertSessionHasErrors(['name', 'email', 'subject', 'message']);
 
-    $this->post(route('contact.store'), validContact(['subject' => 'hack', 'message' => 'curta']))
-        ->assertSessionHasErrors(['subject', 'message']);
+    $this->post(route('contact.store'), validContact(['email' => 'nao-e-email', 'subject' => 'hack', 'message' => 'curta']))
+        ->assertSessionHasErrors(['email', 'subject', 'message']);
 
     Mail::assertNothingQueued();
 });
@@ -91,4 +93,12 @@ it('feedback de sucesso aparece como toast do kit na landing', function () {
         ->assertOk()
         ->assertSee('data-toast', false)
         ->assertSee(__('contact.sent'));
+});
+
+it('respeita o locale do visitante (cookie) na mensagem de retorno', function () {
+    Mail::fake();
+
+    $this->withCookie(SetLocale::COOKIE, 'en')
+        ->post(route('contact.store'), validContact())
+        ->assertSessionHas('contact_status', __('contact.sent', locale: 'en'));
 });
