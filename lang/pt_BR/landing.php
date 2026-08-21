@@ -8,9 +8,11 @@ return [
 
     'nav' => [
         'features' => 'Recursos',
+        'hours' => 'Economia',
         'stack' => 'Stack',
         'components' => 'Componentes',
         'login' => 'Entrar',
+        'demo' => 'Testar demo',
         'register' => 'Criar conta',
         'dashboard' => 'Ir para o painel',
     ],
@@ -19,7 +21,9 @@ return [
         'title' => 'Seu SaaS Laravel em produção em dias, não meses',
         'subtitle' => 'Autenticação com 2FA, API keys com rotação, multitenancy, painel Livewire, admin Filament, uploads seguros, backup e testes — tudo pronto e auditado. Você constrói só o que é do seu produto.',
         'cta_components' => 'Explorar componentes',
+        'cta_demo' => 'Testar demo',
         'cta_register' => 'Criar conta',
+        'screenshot_alt' => 'Captura de tela real do painel do kit',
         'mockup_title' => 'Painel',
         'mockup_row_1' => 'API keys ativas',
         'mockup_row_2' => 'Projetos',
@@ -64,19 +68,29 @@ return [
             ['icon' => 'clipboard-document-list', 'title' => 'Auditoria e logs', 'description' => 'Request logging em banco e arquivo com redaction de dados sensíveis (LGPD) e retenção configurável.'],
             ['icon' => 'archive-box', 'title' => 'Backup e filas', 'description' => 'Dump PostgreSQL criptografado para R2 com webhook de validação cruzada, e Horizon para as filas.'],
             ['icon' => 'beaker', 'title' => 'Testes de verdade', 'description' => 'Cobertura Pest de feature em todos os módulos + E2E Playwright — validação de conteúdo, não só de status.'],
+            ['icon' => 'language', 'title' => 'i18n pt-BR nativo', 'description' => 'Toda string passa por arquivos de idioma (lang/pt_BR), nunca texto fixo em views — multi-idioma já preparado.'],
+            ['icon' => 'server-stack', 'title' => 'Docker autocontido', 'description' => 'Só Docker na máquina: o compose sobe app, banco, Redis, filas e scheduler — inclusive a stack de produção.'],
         ],
     ],
 
     'cta' => [
         'heading' => 'Pronto para construir?',
         'subtitle' => 'Crie sua conta e explore o painel, ou mergulhe no código: cada decisão está documentada em ADRs.',
+        'install_label' => 'Do clone ao ar em minutos — só Docker na máquina',
+        'install_command' => 'git clone <repo> meu-projeto && cd meu-projeto && cp .env.example .env && docker compose up -d --build',
+        'copy' => 'Copiar',
+        'copied' => 'Copiado!',
         'register' => 'Criar conta',
+        'demo' => 'Testar demo',
         'login' => 'Entrar',
     ],
 
     'footer' => [
         'tagline' => 'Starter kit Laravel para SaaS — base estrutural pronta para construir.',
-        'showcase' => 'Showcase de componentes',
+        'links_heading' => 'Atalhos',
+        'showcase' => 'Componentes',
+        'demo' => 'Login demo',
+        'api_status' => 'Status da API',
     ],
 
 ];
