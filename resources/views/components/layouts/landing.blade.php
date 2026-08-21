@@ -86,12 +86,8 @@
         </div>
     </footer>
 
-    {{-- Toast de flash (ex.: formulário de contato enviado): renderizado já
-         visível; o auto-esconder vive em resources/js/ui.js. --}}
-    @if (session('contact_status'))
-        <div class="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
-            <x-toast type="success">{{ session('contact_status') }}</x-toast>
-        </div>
-    @endif
+    {{-- Flash de sessão (ex.: formulário de contato enviado) → toast do kit;
+         renderizado já visível, o auto-esconder vive em resources/js/ui.js. --}}
+    <x-flash-toast />
 </body>
 </html>

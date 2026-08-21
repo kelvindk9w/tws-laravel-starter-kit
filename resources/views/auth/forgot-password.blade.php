@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
         @csrf
 
-        <x-input :label="__('auth.ui.email')" name="email" type="email" :value="old('email')" required autofocus autocomplete="username" />
+        <x-input :label="__('auth.ui.email')" name="email" type="email" :value="old('email')" :error="field_error('email')" required autofocus autocomplete="username" />
 
         <x-button type="submit" class="w-full">{{ __('auth.ui.forgot_submit') }}</x-button>
     </form>

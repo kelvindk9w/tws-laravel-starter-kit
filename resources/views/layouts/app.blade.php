@@ -51,5 +51,8 @@
     <main class="mx-auto max-w-5xl px-4 py-8">
         {{ $slot }}
     </main>
+
+    {{-- Flash de sessão (ex.: conta criada) → toast do kit. --}}
+    <x-flash-toast />
 </body>
 </html>

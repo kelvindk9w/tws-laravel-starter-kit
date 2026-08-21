@@ -107,18 +107,22 @@
             <form method="POST" action="{{ route('contact.store') }}" class="space-y-4">
                 @csrf
 
+                {{-- Resumo conforme config/ui.php → error_display (inline =
+                     padrão: o erro aparece junto ao campo, via field_error). --}}
+                <x-form-errors />
+
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-input :label="__('contact.form.name')" name="name" :value="old('name')" :placeholder="__('contact.form.name_placeholder')" :error="$errors->first('name')" required maxlength="120" />
-                    <x-input :label="__('contact.form.email')" name="email" type="email" :value="old('email')" :placeholder="__('contact.form.email_placeholder')" :error="$errors->first('email')" required />
+                    <x-input :label="__('contact.form.name')" name="name" :value="old('name')" :placeholder="__('contact.form.name_placeholder')" :error="field_error('name')" required maxlength="120" />
+                    <x-input :label="__('contact.form.email')" name="email" type="email" :value="old('email')" :placeholder="__('contact.form.email_placeholder')" :error="field_error('email')" required />
                 </div>
 
-                <x-select :label="__('contact.form.subject')" name="subject" :error="$errors->first('subject')" required>
+                <x-select :label="__('contact.form.subject')" name="subject" :error="field_error('subject')" required>
                     @foreach (['suggestion', 'complaint', 'other'] as $subjectKey)
                         <option value="{{ $subjectKey }}" @selected(old('subject') === $subjectKey)>{{ __("contact.subjects.{$subjectKey}") }}</option>
                     @endforeach
                 </x-select>
 
-                <x-textarea :label="__('contact.form.message')" name="message" :placeholder="__('contact.form.message_placeholder')" :error="$errors->first('message')" required minlength="10" maxlength="5000">{{ old('message') }}</x-textarea>
+                <x-textarea :label="__('contact.form.message')" name="message" :placeholder="__('contact.form.message_placeholder')" :error="field_error('message')" required minlength="10" maxlength="5000">{{ old('message') }}</x-textarea>
 
                 {{-- Honeypot anti-spam: invisível para humanos (CSS), fora do
                      tab order; bots que o preenchem recebem sucesso falso. --}}

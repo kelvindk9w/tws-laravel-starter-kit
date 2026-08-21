@@ -20,10 +20,12 @@
 
         <x-input :label="__('auth.ui.email')" name="email" type="email"
                  :value="old('email', $demo['enabled'] ? $demo['email'] : '')"
+                 :error="field_error('email')"
                  required autofocus autocomplete="username" />
 
         <x-input :label="__('auth.ui.password')" name="password" type="password"
                  :value="$demo['enabled'] ? $demo['password'] : ''"
+                 :error="field_error('password')"
                  required autocomplete="current-password" />
 
         <x-checkbox :label="__('auth.ui.remember_me')" name="remember" />

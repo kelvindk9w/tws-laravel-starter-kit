@@ -23,22 +23,15 @@
         </a>
 
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            @if (session('status'))
-                <x-alert type="success" class="mb-4">{{ session('status') }}</x-alert>
-            @endif
-
-            @if ($errors->any())
-                <x-alert type="error" class="mb-4">
-                    <ul class="list-inside list-disc space-y-0.5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </x-alert>
-            @endif
+            {{-- Resumo de erros conforme a estratégia (config/ui.php →
+                 error_display); inline é tratado pelos próprios campos. --}}
+            <x-form-errors class="mb-4" />
 
             @yield('content')
         </div>
     </main>
+
+    {{-- Flash de sessão (ex.: link de reset enviado) → toast do kit. --}}
+    <x-flash-toast />
 </body>
 </html>
