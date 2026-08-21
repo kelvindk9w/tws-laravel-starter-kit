@@ -264,3 +264,30 @@ it('o seeder da demo cadastra 40 submissões variadas com bloqueadas', function 
         ->and(FormSubmission::query()->where('origin', 'classic')->count())->toBeGreaterThan(0)
         ->and(FormSubmission::query()->where('origin', 'livewire')->count())->toBeGreaterThan(0);
 });
+
+it('delegação Livewire vale no endpoint real ofuscado (livewire-<hash>/update)', function () {
+    // Descobre o path real do update do Livewire 4 (ofuscado) via HTML do /ui.
+    config()->set('ui.showcase_enabled', true);
+    $html = $this->get('/ui')->assertOk()->getContent();
+    preg_match('#livewire-[a-z0-9]+/update#', (string) $html, $m);
+    $updatePath = $m[0] ?? 'livewire/update';
+
+    $snapshot = json_encode(['memo' => ['name' => 'contact-form'], 'data' => []]);
+    $payload = [
+        'components' => [
+            ['snapshot' => $snapshot, 'updates' => ['message' => "<script>alert('ola')</script>"], 'calls' => []],
+        ],
+    ];
+
+    // Componente delegado: o middleware NÃO bloqueia (a camada do form defende).
+    $delegated = $this->postJson('/'.$updatePath, $payload);
+    expect($delegated->status())->not->toBe(422);
+
+    // Componente FORA da allowlist: o middleware bloqueia normalmente (422).
+    $outro = $this->postJson('/'.$updatePath, [
+        'components' => [
+            ['snapshot' => json_encode(['memo' => ['name' => 'dashboard'], 'data' => []]), 'updates' => ['message' => '<script>alert(1)</script>'], 'calls' => []],
+        ],
+    ]);
+    expect($outro->status())->toBe(422);
+});

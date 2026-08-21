@@ -100,7 +100,7 @@ return [
         // carregam snapshots serializados enormes e repetitivos; o log guarda
         // apenas os nomes dos componentes envolvidos. Continuam auditadas
         // (método, endpoint, duração, status), só sem o payload bruto.
-        'summarized_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_SUMMARIZED_PATHS', 'livewire/*,admin/livewire/*'))),
+        'summarized_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_SUMMARIZED_PATHS', 'livewire/*,livewire-*,admin/livewire/*'))),
     ],
 
 ];

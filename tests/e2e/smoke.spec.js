@@ -41,10 +41,10 @@ test('landing tem CTA "Testar demo" e link do repositório', async ({ page }) =>
 test('seletor de idioma: landing renderiza em inglês e espanhol', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('[data-locale-switch]').first().selectOption({ label: 'English' });
+    await page.locator('[data-locale-switch]').first().selectOption({ label: '🇺🇸 EN' });
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Your Laravel SaaS');
 
-    await page.locator('[data-locale-switch]').first().selectOption({ label: 'Español' });
+    await page.locator('[data-locale-switch]').first().selectOption({ label: '🇪🇸 ES' });
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Tu SaaS Laravel');
 });
 

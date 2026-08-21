@@ -91,7 +91,8 @@ final class SecurityValidation
             return true;
         }
 
-        if (! $request->is('livewire/*', 'admin/livewire/*')) {
+        // Livewire 4 ofusca o path do update (livewire-<hash>/update).
+        if (! $request->is('livewire/*', 'livewire-*', 'admin/livewire/*')) {
             return false;
         }
 
