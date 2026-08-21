@@ -108,8 +108,10 @@ que nenhuma chave fica para trás). Resolução do locale (middleware `SetLocale
    landing, do showcase e do painel → rota `GET /locale/{locale}`);
 3. **Fallback** → `PLATFORM_LOCALE` (padrão do kit: pt-BR).
 
-Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php). O super admin
-Filament (/admin) permanece no locale padrão do app (uso interno).
+Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php). O seletor é
+compacto — **bandeira + sigla** (🇧🇷 PT / 🇺🇸 EN / 🇪🇸 ES) — e o **super admin
+Filament (/admin) segue a MESMA resolução** (o middleware `SetLocale` está no
+stack do painel): seletor na topbar, `lang/*/admin.php` nos 3 idiomas.
 
 ### Tema claro/escuro/sistema
 
@@ -171,9 +173,24 @@ Blade puro é redundante com o Livewire):
    (`POST /ui/form-demo`, mesma flag do showcase).
 2. **Livewire (AJAX)** — `wire:submit` + `wire:model`, validação server-side
    sem reload, estado preservado (não existe `old()` no Livewire). Para
-   interações ricas no painel. Referência viva: telas do painel e o form de
-   contato em versão Livewire no `/ui` (`App\Livewire\ContactForm` — mesmo
-   envio do `POST /contato`: validação, honeypot e e-mail enfileirado).
+   interações ricas no painel. Referência viva: telas do painel e o form demo
+   em versão Livewire no `/ui` (`App\Livewire\ContactForm`).
+
+**Os 2 forms demo do `/ui` gravam de verdade** (campos: apelido, assunto,
+mensagem + honeypot invisível): cada submissão vira uma linha em
+`form_submissions` (origem `classic` ou `livewire`) e aparece no super admin
+(`/admin/form-submissions`, mais recentes primeiro, filtro por origem na URL).
+O `FormSubmissionSeeder` cria 40 submissões variadas.
+
+**Vitrine de segurança**: os forms demo são *autodefendidos* — o middleware
+global delega a detecção para a camada do formulário
+(`security.validation.delegated_paths` / `delegated_components`), que roda o
+MESMO `AttackDetector`. Ataques (XSS, SQLi, honeypot disparado) são gravados
+com `blocked_at` + `attack_type`, o payload fica **inerte** (texto cru exibido
+escapado — nunca `{!! !!}`), a resposta ao atacante é **sucesso falso** e as
+tentativas aparecem **no topo da listagem do admin com badge vermelho**
+"ataque bloqueado". Testes Pest executam ataques reais contra os dois forms
+(`tests/Feature/FormSubmissionsTest.php`).
 
 **Regras do kit:**
 
@@ -214,6 +231,10 @@ docker compose exec app php artisan migrate --seed   # cria os usuários demo
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
 
+**Contas demo são intocáveis pelo admin** (`User::isDemo()`): bloquear/
+desbloquear esses usuários no `/admin` é recusado com notification clara —
+um visitante não pode quebrar a demo para os demais.
+
 ## Identidade visual / design tokens
 
 Rebranding de um projeto novo = **1 arquivo + .env**:
@@ -222,10 +243,16 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   linguagem: cor de marca (`--color-brand`), tipografia (`--font-display`,
   `--font-sans`), radii (`--radius-lg/xl`) e motion (`--ease-out`,
   `--ease-in-out`, `--animate-spin/shimmer`). Importado pelo `app.css`.
+- **Identidade monocromática por padrão** (esquema Vercel/Linear):
+  `--color-brand` é quase-preto no tema claro e quase-branco no escuro
+  (invertido pela classe `.dark`), com `--color-brand-foreground` para o texto
+  sobre a primária. Azul sobrevive só como cor de **status** (badge/alert
+  `info`). O super admin Filament usa a paleta `Zinc` por padrão.
 - **`.env` → `config/platform.php`** — nome (`PLATFORM_NAME`), logo
-  (`PLATFORM_LOGO_URL`) e cor primária (`PLATFORM_PRIMARY_COLOR`, injetada em
-  runtime como `--brand` no `<head>` — sem rebuild). Acesso tipado via
-  `platform()`.
+  (`PLATFORM_LOGO_URL`) e override OPCIONAL da primária
+  (`PLATFORM_PRIMARY_COLOR` — vazio = neutro; quando definido, é injetado em
+  runtime como `--brand` no `<head>`, sem rebuild, valendo para os 2 temas).
+  Acesso tipado via `platform()`.
 
 O showcase `/ui` abre com a seção **Tema** mostrando os tokens vivos e como
 editá-los.
@@ -307,8 +334,14 @@ SecurityHeaders → SecurityValidation → RequestLogging → (api: throttle:api
      processamento de negócio, já com payload redigido.
    - **No terminate**: transição controlada para **CONCLUIDA** (HTTP < 500) ou **ERRO**
      (HTTP ≥ 500, com mensagem capturada e redigida), com `duration_ms` e `http_status_response`.
-   - É global de propósito, com guarda para `api/*`: middleware de grupo não executa em rota
-     não encontrada, e requisição para endpoint inexistente é sinal de varredura (ADR-010).
+   - É global de propósito e cobre **API + navegação web autenticada + super admin
+     (/admin)**: middleware de grupo não executa em rota não encontrada, e requisição
+     para endpoint inexistente é sinal de varredura (ADR-010). Ficam FORA do log em
+     banco (`REQUEST_LOG_EXCLUDED_PATHS`): health checks (`/up`, `/api/health`),
+     assets estáticos (`build/*`, `storage/*`, `favicon.ico`) e preflights OPTIONS.
+     Os updates genéricos do Livewire (`livewire/*`, `admin/livewire/*`) são
+     registrados com **payload resumido** — só os nomes dos componentes
+     (`REQUEST_LOG_SUMMARIZED_PATHS`), porque o snapshot serializado é ruído.
 4. **throttle:api** — rate limit global da API (60/min padrão). Rotas sensíveis (login, códigos
    2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores em `config/security.php`.
 
@@ -701,10 +734,21 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 # revogar:  ... user:make-admin email@exemplo.com --remove
 ```
 
-- **Resources**: Usuários (listar/ver/bloquear), Chaves de API (visão
-  global de todos os tenants + revogar), Projetos, Request Logs (consulta
-  de auditoria read-only com filtros de status/tenant/endpoint/período —
-  logs órfãos, sem tenant, destacados em vermelho) e Uploads.
+- **i18n + seletor compacto na topbar** (bandeira + sigla): o painel segue a
+  mesma resolução de locale do app (preferência da conta → cookie → padrão).
+- **Resources**: Usuários (listar/ver/bloquear — contas demo protegidas),
+  Chaves de API (visão global de todos os tenants + revogar), Projetos,
+  **Produtos** (vitrine de CRUD: foto por upload validado ou URL, valor
+  monetário em centavos — nunca float —, paginação de 10 e paginação/filtros
+  refletidos na query string; `ProductSeeder` com 36 itens),
+  **Submissões de formulário** (read-only; ataques bloqueados no topo com
+  badge vermelho; filtro por origem na URL), Request Logs (auditoria de API
+  + web + admin, com filtros de status/tenant/endpoint/período — logs órfãos,
+  sem tenant, destacados em vermelho) e Uploads.
+- **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): nome
+  editável; e-mail read-only com nota explicativa; seção de senha montada
+  só como prévia (campo desabilitado, sem endpoint) — nada derruba o acesso
+  demo.
 - **Configurações** (`/admin/settings`): parâmetros operacionais editáveis
   pela UI (meses de inatividade p/ expirar chaves, dias de aviso prévio,
   limites de upload, rate limits) gravados na tabela `settings` — sem
