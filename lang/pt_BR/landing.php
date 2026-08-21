@@ -22,6 +22,7 @@ return [
         'subtitle' => 'Autenticação com 2FA, API keys com rotação, multitenancy, painel Livewire, admin Filament, uploads seguros, backup e testes — tudo pronto e auditado. Você constrói só o que é do seu produto.',
         'cta_components' => 'Explorar componentes',
         'cta_demo' => 'Testar demo',
+        'cta_admin_demo' => 'Ver admin demo',
         'cta_register' => 'Criar conta',
         'screenshot_alt' => 'Captura de tela real do painel do kit',
         'mockup_title' => 'Painel',

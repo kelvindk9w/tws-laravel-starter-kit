@@ -22,6 +22,7 @@ return [
         'subtitle' => 'Authentication with 2FA, API keys with rotation, multitenancy, Livewire dashboard, Filament admin, secure uploads, backups and tests — all done and audited. You only build what makes your product unique.',
         'cta_components' => 'Explore components',
         'cta_demo' => 'Try the demo',
+        'cta_admin_demo' => 'See the admin demo',
         'cta_register' => 'Create account',
         'screenshot_alt' => 'Real screenshot of the kit dashboard',
         'mockup_title' => 'Dashboard',

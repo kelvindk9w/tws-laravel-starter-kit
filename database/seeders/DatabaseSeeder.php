@@ -14,10 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Usuário demo (credenciais conhecidas) apenas quando habilitado —
-        // padrão: APP_ENV=local (config/ui.php). Nunca em produção.
+        // Usuário demo + super admin demo (credenciais conhecidas) apenas
+        // quando habilitado — padrão: APP_ENV=local (config/ui.php).
+        // Nunca em produção.
         if (config('ui.demo_login.enabled')) {
             $this->call(DemoUserSeeder::class);
+            $this->call(DemoAdminSeeder::class);
         }
     }
 }

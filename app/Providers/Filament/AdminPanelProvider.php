@@ -6,6 +6,7 @@ namespace App\Providers\Filament;
 
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Security\Middleware\UseEvalBundleForAdmin;
+use App\Filament\Pages\Auth\Login;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -41,7 +42,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            // Página própria: pré-preenche as credenciais do admin demo
+            // quando o login demo está habilitado (só em local).
+            ->login(Login::class)
             ->brandName(platform()->name)
             ->brandLogo(platform()->logoUrl)
             ->colors([

@@ -22,6 +22,7 @@ return [
         'subtitle' => 'Autenticación con 2FA, claves de API con rotación, multitenancy, panel Livewire, admin Filament, uploads seguros, backup y tests — todo listo y auditado. Tú construyes solo lo que es de tu producto.',
         'cta_components' => 'Explorar componentes',
         'cta_demo' => 'Probar demo',
+        'cta_admin_demo' => 'Ver admin demo',
         'cta_register' => 'Crear cuenta',
         'screenshot_alt' => 'Captura de pantalla real del panel del kit',
         'mockup_title' => 'Panel',

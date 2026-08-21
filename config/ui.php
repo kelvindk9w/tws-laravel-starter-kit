@@ -20,4 +20,11 @@ return [
         'password' => env('DEMO_USER_PASSWORD', 'demo-password'),
     ],
 
+    // Super admin demo (/admin): mesma flag do login demo (demo_login.enabled).
+    // Pré-preenche as credenciais no login do Filament e ativa o DemoAdminSeeder.
+    'demo_admin' => [
+        'email' => env('DEMO_ADMIN_EMAIL', 'admin@tws.dev'),
+        'password' => env('DEMO_ADMIN_PASSWORD', 'demo-admin-password'),
+    ],
+
 ];

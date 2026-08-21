@@ -10,6 +10,9 @@
         <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
             <x-button :href="route('ui.showcase')" size="lg">{{ __('landing.hero.cta_components') }}</x-button>
             <x-button :href="route('login')" variant="secondary" size="lg">{{ __('landing.hero.cta_demo') }}</x-button>
+            @if (config('ui.demo_login.enabled'))
+                <x-button href="{{ url('/admin') }}" variant="outline" size="lg">{{ __('landing.hero.cta_admin_demo') }}</x-button>
+            @endif
             <x-button :href="route('register')" variant="ghost" size="lg">{{ __('landing.hero.cta_register') }}</x-button>
         </div>
 
