@@ -23,11 +23,15 @@ async function settle(page) {
 }
 
 // Tema via localStorage ('light' | 'dark' | 'system') antes do primeiro load.
+// Idioma: os cookies da app são criptografados (EncryptCookies) — passamos
+// pela rota real de troca (/locale/{locale}), que grava o cookie correto.
 async function themedPage(viewport, theme, locale = 'pt_BR') {
     const context = await browser.newContext({ baseURL: base, viewport });
-    await context.addCookies([{ name: 'locale', value: locale, url: base }]);
     const page = await context.newPage();
     await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
+    if (locale !== 'pt_BR') {
+        await page.goto(`/locale/${locale}`, { waitUntil: 'networkidle' });
+    }
     return { context, page };
 }
 

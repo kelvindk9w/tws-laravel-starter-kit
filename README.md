@@ -75,13 +75,14 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 # ou localmente, se tiver Node:  npx playwright test
 ```
 
-## Landing pública, showcase de componentes (/ui) e login demo
+## Landing pública, showcase de componentes (/ui) e demos
 
 A home `/` é uma **landing de vitrine** do kit (hero com screenshot real do
-painel, stack, "horas economizadas", grid de 12 features, comando de
-instalação copiável e CTA com glow da marca), com layout próprio
-(`resources/views/components/layouts/landing.blade.php` — público, sem auth,
-tema escuro fixo). Strings em `lang/pt_BR/landing.php`; branding via
+painel, stack + nota de ambiente dev com Mailpit, "horas economizadas", grid
+de 12 features, **formulário de contato funcional**, CTA com link do
+repositório e footer institucional), com layout próprio
+(`resources/views/components/layouts/landing.blade.php` — público, sem auth).
+Strings em `lang/*/landing.php` + `lang/*/contact.php`; branding via
 `platform()`.
 
 - **Tipografia**: títulos em Space Grotesk Variable (self-hosted via
@@ -90,29 +91,66 @@ tema escuro fixo). Strings em `lang/pt_BR/landing.php`; branding via
 - **Screenshot do hero**: `public/img/landing/dashboard.png` (commitado).
   Para regerar com a stack dev no ar: `node tests/e2e/capture-hero.js`
   (faz login com o usuário demo e captura o /dashboard em tema escuro).
-- **Motion**: tokens de easing/duração em `resources/css/app.css`
+- **Motion**: tokens de easing/duração em `resources/css/theme.css`
   (`--ease-out`, `--ease-in-out`); scroll-reveal discreto via
   IntersectionObserver em `resources/js/ui.js` (`data-reveal`), desligado
   com `prefers-reduced-motion`.
 
+### i18n (pt-BR · English · Español)
+
+Toda string de UI passa por `__()` (ADR-007) e o kit já sai com **3 idiomas
+completos** (`lang/pt_BR`, `lang/en`, `lang/es` — um teste de paridade garante
+que nenhuma chave fica para trás). Resolução do locale (middleware `SetLocale`):
+
+1. **Usuário logado** → preferência salva na conta (`users.locale`, editável no
+   Perfil e pelos e-mails transacionais — o destinatário recebe no idioma dele);
+2. **Visitante** → cookie `locale` (seletor `<x-locale-switcher>` nas navs da
+   landing, do showcase e do painel → rota `GET /locale/{locale}`);
+3. **Fallback** → `PLATFORM_LOCALE` (padrão do kit: pt-BR).
+
+Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php). O super admin
+Filament (/admin) permanece no locale padrão do app (uso interno).
+
+### Tema claro/escuro/sistema
+
+Toggle de **3 estados** (`<x-theme-toggle>`) nas navs e segmented control no
+Perfil. Padrão = **Sistema** (`prefers-color-scheme`), sem flash de tema errado
+no carregamento (script inline mínimo em `resources/views/partials/theme-script.blade.php`
+— coberto pela CSP base, que já permite `script-src 'unsafe-inline'`).
+Persistência: `localStorage.theme` (dispositivo) + `users.theme` (conta, via
+`POST /settings/theme` quando logado — padrão entre dispositivos).
+
+### Formulário de contato (landing)
+
+`POST /contato` (nome, e-mail, assunto, mensagem): validação server-side
+(`ContactRequest`), **honeypot** anti-spam (campo invisível `website` → sucesso
+falso para bots), rate limit de rota sensível (5/min) e e-mail **enfileirado**
+para `PLATFORM_CONTACT_EMAIL` (em dev, visível no **Mailpit**:
+http://localhost:18025). Feedback via toast do kit (flash de sessão).
+
 ### Showcase de componentes (`/ui`)
 
 Documentação viva dos **componentes Blade do kit** (estilo docs: sidebar
-sticky com scrollspy, variantes lado a lado): `<x-button>`, `<x-alert>`,
-`<x-badge>`, `<x-input>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`,
+sticky com scrollspy, texto de orientação por seção — quando usar, variantes e
+notas de acessibilidade): `<x-button>` (primary/secondary/outline/ghost/danger),
+`<x-alert>`, `<x-badge>`, `<x-input>` (com **olho de senha** embutido em
+`type="password"`), `<x-textarea>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`,
 `<x-card>`, `<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>`,
-`<x-snippet>` e `<x-ui-icon>` (em `resources/views/components/` — copie e use
-em qualquer tela).
+`<x-skeleton>` (shimmer, com exemplo real via `wire:loading` em Projetos),
+`<x-loading-overlay>` (uso restrito documentado), `<x-snippet>`,
+`<x-locale-switcher>`, `<x-theme-toggle>` e `<x-ui-icon>` (em
+`resources/views/components/` — copie e use em qualquer tela). Abre com a
+seção **Tema** (design tokens vivos) e fecha com um **formulário completo**
+montado (o form de contato como exemplo).
 
 - **Snippets copiáveis**: cada variante exibe o código `<x-…>` com botão de
   copiar (clipboard via `data-copy` em `resources/js/ui.js`, feedback no
   próprio botão + toast do kit).
-- **Toggle claro/escuro**: prova os dois temas (persiste em `localStorage`
-  como `ui-theme`; a landing permanece sempre escura por decisão de design).
 - **JS de UI centralizado**: modal (`data-modal-open`/`data-modal-close`),
-  toast (`data-toast-show`), copiar, scroll-reveal e scrollspy vivem em
-  `resources/js/ui.js`, servido pelo Vite — nada de `<script>` inline nas
-  views (CSP-friendly).
+  toast (`data-toast-show`), copiar, scroll-reveal, scrollspy, olho de senha
+  (`data-password-toggle`), tema e idioma vivem em `resources/js/ui.js`,
+  servido pelo Vite — nada de `<script>` inline nas views (CSP-friendly; a
+  única exceção deliberada é o anti-flash de tema no `<head>`).
 
 Kill switch: `UI_SHOWCASE_ENABLED` (config/ui.php). **Padrão: ligado só em
 `APP_ENV=local`**; desabilitado, a rota responde **404**. Em produção,
@@ -121,17 +159,20 @@ defina `UI_SHOWCASE_ENABLED=false` (já está no `.env.prod.example`).
 > Nota: o nome `<x-icon>` pertence ao pacote `blade-icons` (dependência do
 > Filament) — por isso os ícones inline do kit usam `<x-ui-icon>`.
 
-### Login demo (fricção zero em dev)
+### Login demo e admin demo (fricção zero em dev)
 
 Quando `DEMO_LOGIN_ENABLED=true` (**padrão só em `APP_ENV=local`**), a tela de
 login mostra um aviso e vem com as credenciais demo pré-preenchidas — basta
-clicar em "Entrar" (padrão demo.filamentphp.com). O usuário é criado pelo
-`DemoUserSeeder`, chamado automaticamente pelo `DatabaseSeeder` quando o flag
-está ligado:
+clicar em "Entrar" (padrão demo.filamentphp.com). A MESMA flag ativa o **admin
+demo**: usuário com `is_admin` e credenciais pré-preenchidas em `/admin/login`
+(página própria `App\Filament\Pages\Auth\Login`), com link "Ver admin demo" na
+landing. Os dois usuários são criados pelo `DemoUserSeeder` + `DemoAdminSeeder`,
+chamados automaticamente pelo `DatabaseSeeder` quando o flag está ligado:
 
 ```bash
-docker compose exec app php artisan migrate --seed   # cria o usuário demo
-# demo@tws.dev / demo-password  (sobreponíveis via DEMO_USER_EMAIL/PASSWORD)
+docker compose exec app php artisan migrate --seed   # cria os usuários demo
+# painel:  demo@tws.dev / demo-password       (DEMO_USER_EMAIL/PASSWORD)
+# /admin:  admin@tws.dev / demo-admin-password (DEMO_ADMIN_EMAIL/PASSWORD)
 ```
 
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
@@ -151,9 +192,7 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   `platform()`.
 
 O showcase `/ui` abre com a seção **Tema** mostrando os tokens vivos e como
-editá-los. Tema claro/escuro/sistema: toggle de 3 estados nas navs e no Perfil,
-padrão = preferência do SO, sem flash no carregamento (script inline mínimo em
-`resources/views/partials/theme-script.blade.php`, coberto pela CSP base).
+editá-los.
 
 ## Produção
 
@@ -197,8 +236,10 @@ Para produção real:
    (`App\Core\Http\Resources\BaseResource`) — nunca modelo Eloquent cru.
 5. **Logs de requisição (ADR-004/005):** append-only, status
    INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
-6. **i18n (ADR-007):** locale padrão `pt_BR`; TODA string de UI via `__()`
-   apontando para `lang/pt_BR/`. Multi-idioma = adicionar pasta em `lang/`.
+6. **i18n (ADR-007):** locale padrão `pt_BR`; TODA string de UI via `__()`.
+   O kit já sai com `lang/pt_BR`, `lang/en` e `lang/es` completos (teste de
+   paridade de chaves); novo idioma = nova pasta em `lang/` + entrada em
+   `PLATFORM_AVAILABLE_LOCALES`.
 7. **Segredos:** somente em `.env` (gitignored), nunca no código nem na imagem.
 8. **Testes (ADR-010):** Pest 4 + Playwright, validando **conteúdo** das
    respostas, não apenas status HTTP. A suíte PHP roda com SQLite em memória
@@ -591,15 +632,16 @@ disco; re-encode elimina trailing payload; vínculo tenant (API) vs user_id
 Dois frontends na mesma codebase: **painel do usuário em Livewire 4** e
 **super admin em Filament 5**. Branding 100% via `platform()` (nome, logo e
 cor primária — `PLATFORM_NAME`/`PLATFORM_LOGO_URL`/`PLATFORM_PRIMARY_COLOR`
-no .env; ADR-007/010). Toda string via `__()` (pt-BR). Tema claro/escuro no
-painel do usuário (toggle no topo, default = preferência do SO).
+no .env; ADR-007/010). Toda string via `__()` (pt-BR/en/es). Tema
+claro/escuro/sistema no painel do usuário (toggle de 3 estados no topo,
+default = preferência do SO).
 
 ### Painel do usuário (Livewire 4)
 
 | Rota | Tela |
 |---|---|
 | `/dashboard` | Boas-vindas, código público, contadores e ações rápidas |
-| `/profile` | Dados, senha de login, senha de transação e avatar (mesma tela) |
+| `/profile` | Dados, idioma, aparência (tema), senha de login, senha de transação e avatar (mesma tela) |
 | `/api-keys` | Chaves de API: criar (scopes + vínculo N:N com projetos), visualização única da secreta, rotacionar (grace period), revogar |
 | `/projects` | Projetos: CRUD só com nome, tudo inline (ADR-005) |
 | `/notifications` | Preferências de e-mail (esqueleto p/ notificações de pagamento) |
