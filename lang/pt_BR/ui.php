@@ -12,6 +12,9 @@ return [
         'subtitle' => 'Starter kit Laravel — base estrutural pronta para construir.',
         'stack_heading' => 'Stack desta base',
         'docs_cta' => 'Documentação',
+        'login_cta' => 'Entrar',
+        'register_cta' => 'Criar conta',
+        'dashboard_cta' => 'Ir para o painel',
     ],
 
     'footer' => [

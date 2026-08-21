@@ -13,6 +13,11 @@
         p { color: #94a3b8; }
         footer { margin-top: 3rem; font-size: .8rem; color: #64748b; }
         a { color: #38bdf8; }
+        nav.cta { margin-top: 2rem; display: flex; gap: .75rem; justify-content: center; }
+        nav.cta a { display: inline-block; padding: .65rem 1.5rem; border-radius: .5rem;
+                    text-decoration: none; font-weight: 600; }
+        nav.cta a.primary { background: #38bdf8; color: #0f172a; }
+        nav.cta a.secondary { border: 1px solid #38bdf8; color: #38bdf8; }
     </style>
 </head>
 <body>
@@ -23,6 +28,15 @@
 
         <h1>{{ __('ui.welcome.title', ['platform' => platform()->name]) }}</h1>
         <p>{{ __('ui.welcome.subtitle') }}</p>
+
+        <nav class="cta">
+            @auth
+                <a class="primary" href="{{ route('dashboard') }}">{{ __('ui.welcome.dashboard_cta') }}</a>
+            @else
+                <a class="primary" href="{{ route('register') }}">{{ __('ui.welcome.register_cta') }}</a>
+                <a class="secondary" href="{{ route('login') }}">{{ __('ui.welcome.login_cta') }}</a>
+            @endauth
+        </nav>
 
         <footer>
             <p>
