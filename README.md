@@ -77,18 +77,42 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 
 ## Landing pública, showcase de componentes (/ui) e login demo
 
-A home `/` é uma **landing de vitrine** do kit (hero, stack, "horas
-economizadas", grid de features e CTA), com layout próprio
+A home `/` é uma **landing de vitrine** do kit (hero com screenshot real do
+painel, stack, "horas economizadas", grid de 12 features, comando de
+instalação copiável e CTA com glow da marca), com layout próprio
 (`resources/views/components/layouts/landing.blade.php` — público, sem auth,
-tema escuro). Strings em `lang/pt_BR/landing.php`; branding via `platform()`.
+tema escuro fixo). Strings em `lang/pt_BR/landing.php`; branding via
+`platform()`.
+
+- **Tipografia**: títulos em Space Grotesk Variable (self-hosted via
+  `@fontsource-variable/space-grotesk`, token `--font-display`), corpo em
+  Instrument Sans.
+- **Screenshot do hero**: `public/img/landing/dashboard.png` (commitado).
+  Para regerar com a stack dev no ar: `node tests/e2e/capture-hero.js`
+  (faz login com o usuário demo e captura o /dashboard em tema escuro).
+- **Motion**: tokens de easing/duração em `resources/css/app.css`
+  (`--ease-out`, `--ease-in-out`); scroll-reveal discreto via
+  IntersectionObserver em `resources/js/ui.js` (`data-reveal`), desligado
+  com `prefers-reduced-motion`.
 
 ### Showcase de componentes (`/ui`)
 
-Documentação viva dos **componentes Blade do kit** (estilo docs: sidebar com
-âncoras, variantes lado a lado): `<x-button>`, `<x-alert>`, `<x-badge>`,
-`<x-input>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`, `<x-card>`,
-`<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>` e `<x-ui-icon>`
-(em `resources/views/components/` — copie e use em qualquer tela).
+Documentação viva dos **componentes Blade do kit** (estilo docs: sidebar
+sticky com scrollspy, variantes lado a lado): `<x-button>`, `<x-alert>`,
+`<x-badge>`, `<x-input>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`,
+`<x-card>`, `<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>`,
+`<x-snippet>` e `<x-ui-icon>` (em `resources/views/components/` — copie e use
+em qualquer tela).
+
+- **Snippets copiáveis**: cada variante exibe o código `<x-…>` com botão de
+  copiar (clipboard via `data-copy` em `resources/js/ui.js`, feedback no
+  próprio botão + toast do kit).
+- **Toggle claro/escuro**: prova os dois temas (persiste em `localStorage`
+  como `ui-theme`; a landing permanece sempre escura por decisão de design).
+- **JS de UI centralizado**: modal (`data-modal-open`/`data-modal-close`),
+  toast (`data-toast-show`), copiar, scroll-reveal e scrollspy vivem em
+  `resources/js/ui.js`, servido pelo Vite — nada de `<script>` inline nas
+  views (CSP-friendly).
 
 Kill switch: `UI_SHOWCASE_ENABLED` (config/ui.php). **Padrão: ligado só em
 `APP_ENV=local`**; desabilitado, a rota responde **404**. Em produção,
