@@ -27,6 +27,7 @@ return [
         'unblock_heading' => 'Unblock user',
         'blocked_success' => 'User blocked.',
         'unblocked_success' => 'User unblocked.',
+        'demo_protected' => 'Demo account protected: demo users cannot be blocked, edited or deleted.',
         'transaction_password' => 'Transaction password set',
         'created_at' => 'Registered at',
     ],

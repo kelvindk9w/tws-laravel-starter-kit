@@ -123,6 +123,21 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Usuário de demonstração (login demo / super admin demo — config/ui.php)?
+     *
+     * Contas demo NÃO podem ser bloqueadas, editadas ou excluídas por ações
+     * do super admin: um visitante quebraria a demo para os demais. As ações
+     * do UserResource verificam esta guarda e avisam com uma notification.
+     */
+    public function isDemo(): bool
+    {
+        return in_array($this->email, array_filter([
+            config('ui.demo_login.email'),
+            config('ui.demo_admin.email'),
+        ]), true);
+    }
+
+    /**
      * Preferência de notificação efetiva (escolha gravada → default do
      * config/notifications.php). Chaves desconhecidas = false.
      */

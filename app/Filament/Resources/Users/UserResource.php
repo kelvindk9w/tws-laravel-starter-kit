@@ -117,6 +117,14 @@ final class UserResource extends Resource
                     ->modalHeading(__('admin.users.block_heading'))
                     ->modalDescription(fn (User $record): string => __('admin.users.block_warning', ['email' => $record->email]))
                     ->action(function (User $record): void {
+                        // Contas demo são intocáveis (senão visitantes
+                        // quebram a demonstração para os demais).
+                        if ($record->isDemo()) {
+                            Notification::make()->danger()->title(__('admin.users.demo_protected'))->send();
+
+                            return;
+                        }
+
                         $record->forceFill(['status' => UserStatus::Blocked])->save();
 
                         Notification::make()->success()->title(__('admin.users.blocked_success'))->send();
@@ -128,6 +136,12 @@ final class UserResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading(__('admin.users.unblock_heading'))
                     ->action(function (User $record): void {
+                        if ($record->isDemo()) {
+                            Notification::make()->danger()->title(__('admin.users.demo_protected'))->send();
+
+                            return;
+                        }
+
                         $record->forceFill(['status' => UserStatus::Active])->save();
 
                         Notification::make()->success()->title(__('admin.users.unblocked_success'))->send();

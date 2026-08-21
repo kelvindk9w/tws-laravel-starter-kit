@@ -27,6 +27,7 @@ return [
         'unblock_heading' => 'Desbloquear usuário',
         'blocked_success' => 'Usuário bloqueado.',
         'unblocked_success' => 'Usuário desbloqueado.',
+        'demo_protected' => 'Conta de demonstração protegida: usuários demo não podem ser bloqueados, editados ou excluídos.',
         'transaction_password' => 'Senha de transação definida',
         'created_at' => 'Cadastrado em',
     ],
