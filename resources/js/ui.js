@@ -107,6 +107,13 @@ window.twsToast = (id, message = null, timeout = 3000) => {
     showToast(toast, timeout);
 };
 
+// Flash de sessão: toasts renderizados JÁ visíveis (sem .hidden — ex.:
+// confirmação do formulário de contato) entram visíveis e auto-escondem.
+document.querySelectorAll('[data-toast]:not(.hidden)').forEach((toast) => {
+    toast.classList.add('is-visible');
+    toastTimers.set(toast, setTimeout(() => hideToast(toast), 4000));
+});
+
 document.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-toast-show]');
 

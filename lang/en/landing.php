@@ -33,6 +33,7 @@ return [
     'stack' => [
         'heading' => 'A current stack, tested in production',
         'items' => ['Laravel 13', 'PHP 8.4', 'PostgreSQL 18', 'Redis 8', 'Livewire 4', 'Filament 5', 'Tailwind 4', 'Horizon', 'Pest', 'Docker'],
+        'dev_note' => 'Complete dev environment in compose: Mailpit (email inbox), Horizon (queues) and scheduler — nothing to install beyond Docker.',
     ],
 
     'hours' => [
@@ -76,10 +77,7 @@ return [
     'cta' => [
         'heading' => 'Ready to build?',
         'subtitle' => 'Create your account and explore the dashboard, or dive into the code: every decision is documented in ADRs.',
-        'install_label' => 'From clone to running in minutes — only Docker on your machine',
-        'install_command' => 'git clone <repo> meu-projeto && cd meu-projeto && cp .env.example .env && docker compose up -d --build',
-        'copy' => 'Copy',
-        'copied' => 'Copied!',
+        'repo' => 'See the code on the repository',
         'register' => 'Create account',
         'demo' => 'Try the demo',
         'login' => 'Sign in',
@@ -90,7 +88,10 @@ return [
         'links_heading' => 'Shortcuts',
         'showcase' => 'Components',
         'demo' => 'Demo sign-in',
+        'contact' => 'Contact',
         'api_status' => 'API status',
+        'rights' => '© :year :company — All rights reserved',
+        'developed_by' => 'Developed by',
     ],
 
 ];

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
+use App\Core\Support\Platform;
 
 // Landing page pública (/) — vitrine do kit. Valida CONTEÚDO (ADR-010).
 
@@ -50,14 +51,40 @@ it('landing tem links para showcase, login, registro e demo quando deslogado', f
         ->assertSee('#horas', false);
 });
 
-it('landing mostra o screenshot real do painel e o comando de instalação copiável', function () {
+it('landing mostra o screenshot real do painel e o link do repositório', function () {
+    config()->set('platform.repo_url', 'https://github.com/tws/tws-laravel-starter-kit');
+    app()->forgetInstance(Platform::class); // o singleton tipado lê a config na 1ª resolução
+
     expect(public_path('img/landing/dashboard.png'))->toBeFile();
 
     $this->get('/')
         ->assertOk()
         ->assertSee(asset('img/landing/dashboard.png'), false)
-        ->assertSee(__('landing.cta.install_command'))
-        ->assertSee('data-copy', false);
+        ->assertSee('https://github.com/tws/tws-laravel-starter-kit', false)
+        ->assertSee(__('landing.cta.repo'));
+});
+
+it('landing sem repo configurado esconde o CTA (nunca URL quebrada)', function () {
+    config()->set('platform.repo_url', null);
+    app()->forgetInstance(Platform::class);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertDontSee(__('landing.cta.repo'));
+});
+
+it('landing tem formulário de contato, nota de ambiente dev e footer institucional', function () {
+    config()->set('platform.company_url', 'https://example.com');
+    app()->forgetInstance(Platform::class);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertSee('id="contato"', false)
+        ->assertSee(route('contact.store'), false)
+        ->assertSee('name="website"', false) // honeypot anti-spam
+        ->assertSee(__('landing.stack.dev_note'))
+        ->assertSee(__('landing.footer.rights', ['year' => date('Y'), 'company' => platform()->companyName]))
+        ->assertSee('https://example.com', false);
 });
 
 it('landing mostra CTA do painel quando autenticado', function () {

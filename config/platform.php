@@ -27,6 +27,16 @@ return [
     // URL institucional oficial do produto.
     'official_url' => env('PLATFORM_OFFICIAL_URL', env('APP_URL', 'http://localhost:8180')),
 
+    // URL pública do repositório do projeto (CTA da landing).
+    'repo_url' => env('PLATFORM_REPO_URL'),
+
+    // E-mail que RECEBE as mensagens do formulário de contato da landing.
+    'contact_email' => env('PLATFORM_CONTACT_EMAIL'),
+
+    // Empresa operadora (rodapé: direitos autorais e "desenvolvido por").
+    'company_name' => env('PLATFORM_COMPANY_NAME', 'TWS'),
+    'company_url' => env('PLATFORM_COMPANY_URL'),
+
     // E-mail público de suporte.
     'support_email' => env('PLATFORM_SUPPORT_EMAIL'),
 

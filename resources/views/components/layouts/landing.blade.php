@@ -63,10 +63,18 @@
                 <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">{{ __('landing.footer.links_heading') }}</p>
                 <a href="{{ route('ui.showcase') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.showcase') }}</a>
                 <a href="{{ route('login') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.demo') }}</a>
+                <a href="{{ url('/#contato') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.contact') }}</a>
                 <a href="{{ url('/api/health') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.api_status') }}</a>
             </nav>
 
             <div class="flex flex-col items-start gap-1 sm:items-end">
+                <p class="text-gray-400 dark:text-gray-500">
+                    {{ __('landing.footer.rights', ['year' => date('Y'), 'company' => platform()->companyName]) }}
+                    @if (platform()->companyUrl)
+                        · {{ __('landing.footer.developed_by') }}
+                        <a href="{{ platform()->companyUrl }}" target="_blank" rel="noopener" class="hover:text-gray-900 dark:hover:text-gray-200">{{ platform()->companyName }}</a>
+                    @endif
+                </p>
                 <p class="text-gray-400 dark:text-gray-500">
                     {{ __('ui.footer.operated_by', ['platform' => platform()->name]) }}
                     @if (platform()->supportEmail)
@@ -77,5 +85,13 @@
             </div>
         </div>
     </footer>
+
+    {{-- Toast de flash (ex.: formulário de contato enviado): renderizado já
+         visível; o auto-esconder vive em resources/js/ui.js. --}}
+    @if (session('contact_status'))
+        <div class="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
+            <x-toast type="success">{{ session('contact_status') }}</x-toast>
+        </div>
+    @endif
 </body>
 </html>

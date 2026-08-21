@@ -42,6 +42,7 @@
                     <x-badge class="border border-gray-200 px-3 py-1 text-sm dark:border-gray-800">{{ $tech }}</x-badge>
                 @endforeach
             </div>
+            <p class="mx-auto mt-6 max-w-2xl text-center text-sm text-gray-500 dark:text-gray-400">{{ __('landing.stack.dev_note') }}</p>
         </div>
     </section>
 
@@ -92,6 +93,42 @@
         </div>
     </section>
 
+    {{-- Contato (formulário funcional: honeypot + rate limit + e-mail em fila) --}}
+    <section id="contato" class="mx-auto max-w-6xl scroll-mt-16 px-4 py-20">
+        <div class="mx-auto max-w-2xl text-center" data-reveal>
+            <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('contact.heading') }}</h2>
+            <p class="mt-3 text-balance text-gray-600 dark:text-gray-400">{{ __('contact.subtitle') }}</p>
+        </div>
+
+        <x-card class="mx-auto mt-10 max-w-2xl">
+            <form method="POST" action="{{ route('contact.store') }}" class="space-y-4">
+                @csrf
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-input :label="__('contact.form.name')" name="name" :value="old('name')" :placeholder="__('contact.form.name_placeholder')" :error="$errors->first('name')" required maxlength="120" />
+                    <x-input :label="__('contact.form.email')" name="email" type="email" :value="old('email')" :placeholder="__('contact.form.email_placeholder')" :error="$errors->first('email')" required />
+                </div>
+
+                <x-select :label="__('contact.form.subject')" name="subject" :error="$errors->first('subject')" required>
+                    @foreach (['suggestion', 'complaint', 'other'] as $subjectKey)
+                        <option value="{{ $subjectKey }}" @selected(old('subject') === $subjectKey)>{{ __("contact.subjects.{$subjectKey}") }}</option>
+                    @endforeach
+                </x-select>
+
+                <x-textarea :label="__('contact.form.message')" name="message" :placeholder="__('contact.form.message_placeholder')" :error="$errors->first('message')" required minlength="10" maxlength="5000">{{ old('message') }}</x-textarea>
+
+                {{-- Honeypot anti-spam: invisível para humanos (CSS), fora do
+                     tab order; bots que o preenchem recebem sucesso falso. --}}
+                <div class="hidden" aria-hidden="true">
+                    <label for="website">{{ __('contact.form.honeypot_label') }}</label>
+                    <input id="website" type="text" name="website" tabindex="-1" autocomplete="off">
+                </div>
+
+                <x-button type="submit">{{ __('contact.form.submit') }}</x-button>
+            </form>
+        </x-card>
+    </section>
+
     {{-- CTA final com glow radial da marca --}}
     <section class="relative overflow-hidden">
         <div
@@ -105,23 +142,15 @@
                 <p class="mx-auto mt-3 max-w-xl text-gray-600 dark:text-gray-400">{{ __('landing.cta.subtitle') }}</p>
             </div>
 
-            {{-- Comando de instalação copiável (o quickstart real do README) --}}
-            <div class="mx-auto mt-8 max-w-2xl" data-reveal>
-                <p class="text-sm text-gray-500">{{ __('landing.cta.install_label') }}</p>
-                <div class="mt-3 flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/80 py-3 pl-4 pr-2 text-left">
-                    <x-ui-icon name="command-line" class="h-5 w-5 shrink-0 text-(--brand)" />
-                    <code class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-sm text-gray-300">{{ __('landing.cta.install_command') }}</code>
-                    <button
-                        type="button"
-                        data-copy="{{ __('landing.cta.install_command') }}"
-                        data-copied-text="{{ __('landing.cta.copied') }}"
-                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-300 transition-[transform,background-color,border-color,color] duration-150 ease-(--ease-out) hover:border-gray-600 hover:bg-gray-800 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
-                    >
-                        <x-ui-icon name="clipboard-document" class="h-4 w-4" />
-                        <span data-copy-label>{{ __('landing.cta.copy') }}</span>
-                    </button>
+            {{-- Repositório público do kit (config via platform()/env). --}}
+            @if (platform()->repoUrl)
+                <div class="mt-8" data-reveal>
+                    <x-button :href="platform()->repoUrl" variant="outline" size="lg" target="_blank" rel="noopener">
+                        <x-ui-icon name="code-bracket" class="h-5 w-5" />
+                        {{ __('landing.cta.repo') }}
+                    </x-button>
                 </div>
-            </div>
+            @endif
 
             <div class="mt-8 flex flex-wrap items-center justify-center gap-3" data-reveal>
                 <x-button :href="route('register')" size="lg">{{ __('landing.cta.register') }}</x-button>
