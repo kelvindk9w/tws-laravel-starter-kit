@@ -60,6 +60,22 @@ for (const theme of ['light', 'dark']) {
     await page.waitForTimeout(800);
     await page.screenshot({ path: `test-results/shots/rebrand-admin-profile-${theme}.png`, fullPage: true });
 
+    await page.goto('/admin/form-submissions', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: `test-results/shots/rebrand-admin-submissions-${theme}.png`, fullPage: true });
+
+    await context.close();
+}
+
+// --- Showcase /ui: seção de formulários nos 2 temas --------------------------
+for (const theme of ['light', 'dark']) {
+    const context = await browser.newContext({ baseURL: base, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.addInitScript((t) => localStorage.setItem('theme', t), theme);
+    await page.goto('/ui#form_patterns', { waitUntil: 'networkidle' });
+    await page.locator('#form_patterns').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `test-results/shots/rebrand-ui-forms-${theme}.png` });
     await context.close();
 }
 
