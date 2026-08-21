@@ -26,7 +26,7 @@ return [
         'toast' => 'Toast',
         'empty_state' => 'Estado vazio',
         'loading' => 'Carregamento',
-        'form_example' => 'Formulário completo',
+        'form_patterns' => 'Padrões de formulário',
     ],
 
     'theme_tokens' => [
@@ -154,11 +154,33 @@ return [
         'overlay_demo' => 'Ver por 1,5 s',
     ],
 
-    'form_example' => [
-        'guide' => 'O formulário de contato da landing montado com os componentes do kit: input, input password, select, textarea, checkbox e botão com estado de carregamento.',
-        'subject' => 'Assunto',
-        'subject_options' => ['Sugestão', 'Reclamação', 'Outro'],
-        'submit' => 'Enviar mensagem',
+    'form_patterns' => [
+        'guide' => 'Dois padrões canônicos — não invente um terceiro (fetch manual em Blade puro é redundante com o Livewire): Blade clássico (POST + redirect + old()) para formulários públicos simples; Livewire (wire:submit, AJAX) para interações ricas no painel. Erros sempre componentizados: <x-form-errors> + field_error(), com a estratégia em config/ui.php → error_display.',
+        'strategies_heading' => 'Estratégias de exibição de erros',
+        'strategies_guide' => 'Definida em config/ui.php → error_display, com override por formulário (<x-form-errors display="…"> e field_error(\'campo\', \'…\')). Regra de segurança: senhas e segredos NUNCA são repopulados com old().',
+        'strategy_inline' => 'inline (padrão)',
+        'strategy_inline_hint' => 'Erro embaixo de cada campo. Melhor para formulários curtos: o erro aparece onde a correção acontece.',
+        'strategy_summary' => 'summary',
+        'strategy_summary_hint' => 'Só o resumo <x-form-errors> no topo, com âncoras que rolam até o campo. Útil em formulários longos.',
+        'strategy_toast' => 'toast',
+        'strategy_toast_hint' => 'Erros disparam o toast do kit (feedback efêmero). Evite em formulários longos — o resumo some sozinho.',
+        'strategy_both' => 'both',
+        'strategy_both_hint' => 'Inline + resumo: acessibilidade reforçada (resumo anunciado por leitores de tela + erro no contexto do campo).',
+        'demo_error_message' => 'A mensagem precisa ter pelo menos 10 caracteres.',
+        'classic_heading' => 'Blade clássico — POST + redirect (funcional)',
+        'classic_guide' => 'Quando usar: formulários públicos e simples (contato, login, cadastro). Estado repopulado com old() em todos os campos — EXCETO senhas. Envie vazio (ou troque a estratégia) para ver os erros de verdade.',
+        'display_field' => 'Estratégia de exibição deste formulário',
+        'display_field_hint' => 'Override por formulário: vira a prop display do <x-form-errors> e de field_error().',
+        'demo_name' => 'Nome',
+        'demo_email' => 'E-mail',
+        'demo_password' => 'Senha',
+        'demo_password_hint' => 'Erre de propósito e note: a senha NÃO volta preenchida.',
+        'demo_message' => 'Mensagem',
+        'demo_message_placeholder' => 'Mínimo de 10 caracteres…',
+        'demo_submit' => 'Enviar demonstração',
+        'demo_sent' => 'Demonstração enviada! O flash de sessão virou este toast.',
+        'ajax_heading' => 'Livewire — wire:submit (AJAX, funcional)',
+        'ajax_guide' => 'Quando usar: interações ricas sem reload (painel, modais, formulários com estado). Validação server-side automática e campos preservados (não existe old() no Livewire). Este é o MESMO envio do contato da landing: validação, honeypot e e-mail enfileirado.',
     ],
 
     'components' => [

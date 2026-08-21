@@ -18,6 +18,8 @@ return [
         'message' => 'Mensaje',
         'message_placeholder' => 'Cuenta el contexto en pocas líneas…',
         'submit' => 'Enviar mensaje',
+        'sent_title' => 'Mensaje enviado',
+        'send_another' => 'Enviar otro mensaje',
         // Honeypot anti-spam (invisible para humanos — NO traducir el name).
         'honeypot_label' => 'Website',
     ],

@@ -11,6 +11,7 @@ use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Contact\Http\Controllers\ContactController;
 use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
+use App\Http\Controllers\ShowcaseFormDemoController;
 use App\Http\Controllers\ThemePreferenceController;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Dashboard;
@@ -39,6 +40,12 @@ Route::get('ui', function () {
 
     return view('showcase');
 })->name('ui.showcase');
+
+// Exemplo funcional do padrão Blade clássico (seção "Padrões de formulário"
+// do /ui): POST + redirect + old() + erros. Mesma flag do showcase.
+Route::post('ui/form-demo', [ShowcaseFormDemoController::class, 'store'])
+    ->middleware('throttle:sensitive')
+    ->name('ui.form-demo');
 
 // =============================================================================
 // Autenticação web (sessão) — Fase 3 (ADR-006/010).

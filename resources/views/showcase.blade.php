@@ -42,6 +42,13 @@
         'spinner_sm' => '<x-spinner size="sm" />',
         'spinner' => '<x-spinner />',
         'spinner_lg' => '<x-spinner size="lg" />',
+        'form_errors' => '<x-form-errors /> // segue config/ui.php → error_display',
+        'form_errors_summary' => '<x-form-errors display="summary" />',
+        'form_errors_toast' => '<x-form-errors display="toast" />',
+        'form_errors_both' => '<x-form-errors display="both" /> + :error="field_error(\'email\')"',
+        'field_error' => ':error="field_error(\'email\')" // respeita a estratégia configurada',
+        'classic_form' => '<form method="POST">…old(\'campo\')…</form> + redirect back()',
+        'ajax_form' => '<form wire:submit="send">…wire:model…</form>',
     ];
 @endphp
 
@@ -321,27 +328,99 @@
                 <x-loading-overlay id="showcase-overlay" :message="__('showcase.loading.saving')" />
             </section>
 
-            {{-- Formulário completo (exemplo montado: o form de contato da landing) --}}
-            <section id="form_example" class="scroll-mt-24">
-                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.form_example') }}</h2>
-                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_example.guide') }}</p>
+            {{-- Padrões de formulário: Blade clássico × Livewire + estratégias de erro --}}
+            <section id="form_patterns" class="scroll-mt-24">
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.form_patterns') }}</h2>
+                <p class="mb-8 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_patterns.guide') }}</p>
 
-                <x-card class="max-w-2xl">
-                    <form class="space-y-4" action="#form_example" method="get">
+                {{-- Estratégias de exibição de erros (config/ui.php → error_display) --}}
+                <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.form_patterns.strategies_heading') }}</h3>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_patterns.strategies_guide') }}</p>
+
+                <div class="mb-12 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div class="flex flex-col gap-2">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('showcase.form_patterns.strategy_inline') }}</p>
+                        <x-input :label="__('showcase.forms.with_error_label')" name="demo_inline_email" type="email" value="nao-e-um-email" :error="__('showcase.forms.with_error_message')" />
+                        <p class="text-sm text-gray-500">{{ __('showcase.form_patterns.strategy_inline_hint') }}</p>
+                        <div><x-snippet :code="$snip['field_error']" /></div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('showcase.form_patterns.strategy_summary') }}</p>
+                        <x-form-errors display="summary" :messages="['demo_summary_email' => __('showcase.forms.with_error_message'), 'demo_summary_message' => __('showcase.form_patterns.demo_error_message')]" />
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <x-input :label="__('auth.ui.name')" name="demo_contact_name" :placeholder="__('auth.ui.name')" />
-                            <x-input :label="__('auth.ui.email')" name="demo_contact_email" type="email" placeholder="voce@exemplo.com" />
+                            <x-input :label="__('showcase.forms.with_error_label')" name="demo_summary_email" type="email" value="nao-e-um-email" />
+                            <x-input :label="__('showcase.forms.message_label')" name="demo_summary_message" value="curta" />
                         </div>
-                        <x-select :label="__('showcase.form_example.subject')" name="demo_contact_subject">
-                            @foreach (__('showcase.form_example.subject_options') as $subjectOption)
-                                <option>{{ $subjectOption }}</option>
+                        <p class="text-sm text-gray-500">{{ __('showcase.form_patterns.strategy_summary_hint') }}</p>
+                        <div><x-snippet :code="$snip['form_errors_summary']" /></div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('showcase.form_patterns.strategy_toast') }}</p>
+                        <x-form-errors display="toast" :fixed="false" data-toast-sticky :messages="[__('showcase.forms.with_error_message'), __('showcase.form_patterns.demo_error_message')]" />
+                        <p class="text-sm text-gray-500">{{ __('showcase.form_patterns.strategy_toast_hint') }}</p>
+                        <div><x-snippet :code="$snip['form_errors_toast']" /></div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('showcase.form_patterns.strategy_both') }}</p>
+                        <x-form-errors display="both" :messages="['demo_both_email' => __('showcase.forms.with_error_message')]" />
+                        <x-input :label="__('showcase.forms.with_error_label')" name="demo_both_email" type="email" value="nao-e-um-email" :error="__('showcase.forms.with_error_message')" />
+                        <p class="text-sm text-gray-500">{{ __('showcase.form_patterns.strategy_both_hint') }}</p>
+                        <div><x-snippet :code="$snip['form_errors_both']" /></div>
+                    </div>
+                </div>
+
+                {{-- Exemplo funcional 1: Blade clássico (POST + redirect + old()) --}}
+                <x-card :title="__('showcase.form_patterns.classic_heading')" class="mb-8 max-w-2xl">
+                    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_patterns.classic_guide') }}</p>
+
+                    @php($demoDisplay = form_error_display(old('classic_display')))
+
+                    {{-- novalidate: a demo existe para provar a validação
+                         SERVER-SIDE (sem ela, o browser barra o submit). --}}
+                    <form method="POST" action="{{ route('ui.form-demo') }}" class="space-y-4" id="demo-classic" novalidate>
+                        @csrf
+
+                        <x-form-errors :display="$demoDisplay" />
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <x-input :label="__('showcase.form_patterns.demo_name')" name="classic_name" :value="old('classic_name')" :error="field_error('classic_name', $demoDisplay)" required maxlength="120" />
+                            <x-input :label="__('showcase.form_patterns.demo_email')" name="classic_email" type="email" :value="old('classic_email')" :error="field_error('classic_email', $demoDisplay)" required />
+                        </div>
+
+                        {{-- Senha/segredo NUNCA é repopulada com old() — regra do kit. --}}
+                        <x-input :label="__('showcase.form_patterns.demo_password')" name="classic_password" type="password" :hint="__('showcase.form_patterns.demo_password_hint')" :error="field_error('classic_password', $demoDisplay)" required autocomplete="off" />
+
+                        <x-textarea :label="__('showcase.form_patterns.demo_message')" name="classic_message" :placeholder="__('showcase.form_patterns.demo_message_placeholder')" :error="field_error('classic_message', $demoDisplay)" required minlength="10" maxlength="2000">{{ old('classic_message') }}</x-textarea>
+
+                        <x-select :label="__('showcase.form_patterns.display_field')" name="classic_display" :hint="__('showcase.form_patterns.display_field_hint')">
+                            @foreach (['inline', 'summary', 'toast', 'both'] as $strategyOption)
+                                <option value="{{ $strategyOption }}" @selected(old('classic_display', 'inline') === $strategyOption)>{{ $strategyOption }}</option>
                             @endforeach
                         </x-select>
-                        <x-input :label="__('showcase.forms.password_label')" name="demo_contact_password" type="password" autocomplete="off" />
-                        <x-textarea :label="__('showcase.forms.message_label')" name="demo_contact_message" :placeholder="__('showcase.forms.message_placeholder')" />
-                        <x-checkbox :label="__('showcase.forms.checkbox_checked')" name="demo_contact_news" />
-                        <x-button type="submit">{{ __('showcase.form_example.submit') }}</x-button>
+
+                        <x-button type="submit">{{ __('showcase.form_patterns.demo_submit') }}</x-button>
                     </form>
+
+                    <x-slot:footer>
+                        <x-snippet :code="$snip['classic_form']" />
+                    </x-slot:footer>
+                </x-card>
+
+                {{-- Exemplo funcional 2: Livewire (wire:submit, AJAX) — o mesmo
+                     envio do contato da landing, sem reload. --}}
+                <x-card :title="__('showcase.form_patterns.ajax_heading')" class="max-w-2xl">
+                    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_patterns.ajax_guide') }}</p>
+
+                    <div id="demo-ajax">
+                        <livewire:contact-form />
+                    </div>
+
+                    <x-slot:footer>
+                        <x-snippet :code="$snip['ajax_form']" />
+                    </x-slot:footer>
                 </x-card>
             </section>
         </main>

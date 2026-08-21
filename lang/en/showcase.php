@@ -26,7 +26,7 @@ return [
         'toast' => 'Toast',
         'empty_state' => 'Empty state',
         'loading' => 'Loading',
-        'form_example' => 'Complete form',
+        'form_patterns' => 'Form patterns',
     ],
 
     'theme_tokens' => [
@@ -154,11 +154,33 @@ return [
         'overlay_demo' => 'Preview for 1.5 s',
     ],
 
-    'form_example' => [
-        'guide' => 'The landing contact form assembled with the kit components: input, password input, select, textarea, checkbox and a button with loading state.',
-        'subject' => 'Subject',
-        'subject_options' => ['Suggestion', 'Complaint', 'Other'],
-        'submit' => 'Send message',
+    'form_patterns' => [
+        'guide' => 'Two canonical patterns — do not invent a third (manual fetch in plain Blade is redundant with Livewire): classic Blade (POST + redirect + old()) for simple public forms; Livewire (wire:submit, AJAX) for rich interactions in the panel. Errors are always componentized: <x-form-errors> + field_error(), with the strategy in config/ui.php → error_display.',
+        'strategies_heading' => 'Error display strategies',
+        'strategies_guide' => 'Set in config/ui.php → error_display, with per-form override (<x-form-errors display="…"> and field_error(\'field\', \'…\')). Security rule: passwords and secrets are NEVER repopulated with old().',
+        'strategy_inline' => 'inline (default)',
+        'strategy_inline_hint' => 'Error below each field. Best for short forms: the error shows up where the fix happens.',
+        'strategy_summary' => 'summary',
+        'strategy_summary_hint' => 'Only the <x-form-errors> summary on top, with anchors that scroll to the field. Useful in long forms.',
+        'strategy_toast' => 'toast',
+        'strategy_toast_hint' => 'Errors fire the kit toast (ephemeral feedback). Avoid in long forms — the summary disappears on its own.',
+        'strategy_both' => 'both',
+        'strategy_both_hint' => 'Inline + summary: stronger accessibility (summary announced by screen readers + error in the field context).',
+        'demo_error_message' => 'The message must be at least 10 characters.',
+        'classic_heading' => 'Classic Blade — POST + redirect (functional)',
+        'classic_guide' => 'When to use: simple public forms (contact, login, registration). State repopulated with old() in every field — EXCEPT passwords. Submit empty (or switch the strategy) to see real errors.',
+        'display_field' => 'Error display strategy for this form',
+        'display_field_hint' => 'Per-form override: becomes the display prop of <x-form-errors> and field_error().',
+        'demo_name' => 'Name',
+        'demo_email' => 'E-mail',
+        'demo_password' => 'Password',
+        'demo_password_hint' => 'Fail on purpose and notice: the password is NOT filled back.',
+        'demo_message' => 'Message',
+        'demo_message_placeholder' => 'At least 10 characters…',
+        'demo_submit' => 'Send demo',
+        'demo_sent' => 'Demo sent! The session flash became this toast.',
+        'ajax_heading' => 'Livewire — wire:submit (AJAX, functional)',
+        'ajax_guide' => 'When to use: rich interactions without reload (panel, modals, stateful forms). Automatic server-side validation and preserved fields (there is no old() in Livewire). This is the SAME submission as the landing contact form: validation, honeypot and queued e-mail.',
     ],
 
     'components' => [
