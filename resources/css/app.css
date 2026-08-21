@@ -99,6 +99,39 @@
         background-color: var(--brand);
         color: #fff;
     }
+
+    /* Skeleton (<x-skeleton>): barra base + shimmer via ::after (translateX,
+       GPU-friendly). A duração/easing vêm dos tokens (--animate-shimmer). */
+    .skeleton {
+        position: relative;
+        overflow: hidden;
+        background-color: var(--color-gray-200);
+    }
+
+    .dark .skeleton {
+        background-color: var(--color-gray-800);
+    }
+
+    .skeleton::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+        animation: var(--animate-shimmer);
+    }
+
+    .dark .skeleton::after {
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.07), transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Reduced motion = menos movimento, não zero: o shimmer para, mas o
+       placeholder continua visível e claro. */
+    .skeleton::after {
+        animation: none;
+    }
 }
 
 /* Superfícies do navegador também carregam o design: seleção e foco. */

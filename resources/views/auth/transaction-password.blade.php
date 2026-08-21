@@ -3,24 +3,20 @@
 @section('title', __('auth.ui.transaction_password_title'))
 
 @section('content')
-    <h1>{{ __('auth.ui.transaction_password_title') }}</h1>
-    <p>{{ __('auth.ui.transaction_password_subtitle') }}</p>
+    <h1 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em]">{{ __('auth.ui.transaction_password_title') }}</h1>
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">{{ __('auth.ui.transaction_password_subtitle') }}</p>
 
-    <form method="POST" action="{{ route('transaction-password.update') }}">
+    <form method="POST" action="{{ route('transaction-password.update') }}" class="space-y-4">
         @csrf
         @method('PUT')
 
         @if (auth()->user()->hasTransactionPassword())
-            <label for="current_transaction_password">{{ __('auth.ui.current_transaction_password') }}</label>
-            <input id="current_transaction_password" type="password" name="current_transaction_password" required autocomplete="off">
+            <x-input :label="__('auth.ui.current_transaction_password')" name="current_transaction_password" type="password" required autocomplete="off" />
         @endif
 
-        <label for="transaction_password">{{ __('auth.ui.new_transaction_password') }}</label>
-        <input id="transaction_password" type="password" name="transaction_password" required autocomplete="off">
+        <x-input :label="__('auth.ui.new_transaction_password')" name="transaction_password" type="password" required autocomplete="off" />
+        <x-input :label="__('auth.ui.password_confirmation')" name="transaction_password_confirmation" type="password" required autocomplete="off" />
 
-        <label for="transaction_password_confirmation">{{ __('auth.ui.password_confirmation') }}</label>
-        <input id="transaction_password_confirmation" type="password" name="transaction_password_confirmation" required autocomplete="off">
-
-        <button type="submit">{{ __('auth.ui.save') }}</button>
+        <x-button type="submit" class="w-full">{{ __('auth.ui.save') }}</x-button>
     </form>
 @endsection

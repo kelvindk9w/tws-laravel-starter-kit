@@ -23,6 +23,11 @@ return [
         'dark' => 'Escuro',
     ],
 
+    'password' => [
+        'show' => 'Mostrar senha',
+        'hide' => 'Ocultar senha',
+    ],
+
     'footer' => [
         'operated_by' => 'Operado por :platform',
         'support' => 'Suporte',

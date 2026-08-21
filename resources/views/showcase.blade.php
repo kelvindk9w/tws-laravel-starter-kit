@@ -5,6 +5,7 @@
     $snip = [
         'btn' => '<x-button>…</x-button>',
         'btn_secondary' => '<x-button variant="secondary">…</x-button>',
+        'btn_outline' => '<x-button variant="outline">…</x-button>',
         'btn_ghost' => '<x-button variant="ghost">…</x-button>',
         'btn_danger' => '<x-button variant="danger">…</x-button>',
         'btn_sm' => '<x-button size="sm">…</x-button>',
@@ -23,6 +24,11 @@
         'badge_brand' => '<x-badge color="brand">…</x-badge>',
         'badge' => '<x-badge>…</x-badge>',
         'input' => '<x-input label="…" name="demo_name" hint="…" />',
+        'input_password' => '<x-input type="password" label="…" name="password" />',
+        'textarea' => '<x-textarea label="…" name="message" />',
+        'skeleton' => '<x-skeleton :lines="3" />',
+        'skeleton_card' => '<x-skeleton><div class="skeleton h-24 rounded-xl"></div></x-skeleton>',
+        'overlay' => '<x-loading-overlay id="app-loading" message="…" /> + abrir via [data-overlay-show]',
         'input_error' => '<x-input label="…" name="demo_email" :error="…" />',
         'input_disabled' => '<x-input label="…" name="demo_disabled" :disabled="true" />',
         'select' => '<x-select label="…" name="demo_plan">…</x-select>',
@@ -106,12 +112,14 @@
 
             {{-- Botões --}}
             <section id="buttons" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.buttons') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.buttons') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.buttons.guide') }}</p>
 
                 <p class="mb-3 text-sm text-gray-500">{{ __('showcase.buttons.variants') }}</p>
-                <div class="mb-8 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4">
+                <div class="mb-8 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-5">
                     <div class="flex flex-col items-center gap-2"><x-button>{{ __('showcase.buttons.primary') }}</x-button><x-snippet :code="$snip['btn']" /></div>
                     <div class="flex flex-col items-center gap-2"><x-button variant="secondary">{{ __('showcase.buttons.secondary') }}</x-button><x-snippet :code="$snip['btn_secondary']" /></div>
+                    <div class="flex flex-col items-center gap-2"><x-button variant="outline">{{ __('showcase.buttons.outline') }}</x-button><x-snippet :code="$snip['btn_outline']" /></div>
                     <div class="flex flex-col items-center gap-2"><x-button variant="ghost">{{ __('showcase.buttons.ghost') }}</x-button><x-snippet :code="$snip['btn_ghost']" /></div>
                     <div class="flex flex-col items-center gap-2"><x-button variant="danger">{{ __('showcase.buttons.danger') }}</x-button><x-snippet :code="$snip['btn_danger']" /></div>
                 </div>
@@ -133,7 +141,8 @@
 
             {{-- Alertas --}}
             <section id="alerts" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.alerts') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.alerts') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.alerts.guide') }}</p>
                 <div class="space-y-4">
                     <div class="space-y-2"><x-alert type="success" :title="__('showcase.alerts.success_title')">{{ __('showcase.alerts.success') }}</x-alert><div><x-snippet :code="$snip['alert_success']" /></div></div>
                     <div class="space-y-2"><x-alert type="warning" :title="__('showcase.alerts.warning_title')">{{ __('showcase.alerts.warning') }}</x-alert><div><x-snippet :code="$snip['alert_warning']" /></div></div>
@@ -144,7 +153,8 @@
 
             {{-- Badges --}}
             <section id="badges" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.badges') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.badges') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.badges.guide') }}</p>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-6 lg:grid-cols-3">
                     <div class="flex flex-col items-center gap-2"><x-badge color="green">{{ __('showcase.badges.active') }}</x-badge><x-snippet :code="$snip['badge_green']" /></div>
                     <div class="flex flex-col items-center gap-2"><x-badge color="yellow">{{ __('showcase.badges.pending') }}</x-badge><x-snippet :code="$snip['badge_yellow']" /></div>
@@ -157,12 +167,17 @@
 
             {{-- Formulários --}}
             <section id="forms" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.forms') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.forms') }}</h2>
+                <p class="mb-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.forms.guide') }}</p>
                 <p class="mb-6 text-sm text-gray-500">{{ __('showcase.forms.usage') }}</p>
                 <div class="grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
                     <div class="flex flex-col gap-2">
                         <x-input :label="__('showcase.forms.text_label')" name="demo_name" :placeholder="__('showcase.forms.text_placeholder')" :hint="__('showcase.forms.text_hint')" />
                         <div><x-snippet :code="$snip['input']" /></div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <x-input :label="__('showcase.forms.password_label')" name="demo_password" type="password" :hint="__('showcase.forms.password_hint')" />
+                        <div><x-snippet :code="$snip['input_password']" /></div>
                     </div>
                     <div class="flex flex-col gap-2">
                         <x-input :label="__('showcase.forms.with_error_label')" name="demo_email" type="email" value="nao-e-um-email" :error="__('showcase.forms.with_error_message')" />
@@ -171,6 +186,10 @@
                     <div class="flex flex-col gap-2">
                         <x-input :label="__('showcase.forms.disabled_label')" name="demo_disabled" :disabled="true" value="readonly" />
                         <div><x-snippet :code="$snip['input_disabled']" /></div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <x-textarea :label="__('showcase.forms.message_label')" name="demo_message" :placeholder="__('showcase.forms.message_placeholder')" />
+                        <div><x-snippet :code="$snip['textarea']" /></div>
                     </div>
                     <div class="flex flex-col gap-2">
                         <x-select :label="__('showcase.forms.select_label')" name="demo_plan">
@@ -195,7 +214,8 @@
 
             {{-- Cards --}}
             <section id="cards" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.cards') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.cards') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.cards.guide') }}</p>
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div class="flex flex-col gap-2">
                         <x-card :title="__('showcase.cards.simple_title')">{{ __('showcase.cards.simple_body') }}</x-card>
@@ -215,7 +235,8 @@
 
             {{-- Modal --}}
             <section id="modal" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.modal') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.modal') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.modal.guide') }}</p>
                 <div class="flex flex-wrap items-center gap-3">
                     <x-button data-modal-open="showcase-modal">{{ __('showcase.modal.open') }}</x-button>
                     <x-snippet :code="$snip['modal']" />
@@ -231,7 +252,8 @@
 
             {{-- Toast --}}
             <section id="toast" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.toast') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.toast') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.toast.guide') }}</p>
                 <div class="flex flex-wrap items-center gap-3">
                     <x-button data-toast-show="showcase-toast" variant="secondary">{{ __('showcase.toast.demo_button') }}</x-button>
                     <x-snippet :code="$snip['toast']" />
@@ -245,16 +267,19 @@
 
             {{-- Estado vazio --}}
             <section id="empty_state" class="mb-16 scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.empty_state') }}</h2>
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.empty_state') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.empty_state.guide') }}</p>
                 <x-empty-state :title="__('showcase.empty_state.title')" :description="__('showcase.empty_state.description')" icon="building-office">
                     <x-button size="sm">{{ __('showcase.empty_state.action') }}</x-button>
                 </x-empty-state>
                 <div class="mt-2"><x-snippet :code="$snip['empty_state']" /></div>
             </section>
 
-            {{-- Carregamento --}}
-            <section id="loading" class="scroll-mt-24">
-                <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.loading') }}</h2>
+            {{-- Carregamento: spinner, skeleton e overlay (hierarquia de espera) --}}
+            <section id="loading" class="mb-16 scroll-mt-24">
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.loading') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.loading.guide') }}</p>
+
                 <p class="mb-3 text-sm text-gray-500">{{ __('showcase.loading.sizes') }}</p>
                 <div class="mb-8 flex flex-wrap items-end gap-6">
                     <div class="flex flex-col items-center gap-2"><x-spinner size="sm" /><x-snippet :code="$snip['spinner_sm']" /></div>
@@ -262,7 +287,62 @@
                     <div class="flex flex-col items-center gap-2"><x-spinner size="lg" /><x-snippet :code="$snip['spinner_lg']" /></div>
                 </div>
                 <p class="mb-3 text-sm text-gray-500">{{ __('showcase.loading.in_button') }}</p>
-                <x-button :disabled="true"><x-spinner size="sm" class="text-white" /> {{ __('showcase.loading.saving') }}</x-button>
+                <div class="mb-10 flex flex-wrap items-center gap-3">
+                    <x-button :disabled="true"><x-spinner size="sm" class="text-white" /> {{ __('showcase.loading.saving') }}</x-button>
+                </div>
+
+                <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.loading.skeleton_heading') }}</h3>
+                <p class="mb-4 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.loading.skeleton_hint') }}</p>
+                <div class="mb-10 grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div class="flex flex-col gap-2">
+                        <x-skeleton :lines="3" />
+                        <div><x-snippet :code="$snip['skeleton']" /></div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <x-skeleton>
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton h-10 w-10 rounded-full"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="skeleton h-3 w-1/2 rounded"></div>
+                                    <div class="skeleton h-3 w-full rounded"></div>
+                                </div>
+                            </div>
+                        </x-skeleton>
+                        <div><x-snippet :code="$snip['skeleton_card']" /></div>
+                    </div>
+                </div>
+
+                <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.loading.overlay_heading') }}</h3>
+                <x-alert type="warning" class="mb-4 max-w-2xl">{{ __('showcase.loading.overlay_restriction') }}</x-alert>
+                <div class="flex flex-wrap items-center gap-3">
+                    <x-button variant="outline" data-overlay-show="showcase-overlay" data-overlay-timeout="1500">{{ __('showcase.loading.overlay_demo') }}</x-button>
+                    <x-snippet :code="$snip['overlay']" />
+                </div>
+                <x-loading-overlay id="showcase-overlay" :message="__('showcase.loading.saving')" />
+            </section>
+
+            {{-- Formulário completo (exemplo montado: o form de contato da landing) --}}
+            <section id="form_example" class="scroll-mt-24">
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.form_example') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_example.guide') }}</p>
+
+                <x-card class="max-w-2xl">
+                    <form class="space-y-4" action="#form_example" method="get">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <x-input :label="__('auth.ui.name')" name="demo_contact_name" :placeholder="__('auth.ui.name')" />
+                            <x-input :label="__('auth.ui.email')" name="demo_contact_email" type="email" placeholder="voce@exemplo.com" />
+                        </div>
+                        <x-select :label="__('showcase.form_example.subject')" name="demo_contact_subject">
+                            @foreach (__('showcase.form_example.subject_options') as $subjectOption)
+                                <option>{{ $subjectOption }}</option>
+                            @endforeach
+                        </x-select>
+                        <x-input :label="__('showcase.forms.password_label')" name="demo_contact_password" type="password" autocomplete="off" />
+                        <x-textarea :label="__('showcase.forms.message_label')" name="demo_contact_message" :placeholder="__('showcase.forms.message_placeholder')" />
+                        <x-checkbox :label="__('showcase.forms.checkbox_checked')" name="demo_contact_news" />
+                        <x-button type="submit">{{ __('showcase.form_example.submit') }}</x-button>
+                    </form>
+                </x-card>
             </section>
         </main>
     </div>

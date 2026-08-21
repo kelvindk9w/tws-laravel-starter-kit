@@ -26,6 +26,7 @@ return [
         'toast' => 'Toast',
         'empty_state' => 'Empty state',
         'loading' => 'Loading',
+        'form_example' => 'Complete form',
     ],
 
     'theme_tokens' => [
@@ -45,11 +46,13 @@ return [
     ],
 
     'buttons' => [
+        'guide' => 'When to use: the block’s main action = primary (at most one per block); supporting = outline or secondary; quiet navigation = ghost; destructive = danger. A11y: visible focus and press feedback on all; on submit, disable and show the spinner inside the button.',
         'variants' => 'Variants',
         'sizes' => 'Sizes',
         'states' => 'States',
         'primary' => 'Primary',
         'secondary' => 'Secondary',
+        'outline' => 'Outline',
         'ghost' => 'Ghost',
         'danger' => 'Danger',
         'small' => 'Small',
@@ -61,6 +64,7 @@ return [
     ],
 
     'alerts' => [
+        'guide' => 'When to use: persistent feedback in the content context (does not auto-dismiss — use a toast for that). A11y: role="alert" makes screen readers announce it immediately.',
         'success_title' => 'All set',
         'success' => 'Your change was saved successfully.',
         'warning_title' => 'Attention',
@@ -72,6 +76,7 @@ return [
     ],
 
     'badges' => [
+        'guide' => 'Short, scannable statuses. Do not use as a button or for long text; brand for brand highlights, neutral as the default.',
         'active' => 'Active',
         'pending' => 'Pending',
         'blocked' => 'Blocked',
@@ -81,6 +86,11 @@ return [
     ],
 
     'forms' => [
+        'guide' => 'Label always visible (never a placeholder as label), hint for the expected format and error next to the field. type="password" ships the built-in eye button (reveal/hide).',
+        'password_label' => 'Password',
+        'password_hint' => 'Click the eye to reveal.',
+        'message_label' => 'Message',
+        'message_placeholder' => 'Tell the context in a few lines…',
         'text_label' => 'Project name',
         'text_placeholder' => 'My store',
         'text_hint' => 'Can be changed later.',
@@ -99,6 +109,7 @@ return [
     ],
 
     'cards' => [
+        'guide' => 'Groups related content; the footer is an optional slot for actions. Avoid nesting cards.',
         'simple_title' => 'Simple card',
         'simple_body' => 'Card body with supporting text. Use it to group related information.',
         'footer_title' => 'Card with footer',
@@ -107,6 +118,7 @@ return [
     ],
 
     'modal' => [
+        'guide' => 'Confirmations and short flows without leaving the screen. Closes via Esc, backdrop or button; the entrance is an interruptible transition (scale 0.95 + fade).',
         'open' => 'Open modal',
         'title' => 'Confirm action',
         'body' => 'This modal is a real Blade component (<x-modal>): it opens via data-modal-open and closes via backdrop, button or Esc. The animation is a CSS transition (interruptible) and the JS lives in resources/js/ui.js, served by Vite.',
@@ -115,6 +127,7 @@ return [
     ],
 
     'toast' => [
+        'guide' => 'Ephemeral feedback for a completed action — auto-dismisses. Do not use for errors that require a user decision (use <x-alert>).',
         'demo_button' => 'Trigger toast',
         'demo_message' => 'Preferences saved successfully.',
         'flash_note' => 'For session flash, render <x-toast> with session(\'status\') in your layout. The behavior (open, auto-hide) lives in resources/js/ui.js.',
@@ -123,19 +136,34 @@ return [
     'clipboard_toast' => 'Snippet copied to the clipboard.',
 
     'empty_state' => [
+        'guide' => 'First experience of an empty area: say what it is, why it matters and what the next action is.',
         'title' => 'No projects yet',
         'description' => 'Projects group your API keys and uploads. Create the first one to get started.',
         'action' => 'Create project',
     ],
 
     'loading' => [
+        'guide' => 'Waiting hierarchy: spinner inside the button for submissions; skeleton for incoming content (lists, cards); fullscreen overlay is the LAST resort.',
         'sizes' => 'Sizes',
         'in_button' => 'In buttons',
         'saving' => 'Saving…',
+        'skeleton_heading' => 'Skeleton (incoming content)',
+        'skeleton_hint' => 'Shows the STRUCTURE that is coming — feels faster than a spinner. Subtle shimmer, disabled with prefers-reduced-motion. In the dashboard it pairs with wire:loading (see Projects).',
+        'overlay_heading' => 'Fullscreen overlay (restricted use)',
+        'overlay_restriction' => 'ONLY for the initial load of an entire area or long, rare actions (e.g.: generating a heavy report). It blocks the whole screen — for everything else use skeleton or the button spinner.',
+        'overlay_demo' => 'Preview for 1.5 s',
+    ],
+
+    'form_example' => [
+        'guide' => 'The landing contact form assembled with the kit components: input, password input, select, textarea, checkbox and a button with loading state.',
+        'subject' => 'Subject',
+        'subject_options' => ['Suggestion', 'Complaint', 'Other'],
+        'submit' => 'Send message',
     ],
 
     'components' => [
         'spinner_label' => 'Loading',
+        'loading_label' => 'Loading content',
     ],
 
 ];

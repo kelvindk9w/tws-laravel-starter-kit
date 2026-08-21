@@ -3,41 +3,37 @@
 @section('title', __('auth.ui.login_title'))
 
 @section('content')
-    <h1>{{ __('auth.ui.login_title') }}</h1>
+    <h1 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em]">{{ __('auth.ui.login_title') }}</h1>
 
     @php($demo = config('ui.demo_login'))
 
     @if ($demo['enabled'])
-        <p class="status" style="background:#0c4a6e;color:#bae6fd">
+        <x-alert type="info" class="mb-4">
             {{ __('auth.ui.demo_notice') }}<br>
             <strong>{{ __('auth.ui.demo_credentials') }}:</strong>
             {{ $demo['email'] }} / {{ $demo['password'] }}
-        </p>
+        </x-alert>
     @endif
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login') }}" class="space-y-4">
         @csrf
 
-        <label for="email">{{ __('auth.ui.email') }}</label>
-        <input id="email" type="email" name="email"
-               value="{{ old('email', $demo['enabled'] ? $demo['email'] : '') }}"
-               required autofocus autocomplete="username">
+        <x-input :label="__('auth.ui.email')" name="email" type="email"
+                 :value="old('email', $demo['enabled'] ? $demo['email'] : '')"
+                 required autofocus autocomplete="username" />
 
-        <label for="password">{{ __('auth.ui.password') }}</label>
-        <input id="password" type="password" name="password"
-               value="{{ $demo['enabled'] ? $demo['password'] : '' }}"
-               required autocomplete="current-password">
+        <x-input :label="__('auth.ui.password')" name="password" type="password"
+                 :value="$demo['enabled'] ? $demo['password'] : ''"
+                 required autocomplete="current-password" />
 
-        <label>
-            <input type="checkbox" name="remember" value="1"> {{ __('auth.ui.remember_me') }}
-        </label>
+        <x-checkbox :label="__('auth.ui.remember_me')" name="remember" />
 
-        <button type="submit">{{ __('auth.ui.login_submit') }}</button>
+        <x-button type="submit" class="w-full">{{ __('auth.ui.login_submit') }}</x-button>
     </form>
 
-    <p class="links">
-        <a href="{{ route('password.request') }}">{{ __('auth.ui.forgot_password') }}</a>
+    <p class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        <a href="{{ route('password.request') }}" class="text-(--brand) hover:underline">{{ __('auth.ui.forgot_password') }}</a>
         ·
-        <a href="{{ route('register') }}">{{ __('auth.ui.register_link') }}</a>
+        <a href="{{ route('register') }}" class="text-(--brand) hover:underline">{{ __('auth.ui.register_link') }}</a>
     </p>
 @endsection

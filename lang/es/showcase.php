@@ -26,6 +26,7 @@ return [
         'toast' => 'Toast',
         'empty_state' => 'Estado vacío',
         'loading' => 'Carga',
+        'form_example' => 'Formulario completo',
     ],
 
     'theme_tokens' => [
@@ -45,11 +46,13 @@ return [
     ],
 
     'buttons' => [
+        'guide' => 'Cuándo usar: acción principal del bloque = primario (máximo uno por bloque); apoyo = outline o secondary; navegación discreta = ghost; destructiva = danger. A11y: foco visible y feedback de presión en todos; al enviar, deshabilita y muestra el spinner dentro del botón.',
         'variants' => 'Variantes',
         'sizes' => 'Tamaños',
         'states' => 'Estados',
         'primary' => 'Primario',
         'secondary' => 'Secundario',
+        'outline' => 'Outline',
         'ghost' => 'Ghost',
         'danger' => 'Peligro',
         'small' => 'Pequeño',
@@ -61,6 +64,7 @@ return [
     ],
 
     'alerts' => [
+        'guide' => 'Cuándo usar: feedback persistente en el contexto del contenido (no se oculta solo — para eso usa toast). A11y: role="alert" hace que los lectores de pantalla lo anuncien al instante.',
         'success_title' => 'Todo listo',
         'success' => 'Tu cambio se guardó con éxito.',
         'warning_title' => 'Atención',
@@ -72,6 +76,7 @@ return [
     ],
 
     'badges' => [
+        'guide' => 'Estados cortos y escaneables. No uses como botón ni para texto largo; brand para destaque de marca, neutral por defecto.',
         'active' => 'Activo',
         'pending' => 'Pendiente',
         'blocked' => 'Bloqueado',
@@ -81,6 +86,11 @@ return [
     ],
 
     'forms' => [
+        'guide' => 'Label siempre visible (nunca placeholder como label), hint para el formato esperado y error junto al campo. type="password" ya incluye el botón ojo (revelar/ocultar).',
+        'password_label' => 'Contraseña',
+        'password_hint' => 'Haz clic en el ojo para revelar.',
+        'message_label' => 'Mensaje',
+        'message_placeholder' => 'Cuenta el contexto en pocas líneas…',
         'text_label' => 'Nombre del proyecto',
         'text_placeholder' => 'Mi tienda',
         'text_hint' => 'Puede cambiarse después.',
@@ -99,6 +109,7 @@ return [
     ],
 
     'cards' => [
+        'guide' => 'Agrupa contenido relacionado; el pie es un slot opcional para acciones. Evita anidar cards.',
         'simple_title' => 'Card simple',
         'simple_body' => 'Cuerpo del card con texto de apoyo. Úsalo para agrupar información relacionada.',
         'footer_title' => 'Card con pie',
@@ -107,6 +118,7 @@ return [
     ],
 
     'modal' => [
+        'guide' => 'Confirmaciones y flujos cortos sin salir de la pantalla. Cierra por Esc, backdrop o botón; la entrada es una transition interrumpible (scale 0.95 + fade).',
         'open' => 'Abrir modal',
         'title' => 'Confirmar acción',
         'body' => 'Este modal es un componente Blade real (<x-modal>): abre por data-modal-open y cierra por backdrop, botón o Esc. La animación es una CSS transition (interrumpible) y el JS vive en resources/js/ui.js, servido por Vite.',
@@ -115,6 +127,7 @@ return [
     ],
 
     'toast' => [
+        'guide' => 'Feedback efímero de acción completada — se oculta solo. No uses para errores que exigen una decisión del usuario (usa <x-alert>).',
         'demo_button' => 'Disparar toast',
         'demo_message' => 'Preferencias guardadas con éxito.',
         'flash_note' => 'Para flash de sesión, renderiza <x-toast> con session(\'status\') en tu layout. El comportamiento (abrir, auto-ocultar) vive en resources/js/ui.js.',
@@ -123,19 +136,34 @@ return [
     'clipboard_toast' => 'Snippet copiado al portapapeles.',
 
     'empty_state' => [
+        'guide' => 'Primera experiencia de un área vacía: di qué es, por qué importa y cuál es la siguiente acción.',
         'title' => 'Ningún proyecto aún',
         'description' => 'Los proyectos agrupan tus claves de API y uploads. Crea el primero para empezar.',
         'action' => 'Crear proyecto',
     ],
 
     'loading' => [
+        'guide' => 'Jerarquía de espera: spinner dentro del botón para envíos; skeleton para contenido que está llegando (listas, cards); overlay de pantalla completa es el ÚLTIMO recurso.',
         'sizes' => 'Tamaños',
         'in_button' => 'En botones',
         'saving' => 'Guardando…',
+        'skeleton_heading' => 'Skeleton (contenido llegando)',
+        'skeleton_hint' => 'Muestra la ESTRUCTURA que viene — percepción de rapidez mayor que spinner. Shimmer sutil, desactivado con prefers-reduced-motion. En el panel combina con wire:loading (ver Proyectos).',
+        'overlay_heading' => 'Overlay de pantalla completa (uso restringido)',
+        'overlay_restriction' => 'SOLO para carga inicial de un área entera o acciones largas y raras (ej.: generar un reporte pesado). Bloquea toda la pantalla — para todo lo demás usa skeleton o el spinner del botón.',
+        'overlay_demo' => 'Ver por 1,5 s',
+    ],
+
+    'form_example' => [
+        'guide' => 'El formulario de contacto de la landing montado con los componentes del kit: input, input password, select, textarea, checkbox y botón con estado de carga.',
+        'subject' => 'Asunto',
+        'subject_options' => ['Sugerencia', 'Reclamo', 'Otro'],
+        'submit' => 'Enviar mensaje',
     ],
 
     'components' => [
         'spinner_label' => 'Cargando',
+        'loading_label' => 'Cargando contenido',
     ],
 
 ];

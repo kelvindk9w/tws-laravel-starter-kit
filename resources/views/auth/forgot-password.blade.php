@@ -3,19 +3,18 @@
 @section('title', __('auth.ui.forgot_title'))
 
 @section('content')
-    <h1>{{ __('auth.ui.forgot_title') }}</h1>
-    <p>{{ __('auth.ui.forgot_subtitle') }}</p>
+    <h1 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em]">{{ __('auth.ui.forgot_title') }}</h1>
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">{{ __('auth.ui.forgot_subtitle') }}</p>
 
-    <form method="POST" action="{{ route('password.email') }}">
+    <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
         @csrf
 
-        <label for="email">{{ __('auth.ui.email') }}</label>
-        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
+        <x-input :label="__('auth.ui.email')" name="email" type="email" :value="old('email')" required autofocus autocomplete="username" />
 
-        <button type="submit">{{ __('auth.ui.forgot_submit') }}</button>
+        <x-button type="submit" class="w-full">{{ __('auth.ui.forgot_submit') }}</x-button>
     </form>
 
-    <p class="links">
-        <a href="{{ route('login') }}">{{ __('auth.ui.login_link') }}</a>
+    <p class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        <a href="{{ route('login') }}" class="text-(--brand) hover:underline">{{ __('auth.ui.login_link') }}</a>
     </p>
 @endsection

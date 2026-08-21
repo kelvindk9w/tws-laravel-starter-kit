@@ -86,25 +86,16 @@
         @endif
 
         <form wire:submit="updatePassword" class="mt-4 space-y-4">
-            <div>
-                <label for="currentPassword" class="text-sm font-medium">{{ __('panel.profile.current_password') }}</label>
-                <input id="currentPassword" type="password" wire:model="currentPassword" autocomplete="current-password"
-                       class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                @error('currentPassword') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-            </div>
+            <x-input :label="__('panel.profile.current_password')" name="currentPassword" type="password"
+                     wire:model="currentPassword" autocomplete="current-password"
+                     :error="$errors->first('currentPassword')" />
             <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="password" class="text-sm font-medium">{{ __('auth.ui.new_password') }}</label>
-                    <input id="password" type="password" wire:model="password" autocomplete="new-password"
-                           class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                    @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label for="passwordConfirmation" class="text-sm font-medium">{{ __('auth.ui.password_confirmation') }}</label>
-                    <input id="passwordConfirmation" type="password" wire:model="passwordConfirmation" autocomplete="new-password"
-                           class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                    @error('passwordConfirmation') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
+                <x-input :label="__('auth.ui.new_password')" name="password" type="password"
+                         wire:model="password" autocomplete="new-password"
+                         :error="$errors->first('password')" />
+                <x-input :label="__('auth.ui.password_confirmation')" name="passwordConfirmation" type="password"
+                         wire:model="passwordConfirmation" autocomplete="new-password"
+                         :error="$errors->first('passwordConfirmation')" />
             </div>
             <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
         </form>
@@ -128,26 +119,17 @@
 
         <form wire:submit="updateTransactionPassword" class="mt-4 space-y-4">
             @if ($user->hasTransactionPassword())
-                <div>
-                    <label for="currentTransactionPassword" class="text-sm font-medium">{{ __('auth.ui.current_transaction_password') }}</label>
-                    <input id="currentTransactionPassword" type="password" wire:model="currentTransactionPassword" autocomplete="off"
-                           class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                    @error('currentTransactionPassword') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
+                <x-input :label="__('auth.ui.current_transaction_password')" name="currentTransactionPassword" type="password"
+                         wire:model="currentTransactionPassword" autocomplete="off"
+                         :error="$errors->first('currentTransactionPassword')" />
             @endif
             <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="transactionPassword" class="text-sm font-medium">{{ __('auth.ui.new_transaction_password') }}</label>
-                    <input id="transactionPassword" type="password" wire:model="transactionPassword" autocomplete="new-password"
-                           class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                    @error('transactionPassword') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label for="transactionPasswordConfirmation" class="text-sm font-medium">{{ __('auth.ui.password_confirmation') }}</label>
-                    <input id="transactionPasswordConfirmation" type="password" wire:model="transactionPasswordConfirmation" autocomplete="new-password"
-                           class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                    @error('transactionPasswordConfirmation') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
+                <x-input :label="__('auth.ui.new_transaction_password')" name="transactionPassword" type="password"
+                         wire:model="transactionPassword" autocomplete="new-password"
+                         :error="$errors->first('transactionPassword')" />
+                <x-input :label="__('auth.ui.password_confirmation')" name="transactionPasswordConfirmation" type="password"
+                         wire:model="transactionPasswordConfirmation" autocomplete="new-password"
+                         :error="$errors->first('transactionPasswordConfirmation')" />
             </div>
             <button type="submit" class="rounded-lg bg-(--brand) px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.save') }}</button>
         </form>

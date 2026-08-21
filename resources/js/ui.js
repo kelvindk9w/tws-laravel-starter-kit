@@ -13,6 +13,9 @@
 //   [data-theme-toggle]     cicla o tema: sistema → claro → escuro
 //   [data-theme-set="…"]    define o tema diretamente (segmented control)
 //   [data-locale-switch]    <select> de idioma — navega para a URL da option
+//   [data-password-toggle]  botão "olho" do <x-input type="password">
+//   [data-overlay-show="id"] abre o <x-loading-overlay id>; data-overlay-timeout
+//                           (ms, opcional) auto-esconde — usado na demo do /ui
 // =============================================================================
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -284,4 +287,46 @@ applyTheme(themeSetting());
 document.addEventListener('change', (event) => {
     const select = event.target.closest('[data-locale-switch]');
     if (select) window.location.assign(select.value);
+});
+
+// --- Senha: botão "olho" do <x-input type="password"> ---------------------------
+
+document.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-password-toggle]');
+    if (!toggle) return;
+
+    const input = toggle.parentElement?.querySelector('input');
+    if (!input) return;
+
+    const revealed = input.type === 'password';
+    input.type = revealed ? 'text' : 'password';
+
+    toggle.setAttribute('aria-label', revealed ? toggle.dataset.labelHide : toggle.dataset.labelShow);
+    toggle.setAttribute('aria-pressed', revealed ? 'true' : 'false');
+    toggle.querySelector('[data-password-icon="show"]')?.classList.toggle('hidden', revealed);
+    toggle.querySelector('[data-password-icon="hide"]')?.classList.toggle('hidden', !revealed);
+
+    // Devolve o foco ao campo sem mover o cursor (UX de formulário).
+    input.focus({ preventScroll: true });
+});
+
+// --- Overlay de carregamento (USO RESTRITO — ver showcase) ----------------------
+
+document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-overlay-show]');
+    if (!trigger) return;
+
+    const overlay = document.getElementById(trigger.dataset.overlayShow);
+    if (!overlay) return;
+
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+
+    const timeout = Number(trigger.dataset.overlayTimeout ?? overlay.dataset.overlayTimeout ?? 0);
+    if (timeout > 0) {
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }, timeout);
+    }
 });

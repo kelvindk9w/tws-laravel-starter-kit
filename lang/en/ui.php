@@ -22,6 +22,11 @@ return [
         'dark' => 'Dark',
     ],
 
+    'password' => [
+        'show' => 'Show password',
+        'hide' => 'Hide password',
+    ],
+
     'footer' => [
         'operated_by' => 'Operated by :platform',
         'support' => 'Support',

@@ -35,7 +35,13 @@
         </p>
     @endif
 
-    <div class="space-y-3">
+    {{-- Skeleton durante ações Livewire (criar/editar/excluir): mostra a
+         ESTRUTURA da lista em vez de spinner — percepção de rapidez. --}}
+    <div wire:loading class="space-y-3">
+        <x-skeleton :lines="3" />
+    </div>
+
+    <div wire:loading.remove class="space-y-3">
         @foreach ($projects as $project)
             <article class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
                 @if ($editingUuid === $project->uuid)
