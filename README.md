@@ -977,14 +977,12 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 
 - **i18n + seletor compacto na topbar** (bandeira + sigla): o painel segue a
   mesma resolução de locale do app (preferência da conta → cookie → padrão).
-- **Dashboard com dados reais** (`/admin`): `StatsOverviewWidget` com seis
-  números da plataforma (usuários totais, novos em 7 dias, requisições em
-  24h, respostas 4xx/5xx em 24h, chaves de API ativas e submissões dos
-  últimos 7 dias) + `ChartWidget` de **requisições por dia nos últimos 30
-  dias**, com a série de erros destacada. Tudo lido de tabela real — o
-  `RequestLogSeeder` semeia ~30 dias de `request_logs` realistas
-  (append-only e com a mesma redaction do middleware) para que o gráfico
-  nasça com conteúdo em qualquer instalação.
+- **Três dashboards nomeados para escolher** (`/admin`): "Visão geral",
+  "Crescimento & API" e "Conteúdo & Operação" — a seção
+  [Dashboards: escolhendo e adaptando a sua variante](#dashboards-escolhendo-e-adaptando-a-sua-variante)
+  explica como ligar/desligar cada uma, como criar a quarta e como um widget
+  novo nasce em poucas linhas. Todo número vem de tabela real; os seeders do
+  kit garantem que as três nasçam CHEIAS em qualquer instalação.
 - **Identidade unificada com o resto do produto**: `->font('Space Grotesk
   Variable')` (self-hosted, sem CDN de fonte — a CSP não permite),
   `->viteTheme('resources/css/filament.css')` (que importa o preset do
@@ -1034,6 +1032,182 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 - **IP allowlist** (ADR-011, checklist 25 — obrigatória em produção):
   `ADMIN_ALLOWED_IPS` no .env (IPs ou CIDRs separados por vírgula). Vazio =
   sem restrição (apenas desenvolvimento). Middleware: `EnsureAdminIpAllowed`.
+
+### Dashboards: escolhendo e adaptando a sua variante
+
+Como nos temas de admin clássicos ("Analytics / SaaS / E-commerce"), o
+`/admin` entrega **três dashboards nomeados**. A ideia não é que os três
+fiquem ligados para sempre: é que você abra os três, escolha o que mais se
+parece com o seu produto, **apague os outros dois** e adapte o que sobrou.
+
+| Variante | Slug | Para quem | O que mostra |
+|---|---|---|---|
+| **Visão geral** | `overview` | quem abre o painel para saber se está tudo bem | usuários, requisições, chaves ativas e projetos (total + Δ do período); requisições por dia com a linha de erro; respostas por faixa 2xx/3xx/4xx/5xx; últimas submissões; últimos uploads |
+| **Crescimento & API** | `growth` | o dono técnico acompanhando adoção | novos usuários, taxa de erro, latência média e chaves emitidas; curva **acumulada** da base; ranking de endpoints; **meta do mês** com marca de ritmo; projetos recentes com dono e nº de chaves |
+| **Conteúdo & Operação** | `content` | quem cuida do catálogo e da fila do dia | produtos, uploads, volume armazenado e tentativas bloqueadas; composição por tipo de arquivo; entrada por dia (uploads + submissões); últimos produtos; fila de entrada com as bloqueadas no topo |
+
+Todas têm, no topo, **um** seletor de período (7/30/90 dias) que vale para a
+página inteira, e **todo** card compara com o período anterior de mesmo
+tamanho — com seta, cor e sparkline. Quando não há período anterior, o card
+diz "sem base de comparação" em vez de inventar um "+100%".
+
+#### Ligar, desligar e escolher a home
+
+Tudo em `config/dashboards.php`, alimentado pelo `.env` (ADR-007):
+
+```dotenv
+DASHBOARD_ENABLED=overview,growth,content   # quais existem, nesta ordem no menu
+DASHBOARD_DEFAULT=overview                  # qual responde em /admin
+DASHBOARD_PERIOD=30                         # janela padrão do seletor
+DASHBOARD_GOAL_MONTHLY_REQUESTS=1500        # meta do widget de progresso
+DASHBOARD_LATEST_RECORDS=6                  # linhas das tabelas "últimos N"
+```
+
+- a variante **padrão** responde em `/admin`; as demais em
+  `/admin/dashboards/{slug}`;
+- tirar um slug de `DASHBOARD_ENABLED` remove a variante do **menu E da
+  rota** — a página deixa de ser registrada no painel e a URL responde 404.
+  Não é um item escondido com a rota viva;
+- `DASHBOARD_DEFAULT` apontando para variante desligada não deixa o painel
+  sem home: a primeira habilitada (na ordem do menu) assume;
+- sem nenhuma variante habilitada, o painel volta ao Dashboard de fábrica do
+  Filament — `/admin` nunca dá 404.
+
+Quem lê essa config é o `App\Filament\Dashboards\DashboardRegistry`, e é
+ele que o `AdminPanelProvider` consulta (`->pages(DashboardRegistry::pages())`).
+Nenhuma lista de dashboards existe hardcodada em código.
+
+#### Criar uma quarta variante (4 passos)
+
+1. **Traduções** — um bloco `admin.dashboards.finance` em
+   `lang/{pt_BR,en,es}/admin.php` com `nav`, `title` e `subheading` (o teste
+   de paridade de chaves reprova se faltar em algum idioma).
+2. **A página** — `app/Filament/Dashboards/FinanceDashboard.php`, estendendo
+   `BaseDashboard`. Ela declara só duas coisas:
+
+```php
+final class FinanceDashboard extends BaseDashboard
+{
+    public static function variant(): string
+    {
+        return 'finance';
+    }
+
+    public function getWidgets(): array
+    {
+        return [FinanceStats::class, RevenueChart::class];
+    }
+}
+```
+
+   Rota, ícone, grupo de navegação, ordem no menu, título, subtítulo, grade de
+   12 colunas e o seletor de período vêm da base.
+
+3. **A config** — a entrada nova em `config/dashboards.php`:
+
+```php
+'finance' => [
+    'page' => App\Filament\Dashboards\FinanceDashboard::class,
+    'icon' => 'heroicon-o-banknotes',
+    'sort' => 4,
+],
+```
+
+4. **O `.env`** — acrescentar `finance` a `DASHBOARD_ENABLED` (e
+   `php artisan optimize:clear`). A variante aparece no menu e responde em
+   `/admin/dashboards/finance`.
+
+#### Criar um widget com a base
+
+A base vive em `app/Filament/Widgets/Support/` e existe para que um widget
+novo não repita decisão de design nem conta de porcentagem:
+
+| Peça | O que entrega |
+|---|---|
+| `Period` | a janela do filtro da página **e** a janela anterior de mesmo tamanho |
+| `Metric` | contagem/soma/média/razão por dia, com `current()`, `previous()`, `delta()`, `series()` e `cumulativeSeries()` |
+| `MetricStat` | o card: valor formatado, seta, Δ%, cor de status, sparkline |
+| `MetricFormat` | inteiro, porcentagem, milissegundos e bytes — formatação só na borda |
+| `StatusPalette` | a **única** paleta de status (nome da cor do Filament + hex para o Chart.js) |
+| `BaseStatsWidget` | faixa de 4 KPIs, largura total, período da página |
+| `BaseTimeSeriesWidget` | gráfico de linha/área/barras por dia, opções do Chart.js e estado vazio |
+| `BaseCompositionWidget` | doughnut de participação ou barra horizontal de ranking |
+| `BaseLatestRecordsWidget` | tabela "últimos N" sem paginação, com "ver tudo" e estado vazio |
+| `InteractsWithDashboardPeriod` | o período **da página** chegando no widget (`$this->pageFilters`) |
+
+Um KPI novo:
+
+```php
+final class FaturasStats extends BaseStatsWidget
+{
+    protected function metrics(Period $period): array
+    {
+        return [
+            MetricStat::make(__('admin.dashboards.finance.invoices'), Metric::count(
+                fn () => Fatura::query(),
+                $period,
+            ))
+                ->icon(Heroicon::OutlinedDocumentText)
+                ->hint(__('admin.dashboards.finance.invoices_hint')),
+        ];
+    }
+}
+```
+
+Um gráfico novo:
+
+```php
+final class FaturasChart extends BaseTimeSeriesWidget
+{
+    protected int|string|array $columnSpan = ['default' => 'full', 'xl' => 8];
+
+    public function getHeading(): string
+    {
+        return __('admin.dashboards.finance.chart');
+    }
+
+    protected function chartSeries(Period $period): array
+    {
+        return [ChartSeries::make(
+            __('admin.dashboards.finance.chart_series'),
+            Metric::count(fn () => Fatura::query(), $period)->series(),
+            StatusPalette::Neutral,
+        )];
+    }
+}
+```
+
+Ajustes finos por propriedade: `$columnSpan` (span na grade de 12,
+responsivo), `$chartType` (`line`/`bar`/`doughnut`), `$maxHeight`,
+`->inverted()` no card quando **subir é ruim** e `->deltaInPoints()` quando a
+métrica já é uma porcentagem. Para o que não é card, gráfico nem tabela, o
+exemplo de widget **custom** é o `RequestsGoalProgress` (Blade livre dentro da
+mesma `<x-filament::section>` dos demais).
+
+#### Por que os dashboards nascem cheios
+
+`users` (90 dias) e `request_logs` (30 dias) já vinham semeados; `projects`,
+`api_keys` e `uploads` nasciam **vazios**, e as submissões cabiam todas nas
+últimas 40 horas — metade dos cards abriria em zero. O
+`DashboardHistorySeeder` (chamado pelo `DatabaseSeeder`, só com o login demo
+habilitado) resolve isso com seis seeders **idempotentes**, todos por
+identificador determinístico (UUID v5 com semente fixa):
+
+| Seeder | O que semeia |
+|---|---|
+| `ProjectSeeder` | 22 projetos espalhados em até 200 dias, com status variado |
+| `ApiKeySeeder` | 18 chaves **inertes** (nenhuma secreta existe — só um hash sem par), com os quatro status e vínculo com projetos |
+| `UploadSeeder` | ~700 registros de upload em 200 dias, com tipo real, tamanho plausível e volume crescendo rumo ao presente |
+| `SubmissionHistorySeeder` | submissões ANTIGAS (conteúdo banal — payload de ataque continua sendo assunto do `FormSubmissionSeeder`) |
+| `ProductHistorySeeder` | data de cadastro dos produtos derivada do uuid: não cria nem apaga nada, só espalha o catálogo no tempo |
+| `RequestLogHistorySeeder` | o passado dos logs (dia 31 ao 200), respeitando append-only e a MESMA redaction do middleware |
+
+A profundidade de 200 dias é proposital: a janela de 90 dias precisa de
+outros 90 atrás dela, senão todo card diria "sem base de comparação".
+
+> `php artisan db:seed` roda tudo de novo sem duplicar nada (é o comando de
+> reseed do kit — **nunca** `migrate:fresh`).
+
 
 ### Submissões bloqueadas: listagem neutralizada, detalhe forense
 

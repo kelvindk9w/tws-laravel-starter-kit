@@ -2,13 +2,20 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+/**
+ * Semeadura da instalação de demonstração.
+ *
+ * SEM WithoutModelEvents (e isso é decisão, não esquecimento): os models do
+ * kit preenchem `uuid` (HasUuids/booted) e `codigo_publico` (HasPublicCode) no
+ * evento `creating`. Silenciar os eventos durante o `db:seed` fazia o
+ * RequestLogSeeder estourar "null value in column uuid" e faria o mesmo com
+ * projetos, chaves e uploads. Se algum seeder futuro precisar de silêncio, o
+ * lugar do `WithoutModelEvents` é ELE, não este agregador.
+ */
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
@@ -29,6 +36,12 @@ class DatabaseSeeder extends Seeder
             // /admin nasce com conteúdo em qualquer instalação (append-only
             // e idempotente — ver RequestLogSeeder).
             $this->call(RequestLogSeeder::class);
+            // Profundidade no tempo para os DASHBOARDS do /admin (projetos,
+            // chaves de API, uploads, submissões antigas, datas dos produtos e
+            // o passado dos request logs). Sem isto, metade dos cards das três
+            // variantes nasceria em zero numa instalação nova. Todos
+            // idempotentes — ver DashboardHistorySeeder.
+            $this->call(DashboardHistorySeeder::class);
         }
     }
 }

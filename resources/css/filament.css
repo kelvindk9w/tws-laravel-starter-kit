@@ -46,3 +46,106 @@
         letter-spacing: -0.02em;
     }
 }
+
+/* =============================================================================
+   Dashboards do /admin (config/dashboards.php).
+
+   Três coisas que separam um dashboard "premium" de um genérico e que o
+   Filament não entrega de fábrica:
+
+   1. TIPOGRAFIA NUMÉRICA tabular — sem ela, o número "dança" de largura
+      enquanto a animação de contagem roda e quando o período muda;
+   2. DENSIDADE controlada — respiro entre os cards e altura previsível de
+      linha, para a grade parecer uma grade e não uma colagem;
+   3. estado de FOCO e movimento sob controle do usuário.
+   ============================================================================= */
+
+@layer components {
+    /* Todo número de dashboard fala a voz display, em largura fixa. */
+    .fi-wi-stats-overview-stat-value,
+    .fi-dash-number {
+        font-family: var(--font-display);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+        letter-spacing: -0.02em;
+    }
+
+    /* Δ% e legenda do card: um degrau abaixo, nunca competindo com o número. */
+    .fi-dash-stat .fi-wi-stats-overview-stat-description {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Widget de progresso da meta (variante "Crescimento & API"). */
+    .fi-dash-goal-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+
+    .fi-dash-goal-value {
+        display: flex;
+        align-items: baseline;
+        gap: 0.375rem;
+        font-size: 1.875rem;
+        font-weight: 600;
+        line-height: 1.1;
+        color: var(--color-gray-950, #09090b);
+    }
+
+    .fi-dash-goal-target {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--color-gray-500, #71717a);
+    }
+
+    .fi-dash-goal-track {
+        position: relative;
+        height: 0.5rem;
+        overflow: hidden;
+        border-radius: 9999px;
+        background-color: var(--color-gray-100, #f4f4f5);
+    }
+
+    .fi-dash-goal-bar {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 600ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Marca do ritmo esperado: fina, neutra, sem roubar a leitura da barra. */
+    .fi-dash-goal-pace {
+        position: absolute;
+        inset-block: 0;
+        width: 2px;
+        background-color: var(--color-gray-400, #a1a1aa);
+        opacity: 0.9;
+    }
+
+    .fi-dash-goal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .fi-dash-goal-meta {
+        font-size: 0.75rem;
+        color: var(--color-gray-500, #71717a);
+    }
+
+    .dark .fi-dash-goal-value {
+        color: var(--color-gray-50, #fafafa);
+    }
+
+    .dark .fi-dash-goal-track {
+        background-color: var(--color-gray-800, #27272a);
+    }
+}
+
+/* Quem pediu menos movimento não recebe transição nenhuma — a mesma regra
+   que o script de contagem aplica do lado do JS. */
+@media (prefers-reduced-motion: reduce) {
+    .fi-dash-goal-bar {
+        transition: none;
+    }
+}

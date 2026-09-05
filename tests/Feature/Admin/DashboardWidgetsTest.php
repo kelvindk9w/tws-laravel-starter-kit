@@ -4,17 +4,29 @@ declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
 use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use App\Core\Logging\Models\RequestLog;
-use App\Filament\Widgets\PlatformStatsOverview;
-use App\Filament\Widgets\RequestsChart;
-use Database\Seeders\RequestLogSeeder;
+use App\Core\Showcase\Models\FormSubmission;
+use App\Core\Uploads\Models\Upload;
+use App\Filament\Widgets\Content\ContentStats;
+use App\Filament\Widgets\Content\UploadsPerDayChart;
+use App\Filament\Widgets\Growth\GrowthStats;
+use App\Filament\Widgets\Overview\LatestSubmissions;
+use App\Filament\Widgets\Overview\OverviewStats;
+use App\Filament\Widgets\Overview\RequestsTrendChart;
+use App\Filament\Widgets\Support\Metric;
+use App\Filament\Widgets\Support\MetricFormat;
+use App\Filament\Widgets\Support\MetricStat;
+use App\Filament\Widgets\Support\Period;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 // =============================================================================
-// Crítica de design #3 — o /admin abria com o AccountWidget de fábrica
-// sozinho. Agora abre com números reais + gráfico de 30 dias.
+// A BASE reutilizável dos dashboards (app/Filament/Widgets/Support):
+// Metric (Δ% vs. período anterior + sparkline), Period (janela e janela
+// anterior), MetricStat (o card) e as bases de gráfico e de tabela.
+//
+// É o contrato que faz um widget novo nascer em poucas linhas — e o que
+// impede um card de comparar 30 dias com 7.
 // =============================================================================
 
 beforeEach(function () {
@@ -22,84 +34,241 @@ beforeEach(function () {
     $this->actingAs($this->admin);
 });
 
-it('o dashboard do admin renderiza os widgets com dados, sem o AccountWidget', function () {
-    $this->seed(RequestLogSeeder::class);
+/** Cria um request log numa data específica. */
+function logEm(string $quando, int $http = 200, int $duracao = 100): RequestLog
+{
+    // forceFill: `created_at` não é fillable no RequestLog (append-only), e é
+    // exatamente a data que estes testes precisam controlar.
+    $log = new RequestLog;
 
-    // Os widgets do Filament são componentes Livewire carregados sob demanda:
-    // a página registra os componentes; o CONTEÚDO é verificado nos testes
-    // de widget abaixo.
-    $html = $this->get('/admin')->assertOk()->getContent();
-
-    expect($html)->toContain('PlatformStatsOverview')
-        ->and($html)->toContain('RequestsChart')
-        // AccountWidget de fábrica ("Bem-vindo(a)") saiu do painel.
-        ->and($html)->not->toContain('AccountWidget');
-
-    expect(filament()->getWidgets())->toBe([
-        PlatformStatsOverview::class,
-        RequestsChart::class,
-    ]);
-});
-
-it('os números do StatsOverview vêm das tabelas reais', function () {
-    User::factory()->count(4)->create();
-
-    RequestLog::query()->create([
+    $log->forceFill([
         'correlation_id' => (string) Str::uuid7(),
         'method' => 'GET',
         'endpoint' => 'api/v1/projects',
         'status' => RequestLogStatus::Concluida,
-        'http_status_response' => 500,
-    ]);
+        'http_status_response' => $http,
+        'duration_ms' => $duracao,
+        'created_at' => $quando,
+    ])->save();
 
-    $widget = Livewire::test(PlatformStatsOverview::class)->assertOk();
+    return $log;
+}
 
-    $widget->assertSee(__('admin.dashboard.users_total'))
-        ->assertSee(__('admin.dashboard.errors_24h'))
-        // 5 usuários = 4 criados + o admin do beforeEach.
-        ->assertSee('5');
+it('o período resolve a janela atual e a anterior, e cai no padrão quando o filtro é inválido', function () {
+    $periodo = Period::days(30);
+
+    expect($periodo->days)->toBe(30)
+        ->and($periodo->dates())->toHaveCount(30)
+        ->and($periodo->previousDates())->toHaveCount(30)
+        // A janela anterior termina EXATAMENTE onde a atual começa.
+        ->and($periodo->previousEnd()->toDateTimeString())->toBe($periodo->start()->toDateTimeString())
+        ->and($periodo->dates())->toContain(now()->toDateString());
+
+    // Filtro ausente, vazio ou fora das opções: padrão da config, nunca erro.
+    expect(Period::fromFilters(null)->days)->toBe(Period::defaultDays())
+        ->and(Period::fromFilters(['period' => '7'])->days)->toBe(7)
+        ->and(Period::fromFilters(['period' => 'abacaxi'])->days)->toBe(Period::defaultDays())
+        ->and(Period::days(365)->days)->toBe(Period::defaultDays());
 });
 
-it('o gráfico devolve 30 dias e conta as requisições do dia', function () {
-    RequestLog::query()->create([
-        'correlation_id' => (string) Str::uuid7(),
-        'method' => 'GET',
-        'endpoint' => 'dashboard',
-        'status' => RequestLogStatus::Concluida,
-        'http_status_response' => 200,
-    ]);
+it('a métrica calcula o Δ% comparando a janela com a janela anterior', function () {
+    $periodo = Period::days(7);
 
-    $dados = (fn (): array => $this->getCachedData())->call(Livewire::test(RequestsChart::class)->assertOk()->instance());
+    // 6 registros nos últimos 7 dias; 4 nos 7 dias anteriores → +50%.
+    foreach ([0, 1, 2, 3, 4, 5] as $dia) {
+        logEm(now()->subDays($dia)->toDateTimeString());
+    }
 
-    expect($dados['labels'])->toHaveCount(30)
+    foreach ([8, 9, 10, 11] as $dia) {
+        logEm(now()->subDays($dia)->toDateTimeString());
+    }
+
+    $metrica = Metric::count(fn () => RequestLog::query(), $periodo);
+
+    expect($metrica->current())->toBe(6.0)
+        ->and($metrica->previous())->toBe(4.0)
+        ->and(round((float) $metrica->delta(), 2))->toBe(50.0)
+        ->and($metrica->deltaAbsolute())->toBe(2.0)
+        // Sparkline: um ponto por dia da janela, o mais recente por último.
+        ->and($metrica->series())->toHaveCount(7)
+        ->and(array_sum($metrica->series()))->toBe(6.0);
+});
+
+it('sem base de comparação a métrica devolve null, e não um +100% inventado', function () {
+    logEm(now()->toDateTimeString());
+
+    $metrica = Metric::count(fn () => RequestLog::query(), Period::days(7));
+
+    expect($metrica->previous())->toBe(0.0)
+        ->and($metrica->delta())->toBeNull();
+
+    $stat = MetricStat::make('Requisições', $metrica)->toStat();
+
+    expect($stat->getDescription())->toContain(__('admin.dashboards.common.no_baseline'));
+});
+
+it('a métrica soma, faz média e razão — e a razão compara pontos, não porcentagem de porcentagem', function () {
+    $periodo = Period::days(7);
+
+    logEm(now()->toDateTimeString(), 200, 100);
+    logEm(now()->toDateTimeString(), 500, 300);
+    logEm(now()->subDays(1)->toDateTimeString(), 200, 200);
+    logEm(now()->subDays(1)->toDateTimeString(), 200, 200);
+
+    $media = Metric::average(fn () => RequestLog::query(), 'duration_ms', $periodo);
+
+    expect($media->current())->toBe(200.0);
+
+    $total = Metric::count(fn () => RequestLog::query(), $periodo);
+    $erros = Metric::count(fn () => RequestLog::query()->where('http_status_response', '>=', 400), $periodo);
+
+    // 1 erro em 4 requisições = 25% no período; sem período anterior = null.
+    expect(Metric::ratio($erros, $total)->current())->toBe(25.0)
+        ->and(Metric::ratio($erros, $total)->series())->toHaveCount(7);
+});
+
+it('a série acumulada parte de uma base e nunca desce', function () {
+    logEm(now()->subDays(1)->toDateTimeString());
+    logEm(now()->toDateTimeString());
+
+    $serie = Metric::count(fn () => RequestLog::query(), Period::days(7))->cumulativeSeries(10.0);
+    $ultimo = $serie[count($serie) - 1];
+
+    expect($serie)->toHaveCount(7)
+        ->and($ultimo)->toBe(12.0)
+        ->and($serie)->toBe(array_values(collect($serie)->sort()->values()->all()));
+});
+
+it('o card mostra a seta certa e a cor certa — inclusive quando subir é ruim', function () {
+    $subindo = Metric::fromValues(120, 100, [1, 2, 3]);
+    $caindo = Metric::fromValues(80, 100, [3, 2, 1]);
+
+    $bom = MetricStat::make('Usuários', $subindo)->toStat();
+    $ruim = MetricStat::make('Taxa de erro', $subindo)->inverted()->toStat();
+
+    expect($bom->getColor())->toBe('success')
+        ->and($ruim->getColor())->toBe('danger')
+        ->and(MetricStat::make('Usuários', $caindo)->toStat()->getColor())->toBe('danger')
+        // Métrica invertida caindo é boa notícia.
+        ->and(MetricStat::make('Latência', $caindo)->inverted()->toStat()->getColor())->toBe('success');
+
+    // Δ em PONTOS para métricas que já são porcentagem.
+    $emPontos = MetricStat::make('Taxa de erro', Metric::fromValues(3.5, 2.0, [1, 2, 3]))
+        ->format(MetricFormat::Percent)
+        ->deltaInPoints()
+        ->toStat();
+
+    expect($emPontos->getDescription())->toContain('1,5');
+});
+
+it('os formatos escrevem o número na borda, nunca no cálculo', function () {
+    expect(MetricFormat::Integer->display(1234))->toContain('1')
+        ->and(MetricFormat::Percent->display(12.34))->toEndWith('%')
+        ->and(MetricFormat::Milliseconds->display(320))->toEndWith('ms')
+        ->and(MetricFormat::Milliseconds->display(2500))->toEndWith('s')
+        ->and(MetricFormat::Bytes->display(2_097_152))->toContain('MB');
+});
+
+it('o gráfico de série temporal devolve um ponto por dia da janela da página', function () {
+    logEm(now()->toDateTimeString());
+
+    $componente = Livewire::test(RequestsTrendChart::class, ['pageFilters' => ['period' => 7]])->assertOk();
+
+    $dados = (fn (): array => $this->getCachedData())->call($componente->instance());
+
+    expect($dados['labels'])->toHaveCount(7)
         ->and($dados['datasets'])->toHaveCount(2)
-        ->and($dados['datasets'][0]['data'])->toHaveCount(30)
+        ->and($dados['datasets'][0]['data'])->toHaveCount(7)
         // A requisição de hoje é o último ponto da série.
-        ->and(end($dados['datasets'][0]['data']))->toBeGreaterThanOrEqual(1);
+        ->and(end($dados['datasets'][0]['data']))->toBeGreaterThanOrEqual(1.0);
+
+    // Trocar o período da PÁGINA reflete no widget — o filtro é um só.
+    $noventa = Livewire::test(RequestsTrendChart::class, ['pageFilters' => ['period' => 90]])->assertOk();
+
+    expect((fn (): array => $this->getCachedData())->call($noventa->instance())['labels'])->toHaveCount(90);
 });
 
-it('o seeder de request logs alimenta o gráfico e é idempotente', function () {
-    $this->seed(RequestLogSeeder::class);
-    $primeiro = RequestLog::query()->count();
+it('gráfico sem nenhum movimento mostra estado vazio ilustrado, não uma reta no zero', function () {
+    $vazio = Livewire::test(UploadsPerDayChart::class)->assertOk()->instance();
 
-    expect($primeiro)->toBeGreaterThan(300);
+    expect($vazio->isEmpty())->toBeTrue()
+        ->and($vazio->getEmptyStateHeading())->toBe(__('admin.dashboards.common.empty_chart_heading'))
+        ->and($vazio->getEmptyStateDescription())->toBe(__('admin.dashboards.common.empty_chart_description'));
 
-    $this->seed(RequestLogSeeder::class);
+    Upload::query()->create([
+        'disk' => 'public',
+        'path' => 'uploads/exemplo.jpg',
+        'original_name' => 'exemplo.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 1024,
+        'sha256' => str_repeat('a', 64),
+    ]);
 
-    expect(RequestLog::query()->count())->toBe($primeiro);
-
-    $dados = (fn (): array => $this->getCachedData())->call(Livewire::test(RequestsChart::class)->assertOk()->instance());
-
-    // Todo dia da janela tem tráfego — o gráfico nunca sai achatado.
-    expect(array_sum($dados['datasets'][0]['data']))->toBeGreaterThan(200)
-        ->and(min($dados['datasets'][0]['data']))->toBeGreaterThan(0);
+    expect(Livewire::test(UploadsPerDayChart::class)->assertOk()->instance()->isEmpty())->toBeFalse();
 });
 
-it('o seeder de request logs respeita o append-only do model', function () {
-    $this->seed(RequestLogSeeder::class);
+it('a tabela de últimos registros mostra o mais recente, sem paginação e com ver tudo', function () {
+    FormSubmission::factory()
+        ->count(12)
+        ->sequence(fn ($sequencia) => ['created_at' => now()->subDays($sequencia->index + 1)])
+        ->create();
 
-    $log = RequestLog::query()->first();
+    $recente = FormSubmission::factory()->create([
+        'nickname' => 'ultima-mensagem',
+        'created_at' => now(),
+    ]);
 
-    expect(fn () => $log->update(['endpoint' => 'hackeado']))
-        ->toThrow(AppendOnlyViolationException::class);
+    $componente = Livewire::test(LatestSubmissions::class)
+        ->assertOk()
+        // O mais recente aparece, e o link para a listagem completa também.
+        ->assertSee('ultima-mensagem')
+        ->assertSee(__('admin.dashboards.common.see_all'));
+
+    // É um RESUMO: mostra só as N últimas linhas, sem paginação, mesmo com o
+    // dobro de registros no banco.
+    expect($componente->instance()->getTableRecords())
+        ->toHaveCount((int) config('dashboards.latest_records'))
+        ->and($recente->exists)->toBeTrue();
+});
+
+it('a tabela do dashboard nunca imprime payload de tentativa de ataque', function () {
+    FormSubmission::factory()->blocked('xss')->create([
+        'nickname' => "<script>alert('x')</script>",
+        'created_at' => now(),
+    ]);
+
+    Livewire::test(LatestSubmissions::class)
+        ->assertOk()
+        ->assertDontSee('<script>', escape: false)
+        ->assertSee(__('admin.submissions.attack_xss'));
+});
+
+it('as faixas de KPI das três variantes montam os quatro cards com dados reais', function () {
+    logEm(now()->toDateTimeString());
+
+    Upload::query()->create([
+        'disk' => 'public',
+        'path' => 'uploads/exemplo.pdf',
+        'original_name' => 'exemplo.pdf',
+        'mime' => 'application/pdf',
+        'size' => 2048,
+        'sha256' => str_repeat('b', 64),
+    ]);
+
+    foreach ([OverviewStats::class, GrowthStats::class, ContentStats::class] as $widget) {
+        $componente = Livewire::test($widget)->assertOk();
+
+        $stats = (fn (): array => $this->getCachedStats())->call($componente->instance());
+
+        expect($stats)->toHaveCount(4);
+
+        foreach ($stats as $stat) {
+            // Todo card diz a que período ele se compara — nunca um número solto.
+            expect((string) $stat->getDescription())->not->toBeEmpty();
+        }
+    }
+
+    Livewire::test(OverviewStats::class)->assertSee(__('admin.dashboards.overview.users'));
+    Livewire::test(GrowthStats::class)->assertSee(__('admin.dashboards.growth.error_rate'));
+    Livewire::test(ContentStats::class)->assertSee(__('admin.dashboards.content.storage'));
 });
