@@ -266,11 +266,15 @@ return [
         'mail' => [
             // Alertas operacionais de backup (falhas). Padrão: e-mail de
             // suporte da plataforma (ADR-007 — nada hardcoded).
-            'to' => env('BACKUP_ALERT_EMAIL', env('PLATFORM_SUPPORT_EMAIL', 'backups@example.com')),
+            // `?:` e não o default do env(): uma variável PRESENTE e VAZIA
+            // (`BACKUP_ALERT_EMAIL=` no .env.example) retorna "" e o
+            // spatie/laravel-backup recusa "" como e-mail — o que derrubava
+            // até o `php artisan key:generate` numa instalação nova.
+            'to' => env('BACKUP_ALERT_EMAIL') ?: (env('PLATFORM_SUPPORT_EMAIL') ?: 'backups@example.com'),
 
             'from' => [
-                'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-                'name' => env('MAIL_FROM_NAME', 'Example'),
+                'address' => env('MAIL_FROM_ADDRESS') ?: 'hello@example.com',
+                'name' => env('MAIL_FROM_NAME') ?: 'Example',
             ],
         ],
 
