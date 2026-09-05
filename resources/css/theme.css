@@ -55,6 +55,23 @@
     --color-border: var(--color-gray-200);
     --color-border-strong: var(--color-gray-300);
 
+    /* ---------------------------------------------------------------------
+       CORES DE ESTADO — nada a ver com a marca. A marca é monocromática
+       (quase-preta no claro, quase-BRANCA no escuro): usá-la para dizer
+       "ligado" fazia o <x-toggle> aparecer branco sobre branco no tema
+       escuro — um controle que não mostra o próprio estado.
+       Verde de sucesso e cinza de repouso, cada um com contraste >= 3:1
+       (WCAG 1.4.11) contra a superfície do SEU tema.
+       --------------------------------------------------------------------- */
+    --color-success: var(--color-green-600);
+    --color-success-foreground: #ffffff;
+
+    /* Trilho do interruptor desligado. Um cinza claro (gray-300) some no
+       branco: 1,5:1. gray-500 passa nos DOIS temas (4,8:1 sobre branco,
+       3,6:1 sobre gray-900) e continua lendo como "apagado" ao lado do
+       verde. */
+    --color-switch-off: var(--color-gray-500);
+
     /* Texto secundário com contraste AA garantido nos dois temas
        (gray-500 sobre branco = 4,83:1; gray-400 sobre gray-950 = 7,3:1). */
     --color-text-muted: var(--color-gray-500);
@@ -150,4 +167,10 @@
     --color-border-strong: var(--color-gray-700);
 
     --color-text-muted: var(--color-gray-400);
+
+    /* No escuro o verde precisa clarear para manter contraste sobre a
+       superfície (green-600 sobre gray-900 = 2,9:1; green-500 = 5,5:1). */
+    --color-success: var(--color-green-500);
+    --color-success-foreground: var(--color-gray-950);
+    --color-switch-off: var(--color-gray-500);
 }

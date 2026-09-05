@@ -80,3 +80,40 @@ it('rota de preferência de tema exige login', function () {
     $this->postJson(route('settings.theme'), ['theme' => 'dark'])
         ->assertUnauthorized();
 });
+
+// =============================================================================
+// Cores de ESTADO (o toggle ligado).
+//
+// O <x-toggle> pintava o trilho ligado com a cor da MARCA. Como a marca do kit
+// é monocromática — quase-BRANCA no tema escuro —, o estado ligado virava um
+// trilho branco com um knob branco em cima: indistinguível do desligado. Cor
+// de estado é verde de sucesso; cor de marca é outra conversa.
+// =============================================================================
+
+it('o toggle ligado usa cor de ESTADO, nunca a cor da marca', function () {
+    $toggle = (string) file_get_contents(resource_path('views/components/toggle.blade.php'));
+
+    expect($toggle)->toContain('peer-checked:bg-success')
+        ->and($toggle)->not->toContain('peer-checked:bg-brand')
+        // Desligado: cinza com contraste suficiente, o mesmo token nos 2 temas.
+        ->and($toggle)->toContain('bg-switch-off')
+        ->and($toggle)->not->toContain('dark:bg-gray-600')
+        // Knob sempre branco (um knob preto lê como desligado em iOS/Android).
+        ->and($toggle)->toContain('after:bg-white');
+});
+
+it('os tokens de sucesso existem nos DOIS temas', function () {
+    $theme = (string) file_get_contents(resource_path('css/theme.css'));
+
+    // Bloco @theme (tema claro) e bloco .dark: cada um define o seu verde —
+    // green-600 sobre branco e green-500 sobre gray-900 passam em 3:1.
+    expect(substr_count($theme, '--color-success:'))->toBe(2)
+        ->and(substr_count($theme, '--color-switch-off:'))->toBe(2)
+        ->and($theme)->toContain('--color-success-foreground:');
+});
+
+it('o showcase mostra o toggle nos dois estados', function () {
+    config()->set('ui.showcase_enabled', true);
+
+    $this->get('/ui')->assertOk()->assertSee('peer-checked:bg-success', false);
+});

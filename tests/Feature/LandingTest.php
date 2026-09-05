@@ -87,13 +87,20 @@ it('landing tem formulário de contato, nota de ambiente dev e footer institucio
         ->assertSee('https://example.com', false);
 });
 
-it('landing mostra CTA do painel quando autenticado', function () {
-    $this->actingAs(User::factory()->create());
+it('landing mostra a porta de volta para a conta quando autenticado', function () {
+    // O cabeçalho é o MESMO do painel (decisão do dono): logado, o botão
+    // "Ir para o painel" deu lugar ao AVATAR, e a volta para a conta mora no
+    // menu dele — presente em qualquer tela do site, não só na landing.
+    $user = User::factory()->create(['name' => 'Ana Ribeiro']);
+
+    $this->actingAs($user);
 
     $this->get('/')
         ->assertOk()
+        ->assertSee(__('ui.nav.account_menu'))
         ->assertSee(route('dashboard'), false)
-        ->assertSee(__('landing.nav.dashboard'));
+        ->assertSee(__('panel.nav.dashboard'))
+        ->assertSee($user->email);
 });
 
 it('toda string da landing passa pelo arquivo de idioma (sem fallback cru)', function () {

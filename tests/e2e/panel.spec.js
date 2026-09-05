@@ -129,26 +129,81 @@ test.describe('regressões', () => {
         expect(erros.filter((e) => e.includes('CSP Parser Error'))).toHaveLength(0);
     });
 
-    test('painel no mobile: hambúrguer abre o drawer, Esc fecha', async ({ page }) => {
+    test('painel no mobile: a gaveta traz o site E o "Minha conta"; Esc fecha', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/dashboard');
 
-        const drawer = page.locator('#panel-menu');
+        // Uma gaveta só (#site-menu) — a mesma da landing. Antes o painel
+        // tinha a própria (#panel-menu) e o cliente logado navegava em dois
+        // menus diferentes para o mesmo produto.
+        const drawer = page.locator('#site-menu');
         await expect(drawer).toBeHidden();
 
         await page.getByRole('button', { name: 'Abrir menu de navegação' }).click();
         await expect(drawer).toBeVisible();
+
+        // Links do site...
+        await expect(drawer.getByRole('link', { name: 'Componentes' })).toBeVisible();
+        // ...e a seção da conta, com identidade e os itens do menu lateral.
+        await expect(drawer.getByText('Minha conta')).toBeVisible();
         await expect(drawer.getByRole('link', { name: 'Chaves de API' })).toBeVisible();
+        await expect(drawer.getByRole('link', { name: 'Senha de transação' })).toBeVisible();
 
         await page.keyboard.press('Escape');
         await expect(drawer).toBeHidden();
     });
 
+    test('menu do avatar: abre, troca o tema e o Esc fecha', async ({ page }) => {
+        await page.goto('/dashboard');
+
+        const trigger = page.getByRole('button', { name: 'Menu da conta' });
+        await trigger.click();
+
+        const menu = page.locator('[data-dropdown].is-open [data-dropdown-menu]');
+        await expect(menu).toBeVisible();
+        await expect(menu.getByText('Voltar ao site')).toBeVisible();
+        await expect(menu.getByRole('menuitem', { name: 'Perfil' })).toBeVisible();
+
+        // Troca o tema pelo menu: a classe .dark entra no <html> na hora.
+        await menu.getByRole('menuitem', { name: 'Escuro' }).click();
+        await expect(page.locator('html')).toHaveClass(/dark/);
+
+        // Reabrir mostra o ✓ no estado escolhido, e o Esc fecha.
+        await trigger.click();
+        await expect(page.locator('[data-dropdown].is-open')).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('[data-dropdown].is-open')).toHaveCount(0);
+
+        // Volta ao tema claro para não vazar estado para os próximos testes.
+        await trigger.click();
+        await page.getByRole('menuitem', { name: 'Sistema' }).click();
+    });
+
+    test('painel no desktop: menu lateral "Minha conta" marca a tela atual', async ({ page }) => {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto('/projects');
+
+        const sidebar = page.getByRole('navigation', { name: 'Minha conta' });
+        await expect(sidebar).toBeVisible();
+        await expect(sidebar.getByText('Desenvolvimento')).toBeVisible();
+
+        // Item ativo com aria-current — reconhecer onde se está sem clicar.
+        await expect(sidebar.getByRole('link', { name: 'Projetos' })).toHaveAttribute('aria-current', 'page');
+
+        // E navegar pela coluna funciona.
+        await sidebar.getByRole('link', { name: 'Chaves de API' }).click();
+        await expect(page).toHaveURL(/\/api-keys$/);
+    });
+
     test('dashboard: métricas, gráfico e últimas chamadas da API', async ({ page }) => {
         await page.goto('/dashboard');
 
-        await expect(page.getByText('Chaves de API ativas')).toBeVisible();
-        await expect(page.getByText('Projetos', { exact: true }).first()).toBeVisible();
+        // Escopo no <main>: "Projetos" também é item do menu lateral e da
+        // gaveta — sem escopo, o primeiro match é um link escondido.
+        const conteudo = page.getByRole('main');
+
+        await expect(conteudo.getByText('Chaves de API ativas')).toBeVisible();
+        await expect(conteudo.getByText('Projetos', { exact: true }).first()).toBeVisible();
         await expect(page.getByRole('heading', { name: /Requisições por dia/ })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Últimas chamadas da API' })).toBeVisible();
     });

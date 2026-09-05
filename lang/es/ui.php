@@ -15,6 +15,19 @@ return [
         ],
     ],
 
+    // Navegação do site (<x-site-header>, <x-side-nav>). O painel e a landing
+    // compartilham o MESMO cabeçalho — por isso estas chaves são de UI, não
+    // de "landing" nem de "panel".
+    'nav' => [
+        'site' => 'Navegación del sitio',
+        'menu' => 'Menú',
+        'open_menu' => 'Abrir menú de navegación',
+        'account' => 'Mi cuenta',
+        'account_menu' => 'Menú de la cuenta',
+        'back_to_site' => 'Volver al sitio',
+        'sections' => 'Secciones',
+    ],
+
     'theme' => [
         'toggle' => 'Tema: alterna entre sistema, claro y oscuro',
         'label' => 'Tema',

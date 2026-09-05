@@ -54,6 +54,9 @@
         'dropdown_danger' => '<x-dropdown-item danger wire:click="…">…</x-dropdown-item>',
         'drawer' => '<x-button data-modal-open="menu">…</x-button> + <x-drawer id="menu" title="…" side="left">…</x-drawer>',
         'file_input' => '<x-file-input name="avatar" accept="image/*" />',
+        'avatar' => '<x-avatar :user="$user" size="md" />',
+        'avatar_initials' => '<x-avatar name="Ana Ribeiro" size="lg" />',
+        'side_nav' => '<x-side-nav id="ui" :title="…" :groups="…" spy />',
         'locale_switcher' => '<x-locale-switcher />',
         'theme_toggle' => '<x-theme-toggle />',
         'classic_form' => '<form method="POST">…old(\'campo\')…</form> + redirect back()',
@@ -62,15 +65,17 @@
 @endphp
 
 <x-layouts.landing :title="__('showcase.title').' — '.platform()->name">
-    <div class="mx-auto max-w-6xl px-4 py-12 lg:flex lg:gap-10">
-        {{-- Sidebar de categorias (âncoras + scrollspy) --}}
-        <aside class="mb-10 shrink-0 lg:mb-0 lg:w-56">
-            <nav data-scrollspy class="flex flex-wrap gap-1 lg:sticky lg:top-20 lg:flex-col">
-                @foreach (__('showcase.categories') as $anchor => $label)
-                    <a href="#{{ $anchor }}" class="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white">{{ $label }}</a>
-                @endforeach
-            </nav>
-        </aside>
+    <div class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:flex lg:gap-10 lg:py-12">
+        {{-- Índice das seções: coluna com rolagem própria no desktop, barra
+             compacta + gaveta no mobile (<x-side-nav>, o MESMO componente do
+             menu "Minha conta" do painel). O scrollspy marca a seção atual e
+             o rótulo da barra acompanha. --}}
+        <x-side-nav
+            id="ui"
+            :title="__('ui.nav.sections')"
+            :groups="\App\Livewire\Support\Navigation::showcase()"
+            spy
+        />
 
         <main class="min-w-0 flex-1">
             <header class="mb-12 flex flex-wrap items-start justify-between gap-4">
@@ -85,7 +90,7 @@
             </header>
 
             {{-- Tema e tokens de design --}}
-            <section id="theme" class="mb-16 scroll-mt-24">
+            <section id="theme" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.theme') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.theme_tokens.guide') }}</p>
 
@@ -127,7 +132,7 @@
             </section>
 
             {{-- Botões --}}
-            <section id="buttons" class="mb-16 scroll-mt-24">
+            <section id="buttons" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.buttons') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.buttons.guide') }}</p>
 
@@ -156,7 +161,7 @@
             </section>
 
             {{-- Alertas --}}
-            <section id="alerts" class="mb-16 scroll-mt-24">
+            <section id="alerts" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.alerts') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.alerts.guide') }}</p>
                 <div class="space-y-4">
@@ -168,7 +173,7 @@
             </section>
 
             {{-- Badges --}}
-            <section id="badges" class="mb-16 scroll-mt-24">
+            <section id="badges" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.badges') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.badges.guide') }}</p>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-6 lg:grid-cols-3">
@@ -182,7 +187,7 @@
             </section>
 
             {{-- Formulários --}}
-            <section id="forms" class="mb-16 scroll-mt-24">
+            <section id="forms" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.forms') }}</h2>
                 <p class="mb-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.forms.guide') }}</p>
                 <p class="mb-6 text-sm text-gray-500">{{ __('showcase.forms.usage') }}</p>
@@ -229,7 +234,7 @@
             </section>
 
             {{-- Cards --}}
-            <section id="cards" class="mb-16 scroll-mt-24">
+            <section id="cards" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.cards') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.cards.guide') }}</p>
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -250,7 +255,7 @@
             </section>
 
             {{-- Modal --}}
-            <section id="modal" class="mb-16 scroll-mt-24">
+            <section id="modal" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.modal') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.modal.guide') }}</p>
                 <div class="flex flex-wrap items-center gap-3">
@@ -267,7 +272,7 @@
             </section>
 
             {{-- Toast --}}
-            <section id="toast" class="mb-16 scroll-mt-24">
+            <section id="toast" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.toast') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.toast.guide') }}</p>
                 <div class="flex flex-wrap items-center gap-3">
@@ -282,7 +287,7 @@
             </section>
 
             {{-- Estado vazio --}}
-            <section id="empty_state" class="mb-16 scroll-mt-24">
+            <section id="empty_state" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.empty_state') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.empty_state.guide') }}</p>
                 <x-empty-state :title="__('showcase.empty_state.title')" :description="__('showcase.empty_state.description')" icon="building-office">
@@ -292,7 +297,7 @@
             </section>
 
             {{-- Carregamento: spinner, skeleton e overlay (hierarquia de espera) --}}
-            <section id="loading" class="mb-16 scroll-mt-24">
+            <section id="loading" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.loading') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.loading.guide') }}</p>
 
@@ -338,7 +343,7 @@
             </section>
 
             {{-- Dados: tabela, métrica e gráfico (o painel do usuário consome os 3) --}}
-            <section id="data_display" class="mb-16 scroll-mt-24">
+            <section id="data_display" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.data_display') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.data_display.guide') }}</p>
 
@@ -401,7 +406,7 @@
             </section>
 
             {{-- Navegação: dropdown, drawer, arquivo, idioma e tema --}}
-            <section id="navigation" class="mb-16 scroll-mt-24">
+            <section id="navigation" class="mb-16 scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.navigation') }}</h2>
                 <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.guide') }}</p>
 
@@ -456,6 +461,28 @@
                     </div>
 
                     <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.avatar_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.avatar_hint') }}</p>
+                        <div class="flex flex-wrap items-end gap-4">
+                            <x-avatar name="Ana Ribeiro" size="sm" />
+                            <x-avatar name="Ana Ribeiro" size="md" />
+                            <x-avatar name="Ana Ribeiro" size="lg" />
+                            <x-avatar :src="asset('img/landing/dashboard.png')" name="Ana Ribeiro" size="lg" />
+                        </div>
+                        <div class="mt-3 flex flex-col gap-2">
+                            <x-snippet :code="$snip['avatar']" />
+                            <x-snippet :code="$snip['avatar_initials']" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.side_nav_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.side_nav_hint') }}</p>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.side_nav_live') }}</p>
+                        <div class="mt-3"><x-snippet :code="$snip['side_nav']" /></div>
+                    </div>
+
+                    <div>
                         <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.locale_heading') }}</h3>
                         <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.locale_hint') }}</p>
                         <div class="flex flex-wrap items-center gap-3">
@@ -471,7 +498,7 @@
             </section>
 
             {{-- Padrões de formulário: Blade clássico × Livewire + estratégias de erro --}}
-            <section id="form_patterns" class="scroll-mt-24">
+            <section id="form_patterns" class="scroll-mt-32 lg:scroll-mt-24">
                 <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.form_patterns') }}</h2>
                 <p class="mb-8 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.form_patterns.guide') }}</p>
 

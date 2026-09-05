@@ -85,10 +85,18 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 A home `/` é uma **landing de vitrine** do kit (hero com screenshot real do
 painel, stack + nota de ambiente dev com Mailpit, "horas economizadas", grid
 de 12 features, **formulário de contato funcional**, CTA com link do
-repositório e footer institucional), com layout próprio
-(`resources/views/components/layouts/landing.blade.php` — público, sem auth).
-Strings em `lang/*/landing.php` + `lang/*/contact.php`; branding via
-`platform()`.
+repositório e footer institucional). Strings em `lang/*/landing.php` +
+`lang/*/contact.php`; branding via `platform()`.
+
+**Um esqueleto para o produto inteiro** (`resources/views/components/layouts/
+site.blade.php`): landing, showcase, telas de auth e **painel do usuário**
+passam pelo mesmo `<head>`, pelo mesmo `<x-site-header>` e pelo mesmo
+`<x-site-footer>`. Eram três esqueletos, com marcas, larguras e rodapés
+diferentes — e o cliente logado sentia que tinha saído do site. Muda só o que
+precisa mudar: `background` (o painel usa a superfície rebaixada, para os
+cartões flutuarem) e `width` (1152px na landing, 1280px no painel, onde a
+coluna do menu lateral come 240px). `<x-layouts.landing>` sobrevive como
+apelido de `<x-layouts.site>` para as views públicas.
 
 - **Hierarquia de CTA**: UM primário ("Criar conta"), UM secundário ("Testar
   demo") e o resto como link de texto sublinhado — no herói e no CTA final.
@@ -97,8 +105,19 @@ Strings em `lang/*/landing.php` + `lang/*/contact.php`; branding via
   Variable — as **duas** self-hosted via `@fontsource-variable` e importadas
   no `app.css` (tokens `--font-display` / `--font-sans`). Nenhuma fonte vem de
   CDN: a CSP do kit não permite `font-src` externo.
-- **Mobile**: abaixo de `sm:` a nav vira um **drawer** (`<x-drawer>`) aberto
-  pelo hambúrguer, com Esc, backdrop, foco preso e alvos de 44px.
+- **Mobile**: abaixo de `sm:` a nav vira um **drawer** (`<x-drawer id="site-menu">`)
+  aberto pelo hambúrguer, com Esc, backdrop, foco preso e alvos de 44px. É a
+  MESMA gaveta em todas as telas; com sessão aberta ela ganha a seção
+  **"Minha conta"** (avatar, nome, e-mail e os itens do menu lateral do
+  painel) — duas gavetas seriam duas navegações concorrentes no mesmo polegar.
+- **Cabeçalho logado**: seletor de idioma visível + **avatar** (`<x-avatar>`:
+  foto do perfil ou iniciais sobre fundo neutro) que abre o menu da conta —
+  nome e e-mail, Painel, Perfil, os 3 estados do tema com ✓ no atual, "Voltar
+  ao site" e Sair. Deslogado, continuam Entrar e Criar conta.
+- **Screenshots de validação**: `node tests/e2e/screenshots.js` (landing e
+  showcase, 3 idiomas) e `node tests/e2e/shots-panel.js <pasta>` (telas
+  autenticadas + login, desktop/mobile × claro/escuro) — saída em
+  `test-results/`.
 - **Screenshot do hero**: `public/img/landing/dashboard.png` (commitado).
   Para regerar com a stack dev no ar: `node tests/e2e/capture-hero.js`
   (faz login com o usuário demo e captura o /dashboard em tema escuro —
@@ -177,8 +196,8 @@ entrada.
 
 ### Showcase de componentes (`/ui`)
 
-Documentação viva dos **componentes Blade do kit** (estilo docs: sidebar
-sticky com scrollspy, texto de orientação por seção — quando usar, variantes e
+Documentação viva dos **componentes Blade do kit** (estilo docs: índice
+lateral com scrollspy, texto de orientação por seção — quando usar, variantes e
 notas de acessibilidade): `<x-button>` (primary/secondary/outline/ghost/danger),
 `<x-alert>`, `<x-badge>`, `<x-input>` (com **olho de senha** embutido em
 `type="password"`), `<x-textarea>`, `<x-select>`, `<x-checkbox>`, `<x-toggle>`,
@@ -191,11 +210,25 @@ cartões abaixo de `sm:`**, cada célula com o próprio rótulo), `<x-stat>`
 `<x-dropdown>` + `<x-dropdown-item>` (menu ancorado, teclado completo),
 `<x-drawer>` (gaveta lateral — mesmo motor do modal), `<x-file-input>`
 (seletor de arquivo traduzido), `<x-flag>` (bandeiras em SVG),
-`<x-locale-switcher>`, `<x-theme-toggle>`, `<x-ui-icon>`, `<x-form-errors>` e
+`<x-locale-switcher>`, `<x-theme-toggle>`, `<x-avatar>` (foto ou iniciais, 3
+tamanhos), `<x-side-nav>` + `<x-side-nav-items>` (menu lateral — o mesmo do
+`/ui` e do painel), `<x-brand>`, `<x-site-header>`, `<x-site-footer>`,
+`<x-user-menu>`, `<x-ui-icon>`, `<x-form-errors>` e
 `<x-flash-toast>` (em `resources/views/components/` — copie e use em qualquer
 tela). Duas seções novas no `/ui`: **Tabela e dados** e **Navegação**. Abre com a seção **Tema** (design tokens vivos) e fecha com
 **Padrões de formulário**: os dois modos canônicos funcionais (Blade clássico
 e Livewire/AJAX) e as 4 estratégias de exibição de erros.
+
+- **Índice lateral (`<x-side-nav>`)** — comportamento de docs, o mesmo do
+  painel: no desktop, coluna fixa com **rolagem própria** (o índice não
+  arrasta a página) e seções agrupadas; no celular, uma **barra compacta**
+  grudada abaixo do cabeçalho dizendo em que seção o leitor está e um toque
+  abre o índice inteiro como gaveta, com grupos colapsáveis (`<details>`
+  nativo — sem JS e sem estado a manter) e o item atual marcado. Navegar
+  fecha a gaveta e rola até a âncora com o desconto do cabeçalho
+  (`scroll-mt-32 lg:scroll-mt-24` — 64px de cabeçalho + 48px de barra). Antes
+  eram 13 pílulas empilhadas ANTES do conteúdo: a página começava com um menu
+  do tamanho da tela.
 
 - **Snippets copiáveis**: cada variante exibe o código `<x-…>` **inteiro**
   (quebra em várias linhas — nada de `truncate`: um snippet cortado no meio é
@@ -325,7 +358,9 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   linguagem: cor de marca (`--color-brand`, `--color-brand-hover`),
   **superfícies semânticas** (`--color-surface`, `--color-surface-raised`,
   `--color-surface-sunken`, `--color-surface-disabled`, `--color-border`,
-  `--color-border-strong`, `--color-text-muted`), tipografia (`--font-display`,
+  `--color-border-strong`, `--color-text-muted`), **cores de estado**
+  (`--color-success`, `--color-success-foreground`, `--color-switch-off` —
+  ver abaixo), tipografia (`--font-display`,
   `--font-sans`), **escala tipográfica de 5 degraus** (`--text-display`,
   `--text-h1`, `--text-h2`, `--text-body`, `--text-caption` — utilitários
   `text-display`/`text-h1`/…), radii (`--radius-lg/xl`) e motion (`--ease-out`,
@@ -336,6 +371,13 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   (texto e controles), `caption` (metadado/rótulo). Tracking negativo só nos
   dois primeiros. Use os degraus em vez de reinventar `text-2xl font-semibold`
   a cada tela.
+- **Estado não se diz com a cor da marca.** A primária do kit é
+  monocromática — quase-BRANCA no tema escuro. Enquanto o `<x-toggle>` ligado
+  usava `bg-brand`, o estado ligado era um trilho branco com um knob branco em
+  cima: indistinguível do desligado justo no tema em que mais gente trabalha.
+  Ligado = `--color-success` (green-600 no claro, green-500 no escuro);
+  desligado = `--color-switch-off` (gray-500 nos dois temas, ≥3:1 contra a
+  superfície — WCAG 1.4.11); knob sempre branco.
 - **Identidade monocromática por padrão** (esquema Vercel/Linear):
   `--color-brand` é quase-preto no tema claro e quase-branco no escuro
   (invertido pela classe `.dark`), com `--color-brand-foreground` para o texto
@@ -894,8 +936,22 @@ compilada por um parser de JS, e uma ação chamada `delete` estoura
 `Expected IDENTIFIER but got KEYWORD` — a ação nunca roda, sem erro visível
 (foi o bug de "excluir projeto"; hoje o método se chama `removeProject`).
 
-**Mobile**: abaixo de `sm:` a nav do painel vira um drawer (hambúrguer → Esc,
-backdrop, foco preso), as tabelas viram cartões e as ações destrutivas moram
+**O painel é o site, logado.** Mesmo cabeçalho, mesma marca, mesmo rodapé
+(seção *Landing*). O que muda é um **menu lateral "Minha conta"**
+(`<x-side-nav mobile="none">`) à esquerda do conteúdo, agrupado por assunto —
+Visão geral (Painel), Desenvolvimento (Chaves de API, Projetos) e Conta
+(Notificações, Perfil, **Senha de transação**, que só existia como rota solta
+sem entrada em menu nenhum). Item atual com `aria-current`, coluna sticky com
+rolagem própria. A barra horizontal anterior não escalava: cada tela nova
+empurrava a próxima para fora.
+
+O mapa de navegação (site, conta e índice do `/ui`) é declarado **uma vez** em
+`App\Livewire\Support\Navigation`; cabeçalho, gaveta e coluna leem a MESMA
+lista. Adicionar uma tela é acrescentar uma linha.
+
+**Mobile**: abaixo de `sm:` a navegação inteira vira a gaveta do cabeçalho
+(hambúrguer → Esc, backdrop, foco preso), com os links do site e a seção
+"Minha conta" dentro; as tabelas viram cartões e as ações destrutivas moram
 num menu de overflow (⋯) com modal de confirmação — mirar "Rotacionar" e
 acertar "Revogar" destruía uma credencial de produção.
 
@@ -946,12 +1002,22 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   **Produtos** (vitrine de CRUD: foto por upload validado ou URL, valor
   monetário em centavos — nunca float —, paginação de 10 e paginação/filtros
   refletidos na query string; `ProductSeeder` com 36 itens),
-  **Submissões de formulário** (read-only; ataques bloqueados no topo com
-  badge vermelho; filtro por origem na URL — os dois forms demo do `/ui`
-  **e o formulário de contato real da landing**, origem `contact`, a única
-  com remetente identificado), Request Logs (auditoria de API
+  **Submissões de formulário** (read-only; ataques bloqueados no topo, com
+  selo do tipo e **trecho neutralizado** — ver abaixo; filtro por origem na
+  URL — os dois forms demo do `/ui` **e o formulário de contato real da
+  landing**, origem `contact`, a única com remetente identificado),
+  Request Logs (auditoria de API
   + web + admin, com filtros de status/tenant/endpoint/período — logs órfãos,
   sem tenant, destacados em vermelho) e Uploads.
+- **Menu do usuário**: avatar (foto de perfil de quem subiu uma — o mesmo
+  Upload validado da Fase 5 —, senão as **iniciais** desenhadas localmente em
+  SVG `data:`, sem CDN de avatar), Perfil, **alternador de tema**
+  claro/escuro/sistema, Voltar ao site e Sair. O seletor de idioma continua
+  na topbar, fora do menu (decisão do dono): trocar de idioma reescreve a
+  tela inteira e não é um item de conta. A foto é resolvida por
+  `App\Filament\Support\InitialsAvatarProvider`
+  (`->defaultAvatarProvider()`), não por um `getFilamentAvatarUrl()` no
+  model — o domínio não precisa conhecer o Filament para isso.
 - **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): nome
   editável; e-mail read-only com nota explicativa; seção de senha montada
   só como prévia (campo desabilitado, sem endpoint) — nada derruba o acesso
@@ -968,6 +1034,125 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 - **IP allowlist** (ADR-011, checklist 25 — obrigatória em produção):
   `ADMIN_ALLOWED_IPS` no .env (IPs ou CIDRs separados por vírgula). Vazio =
   sem restrição (apenas desenvolvimento). Middleware: `EnsureAdminIpAllowed`.
+
+### Submissões bloqueadas: listagem neutralizada, detalhe forense
+
+O payload de uma tentativa de ataque **não aparece na listagem**. Ele
+aparecia — escapado, portanto inerte —, e inerte não é o mesmo que
+inofensivo: uma fila de tentativas exibidas por extenso é um catálogo de
+ataques pronto para copiar, na tela de quem tem acesso ao painel.
+
+Hoje:
+
+- **na listagem**: o selo do tipo de ataque (XSS, SQL injection, null byte,
+  path traversal, honeypot) e um **trecho neutralizado** do conteúdo — sem
+  tags, sem entidades que possam virar tags, espaços colapsados, ~60
+  caracteres —, com a legenda "conteúdo neutralizado". Vale para a mensagem
+  **e para o apelido**: o payload entra por qualquer campo. Quem neutraliza é
+  `App\Core\Showcase\Support\SubmissionExcerpt`, e o teste prova que o
+  trecho não tem como voltar a ser marcação;
+- **no detalhe** (`/admin/form-submissions/{uuid}`): o payload **íntegro**,
+  escapado, dentro de um bloco monoespaçado rotulado "evidência forense",
+  com callout de aviso — e sem botão de copiar. Ao lado, os metadados da
+  tentativa: origem, IP, remetente (quando houver), recebida em e bloqueada
+  em;
+- **no banco**: nada muda. A gravação continua **crua** (auditoria —
+  ADR-004/005). Quem neutraliza é a exibição, nunca o registro.
+
+O IP passou a ser gravado junto da submissão (migration
+`add_ip_to_form_submissions_table`): sem ele a evidência responde "o quê" e
+não responde "de onde", e não dá para correlacionar a tentativa com os
+`request_logs`.
+
+### Alternador tabela/cards nas listagens
+
+Toda listagem do painel tem no cabeçalho um botão **"Ver em cards" / "Ver em
+tabela"**. Os cards mostram de três a cinco campos com hierarquia (o que
+identifica o registro em destaque, o resto em cinza) e as mesmas ações da
+tabela. A tabela segue sendo o padrão: é o modo denso, o certo para quem
+abre o painel procurando alguma coisa.
+
+**Onde a escolha mora (decisão documentada):** na **sessão**, com uma chave
+por recurso (`App\Filament\Support\ViewMode`). A sessão já é por usuário,
+então não é preciso coluna nova nem escrita no banco a cada clique; e a
+chave por recurso deixa cada tela com o seu modo — quem tria submissões em
+cards continua querendo request logs em tabela. Trocar de máquina reinicia
+no padrão. Se um dia a preferência tiver de atravessar sessões, o ponto de
+troca é só o `ViewMode`: nada mais no painel muda.
+
+### Como criar uma tela nova no /admin (5 passos)
+
+Todo resource herda de `App\Filament\Support\BaseResource` e toda listagem
+de `App\Filament\Support\BaseListRecords` — isso é **verificado por teste**
+(`tests/Feature/Admin/TableViewModeTest.php`). De graça vêm: rota por uuid,
+rótulos e grupo de navegação traduzidos, ordenação padrão, paginação, estado
+vazio traduzido, o alternador tabela/cards e as colunas repetidas de sempre
+(`AdminColumns::publicCode()`, `AdminColumns::dateTime()` — esta última já no
+fuso de exibição da plataforma).
+
+1. **Traduções** — um bloco novo em `lang/{pt_BR,en,es}/admin.php` com, no
+   mínimo, `label` e `plural` (o teste de paridade de chaves reprova se
+   faltar em algum idioma).
+2. **O resource** — em `app/Filament/Resources/Faturas/FaturaResource.php`:
+
+```php
+final class FaturaResource extends BaseResource
+{
+    protected static ?string $model = Fatura::class;
+
+    protected static string $translationKey = 'admin.faturas';
+
+    protected static ?string $navigationGroupKey = 'admin.nav.group_management';
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
+
+    /** Colunas da tabela clássica. */
+    public static function tableColumns(): array
+    {
+        return [
+            AdminColumns::publicCode(),
+            TextColumn::make('valor')->label(__('admin.faturas.valor'))->sortable(),
+            AdminColumns::dateTime('created_at'),
+        ];
+    }
+
+    /** Opcional: declarar isto liga o alternador tabela/cards. */
+    public static function cardComponents(): array
+    {
+        return [
+            Stack::make([
+                TextColumn::make('codigo_publico')->weight(FontWeight::SemiBold),
+                TextColumn::make('valor')->color('gray'),
+            ])->space(2),
+        ];
+    }
+
+    /** Opcional: filtros, ações e o que mais for específico da tela. */
+    protected static function tableExtras(Table $table): Table
+    {
+        return $table->recordActions([ViewAction::make()]);
+    }
+
+    public static function getPages(): array
+    {
+        return ['index' => ListFaturas::route('/')];
+    }
+}
+```
+
+3. **A página de listagem** — `Pages/ListFaturas.php` estendendo
+   `BaseListRecords`; ações próprias da tela (um `CreateAction`, por
+   exemplo) vão em `getResourceHeaderActions()`, **nunca** sobrescrevendo
+   `getHeaderActions()` — é de lá que sai o alternador.
+4. **`php artisan optimize:clear`** e a tela já aparece na navegação (o
+   painel descobre os resources sozinho).
+5. **O teste** — em `tests/Feature/Admin/`, com `Livewire::test(ListFaturas::class)`
+   validando **conteúdo** (registros visíveis, filtro que filtra, ação que
+   age), não só status HTTP.
+
+Ajustes finos disponíveis por propriedade estática: `$defaultSortColumn` /
+`$defaultSortDirection` (`null` na coluna = o resource ordena sozinho, como
+Submissões, que sobem as bloqueadas), `$paginationOptions` e `cardGrid()`.
 
 ### CSP e JavaScript (decisão documentada)
 
@@ -989,12 +1174,26 @@ revogar chave com o fluxo 2FA real e código capturado do mailable, avatar,
 preferências, isolamento anti-IDOR entre tenants), dashboard com
 `request_logs` inseridos no próprio teste (janela de 7 dias, série de 30 dias
 sem buracos, 5 últimas chamadas, estados vazios), **arquitetura do design
-system** (`tests/Feature/Architecture/DesignSystemTest.php`), layout mobile
+system** (`tests/Feature/Architecture/DesignSystemTest.php` — que também varre
+`resources/views/layouts/**`, o esqueleto agora compartilhado por todo o
+produto), **layout unificado** (`tests/Feature/Panel/LayoutTest.php`: mesmo
+cabeçalho e rodapé em landing/`/ui`/auth/painel, menu lateral com item atual,
+gaveta com "Minha conta"), **avatar e menu da conta**
+(`tests/Feature/UiAvatarTest.php`: iniciais com acento, foto, 3 tamanhos),
+**cor de estado do toggle** (`tests/Feature/ThemeTest.php`), layout mobile
 (drawer, alvos de 44px), acesso ao /admin (403 a não-admin, comando de
 promoção, IP allowlist), resources Filament (listagens, bloquear usuário,
-revogar chave, filtros de request logs) e Settings (override, fallback ao
-.env, whitelist). E2E Playwright: login → dashboard → chaves de API,
-gating do /admin (`tests/e2e/panel.spec.js`).
+revogar chave, filtros de request logs), **alternador tabela/cards**
+(persistência por usuário e por recurso, as duas listagens renderizando com
+conteúdo, e a arquitetura: todo resource estende a base),
+**evidência das submissões** (a listagem não mostra o payload em nenhuma
+forma, o detalhe mostra íntegro e escapado, o banco continua cru),
+**menu do usuário** (itens, alternador de tema, avatar por foto ou iniciais)
+e Settings (override, fallback ao .env, whitelist). E2E Playwright: login → dashboard → chaves de API,
+gaveta mobile com "Minha conta", menu do avatar (abre, troca o tema, Esc
+fecha), menu lateral no desktop e gating do /admin
+(`tests/e2e/panel.spec.js`); índice do `/ui` no mobile e no desktop
+(`tests/e2e/smoke.spec.js`).
 
 ## Backup e Filas (Fase 7 — ADR-010)
 

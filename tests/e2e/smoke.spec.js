@@ -57,7 +57,9 @@ test('landing no mobile: menu hambúrguer abre o drawer e o Esc fecha', async ({
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
 
-    const drawer = page.locator('#landing-menu');
+    // #site-menu: a gaveta é a MESMA da landing, do /ui, das telas de auth e
+    // do painel (um cabeçalho para o produto inteiro).
+    const drawer = page.locator('#site-menu');
     await expect(drawer).toBeHidden();
 
     await page.getByRole('button', { name: 'Abrir menu de navegação' }).click();
@@ -111,4 +113,51 @@ test('showcase: snippets copiam com feedback e o tema alterna claro/escuro', asy
     await page.getByRole('button', { name: 'Tema' }).first().click();
     await page.locator('[data-theme-set="light"]').first().click();
     await expect(html).not.toHaveClass(/dark/);
+});
+
+// -----------------------------------------------------------------------------
+// Índice do /ui no mobile (<x-side-nav>). Antes era uma nuvem de 13 pílulas
+// empilhadas ANTES do conteúdo: a página começava com um menu do tamanho da
+// tela. Agora é barra compacta + gaveta, como as docs do Next.js.
+// -----------------------------------------------------------------------------
+test('showcase no mobile: barra compacta abre o índice, navegar fecha e ancora', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/ui');
+
+    // A barra diz em que seção o leitor está (scrollspy) e é o gatilho.
+    const bar = page.locator('[data-modal-open="ui-drawer"]');
+    await expect(bar).toBeVisible();
+
+    const drawer = page.locator('#ui-drawer');
+    await expect(drawer).toBeHidden();
+
+    await bar.click();
+    await expect(drawer).toBeVisible();
+
+    // Grupos colapsáveis, na ordem do documento.
+    await expect(drawer.getByText('Fundamentos')).toBeVisible();
+    await expect(drawer.getByText('Componentes', { exact: true })).toBeVisible();
+
+    // Navegar fecha a gaveta e rola até a âncora — o título tem de ficar
+    // ABAIXO do cabeçalho (64px) e da barra (~48px), nunca escondido atrás.
+    await drawer.getByRole('link', { name: 'Alertas' }).click();
+    await expect(drawer).toBeHidden();
+    await expect(page).toHaveURL(/#alerts$/);
+
+    const top = await page.locator('#alerts h2').evaluate((el) => el.getBoundingClientRect().top);
+    expect(top).toBeGreaterThan(100);
+
+    // E a barra passa a anunciar a seção onde o leitor está.
+    await expect(page.locator('[data-side-nav-current]')).toHaveText('Alertas');
+});
+
+test('showcase no desktop: índice em coluna com a seção atual marcada', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/ui');
+
+    const index = page.getByRole('navigation', { name: 'Seções' });
+    await expect(index).toBeVisible();
+
+    await index.getByRole('link', { name: 'Badges' }).click();
+    await expect(index.getByRole('link', { name: 'Badges' })).toHaveAttribute('aria-current', 'true');
 });

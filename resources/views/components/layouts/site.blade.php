@@ -1,0 +1,55 @@
+@props([
+    'title' => null,
+    'background' => 'bg-surface',
+    'width' => 'max-w-6xl',
+])
+
+{{-- Esqueleto ÚNICO do site — <x-layouts.site>. Landing, showcase, telas de
+     auth e painel do usuário passam por aqui: um <head>, um cabeçalho, um
+     rodapé. Quando existiam três esqueletos, o painel tinha outra marca,
+     outra largura e outro rodapé — e o cliente logado sentia que tinha
+     saído do site (é a decisão do dono que este arquivo materializa).
+
+     `background` existe porque o painel usa a superfície REBAIXADA (os
+     cartões precisam flutuar sobre algo) e a landing usa a superfície normal.
+     Os dois vêm dos tokens semânticos: nunca bg-white/dark:bg-gray-950.
+
+     `width` alinha cabeçalho, conteúdo e rodapé na MESMA coluna. A landing
+     lê a 1152px (texto longo pede medida curta); o painel usa 1280px, porque
+     ali a coluna do menu lateral come 240px e as quatro métricas do dashboard
+     não podem quebrar o rótulo em duas linhas. Marca, menu e conteúdo
+     continuam começando no mesmo x. --}}
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-default="{{ auth()->user()?->theme ?? 'system' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $title ?? platform()->name }}</title>
+
+    {{-- Branding 100% via platform() (ADR-007/010): nome, logo e cor primária
+         vêm do .env (config/platform.php). Nada hardcoded. --}}
+    {{-- Override de marca opcional (.env PLATFORM_PRIMARY_COLOR). Vazio =
+         identidade monocromática dos tokens (theme.css) — ver README. --}}
+    @if (platform()->primaryColor !== null)
+        <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
+    @endif
+
+    {{-- Tema claro/escuro/sistema: aplica a classe ANTES do primeiro paint
+         (sem flash). Default = preferência do SO; escolha persiste em
+         localStorage (dispositivo) e na conta (users.theme). --}}
+    @include('partials.theme-script')
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body @auth data-authenticated @endauth class="flex min-h-screen flex-col {{ $background }} text-gray-900 antialiased dark:text-gray-100">
+    <x-site-header :width="$width" />
+
+    {{ $slot }}
+
+    <x-site-footer :width="$width" />
+
+    {{-- Flash de sessão (ex.: conta criada, contato enviado) → toast do kit. --}}
+    <x-flash-toast />
+</body>
+</html>

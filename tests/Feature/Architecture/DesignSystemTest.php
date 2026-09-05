@@ -82,15 +82,47 @@ function bladeViews(string $directory): array
 it('painel usa o design system do kit, nunca Tailwind cru de componente', function () {
     $violations = [];
 
-    foreach (bladeViews('resources/views/livewire') as $path => $contents) {
-        foreach (FORBIDDEN_PATTERNS as $pattern => $component) {
-            if (preg_match($pattern, $contents, $matches) === 1) {
-                $violations[] = sprintf('%s: "%s" — use %s', $path, trim($matches[0]), $component);
+    // As TELAS do painel e o ESQUELETO que as embrulha. O layout entrou na
+    // varredura quando virou o cabeçalho/rodapé de todo o produto: o lugar
+    // onde uma superfície escrita à mão contamina landing, /ui, auth e painel
+    // de uma vez é justamente esse.
+    $diretorios = ['resources/views/livewire', 'resources/views/layouts'];
+
+    foreach ($diretorios as $diretorio) {
+        foreach (bladeViews($diretorio) as $path => $contents) {
+            foreach (FORBIDDEN_PATTERNS as $pattern => $component) {
+                if (preg_match($pattern, $contents, $matches) === 1) {
+                    $violations[] = sprintf('%s: "%s" — use %s', $path, trim($matches[0]), $component);
+                }
             }
         }
     }
 
     expect($violations)->toBe([], implode("\n", $violations));
+});
+
+it('o esqueleto do site é montado com componentes do kit', function () {
+    // Um cabeçalho copiado é um cabeçalho que diverge. Landing, showcase,
+    // auth e painel passam pelo MESMO <x-layouts.site>, que por sua vez só
+    // compõe componentes do kit.
+    $site = (string) file_get_contents(resource_path('views/components/layouts/site.blade.php'));
+
+    expect($site)->toContain('<x-site-header')
+        ->and($site)->toContain('<x-site-footer')
+        ->and($site)->toContain('<x-flash-toast');
+
+    foreach (['layouts/app', 'layouts/auth', 'components/layouts/landing'] as $layout) {
+        expect((string) file_get_contents(resource_path("views/{$layout}.blade.php")))
+            ->toContain('<x-layouts.site');
+    }
+
+    // Nenhum layout escreve o próprio <header>/<footer> de site. (O <header>
+    // de uma PÁGINA — o bloco de título do /ui — é conteúdo, não é chrome.)
+    foreach (['layouts/app', 'layouts/auth', 'components/layouts/landing'] as $layout) {
+        expect((string) file_get_contents(resource_path("views/{$layout}.blade.php")))
+            ->not->toContain('<header')
+            ->not->toContain('<footer');
+    }
 });
 
 it('nenhuma ação Livewire usa palavra reservada do JavaScript (CSP-safe)', function () {

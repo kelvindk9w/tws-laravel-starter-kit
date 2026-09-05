@@ -31,6 +31,14 @@ return [
         'form_patterns' => 'Padrões de formulário',
     ],
 
+    // Grupos do índice lateral (/ui) — na ORDEM do documento.
+    'groups' => [
+        'foundations' => 'Fundamentos',
+        'components' => 'Componentes',
+        'states' => 'Estados',
+        'data' => 'Dados e padrões',
+    ],
+
     'theme_tokens' => [
         'guide' => 'A identidade visual vive em UM arquivo: resources/css/theme.css (bloco @theme do Tailwind 4: cores, fontes, radii, motion) + config/platform.php alimentado pelo .env (nome, logo, cor primária). Para rebranding: edite os dois e o kit inteiro — landing, painel, admin e e-mails — reflete.',
         'brand' => 'Cor da marca',
@@ -196,6 +204,11 @@ return [
         'drawer_body' => 'Esc, clique no backdrop ou no X fecham. O foco fica preso no painel enquanto ele está aberto.',
         'file_heading' => 'Seletor de arquivo',
         'file_hint' => 'O <input type="file"> nativo desenha o próprio botão com o texto do sistema operacional — em inglês, numa tela pt-BR. Aqui o input real fica escondido e quem aparece é o botão do kit.',
+        'avatar_heading' => 'Avatar',
+        'avatar_hint' => 'Foto do perfil quando existe; senão as INICIAIS do nome sobre fundo neutro. Nunca um boneco genérico: num menu de conta, o ícone padrão é a mesma imagem para todo mundo, e o que se precisa reconhecer ali é a própria conta. Tamanhos sm (cabeçalho), md e lg (perfil).',
+        'side_nav_heading' => 'Menu lateral',
+        'side_nav_hint' => 'Índice longo em duas geometrias: no desktop, coluna fixa com rolagem própria e grupos rotulados; no celular, barra compacta abaixo do cabeçalho dizendo a seção atual e uma gaveta com os grupos colapsáveis. Navegar fecha a gaveta e rola até a âncora com o desconto do cabeçalho.',
+        'side_nav_live' => 'O índice à esquerda desta página é o próprio componente — e é o MESMO que desenha o menu "Minha conta" do painel.',
         'locale_heading' => 'Idioma e tema',
         'locale_hint' => 'Bandeiras em SVG inline (emoji depende da fonte do sistema) com o nome do idioma ao lado, e os 3 estados de tema NOMEADOS em vez de um ícone que cicla às cegas.',
     ],

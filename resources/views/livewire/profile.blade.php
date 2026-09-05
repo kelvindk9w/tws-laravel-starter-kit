@@ -73,11 +73,9 @@
         @endif
 
         <form wire:submit="updateAvatar" class="flex flex-wrap items-center gap-4">
-            @if ($user->avatarUrl())
-                <img src="{{ $user->avatarUrl() }}" alt="" class="h-16 w-16 shrink-0 rounded-full object-cover">
-            @else
-                <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand text-xl font-semibold text-brand-foreground">{{ mb_substr($user->name, 0, 1) }}</span>
-            @endif
+            {{-- MESMO avatar do cabeçalho (<x-avatar>): a prévia aqui e o
+                 gatilho do menu da conta não podem divergir. --}}
+            <x-avatar :user="$user" size="lg" />
 
             <div class="min-w-0 flex-1">
                 {{-- Seletor de arquivo do KIT: o nativo desenha o próprio botão

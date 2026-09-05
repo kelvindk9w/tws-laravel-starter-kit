@@ -31,6 +31,14 @@ return [
         'form_patterns' => 'Patrones de formulario',
     ],
 
+    // Grupos do índice lateral (/ui) — na ORDEM do documento.
+    'groups' => [
+        'foundations' => 'Fundamentos',
+        'components' => 'Componentes',
+        'states' => 'Estados',
+        'data' => 'Datos y patrones',
+    ],
+
     'theme_tokens' => [
         'guide' => 'La identidad visual vive en UN archivo: resources/css/theme.css (bloque @theme de Tailwind 4: colores, fuentes, radios, motion) + config/platform.php alimentado por el .env (nombre, logo, color primario). Para rebrandear: edita ambos y todo el kit — landing, panel, admin y correos — lo refleja.',
         'brand' => 'Color de marca',
@@ -196,6 +204,11 @@ return [
         'drawer_body' => 'Esc, un clic en el backdrop o la X lo cierran. El foco queda atrapado en el panel mientras está abierto.',
         'file_heading' => 'Selector de archivo',
         'file_hint' => 'El <input type="file"> nativo dibuja su propio botón con el texto del sistema operativo — en inglés, en una pantalla en español. Aquí el input real queda oculto y aparece el botón del kit.',
+        'avatar_heading' => 'Avatar',
+        'avatar_hint' => 'Foto del perfil cuando existe; si no, las INICIALES del nombre sobre fondo neutro. Nunca una silueta genérica: en un menú de cuenta el icono por defecto es la misma imagen para todos, y lo que hay que reconocer allí es la propia cuenta. Tamaños sm (cabecera), md y lg (perfil).',
+        'side_nav_heading' => 'Menú lateral',
+        'side_nav_hint' => 'Un índice largo en dos geometrías: en el escritorio, columna fija con desplazamiento propio y grupos etiquetados; en el móvil, una barra compacta bajo la cabecera con la sección actual y un cajón con grupos plegables. Navegar cierra el cajón y desplaza hasta el ancla descontando la cabecera.',
+        'side_nav_live' => 'El índice a la izquierda de esta página es el propio componente — y es el MISMO que dibuja el menú "Mi cuenta" del panel.',
         'locale_heading' => 'Idioma y tema',
         'locale_hint' => 'Banderas en SVG inline (el emoji depende de la fuente del sistema) con el nombre del idioma al lado, y los 3 estados de tema NOMBRADOS en vez de un icono que cicla a ciegas.',
     ],

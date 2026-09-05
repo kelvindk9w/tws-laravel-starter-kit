@@ -31,6 +31,14 @@ return [
         'form_patterns' => 'Form patterns',
     ],
 
+    // Grupos do índice lateral (/ui) — na ORDEM do documento.
+    'groups' => [
+        'foundations' => 'Foundations',
+        'components' => 'Components',
+        'states' => 'States',
+        'data' => 'Data and patterns',
+    ],
+
     'theme_tokens' => [
         'guide' => 'The visual identity lives in ONE file: resources/css/theme.css (Tailwind 4 @theme block: colors, fonts, radii, motion) + config/platform.php fed by the .env (name, logo, primary color). To rebrand: edit both and the whole kit — landing, dashboard, admin and emails — reflects it.',
         'brand' => 'Brand color',
@@ -196,6 +204,11 @@ return [
         'drawer_body' => 'Esc, a backdrop click or the X close it. Focus stays trapped in the panel while it is open.',
         'file_heading' => 'File picker',
         'file_hint' => 'The native <input type="file"> draws its own button with the operating system wording — in English, on a Portuguese screen. Here the real input is hidden and the kit button is what shows.',
+        'avatar_heading' => 'Avatar',
+        'avatar_hint' => 'Profile photo when there is one; otherwise the INITIALS of the name over a neutral background. Never a generic silhouette: in an account menu the default icon is the same picture for everyone, and what has to be recognised there is your own account. Sizes sm (header), md and lg (profile).',
+        'side_nav_heading' => 'Side navigation',
+        'side_nav_hint' => 'A long index in two geometries: on the desktop, a fixed column that scrolls on its own with labelled groups; on the phone, a compact bar under the header naming the current section and a drawer with collapsible groups. Navigating closes the drawer and scrolls to the anchor with the header offset.',
+        'side_nav_live' => 'The index on the left of this page is the component itself — and it is the SAME one that draws the panel\'s "My account" menu.',
         'locale_heading' => 'Language and theme',
         'locale_hint' => 'Inline SVG flags (emoji depends on the system font) with the language name next to them, and the 3 theme states NAMED instead of an icon that cycles blindly.',
     ],

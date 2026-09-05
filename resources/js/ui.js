@@ -11,6 +11,8 @@
 //   [data-copy="texto"]     copia o texto; feedback no próprio botão + toast
 //   [data-reveal]           scroll-reveal (IntersectionObserver, uma vez)
 //   [data-scrollspy]        nav cujos links #âncora ganham aria-current
+//                           (pode haver mais de um: coluna + gaveta)
+//   [data-side-nav-current] rótulo da barra compacta do <x-side-nav> (mobile)
 //   [data-theme-toggle]     cicla o tema: sistema → claro → escuro
 //   [data-theme-set="…"]    define o tema diretamente (segmented control)
 //   [data-locale-switch]    <select> de idioma — navega para a URL da option
@@ -275,25 +277,43 @@ if (revealTargets.length && !reduceMotion && 'IntersectionObserver' in window) {
     }, 2000);
 }
 
-// --- Scrollspy (sidebar do showcase) ------------------------------------------
+// --- Scrollspy (índice do <x-side-nav>) ---------------------------------------
+//
+// O índice existe em DOIS markups na mesma página (a coluna do desktop e a
+// gaveta do mobile), então o spy marca todos os [data-scrollspy] de uma vez —
+// abrir a gaveta no meio da página tem de mostrar onde o leitor está, não o
+// topo do documento. O rótulo da barra compacta ([data-side-nav-current])
+// acompanha a seção atual pelo mesmo caminho.
 
-const spyNav = document.querySelector('[data-scrollspy]');
+const spyNavs = [...document.querySelectorAll('[data-scrollspy]')];
 
-if (spyNav && 'IntersectionObserver' in window) {
-    const links = new Map(
-        [...spyNav.querySelectorAll('a[href^="#"]')].map((a) => [a.getAttribute('href').slice(1), a]),
-    );
+if (spyNavs.length && 'IntersectionObserver' in window) {
+    // id da seção => todos os links que apontam para ela (um por markup).
+    const links = new Map();
+
+    for (const nav of spyNavs) {
+        for (const link of nav.querySelectorAll('a[href^="#"]')) {
+            const id = link.getAttribute('href').slice(1);
+            if (!links.has(id)) links.set(id, []);
+            links.get(id).push(link);
+        }
+    }
+
+    const currentLabels = [...document.querySelectorAll('[data-side-nav-current]')];
 
     const spy = new IntersectionObserver(
         (entries) => {
             for (const entry of entries) {
-                const link = links.get(entry.target.id);
-                if (!link) continue;
+                const targets = links.get(entry.target.id);
+                if (!targets || !entry.isIntersecting) continue;
 
-                if (entry.isIntersecting) {
-                    links.forEach((l) => l.removeAttribute('aria-current'));
-                    link.setAttribute('aria-current', 'true');
-                }
+                links.forEach((group) => group.forEach((l) => l.removeAttribute('aria-current')));
+                targets.forEach((l) => l.setAttribute('aria-current', 'true'));
+
+                const label = targets[0].textContent.trim();
+                currentLabels.forEach((el) => {
+                    el.textContent = label;
+                });
             }
         },
         { rootMargin: '-20% 0px -70% 0px' },

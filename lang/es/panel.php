@@ -14,9 +14,17 @@ return [
         'projects' => 'Proyectos',
         'notifications' => 'Notificaciones',
         'profile' => 'Perfil',
+        'transaction_password' => 'Contraseña de transacción',
         'toggle_theme' => 'Alternar tema claro/oscuro',
         'menu' => 'Menú',
         'open_menu' => 'Abrir menú de navegación',
+
+        // Grupos do menu lateral "Minha conta" (<x-side-nav>).
+        'groups' => [
+            'overview' => 'Resumen',
+            'development' => 'Desarrollo',
+            'account' => 'Cuenta',
+        ],
     ],
 
     'common' => [
