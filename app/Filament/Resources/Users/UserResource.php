@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Users;
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
+use App\Core\Auth\PasswordPolicy;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -31,7 +32,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use Illuminate\Validation\Rules\Password;
 
 /**
  * Usuários (super admin — ADR-011): CRUD completo — listar, ver, criar,
@@ -87,8 +87,6 @@ final class UserResource extends Resource
      */
     public static function form(Schema $schema): Schema
     {
-        $minimo = (int) config('auth.password_rules.min_length', 12);
-
         return $schema
             ->components([
                 Section::make(__('admin.users.section_identity'))
@@ -117,12 +115,12 @@ final class UserResource extends Resource
                             ->label(__('admin.users.password'))
                             ->password()
                             ->revealable()
-                            ->rule(Password::min($minimo)->letters()->mixedCase()->numbers())
+                            ->rule(PasswordPolicy::rule())
                             ->same('password_confirmation')
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrated(fn (?string $state): bool => filled($state))
                             ->helperText(fn (string $operation): string => $operation === 'create'
-                                ? __('admin.users.password_hint_create', ['min' => $minimo])
+                                ? __('admin.users.password_hint_create', ['rules' => PasswordPolicy::hint()])
                                 : __('admin.users.password_hint_edit')),
                         TextInput::make('password_confirmation')
                             ->label(__('admin.users.password_confirmation'))

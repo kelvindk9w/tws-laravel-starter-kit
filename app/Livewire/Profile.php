@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Core\Auth\Models\User;
+use App\Core\Auth\PasswordPolicy;
 use App\Core\Auth\Services\TransactionPasswordService;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Services\SecureUploadService;
@@ -86,10 +87,7 @@ final class Profile extends Component
             'currentPassword' => ['required', 'string'],
             'password' => [
                 'required',
-                Password::min((int) config('auth.password_rules.min_length', 12))
-                    ->letters()
-                    ->mixedCase()
-                    ->numbers(),
+                PasswordPolicy::rule(),
             ],
             'passwordConfirmation' => ['required', 'same:password'],
         ], [], [

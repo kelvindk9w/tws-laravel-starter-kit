@@ -124,9 +124,25 @@ return [
     |
     */
 
-    // Regras de força da senha de LOGIN (Form Requests usam Password::min()).
+    // Política da senha de LOGIN — consumida por App\Core\Auth\PasswordPolicy
+    // em TODOS os pontos (registro, reset, perfil, /admin). O kit nasce com o
+    // mínimo (só o tamanho); cada exigência extra é um toggle no .env:
+    //   AUTH_PASSWORD_LETTERS=true        pelo menos uma letra
+    //   AUTH_PASSWORD_MIXED_CASE=true     maiúscula E minúscula
+    //   AUTH_PASSWORD_NUMBERS=true        pelo menos um número
+    //   AUTH_PASSWORD_SYMBOLS=true        pelo menos um símbolo
+    //   AUTH_PASSWORD_UNCOMPROMISED=true  recusa senha vazada (consulta a API
+    //                                     Have I Been Pwned por k-anonimato —
+    //                                     exige saída de rede no servidor)
+    // As dicas dos formulários são montadas a partir do que está ativo, e as
+    // mensagens de erro já existem nos 3 idiomas (lang/*/validation.php).
     'password_rules' => [
-        'min_length' => (int) env('AUTH_PASSWORD_MIN', 12),
+        'min_length' => (int) env('AUTH_PASSWORD_MIN', 6),
+        'letters' => (bool) env('AUTH_PASSWORD_LETTERS', false),
+        'mixed_case' => (bool) env('AUTH_PASSWORD_MIXED_CASE', false),
+        'numbers' => (bool) env('AUTH_PASSWORD_NUMBERS', false),
+        'symbols' => (bool) env('AUTH_PASSWORD_SYMBOLS', false),
+        'uncompromised' => (bool) env('AUTH_PASSWORD_UNCOMPROMISED', false),
     ],
 
     // Bloqueio por tentativas de login (throttle + contador — checklist 10).

@@ -49,6 +49,10 @@ it('cria usuário com senha, situação e flag de admin', function () {
 });
 
 it('exige a política de senha do app na criação', function () {
+    // A política é configurável (PasswordPolicy); o admin obedece ao que
+    // estiver ligado — aqui, ligamos uma regra para provar que ele cobra.
+    config()->set('auth.password_rules.numbers', true);
+
     Livewire::test(CreateUser::class)
         ->fillForm([
             'name' => 'Fraca',

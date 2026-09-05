@@ -90,7 +90,7 @@ return [
         'transaction_password_set' => 'Set',
         'transaction_password_not_set' => 'Not set — define it to be able to create API keys.',
         'subtitle' => 'Your data, appearance, photo and the two account passwords.',
-        'password_hint' => 'Requires the current password. The new one needs upper case, lower case and a number.',
+        'password_hint' => 'Requires the current password. New password: :rules.',
         'choose_file' => 'Choose image',
         'avatar_uploading' => 'Uploading the image…',
         // Cada botão nomeia o próprio escopo (a tela salva 4 coisas).

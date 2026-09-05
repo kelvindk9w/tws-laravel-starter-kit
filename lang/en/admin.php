@@ -44,7 +44,7 @@ return [
         'section_access' => 'Access',
         'password' => 'Password',
         'password_confirmation' => 'Password confirmation',
-        'password_hint_create' => 'At least :min characters, with uppercase, lowercase and a number.',
+        'password_hint_create' => 'Password: :rules.',
         'password_hint_edit' => 'Leave blank to keep the current password.',
         'status' => 'Status',
         'admin_hint' => 'Grants full access to the super admin panel (/admin). Also available via the user:make-admin command.',

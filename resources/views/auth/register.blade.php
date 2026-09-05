@@ -10,7 +10,7 @@
 
         <x-input :label="__('auth.ui.name')" name="name" :value="old('name')" :error="field_error('name')" required autofocus autocomplete="name" />
         <x-input :label="__('auth.ui.email')" name="email" type="email" :value="old('email')" :error="field_error('email')" required autocomplete="username" />
-        <x-input :label="__('auth.ui.password')" name="password" type="password" :error="field_error('password')" required autocomplete="new-password" />
+        <x-input :label="__('auth.ui.password')" name="password" type="password" :hint="ucfirst(\App\Core\Auth\PasswordPolicy::hint())" :error="field_error('password')" required autocomplete="new-password" />
         <x-input :label="__('auth.ui.password_confirmation')" name="password_confirmation" type="password" :error="field_error('password_confirmation')" required autocomplete="new-password" />
 
         <x-button type="submit" class="w-full">{{ __('auth.ui.register_submit') }}</x-button>

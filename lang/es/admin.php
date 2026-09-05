@@ -44,7 +44,7 @@ return [
         'section_access' => 'Acceso',
         'password' => 'Contraseña',
         'password_confirmation' => 'Confirmación de la contraseña',
-        'password_hint_create' => 'Mínimo :min caracteres, con mayúscula, minúscula y número.',
+        'password_hint_create' => 'Contraseña: :rules.',
         'password_hint_edit' => 'Déjelo en blanco para mantener la contraseña actual.',
         'status' => 'Situación',
         'admin_hint' => 'Concede acceso total al super admin (/admin). También disponible por el comando user:make-admin.',

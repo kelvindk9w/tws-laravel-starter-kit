@@ -101,7 +101,7 @@
     </x-card>
 
     {{-- Senha de login -------------------------------------------------------- --}}
-    <x-card :title="__('panel.profile.password_heading')" :description="__('panel.profile.password_hint')">
+    <x-card :title="__('panel.profile.password_heading')" :description="__('panel.profile.password_hint', ['rules' => \App\Core\Auth\PasswordPolicy::hint()])">
         @if (session('password_status'))
             <x-alert type="success" class="mb-4">{{ session('password_status') }}</x-alert>
         @endif

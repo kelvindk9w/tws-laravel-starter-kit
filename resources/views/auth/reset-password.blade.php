@@ -11,7 +11,7 @@
         <input type="hidden" name="token" value="{{ $token }}">
 
         <x-input :label="__('auth.ui.email')" name="email" type="email" :value="old('email', $email)" :error="field_error('email')" required autofocus autocomplete="username" />
-        <x-input :label="__('auth.ui.new_password')" name="password" type="password" :error="field_error('password')" required autocomplete="new-password" />
+        <x-input :label="__('auth.ui.new_password')" name="password" type="password" :hint="ucfirst(\App\Core\Auth\PasswordPolicy::hint())" :error="field_error('password')" required autocomplete="new-password" />
         <x-input :label="__('auth.ui.password_confirmation')" name="password_confirmation" type="password" :error="field_error('password_confirmation')" required autocomplete="new-password" />
 
         <x-button type="submit" class="w-full">{{ __('auth.ui.reset_submit') }}</x-button>

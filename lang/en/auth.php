@@ -10,6 +10,18 @@ return [
     'password' => 'The provided password is incorrect.',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
 
+    // Login password policy hint, built by PasswordPolicy::hint() from the
+    // ACTIVE rules only (config/auth.php → password_rules).
+    'password_policy' => [
+        'min' => 'at least :min characters',
+        'with' => ':min, with :rules',
+        'separator' => ', ',
+        'letters' => 'at least one letter',
+        'mixed_case' => 'upper and lower case',
+        'numbers' => 'at least one number',
+        'symbols' => 'at least one symbol',
+    ],
+
     'account_inactive' => 'This account is not active. Please contact support.',
     'registered' => 'Account created successfully. Welcome!',
     'logged_out' => 'Signed out successfully.',

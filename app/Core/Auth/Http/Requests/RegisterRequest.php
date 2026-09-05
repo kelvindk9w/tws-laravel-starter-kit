@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Http\Requests;
 
+use App\Core\Auth\PasswordPolicy;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 /**
  * Registro de usuário (checklist item 9 — validação server-side de TODA
@@ -24,10 +24,7 @@ final class RegisterRequest extends FormRequest
             'password' => [
                 'required',
                 'confirmed',
-                Password::min((int) config('auth.password_rules.min_length', 12))
-                    ->letters()
-                    ->mixedCase()
-                    ->numbers(),
+                PasswordPolicy::rule(),
             ],
         ];
     }

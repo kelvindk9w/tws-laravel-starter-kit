@@ -90,7 +90,7 @@ return [
         'transaction_password_set' => 'Definida',
         'transaction_password_not_set' => 'No definida — defínela para poder crear claves de API.',
         'subtitle' => 'Tus datos, apariencia, foto y las dos contraseñas de la cuenta.',
-        'password_hint' => 'Requiere la contraseña actual. La nueva necesita mayúscula, minúscula y número.',
+        'password_hint' => 'Requiere la contraseña actual. Nueva contraseña: :rules.',
         'choose_file' => 'Elegir imagen',
         'avatar_uploading' => 'Subiendo la imagen…',
         // Cada botão nomeia o próprio escopo (a tela salva 4 coisas).

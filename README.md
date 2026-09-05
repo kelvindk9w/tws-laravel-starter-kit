@@ -283,12 +283,32 @@ docker compose exec app php artisan migrate --seed   # cria os usuários demo
 # /admin:  admin@tws.dev / Demo-admin-password1 (DEMO_ADMIN_EMAIL/PASSWORD)
 ```
 
-As senhas demo obedecem à **mesma política de senha do app**
-(`config/auth.php → password_rules`: mínimo de 12 caracteres, maiúscula +
-minúscula e dígito) — senha de demonstração que a própria validação do
-produto recusaria é armadilha, não conveniência. Um teste
-(`tests/Feature/Auth/PasswordPolicyTest.php`) prova que as credenciais
-semeadas passam na regra e que o login com elas funciona.
+As senhas demo obedecem à **mesma política de senha do app** e passam
+mesmo com todas as regras ligadas — senha de demonstração que a própria
+validação do produto recusaria é armadilha, não conveniência. Um teste
+(`tests/Feature/Auth/PasswordPolicyTest.php`) prova isso e que o login com
+elas funciona.
+
+### Política de senha (configurável, sem tocar em código)
+
+Um lugar só decide o que uma senha de login precisa ter:
+`App\Core\Auth\PasswordPolicy`, lido por registro, reset por e-mail, troca
+no perfil e criação/edição de usuário no `/admin`. O kit nasce com o mínimo
+(6 caracteres) e as demais exigências prontas para ligar no `.env`:
+
+```dotenv
+AUTH_PASSWORD_MIN=6
+#AUTH_PASSWORD_LETTERS=true        # pelo menos uma letra
+#AUTH_PASSWORD_MIXED_CASE=true     # maiúscula E minúscula
+#AUTH_PASSWORD_NUMBERS=true        # pelo menos um número
+#AUTH_PASSWORD_SYMBOLS=true        # pelo menos um símbolo
+#AUTH_PASSWORD_UNCOMPROMISED=true  # recusa senha vazada (Have I Been Pwned)
+```
+
+Descomentou, valeu: a validação passa a cobrar, a dica embaixo do campo
+descreve exatamente o que está ativo (`PasswordPolicy::hint()`, nos 3
+idiomas) e as mensagens de erro já existem em `lang/*/validation.php`. A
+senha de **transação** tem política própria (`AUTH_TRANSACTION_PASSWORD_MIN`).
 
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.

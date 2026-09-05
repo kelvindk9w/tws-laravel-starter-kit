@@ -10,6 +10,18 @@ return [
     'password' => 'La contraseña ingresada es incorrecta.',
     'throttle' => 'Demasiados intentos de inicio de sesión. Intenta de nuevo en :seconds segundos.',
 
+    // Pista de la política de contraseña, armada por PasswordPolicy::hint()
+    // solo con las reglas ACTIVAS (config/auth.php → password_rules).
+    'password_policy' => [
+        'min' => 'mínimo :min caracteres',
+        'with' => ':min, con :rules',
+        'separator' => ', ',
+        'letters' => 'al menos una letra',
+        'mixed_case' => 'mayúscula y minúscula',
+        'numbers' => 'al menos un número',
+        'symbols' => 'al menos un símbolo',
+    ],
+
     'account_inactive' => 'Esta cuenta no está activa. Contacta con soporte.',
     'registered' => 'Cuenta creada con éxito. ¡Bienvenido(a)!',
     'logged_out' => 'Sesión cerrada con éxito.',

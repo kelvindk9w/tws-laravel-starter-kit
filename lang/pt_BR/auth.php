@@ -10,6 +10,18 @@ return [
     'password' => 'A senha informada está incorreta.',
     'throttle' => 'Muitas tentativas de login. Tente novamente em :seconds segundos.',
 
+    // Dica da política de senha de login, montada por PasswordPolicy::hint()
+    // só com as regras ATIVAS (config/auth.php → password_rules).
+    'password_policy' => [
+        'min' => 'mínimo de :min caracteres',
+        'with' => ':min, com :rules',
+        'separator' => ', ',
+        'letters' => 'ao menos uma letra',
+        'mixed_case' => 'maiúscula e minúscula',
+        'numbers' => 'ao menos um número',
+        'symbols' => 'ao menos um símbolo',
+    ],
+
     'account_inactive' => 'Esta conta não está ativa. Fale com o suporte.',
     'registered' => 'Conta criada com sucesso. Bem-vindo(a)!',
     'logged_out' => 'Sessão encerrada com sucesso.',
