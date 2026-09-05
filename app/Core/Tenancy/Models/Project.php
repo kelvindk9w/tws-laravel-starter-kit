@@ -7,6 +7,7 @@ namespace App\Core\Tenancy\Models;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
 use App\Core\Identifiers\HasPublicCode;
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -27,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 #[Fillable(['user_id', 'name', 'status'])]
 class Project extends Model
 {
-    use HasPublicCode, HasUuids;
+    use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
      * Prefixo do código público legível (ADR-010): PRJ-xxxxxx.

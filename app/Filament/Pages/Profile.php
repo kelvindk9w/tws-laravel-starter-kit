@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use BackedEnum;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -11,6 +12,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * Perfil do super admin (/admin — demo-safe).
@@ -25,6 +27,8 @@ use Filament\Schemas\Schema;
 final class Profile extends Page implements HasForms
 {
     use InteractsWithForms;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
 
     protected static bool $shouldRegisterNavigation = false;
 

@@ -7,8 +7,12 @@ namespace App\Providers\Filament;
 use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Security\Middleware\UseEvalBundleForAdmin;
+use App\Core\Support\BrandMark;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Profile;
+use App\Filament\Widgets\PlatformStatsOverview;
+use App\Filament\Widgets\RequestsChart;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -20,7 +24,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -51,21 +54,40 @@ class AdminPanelProvider extends PanelProvider
             // quando o login demo está habilitado (só em local).
             ->login(Login::class)
             ->brandName(platform()->name)
-            ->brandLogo(platform()->logoUrl)
-            // Primária do painel: zinc neutro (identidade monocromática
-            // Vercel/Linear — claro e escuro) ou o override de marca do .env.
+            // Marca: o .env sempre vence (ADR-007); sem ele, o kit tem uma
+            // marca monocromática própria em vez de um quadrado preto.
+            ->brandLogo(fn () => filled(platform()->logoUrl)
+                ? (string) platform()->logoUrl
+                : BrandMark::inlineSvg())
+            ->brandLogoHeight('1.75rem')
+            // Tipografia unificada (crítica de design #6): a MESMA voz do
+            // painel do usuário e da landing. Self-hosted via
+            // @fontsource-variable no tema Vite — nada de CDN de fonte
+            // (a CSP do kit não permite font-src externo), por isso o
+            // provider local sem URL: quem serve a fonte é o filament.css.
+            ->font('Space Grotesk Variable', provider: LocalFontProvider::class)
+            // Tema do painel com os tokens de identidade do kit
+            // (resources/css/filament.css → theme.css).
+            ->viteTheme('resources/css/filament.css')
+            // Primária do painel: neutro puro, para casar com --color-brand
+            // (quase-preto no claro / quase-branco no escuro). O Zinc antigo
+            // dava um cinza-médio que não existia em nenhuma outra tela.
             ->colors([
                 'primary' => platform()->primaryColor !== null
                     ? Color::hex(platform()->primaryColor)
-                    : Color::Zinc,
+                    : Color::Neutral,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
             ])
+            // Dashboard com dados reais (crítica de design #3): o
+            // AccountWidget de fábrica ("Bem-vindo(a)") saiu — quem abre o
+            // /admin quer os números da plataforma, não o próprio nome.
             ->widgets([
-                AccountWidget::class,
+                PlatformStatsOverview::class,
+                RequestsChart::class,
             ])
             // Seletor de idioma na topbar (mesmo formato compacto do resto
             // do kit: bandeira + sigla). O locale é resolvido pelo SetLocale

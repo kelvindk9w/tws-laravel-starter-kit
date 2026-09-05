@@ -8,12 +8,14 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
+use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -35,6 +37,10 @@ final class RequestLogResource extends Resource
     protected static ?string $model = RequestLog::class;
 
     protected static ?string $recordRouteKeyName = 'uuid';
+
+    // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
+    // metade da nav aparecia como bolinha sem ícone).
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
     public static function getNavigationLabel(): string
     {

@@ -54,13 +54,21 @@ it('ignora locale fora da whitelist e cai no padrão', function () {
         ->assertSee(__('admin.users.plural', [], 'pt_BR'));
 });
 
-it('expõe o seletor de idioma compacto (bandeira + sigla) na topbar do admin', function () {
+// O seletor da topbar acompanha o <x-locale-switcher> do resto do kit:
+// bandeira em SVG inline (emoji depende da fonte do sistema — no Windows
+// 🇧🇷 vira "BR") + nome do idioma por extenso + link real de troca.
+it('expõe o seletor de idioma com bandeira em SVG e nome do idioma na topbar do admin', function () {
     $response = $this->actingAs($this->admin)->get('/admin')->assertOk();
 
-    $response->assertSee('🇧🇷 PT', false)
-        ->assertSee('🇺🇸 EN', false)
-        ->assertSee('🇪🇸 ES', false)
-        ->assertSee(route('locale.switch', 'en'), false);
+    // Gatilho compacto (sigla do idioma atual) e o menu com um link por idioma.
+    $response->assertSee('tws-locale', false)
+        ->assertSee('<svg', false)
+        ->assertDontSee('🇧🇷', false);
+
+    foreach (['pt_BR' => 'Português (Brasil)', 'en' => 'English', 'es' => 'Español'] as $locale => $nome) {
+        $response->assertSee(route('locale.switch', $locale), false)
+            ->assertSee($nome, false);
+    }
 });
 
 it('traduz as strings do admin.php nos três idiomas (paridade de chaves)', function (string $locale, string $expected) {

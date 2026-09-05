@@ -23,4 +23,13 @@ return [
         'ignore' => 'Si no solicitaste esta acción, ignora este correo y considera cambiar tu contraseña.',
     ],
 
+    // Restablecimiento de contraseña (bug de QA #9 — antes llegaba en inglés).
+    'password_reset' => [
+        'subject' => ':platform — Restablecimiento de contraseña',
+        'intro' => 'Recibe este correo porque solicitamos un restablecimiento de contraseña para su cuenta.',
+        'action' => 'Restablecer contraseña',
+        'expires' => 'Este enlace expira en :minutes minutos.',
+        'ignore' => 'Si no solicitó el restablecimiento, no es necesaria ninguna acción.',
+    ],
+
 ];

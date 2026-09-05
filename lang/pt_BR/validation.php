@@ -68,6 +68,16 @@ return [
     ],
     'not_in' => 'O valor selecionado para :attribute é inválido.',
     'numeric' => 'O campo :attribute deve ser um número.',
+    // Regra Password::min()->mixedCase()->numbers() (config auth.password_rules).
+    // Sem estas chaves o Laravel cai no pacote em inglês — bug de QA #6.
+    'password' => [
+        'letters' => 'O campo :attribute deve conter pelo menos uma letra.',
+        'mixed' => 'O campo :attribute deve conter pelo menos uma letra maiúscula e uma minúscula.',
+        'numbers' => 'O campo :attribute deve conter pelo menos um número.',
+        'symbols' => 'O campo :attribute deve conter pelo menos um símbolo.',
+        'uncompromised' => 'O valor informado para :attribute apareceu em um vazamento de dados. Escolha outro.',
+    ],
+
     'present' => 'O campo :attribute deve estar presente.',
     'regex' => 'O formato do campo :attribute é inválido.',
     'required' => 'O campo :attribute é obrigatório.',

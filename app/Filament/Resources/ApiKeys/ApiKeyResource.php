@@ -8,9 +8,11 @@ use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -28,6 +30,10 @@ final class ApiKeyResource extends Resource
     protected static ?string $model = ApiKey::class;
 
     protected static ?string $recordRouteKeyName = 'uuid';
+
+    // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
+    // metade da nav aparecia como bolinha sem ícone).
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;
 
     public static function getNavigationLabel(): string
     {

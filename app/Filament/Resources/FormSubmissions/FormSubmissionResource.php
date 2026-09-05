@@ -14,8 +14,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 /**
- * Submissões dos formulários demo do /ui (super admin — vitrine de
- * segurança). Somente leitura: nascem dos dois forms do showcase.
+ * Submissões de formulário (super admin). Somente leitura: nascem dos dois
+ * forms demo do /ui e do formulário de CONTATO real da landing (origem
+ * `contact` — a única com remetente identificado).
  *
  * - ORDEM: tentativas bloqueadas SEMPRE no topo (blocked_at não nulo
  *   primeiro), depois as mais recentes — badge vermelho "ataque bloqueado".
@@ -70,6 +71,12 @@ final class FormSubmissionResource extends Resource
                     ->label(__('admin.submissions.nickname'))
                     ->searchable()
                     ->limit(24),
+                // Só a origem `contact` tem remetente (forms demo são anônimos).
+                TextColumn::make('sender_email')
+                    ->label(__('admin.submissions.sender_email'))
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('subject')
                     ->label(__('admin.submissions.subject'))
                     ->formatStateUsing(fn (string $state): string => __("contact.subjects.{$state}"))
@@ -83,7 +90,11 @@ final class FormSubmissionResource extends Resource
                     ->label(__('admin.submissions.origin'))
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => __("admin.submissions.origin_{$state}"))
-                    ->color(fn (string $state): string => $state === FormSubmission::ORIGIN_CLASSIC ? 'info' : 'primary'),
+                    ->color(fn (string $state): string => match ($state) {
+                        FormSubmission::ORIGIN_CLASSIC => 'info',
+                        FormSubmission::ORIGIN_CONTACT => 'warning',
+                        default => 'primary',
+                    }),
                 // Destaque da vitrine: badge vermelho para tentativa bloqueada.
                 TextColumn::make('attack_type')
                     ->label(__('admin.submissions.security'))
@@ -104,6 +115,7 @@ final class FormSubmissionResource extends Resource
                     ->options([
                         FormSubmission::ORIGIN_CLASSIC => __('admin.submissions.origin_classic'),
                         FormSubmission::ORIGIN_LIVEWIRE => __('admin.submissions.origin_livewire'),
+                        FormSubmission::ORIGIN_CONTACT => __('admin.submissions.origin_contact'),
                     ]),
             ])
             ->recordActions([])

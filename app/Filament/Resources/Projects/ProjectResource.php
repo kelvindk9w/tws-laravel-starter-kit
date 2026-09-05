@@ -7,7 +7,9 @@ namespace App\Filament\Resources\Projects;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use App\Core\Tenancy\Models\Project;
 use App\Filament\Resources\Projects\Pages\ListProjects;
+use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -21,6 +23,10 @@ final class ProjectResource extends Resource
     protected static ?string $model = Project::class;
 
     protected static ?string $recordRouteKeyName = 'uuid';
+
+    // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
+    // metade da nav aparecia como bolinha sem ícone).
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function getNavigationLabel(): string
     {

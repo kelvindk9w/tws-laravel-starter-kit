@@ -160,3 +160,45 @@ it('o seeder da demo cadastra 30+ produtos variados', function () {
         ->and(Product::query()->whereNull('image')->count())->toBe(0)
         ->and(Product::query()->distinct('title')->count('title'))->toBe(Product::query()->count());
 });
+
+// Bug de QA #3 — o catálogo aceitava valor negativo. Regra: valor > 0.
+
+it('rejeita valor negativo no catálogo', function () {
+    Livewire::test(CreateProduct::class)
+        ->fillForm(['title' => 'Produto Negativo', 'price' => '-10,00'])
+        ->call('create')
+        ->assertHasFormErrors(['price']);
+
+    expect(Product::query()->where('title', 'Produto Negativo')->exists())->toBeFalse();
+});
+
+it('rejeita valor zero no catálogo', function () {
+    Livewire::test(CreateProduct::class)
+        ->fillForm(['title' => 'Produto Zero', 'price' => '0,00'])
+        ->call('create')
+        ->assertHasFormErrors(['price']);
+
+    expect(Product::query()->where('title', 'Produto Zero')->exists())->toBeFalse();
+});
+
+it('aceita o menor valor válido do catálogo (1 centavo)', function () {
+    Livewire::test(CreateProduct::class)
+        ->fillForm(['title' => 'Produto Centavo', 'price' => '0,01'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Product::query()->where('title', 'Produto Centavo')->sole()->price)->toBe(1);
+});
+
+it('recusa valor negativo também na edição, com a mensagem traduzida', function () {
+    $product = Product::factory()->create(['price' => 5000]);
+
+    app()->setLocale('pt_BR');
+
+    Livewire::test(EditProduct::class, ['record' => $product->uuid])
+        ->fillForm(['price' => '-1,00'])
+        ->call('save')
+        ->assertHasFormErrors(['price' => __('admin.products.price_positive')]);
+
+    expect($product->fresh()->price)->toBe(5000);
+});

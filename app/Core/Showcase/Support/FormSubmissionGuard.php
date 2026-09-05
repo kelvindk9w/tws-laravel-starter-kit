@@ -28,8 +28,11 @@ final class FormSubmissionGuard
     /**
      * Analisa e persiste a submissão. Retorna a submissão criada —
      * isBlocked() diz se foi bloqueada (honeypot ou ataque detectado).
+     *
+     * $senderEmail só é preenchido pela origem `contact` (formulário real da
+     * landing); os forms demo do /ui são anônimos.
      */
-    public function submit(string $origin, string $nickname, string $subject, string $message, ?string $honeypot): FormSubmission
+    public function submit(string $origin, string $nickname, string $subject, string $message, ?string $honeypot, ?string $senderEmail = null): FormSubmission
     {
         $attackType = $honeypot !== null && $honeypot !== ''
             ? 'honeypot'
@@ -41,6 +44,7 @@ final class FormSubmissionGuard
 
         $submission = FormSubmission::query()->create([
             'nickname' => $nickname,
+            'sender_email' => $senderEmail,
             'subject' => $subject,
             'message' => $message,
             'origin' => $origin,

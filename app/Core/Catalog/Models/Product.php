@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Catalog\Models;
 
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Money\MoneyAsCents;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,7 +25,7 @@ use Illuminate\Support\Facades\Storage;
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, RoutesByUuid;
 
     /**
      * Coluna preenchida automaticamente com UUID v7 na criação.

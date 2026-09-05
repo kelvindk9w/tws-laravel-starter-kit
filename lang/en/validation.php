@@ -67,6 +67,15 @@ return [
     ],
     'not_in' => 'The selected :attribute is invalid.',
     'numeric' => 'The :attribute field must be a number.',
+    // Password::min()->mixedCase()->numbers() rule (auth.password_rules config).
+    'password' => [
+        'letters' => 'The :attribute field must contain at least one letter.',
+        'mixed' => 'The :attribute field must contain at least one uppercase and one lowercase letter.',
+        'numbers' => 'The :attribute field must contain at least one number.',
+        'symbols' => 'The :attribute field must contain at least one symbol.',
+        'uncompromised' => 'The given :attribute has appeared in a data leak. Please choose a different one.',
+    ],
+
     'present' => 'The :attribute field must be present.',
     'regex' => 'The :attribute field format is invalid.',
     'required' => 'The :attribute field is required.',

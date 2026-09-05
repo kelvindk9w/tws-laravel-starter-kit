@@ -6,8 +6,10 @@ namespace App\Filament\Resources\Uploads;
 
 use App\Core\Uploads\Models\Upload;
 use App\Filament\Resources\Uploads\Pages\ListUploads;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Resources\Resource;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -21,6 +23,10 @@ final class UploadResource extends Resource
     protected static ?string $model = Upload::class;
 
     protected static ?string $recordRouteKeyName = 'uuid';
+
+    // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
+    // metade da nav aparecia como bolinha sem ícone).
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaperClip;
 
     public static function getNavigationLabel(): string
     {

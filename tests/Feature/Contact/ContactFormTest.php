@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Core\Auth\Models\User;
 use App\Core\Contact\Mail\ContactMessageMail;
 use App\Core\Localization\Middleware\SetLocale;
+use App\Core\Showcase\Models\FormSubmission;
 use App\Core\Support\Platform;
+use App\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use Illuminate\Support\Facades\Mail;
+use Livewire\Livewire;
 
 // Formulário de contato da landing: validação server-side, honeypot,
 // rate limit (throttle:sensitive) e e-mail enfileirado (Mailpit em dev).
@@ -101,4 +105,64 @@ it('respeita o locale do visitante (cookie) na mensagem de retorno', function ()
     $this->withCookie(SetLocale::COOKIE, 'en')
         ->post(route('contact.store'), validContact())
         ->assertSessionHas('contact_status', __('contact.sent', locale: 'en'));
+});
+
+// =============================================================================
+// Bug de QA #5 — a mensagem de contato real também precisa virar registro
+// auditável em form_submissions (origem `contact`), não só e-mail.
+// =============================================================================
+
+it('grava a mensagem em form_submissions com origem contact e remetente', function () {
+    Mail::fake();
+    config()->set('platform.contact_email', 'contato@example.com');
+    app()->forgetInstance(Platform::class);
+
+    $this->post(route('contact.store'), validContact())->assertRedirect();
+
+    $submission = FormSubmission::query()->sole();
+
+    expect($submission->origin)->toBe(FormSubmission::ORIGIN_CONTACT)
+        ->and($submission->nickname)->toBe('Maria Silva')
+        ->and($submission->sender_email)->toBe('maria@example.com')
+        ->and($submission->subject)->toBe('suggestion')
+        ->and($submission->message)->toContain('componente de tabela')
+        ->and($submission->isBlocked())->toBeFalse();
+
+    Mail::assertQueued(ContactMessageMail::class);
+});
+
+it('registra a tentativa do honeypot como bloqueada e NÃO envia e-mail', function () {
+    Mail::fake();
+    config()->set('platform.contact_email', 'contato@example.com');
+    app()->forgetInstance(Platform::class);
+
+    $this->post(route('contact.store'), validContact(['website' => 'http://spam.example']))
+        // Sucesso FALSO: o bot não descobre que foi detectado.
+        ->assertSessionHas('contact_status', __('contact.sent'));
+
+    $submission = FormSubmission::query()->sole();
+
+    expect($submission->origin)->toBe(FormSubmission::ORIGIN_CONTACT)
+        ->and($submission->isBlocked())->toBeTrue()
+        ->and($submission->attack_type)->toBe('honeypot');
+
+    Mail::assertNothingQueued();
+});
+
+it('a submissão de contato aparece na listagem do super admin com a origem', function () {
+    Mail::fake();
+    config()->set('platform.contact_email', 'contato@example.com');
+    app()->forgetInstance(Platform::class);
+
+    $this->post(route('contact.store'), validContact())->assertRedirect();
+
+    $submission = FormSubmission::query()->sole();
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    Livewire::actingAs($admin)
+        ->test(ListFormSubmissions::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords([$submission])
+        ->assertSee(__('admin.submissions.origin_contact'))
+        ->assertSee('Maria Silva');
 });

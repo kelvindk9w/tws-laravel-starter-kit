@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
+use App\Core\Auth\Notifications\ResetPasswordNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -25,7 +27,8 @@ it('envia o link de redefinição para e-mail cadastrado', function () {
     $this->post('/forgot-password', ['email' => $user->email])
         ->assertSessionHas('status', __('passwords.sent'));
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    // Notificação PRÓPRIA do kit (traduzida) — ver ResetPasswordNotification.
+    Notification::assertSentTo($user, ResetPasswordNotification::class);
 });
 
 it('responde igual para e-mail NÃO cadastrado (anti-enumeração — item 11)', function () {
@@ -92,4 +95,44 @@ it('rejeita senha nova fraca na redefinição', function () {
         'password' => 'fraca',
         'password_confirmation' => 'fraca',
     ])->assertSessionHasErrors('password');
+});
+
+// =============================================================================
+// Bug de QA #9 — o e-mail de reset chegava em inglês com pt-BR ativo.
+// =============================================================================
+
+it('envia a notificação própria de reset (traduzida), não a do framework', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'idioma@example.com']);
+
+    $this->post('/forgot-password', ['email' => $user->email]);
+
+    Notification::assertSentTo($user, ResetPasswordNotification::class);
+    Notification::assertNotSentTo($user, ResetPassword::class);
+});
+
+it('renderiza o e-mail de reset no idioma da conta', function (string $locale, string $trecho) {
+    $user = User::factory()->create(['locale' => $locale]);
+
+    app()->setLocale($locale);
+
+    $mail = (new ResetPasswordNotification('token-de-teste'))->toMail($user);
+
+    expect($mail->subject)->toBe(__('mail.password_reset.subject', ['platform' => platform()->name]));
+
+    $texto = implode(' ', array_merge($mail->introLines, $mail->outroLines)).' '.$mail->actionText;
+
+    expect($texto)->toContain($trecho);
+})->with([
+    ['pt_BR', 'Redefinir senha'],
+    ['en', 'Reset password'],
+    ['es', 'Restablecer contraseña'],
+]);
+
+it('o usuário expõe a preferência de idioma para as notificações enfileiradas', function () {
+    $user = User::factory()->create(['locale' => 'es']);
+
+    expect($user)->toBeInstanceOf(HasLocalePreference::class)
+        ->and($user->preferredLocale())->toBe('es');
 });

@@ -7,6 +7,7 @@ namespace App\Core\ApiKeys\Models;
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\Auth\Models\User;
 use App\Core\Identifiers\HasPublicCode;
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -41,7 +42,7 @@ use Illuminate\Support\Carbon;
 #[Hidden(['secret_hash'])]
 class ApiKey extends Model
 {
-    use HasPublicCode, HasUuids;
+    use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
      * Prefixo do código público legível (ADR-010): KEY-xxxxxx.

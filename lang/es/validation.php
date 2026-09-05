@@ -66,6 +66,15 @@ return [
     ],
     'not_in' => 'El valor seleccionado para :attribute no es válido.',
     'numeric' => 'El campo :attribute debe ser un número.',
+    // Regla Password::min()->mixedCase()->numbers() (config auth.password_rules).
+    'password' => [
+        'letters' => 'El campo :attribute debe contener al menos una letra.',
+        'mixed' => 'El campo :attribute debe contener al menos una letra mayúscula y una minúscula.',
+        'numbers' => 'El campo :attribute debe contener al menos un número.',
+        'symbols' => 'El campo :attribute debe contener al menos un símbolo.',
+        'uncompromised' => 'El valor de :attribute apareció en una filtración de datos. Elija otro.',
+    ],
+
     'present' => 'El campo :attribute debe estar presente.',
     'regex' => 'El formato del campo :attribute no es válido.',
     'required' => 'El campo :attribute es obligatorio.',

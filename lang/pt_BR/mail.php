@@ -23,4 +23,13 @@ return [
         'ignore' => 'Se você não solicitou esta ação, ignore este e-mail e considere trocar sua senha.',
     ],
 
+    // Recuperação de senha (bug de QA #9 — antes vinha em inglês do pacote).
+    'password_reset' => [
+        'subject' => ':platform — Redefinição de senha',
+        'intro' => 'Você está recebendo este e-mail porque recebemos um pedido de redefinição de senha para a sua conta.',
+        'action' => 'Redefinir senha',
+        'expires' => 'Este link expira em :minutes minutos.',
+        'ignore' => 'Se você não pediu a redefinição, nenhuma ação é necessária.',
+    ],
+
 ];

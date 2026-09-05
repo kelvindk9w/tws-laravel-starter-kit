@@ -1,0 +1,48 @@
+/*
+   Tema do super admin Filament (/admin).
+
+   Crítica de design #6: o painel do usuário e o /admin pareciam dois
+   produtos de duas empresas — tipografia, primária e superfícies
+   diferentes. Este arquivo é a ponte: o preset do Filament 5 + OS MESMOS
+   tokens de identidade do resto do kit (resources/css/theme.css), de modo
+   que rebranding continue sendo "1 arquivo + .env" (ADR-007).
+
+   Registrado no vite.config.js e apontado por ->viteTheme() no
+   AdminPanelProvider.
+*/
+
+@import '../../vendor/filament/filament/resources/css/theme.css';
+
+/* As duas famílias da identidade, self-hosted (a CSP do kit não permite
+   font-src externo — nada de Google/Bunny Fonts no /admin). */
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/instrument-sans';
+
+/* Tokens da marca (cores, tipografia, radii, motion) — a MESMA fonte da
+   verdade do painel do usuário e da landing. */
+@import './theme.css';
+
+/* Classes usadas dentro do painel: o Tailwind 4 precisa enxergar os
+   arquivos para gerar os utilitários. */
+@source '../../app/Filament';
+@source '../../app/Providers/Filament';
+@source '../../resources/views/filament';
+
+@theme {
+    /* Corpo e títulos do /admin passam a falar a MESMA voz tipográfica do
+       resto do produto (o Filament usa Inter por padrão). */
+    --font-sans: 'Instrument Sans Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Space Grotesk Variable', 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    /* Títulos de página, de seção e de widget na voz display — é o que
+       distingue visualmente o /admin de um Filament de fábrica. */
+    .fi-header-heading,
+    .fi-section-header-heading,
+    .fi-wi-stats-overview-stat-value,
+    .fi-modal-heading {
+        font-family: var(--font-display);
+        letter-spacing: -0.02em;
+    }
+}

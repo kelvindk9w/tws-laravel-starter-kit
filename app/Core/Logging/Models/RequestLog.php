@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Logging\Models;
 
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +32,8 @@ use InvalidArgumentException;
  */
 class RequestLog extends Model
 {
+    use RoutesByUuid;
+
     /**
      * Append-only: sem coluna updated_at.
      */

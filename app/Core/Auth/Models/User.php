@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Core\Auth\Models;
 
 use App\Core\Auth\Enums\UserStatus;
+use App\Core\Auth\Notifications\ResetPasswordNotification;
 use App\Core\Identifiers\HasPublicCode;
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Models\Upload;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -36,10 +39,10 @@ use Illuminate\Notifications\Notifiable;
  */
 #[Fillable(['name', 'email', 'password', 'locale'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPublicCode, HasUuids, Notifiable;
+    use HasFactory, HasPublicCode, HasUuids, Notifiable, RoutesByUuid;
 
     /**
      * Prefixo do código público legível (ADR-010): USR-xxxxxx.
@@ -173,6 +176,17 @@ class User extends Authenticatable implements FilamentUser
     public function hasTransactionPassword(): bool
     {
         return $this->transaction_password !== null;
+    }
+
+    /**
+     * E-mail de recuperação de senha no idioma do DESTINATÁRIO (bug de QA #9).
+     *
+     * A notificação nativa do Laravel usa linhas em inglês do pacote; esta
+     * é traduzida (chaves mail.password_reset.*) e enfileirada como os demais.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     /**

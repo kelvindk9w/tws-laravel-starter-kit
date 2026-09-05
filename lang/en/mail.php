@@ -23,4 +23,13 @@ return [
         'ignore' => 'If you did not request this action, ignore this email and consider changing your password.',
     ],
 
+    // Password reset (QA bug #9 — used to arrive in the framework's English).
+    'password_reset' => [
+        'subject' => ':platform — Password reset',
+        'intro' => 'You are receiving this email because we received a password reset request for your account.',
+        'action' => 'Reset password',
+        'expires' => 'This link expires in :minutes minutes.',
+        'ignore' => 'If you did not request a password reset, no further action is required.',
+    ],
+
 ];

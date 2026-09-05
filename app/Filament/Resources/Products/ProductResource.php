@@ -90,12 +90,23 @@ final class ProductResource extends Resource
                     // centavos na gravação — dinheiro é sempre inteiro.
                     ->formatStateUsing(fn (?int $state): string => $state === null ? '' : Money::format($state))
                     ->dehydrateStateUsing(fn (string $state): int => Money::parse($state))
+                    // Regra do catálogo (decisão documentada): o valor precisa
+                    // ser MAIOR QUE ZERO. Negativo não existe em catálogo
+                    // (seria crédito, não produto) e zero também é recusado —
+                    // item gratuito é uma decisão comercial explícita, não o
+                    // resultado de um campo deixado em branco. Mínimo: 1 centavo.
                     ->rule(function (): \Closure {
                         return function (string $attribute, mixed $value, \Closure $fail): void {
                             try {
-                                Money::parse((string) $value);
+                                $cents = Money::parse((string) $value);
                             } catch (Throwable) {
                                 $fail(__('admin.products.price_invalid'));
+
+                                return;
+                            }
+
+                            if ($cents <= 0) {
+                                $fail(__('admin.products.price_positive'));
                             }
                         };
                     }),

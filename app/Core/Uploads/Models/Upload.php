@@ -6,6 +6,7 @@ namespace App\Core\Uploads\Models;
 
 use App\Core\Auth\Models\User;
 use App\Core\Identifiers\HasPublicCode;
+use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Enums\UploadStatus;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,7 +33,7 @@ use Throwable;
 #[Fillable(['tenant_uuid', 'user_id', 'disk', 'path', 'original_name', 'mime', 'size', 'sha256', 'status'])]
 class Upload extends Model
 {
-    use HasPublicCode, HasUuids;
+    use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
      * Prefixo do código público legível (ADR-010): UPL-xxxxxx.
