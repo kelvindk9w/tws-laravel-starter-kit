@@ -4,7 +4,7 @@
 ])
 
 @php
-    // VARIANTE 'plain' (landing v3, rota /v3): o MESMO rodapé, sem a linha
+    // VARIANTE 'plain' (landing oficial, rota /): o MESMO rodapé, sem a linha
     // superior. Existe porque lá ele mora DENTRO da seção de céu, que já tem
     // o próprio horizonte separando-a do que vem antes — uma segunda régua em
     // cima dela seria uma divisão que não divide nada. Conteúdo idêntico.

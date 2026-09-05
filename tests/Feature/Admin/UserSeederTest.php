@@ -52,11 +52,11 @@ it('é idempotente: rodar de novo não duplica ninguém', function () {
 it('não toca nas contas demo', function () {
     config()->set('ui.demo_login.email', 'demo@tws.dev');
 
-    $demo = User::factory()->create(['email' => 'demo@tws.dev', 'name' => 'Usuário Demo']);
+    $demo = User::factory()->create(['email' => 'demo@tws.dev', 'name' => 'Cliente Demo']);
 
     $this->seed(UserSeeder::class);
 
-    expect($demo->fresh()->name)->toBe('Usuário Demo');
+    expect($demo->fresh()->name)->toBe('Cliente Demo');
 });
 
 it('a massa semeada faz a paginação do admin ter mais de uma página', function () {

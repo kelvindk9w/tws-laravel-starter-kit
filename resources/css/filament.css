@@ -149,3 +149,82 @@
         transition: none;
     }
 }
+
+/* =============================================================================
+   Listagens do /admin: barra da tabela e rodapé dos cards (ADR-011).
+
+   Duas correções de layout que o Filament não expõe por API — por isso
+   vivem aqui, no tema, e não em PHP:
+
+   1. ALTERNADOR TABELA/CARDS na barra da tabela. O botão é declarado como
+      ação de barra (ViewModeToggle), e o Filament renderiza as ações de
+      barra no INÍCIO da linha. Só que ele é irmão do filtro e da busca —
+      os três dizem "como a lista aparece" — então ele tem de terminar
+      COLADO no ícone de filtros, do lado direito. Uma troca de `order`
+      resolve sem tocar na view do pacote.
+
+   2. AÇÕES DO CARD em partes iguais. No modo cards as ações caem numa
+      linha própria no rodapé do cartão; de fábrica elas ficam encostadas
+      num dos lados. Aqui a linha vira uma grade de N colunas de mesma
+      largura (`grid-auto-columns: 1fr`, sem precisar saber o N), cada
+      ícone centralizado na sua parte, separada do conteúdo por um filete
+      que atravessa o cartão inteiro.
+   ============================================================================= */
+
+@layer components {
+    /* (1) O grupo de ações da barra vai para o fim da linha, depois da
+       busca e do ícone de filtros. `margin-inline-start: auto` cobre a
+       listagem sem busca nem filtro, em que o grupo é o único filho. */
+    .fi-ta-header-toolbar > .fi-ta-actions {
+        order: 2;
+        margin-inline-start: auto;
+    }
+
+    .fi-ta-header-toolbar > :not(.fi-ta-actions) {
+        order: 1;
+    }
+
+    /* (2) Rodapé do card: uma coluna por ação, todas do mesmo tamanho.
+
+       O `!important` no padding não é preguiça: o próprio Filament aplica
+       `ps-4/pe-4` nesta linha por um seletor de 6 classes encadeadas, e o
+       filete precisa atravessar o cartão inteiro — um traço que morre a
+       16px de cada borda parece defeito de renderização. */
+    .fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        justify-items: stretch;
+        gap: 0;
+        width: 100%;
+        padding-inline: 0 !important;
+        padding-top: 0.625rem;
+        margin-bottom: -0.25rem;
+        border-top: 1px solid var(--color-gray-200, #e4e4e7);
+    }
+
+    .dark .fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions {
+        border-top-color: var(--color-gray-800, #27272a);
+    }
+
+    /* Cada ação ocupa a sua fatia inteira e centraliza o ícone nela — a
+       área de clique é a coluna toda, não só os 20px do glifo. */
+    .fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions > * {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: stretch;
+        width: 100%;
+        min-width: 0;
+    }
+
+    /* Filete vertical entre as fatias: mostra a divisão sem desenhar
+       botões, que virariam quatro caixas dentro do cartão. */
+    .fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions > * + * {
+        border-inline-start: 1px solid var(--color-gray-200, #e4e4e7);
+    }
+
+    .dark .fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions > * + * {
+        border-inline-start-color: var(--color-gray-800, #27272a);
+    }
+}

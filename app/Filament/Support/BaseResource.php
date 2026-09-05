@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use Filament\Actions\Action;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
 use Filament\Tables\Columns\Column;
 use Filament\Tables\Columns\ColumnGroup;
 use Filament\Tables\Columns\Layout\Component as ColumnLayoutComponent;
@@ -26,9 +28,16 @@ use Filament\Tables\Table;
  * `tableExtras()` para filtros e ações.
  *
  * ALTERNADOR TABELA/CARDS: quando o resource implementa `cardComponents()`,
- * a listagem ganha um botão no cabeçalho (ver BaseListRecords) que troca
- * entre a tabela clássica e a grade de cards. A escolha persiste por
- * usuário e por recurso — ver ViewMode.
+ * a listagem ganha um botão SÓ ÍCONE na barra da tabela, ao lado do ícone
+ * de filtros e da busca (ViewModeToggle), que troca entre a tabela clássica
+ * e a grade de cards. A escolha persiste por usuário e por recurso — ver
+ * ViewMode.
+ *
+ * AÇÕES NO MODO CARDS: no card, as ações de registro viram botões de ícone
+ * com cor semântica e nome no hover (CardActions), distribuídas em partes
+ * iguais no rodapé do card. Na tabela nada muda. O resource NÃO precisa
+ * saber disso: a conversão é feita aqui, em `modifyUngroupedRecordActionsUsing`,
+ * antes de o hook `tableExtras()` declarar as ações.
  *
  * Como criar uma tela nova está documentado no README (seção super admin).
  */
@@ -149,9 +158,24 @@ abstract class BaseResource extends Resource
         }
 
         if ($isGrid) {
-            $table = $table->contentGrid(static::cardGrid());
+            $table = $table
+                ->contentGrid(static::cardGrid())
+                ->recordActionsAlignment(Alignment::Center->value)
+                // Precisa vir ANTES de tableExtras(): o Filament aplica este
+                // modificador no momento em que `recordActions()` é chamado.
+                ->modifyUngroupedRecordActionsUsing(
+                    fn (Action $action) => CardActions::style($action),
+                );
         }
 
-        return static::tableExtras($table);
+        $table = static::tableExtras($table);
+
+        // Depois do hook, e com `push`, para que um resource que zere as
+        // ações da barra (`->toolbarActions([])`) não leve o alternador junto.
+        if (static::hasCardView()) {
+            $table = $table->pushToolbarActions([ViewModeToggle::make(static::class)]);
+        }
+
+        return $table;
     }
 }

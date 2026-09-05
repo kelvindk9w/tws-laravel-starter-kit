@@ -68,6 +68,8 @@ return [
         'cannot_block_self' => 'No puede bloquear su propia cuenta.',
         'cannot_remove_last_admin' => 'Este es el último administrador activo: el panel quedaría sin acceso.',
         'action_denied' => 'Acción no permitida',
+        'avatar' => 'Foto',
+        'avatar_hint' => 'JPG, PNG o WEBP, hasta :max KB. Déjalo vacío para usar las iniciales del nombre.',
     ],
 
     'api_keys' => [
@@ -233,6 +235,7 @@ return [
         'user_not_found' => 'Usuario no encontrado.',
         'admin_granted' => 'Acceso de super admin concedido a :email.',
         'admin_removed' => 'Acceso de super admin revocado de :email.',
+        'demo_protected' => 'Cuenta de demostración protegida: el comando no modifica :email.',
     ],
 
     // -------------------------------------------------------------------------

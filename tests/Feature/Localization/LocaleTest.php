@@ -17,7 +17,7 @@ use Livewire\Livewire;
 it('visitante sem cookie vê o padrão da plataforma (pt-BR)', function () {
     $this->get('/')
         ->assertOk()
-        ->assertSee(__('landing.hero.title', locale: 'pt_BR'));
+        ->assertSee(__('landing.hero.title_line_2', locale: 'pt_BR'));
 });
 
 it('visitante com cookie vê o idioma escolhido', function (string $locale, string $expected) {
@@ -27,15 +27,15 @@ it('visitante com cookie vê o idioma escolhido', function (string $locale, stri
         ->assertOk()
         ->assertSee($expected);
 })->with([
-    'en' => ['en', 'Your Laravel SaaS in production in days, not months'],
-    'es' => ['es', 'Tu SaaS Laravel en producción en días, no meses'],
+    'en' => ['en', 'The base your AI'],
+    'es' => ['es', 'La base que tu IA'],
 ]);
 
 it('cookie com locale fora da whitelist cai no padrão da plataforma', function () {
     $this->withCookie(SetLocale::COOKIE, 'fr')
         ->get('/')
         ->assertOk()
-        ->assertSee(__('landing.hero.title', locale: 'pt_BR'));
+        ->assertSee(__('landing.hero.title_line_2', locale: 'pt_BR'));
 });
 
 it('usuário logado com preferência salva vê o painel no idioma dela', function () {
@@ -54,7 +54,7 @@ it('preferência da conta vence o cookie do visitante', function () {
         ->withCookie(SetLocale::COOKIE, 'es')
         ->get('/')
         ->assertOk()
-        ->assertSee(__('landing.hero.title', locale: 'en'));
+        ->assertSee(__('landing.hero.title_line_2', locale: 'en'));
 });
 
 it('rota de troca grava o cookie e redireciona de volta', function () {

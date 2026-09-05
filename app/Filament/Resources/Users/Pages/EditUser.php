@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Support\AvatarUpload;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -58,6 +59,23 @@ final class EditUser extends EditRecord
     }
 
     /**
+     * Preenche o campo de foto com o caminho do avatar atual, para o
+     * formulário abrir mostrando a imagem que já está lá.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        /** @var User $record */
+        $record = $this->getRecord();
+
+        $data['avatar'] = AvatarUpload::stateFor($record);
+
+        return $data;
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     protected function handleRecordUpdate(Model $record, array $data): Model
@@ -82,6 +100,8 @@ final class EditUser extends EditRecord
         }
 
         $record->forceFill($atributos)->save();
+
+        AvatarUpload::applyTo($record, $data['avatar'] ?? null);
 
         return $record;
     }

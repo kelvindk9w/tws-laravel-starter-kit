@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Users\Pages;
 
 use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Support\AvatarUpload;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 use Illuminate\Database\Eloquent\Model;
@@ -58,6 +59,10 @@ final class CreateUser extends CreateRecord
             // cadastrou é o operador do painel, não um visitante anônimo.
             'email_verified_at' => now(),
         ])->save();
+
+        // A foto entra depois do INSERT: o vínculo é uma FK e o upload já
+        // foi persistido (e validado) pela função global — ver AvatarUpload.
+        AvatarUpload::applyTo($user, $data['avatar'] ?? null);
 
         return $user;
     }

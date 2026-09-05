@@ -26,6 +26,12 @@ import { test, expect } from '@playwright/test';
 const email = process.env.E2E_USER_EMAIL ?? 'e2e@example.com';
 const password = process.env.E2E_USER_PASSWORD ?? 'E2eSenhaForte123';
 
+// PNG 96x96 REAL, embutido em base64: a validação de upload do kit lê o
+// CONTEUDO do arquivo (magic bytes + decodificacao GD), entao um arquivo
+// falso nao serve de fixture — e binario nenhum entra no repositorio.
+const PNG_BASE64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAB90lEQVR4nO2b3U2DMRAECaIQEC1CFbQIohUejFAUiBb/7N7naOYxUuK7Yc9xEnN6fHm/g+vcVxdwdBAkQJAAQQIECRAkQJAAQQIECRAkQJAAQQIECRAkQJAAQQIECRAkQJDgobqAbz7fnn8/+PT6ka/kglPhl/Z/SrlGlawaQV1qzslrKtiDhu1MPneMaIIWtheLUi5Ba//4sSiFBDn6yThKCPJ1EnBkF+Tuwf36nKQFXkGZbcK6ilFQ8sziW4sRE7gE5Y+8phVJkABBAgQJLILyG5BvXRIkQJAAQQIECRAkQJDAIqjqJxrHuiRIgCABggQuQfltyLQiCRIYBSVD5FvLm6CMI+sqjJjALsgdIvfrJxLk6yEwwqERc3SS2eBye9DafmJvkQVX8Ca/OQ4fQQvexWY6zB/QueUqqBR0Dvekd4WTtABBAgQJECRAkABBgvr/F5PHxdrTEJ/FBDlBy283ZUwlBFkvnLk1GQWFL+Jt9rvYzdyTXp+gqhucP6yN0uIEldtZXsNKQUew01hYyZoRO46aC+bHbUGCDmvnbkVts4KObKcxWSEfVgVTgo4fn8ZMneOCdrHTGK52UNBedhpjNbMHCUYE7RifxkDl3YL2tdPorZ8REyBI0Cdo9/lqdHVBggQIEnQIuo35avy/FxIkQJAAQYIvh3yaD4YGJgoAAAAASUVORK5CYII=';
+
 // -----------------------------------------------------------------------------
 // Sem sessão prévia: fluxo real de login e gating de guest.
 // -----------------------------------------------------------------------------
@@ -193,6 +199,44 @@ test.describe('regressões', () => {
         // E navegar pela coluna funciona.
         await sidebar.getByRole('link', { name: 'Chaves de API' }).click();
         await expect(page).toHaveURL(/\/api-keys$/);
+    });
+
+
+    test('perfil: sobe a foto, ela vira o avatar do cabeçalho e o arquivo falso é recusado', async ({ page }) => {
+        await page.goto('/profile');
+
+        const cartao = page.locator('form').filter({ has: page.locator('input[type="file"]') });
+        const antes = await page.evaluate(() => Array.from(document.images).map((i) => i.src));
+
+        await cartao.locator('input[type="file"]').setInputFiles({
+            name: 'foto-valida.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from(PNG_BASE64, 'base64'),
+        });
+        await cartao.getByRole('button', { name: /salvar foto/i }).click();
+        await expect(page.getByText(/foto/i).first()).toBeVisible();
+
+        // A foto tem de sobreviver ao reload: o vínculo é do banco, não da
+        // sessão. E a URL é ASSINADA (política de uploads do kit: documento
+        // nunca em bucket público).
+        await page.reload({ waitUntil: 'networkidle' });
+        const src = await page.evaluate(
+            () => Array.from(document.images).map((i) => i.src).find((s) => /\/storage\/avatars\//.test(s)) ?? null,
+        );
+        expect(src).toBeTruthy();
+        expect(src).toMatch(/(signature|expires)=/i);
+        expect(antes).not.toContain(src);
+
+        // Arquivo que só PARECE imagem: recusado com mensagem, sem gravar.
+        await cartao.locator('input[type="file"]').setInputFiles({
+            name: 'nao-e-imagem.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from('isto aqui e texto puro, apenas renomeado para .png'),
+        });
+        await cartao.getByRole('button', { name: /salvar foto/i }).click();
+        await expect(
+            page.getByText(/corrompida|não é permitido|não corresponde|inválida/i).first(),
+        ).toBeVisible({ timeout: 15000 });
     });
 
     test('dashboard: métricas, gráfico e últimas chamadas da API', async ({ page }) => {

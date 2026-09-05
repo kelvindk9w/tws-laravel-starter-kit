@@ -82,25 +82,70 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 
 ## Landing pública, showcase de componentes (/ui) e demos
 
-A home `/` é uma **landing de vitrine** do kit (hero com screenshot real do
-painel, stack + nota de ambiente dev com Mailpit, "horas economizadas", grid
-de 12 features, **formulário de contato funcional**, CTA com link do
-repositório e footer institucional). Strings em `lang/*/landing.php` +
+A home `/` é a landing **"Céu"** — a direção escolhida pelo dono entre as três
+que existiram. Ela nasceu em `/v3` enquanto era avaliada; hoje é a oficial e
+`/v3` responde **301 para `/`** (links compartilhados continuam valendo, sem
+duas URLs servindo a mesma página). A landing anterior saiu do kit e vive no
+histórico do git; `/v2` ("O Rastro") segue ao lado como **conceito
+alternativo**, não como página do produto.
+
+O que a página tem, na ordem: herói com céu gerado (sem imagem de fundo), o
+**leque de capturas reais** do produto, o split-screen `código ↔ tela`, as três
+etapas do clone, o bento de **segurança de fábrica**, a linha "pronto para
+produzir" (Mailpit/e-mails e "feito em componentes"), a conta das **horas já
+feitas**, o **formulário de contato funcional** e o rodapé-céu com o arco das
+oito tecnologias.
+
+**Promessa (copy):** a página fala com quem constrói com IA — *"A base que a
+sua IA não precisa gerar"*. O argumento não é prazo, é **token e retrabalho**:
+auth, 2FA, API keys, logs com LGPD, uploads, painel e admin já prontos e
+testados, para o tempo de geração ir só no que é do produto.
+
+Arquivos: `resources/views/landing.blade.php` + `resources/views/landing/*`,
+`resources/css/landing.css`, `resources/js/landing.js` (+ `resources/js/landing/`),
+capturas em `public/img/landing/`. Strings em `lang/*/landing.php` +
 `lang/*/contact.php`; branding via `platform()`.
 
+**Números vêm do `.env`, nunca da view** (`config/landing.php`, ADR-007):
+`LANDING_CLONES` (prova social; 0 troca a frase pela suíte verde),
+`LANDING_TESTS`, `LANDING_HOURS_SAVED` (0 esconde a faixa inteira) e
+`LANDING_WEBGL` (desliga o 3D e cai no fallback em CSS). Nenhum número
+inventado no Blade.
+
+**Documento próprio, não `<x-layouts.site>`**: só esta página carrega o bundle
+dela (`landing.css` / `landing.js`, registrados no `vite.config.js`). GSAP,
+Lenis e Three.js entram por `import()` dinâmico — nenhuma outra tela do produto
+baixa um byte disso. Cabeçalho e rodapé são os componentes do kit em variantes
+aditivas: `<x-site-header variant="floating">` (a cápsula que flutua sobre o
+céu e **pousa** — vira superfície opaca do kit — quando o céu acaba) e
+`<x-site-footer variant="plain">`.
+
+**Objetos 3D com os logotipos oficiais**: os oito cubos esmaltados usam a marca
+real de cada tecnologia (Laravel, PHP, PostgreSQL, Redis, Docker, Livewire,
+Filament, Tailwind), em SVG **inline no repositório** — nenhum CDN. Uma única
+fonte de verdade: o desenho e a cor da marca moram em
+`resources/views/landing/tech-mark.blade.php` (que é o fallback em CSS quando
+não há WebGL) e o Three.js **levanta esse mesmo SVG do DOM** para virar
+decalque (`resources/js/landing/marks.js`). A tinta do decalque é calculada
+pela luminância da cor da marca: branco na maioria, quase-preto sobre esmalte
+claro (o âmbar do Filament). As marcas são de seus donos e aparecem em uso
+nominativo, sem deformação e sem caixa.
+
 **Um esqueleto para o produto inteiro** (`resources/views/components/layouts/
-site.blade.php`): landing, showcase, telas de auth e **painel do usuário**
-passam pelo mesmo `<head>`, pelo mesmo `<x-site-header>` e pelo mesmo
-`<x-site-footer>`. Eram três esqueletos, com marcas, larguras e rodapés
+site.blade.php`): showcase, telas de auth e **painel do usuário** passam pelo
+mesmo `<head>`, pelo mesmo `<x-site-header>` e pelo mesmo `<x-site-footer>`.
+(A landing é o único documento próprio — pelo bundle extra dela —, mas usa o
+MESMO cabeçalho e o MESMO rodapé, em variantes.) Eram três esqueletos, com marcas, larguras e rodapés
 diferentes — e o cliente logado sentia que tinha saído do site. Muda só o que
 precisa mudar: `background` (o painel usa a superfície rebaixada, para os
 cartões flutuarem) e `width` (1152px na landing, 1280px no painel, onde a
 coluna do menu lateral come 240px). `<x-layouts.landing>` sobrevive como
 apelido de `<x-layouts.site>` para as views públicas.
 
-- **Hierarquia de CTA**: UM primário ("Criar conta"), UM secundário ("Testar
-  demo") e o resto como link de texto sublinhado — no herói e no CTA final.
-  Quatro botões lado a lado não são quatro opções, são nenhuma.
+- **Hierarquia de CTA**: UM primário ("Clonar"), UM secundário ("Ver a demo")
+  e o resto como link de texto sublinhado (o "Ver admin demo" só existe onde o
+  login demo está ligado). Quatro botões lado a lado não são quatro opções,
+  são nenhuma.
 - **Tipografia**: títulos em Space Grotesk Variable e corpo em Instrument Sans
   Variable — as **duas** self-hosted via `@fontsource-variable` e importadas
   no `app.css` (tokens `--font-display` / `--font-sans`). Nenhuma fonte vem de
@@ -118,10 +163,14 @@ apelido de `<x-layouts.site>` para as views públicas.
   showcase, 3 idiomas) e `node tests/e2e/shots-panel.js <pasta>` (telas
   autenticadas + login, desktop/mobile × claro/escuro) — saída em
   `test-results/`.
-- **Screenshot do hero**: `public/img/landing/dashboard.png` (commitado).
-  Para regerar com a stack dev no ar: `node tests/e2e/capture-hero.js`
-  (faz login com o usuário demo e captura o /dashboard em tema escuro —
-  recorte 1280×700 com as métricas e o gráfico de requisições).
+- **Capturas do herói**: `public/img/landing/*.webp` (commitadas) — as quatro
+  telas reais do kit (painel, super admin, showcase, login) em claro e escuro,
+  720w e 1440w, mais a tabela do split-screen. São capturas do produto rodando
+  (viewport 1440×900, login demo, um arquivo por tema), exportadas para WebP
+  nas duas larguras e commitadas — a landing não busca imagem de lugar nenhum.
+  Para trocar uma delas, recapture a tela e substitua o par claro/escuro com o
+  mesmo nome. O antigo `capture-hero.js`, que produzia um único
+  `dashboard.png` para a landing anterior, saiu junto com ela.
 - **Motion**: tokens de easing/duração em `resources/css/theme.css`
   (`--ease-out`, `--ease-in-out`); scroll-reveal discreto via
   IntersectionObserver em `resources/js/ui.js` (`data-reveal`), desligado
@@ -312,8 +361,8 @@ chamados automaticamente pelo `DatabaseSeeder` quando o flag está ligado:
 
 ```bash
 docker compose exec app php artisan migrate --seed   # cria os usuários demo
-# painel:  demo@tws.dev / Demo-password1        (DEMO_USER_EMAIL/PASSWORD)
-# /admin:  admin@tws.dev / Demo-admin-password1 (DEMO_ADMIN_EMAIL/PASSWORD)
+# painel:  demo@tws.dev / Demo-password1        (DEMO_USER_EMAIL/PASSWORD)  → "Cliente Demo"
+# /admin:  admin@tws.dev / Demo-admin-password1 (DEMO_ADMIN_EMAIL/PASSWORD) → "Admin Demo"
 ```
 
 As senhas demo obedecem à **mesma política de senha do app** e passam
@@ -321,6 +370,63 @@ mesmo com todas as regras ligadas — senha de demonstração que a própria
 validação do produto recusaria é armadilha, não conveniência. Um teste
 (`tests/Feature/Auth/PasswordPolicyTest.php`) prova isso e que o login com
 elas funciona.
+
+### Contas demo são intocáveis: como e por quê
+
+As duas contas demo (`demo@tws.dev` e `admin@tws.dev` — e-mails de
+`config/ui.php`) são a porta de entrada de quem está avaliando o kit. Se um
+visitante troca a senha, o e-mail, a flag de admin ou a situação de uma
+delas, ele não quebra a demo dele: quebra a de **todo mundo que chegar
+depois**, e alguém precisa de shell no servidor para consertar.
+
+Até a Fase 6 só a interface do Filament recusava (`UserAdminGuard`). Isso
+protege a demo do visitante, não de um `php artisan tinker` com três
+linhas. Agora a proteção tem **três camadas**, e cada uma cobre o buraco da
+anterior:
+
+| Camada | Onde | Pega |
+| --- | --- | --- |
+| 1. UI | `UserAdminGuard` (Filament) | o clique no painel — esconde a ação e recusa no servidor, com mensagem amigável |
+| 2. Model | eventos `updating`/`deleting` do `User` (`DemoAccountGuard`) | tinker, comando artisan, job, importação — tudo que passa por Eloquent; lança `DemoAccountProtectedException` |
+| 3. Banco | trigger no PostgreSQL (`DemoAccountTrigger`, migration) | o que **não** dispara evento: `User::where(...)->delete()`, `->update([...])`, SQL cru, cliente externo |
+
+**Por que trigger e não scope global.** Um scope global resolveria o
+update/delete em massa — mas ao preço de **esconder** as contas demo de toda
+leitura, inclusive do login, que é justamente o que a demo precisa fazer.
+Seria trocar um buraco por outro. O único lugar de onde nada escapa é o
+próprio banco.
+
+**O que é bloqueado e o que continua livre.** Bloquear tudo transformaria a
+demo numa vitrine congelada: quem entra precisa conseguir trocar o nome,
+subir uma foto, mudar idioma e tema — é isso que se está demonstrando. O
+corte é por **consequência**:
+
+| | Campos | Por quê |
+| --- | --- | --- |
+| **Bloqueado** | `email`, `password`, `is_admin`, `status` | mudam **quem entra e com qual poder**; trocar qualquer um derruba o acesso do próximo visitante |
+| **Livre** | `name`, `avatar_upload_id`, `locale`, `theme`, `notification_preferences`, `transaction_password` (+ timestamps e controle) | mudam **aparência e preferências**; o pior caso é a demo aparecer com o nome que o último visitante escreveu — e o seeder devolve o original |
+
+A lista vive em `DemoAccountGuard::SENSITIVE_ATTRIBUTES` e é a **mesma nas
+três camadas** (o trigger é gerado a partir dela).
+
+**Quando vale**: só com o modo demo ligado (`DEMO_LOGIN_ENABLED`). Em
+produção o modo é desligado e as contas demo não deveriam existir — apagar
+`demo@…` de um banco de produção tem de continuar possível. Fora do
+PostgreSQL (o SQLite da suíte de testes) a camada 3 não existe e as camadas
+1 e 2 seguem valendo.
+
+**A porta de serviço**: `DemoAccountGuard::withoutProtection(fn () => ...)`
+suspende as três camadas — é o que os seeders demo usam para criar e
+atualizar as próprias contas. Não use isso em código de aplicação: se a
+operação precisa mudar a senha da conta demo, ela está errada.
+
+Comandos que tocam usuários respeitam a regra: `user:make-admin` recusa
+promover o cliente demo e rebaixar o admin demo, com erro legível no
+console em vez de stack trace.
+
+Testes: `tests/Feature/Admin/DemoAccountHardeningTest.php` (os testes do
+trigger só rodam quando a suíte aponta para o PostgreSQL — marcados com
+`skip` no SQLite).
 
 ### Política de senha (configurável, sem tocar em código)
 
@@ -346,9 +452,11 @@ senha de **transação** tem política própria (`AUTH_TRANSACTION_PASSWORD_MIN`
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
 
-**Contas demo são intocáveis pelo admin** (`User::isDemo()`): bloquear/
-desbloquear esses usuários no `/admin` é recusado com notification clara —
-um visitante não pode quebrar a demo para os demais.
+**Contas demo são intocáveis** (`User::isDemo()`) — e não só pela UI:
+bloquear, editar ou excluir essas contas é recusado no `/admin` com
+notification clara, nos eventos do model e, no PostgreSQL, por um trigger
+que pega até o `update`/`delete` em massa. Ver
+[Contas demo são intocáveis: como e por quê](#contas-demo-são-intocáveis-como-e-por-quê).
 
 ## E-mails transacionais
 
@@ -951,6 +1059,29 @@ Rejeições lançam `UploadRejectedException` (com `reason` estável para logs);
 os controllers convertem em 422. Vínculo automático: na API (ResolveTenant)
 o registro sai com `tenant_uuid`; na web autenticada, com `user_id`.
 
+### Foto de perfil (os dois painéis usam a mesma função)
+
+| Onde | Componente | Caminho |
+| --- | --- | --- |
+| Painel do cliente (`/profile`) | Livewire (`App\Livewire\Profile::updateAvatar`) | `SecureUploadService` → `users.avatar_upload_id` |
+| Super admin (`/admin/users`, `/admin/profile`) | `App\Filament\Support\AvatarUpload` | `saveUploadedFileUsing` → `SecureUploadService` → `users.avatar_upload_id` |
+
+Nenhum dos dois grava arquivo por conta própria: os dois chamam o service, e
+por isso a mesma lei vale nos dois (conteúdo validado, re-encode GD, nome do
+arquivo derivado do MIME real, registro em `uploads`, URL assinada).
+
+A validação de segurança também existe como **regra de validação**
+(`App\Core\Uploads\Rules\SafeFile`) para os formulários que não são Form
+Request — hoje os do Filament. Ela não substitui o service (que revalida ao
+persistir): existe para o erro aparecer embaixo do campo, na hora, em vez de
+estourar depois do "Salvar".
+
+Testes: `tests/Feature/Uploads/AvatarTest.php` (endpoint),
+`tests/Feature/Panel/ProfileTest.php` (painel do cliente),
+`tests/Feature/Uploads/AdminAvatarTest.php` (super admin: criar com foto,
+trocar, remover, arquivo inválido, listagem/detalhe e URL assinada) e os
+E2E `tests/e2e/panel.spec.js` / `tests/e2e/admin.spec.js`.
+
 ### Endpoints de exemplo (prova de reuso)
 
 - `POST /api/v1/uploads` (scope `uploads:create`) — campo `file`, opcional
@@ -1106,10 +1237,22 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   `App\Filament\Support\InitialsAvatarProvider`
   (`->defaultAvatarProvider()`), não por um `getFilamentAvatarUrl()` no
   model — o domínio não precisa conhecer o Filament para isso.
-- **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): nome
-  editável; e-mail read-only com nota explicativa; seção de senha montada
-  só como prévia (campo desabilitado, sem endpoint) — nada derruba o acesso
-  demo.
+- **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): **foto**
+  e nome editáveis; e-mail read-only com nota explicativa; seção de senha
+  montada só como prévia (campo desabilitado, sem endpoint) — nada derruba o
+  acesso demo. A foto sobe pela **mesma função global de upload** do resto
+  do kit e vira o avatar do cabeçalho na hora.
+- **Foto de perfil no cadastro de usuário** (`App\Filament\Support\AvatarUpload`):
+  o `FileUpload` do Filament grava, de fábrica, direto no disco — o que
+  pularia o `SecureUploadService` e, com ele, a validação por magic bytes, o
+  re-encode GD, o nome derivado do MIME real e o registro em `uploads`. Aqui
+  o campo delega a gravação ao service (`saveUploadedFileUsing`) e valida
+  antes, na própria validação do formulário (regra `SafeFile`), para que um
+  `.txt` renomeado para `.png` apareça como erro embaixo do campo e não como
+  erro de servidor depois do "Salvar". A imagem é servida por **URL assinada
+  de curta duração** (`visibility('private')` → `temporaryUrl()`); quem não
+  tem foto aparece com as iniciais em SVG `data:`, nunca com um quadrado
+  quebrado.
 - **Configurações** (`/admin/settings`): parâmetros operacionais editáveis
   pela UI (meses de inatividade p/ expirar chaves, dias de aviso prévio,
   limites de upload, rate limits) gravados na tabela `settings` — sem
@@ -1330,11 +1473,50 @@ não responde "de onde", e não dá para correlacionar a tentativa com os
 
 ### Alternador tabela/cards nas listagens
 
-Toda listagem do painel tem no cabeçalho um botão **"Ver em cards" / "Ver em
-tabela"**. Os cards mostram de três a cinco campos com hierarquia (o que
-identifica o registro em destaque, o resto em cinza) e as mesmas ações da
-tabela. A tabela segue sendo o padrão: é o modo denso, o certo para quem
-abre o painel procurando alguma coisa.
+Toda listagem do painel tem, **na barra da tabela — colado no ícone de
+filtros e na busca** —, um botão **só de ícone** (grade ↔ lista) que troca
+entre a tabela clássica e a grade de cards. Sem texto: o nome aparece no
+hover, exatamente como o botão de filtros do Filament. O ícone mostra o
+**destino** do clique, não o estado atual.
+
+Ele já morou no cabeçalho, ao lado de "Novo usuário". Saiu de lá por dois
+motivos: dividia espaço com a ação primária da tela (uma cria registro, a
+outra só muda como você olha) e ficava longe dos seus irmãos — filtro,
+busca e alternador respondem à mesma pergunta, "como esta lista aparece", e
+por isso agora moram juntos. Efeito colateral bem-vindo: nenhuma página
+consegue mais derrubar o alternador ao sobrescrever `getHeaderActions()`,
+porque ele não passa mais por lá (`BaseResource::table()` +
+`App\Filament\Support\ViewModeToggle`).
+
+Os cards mostram de três a cinco campos com hierarquia (o que identifica o
+registro em destaque, o resto em cinza). A tabela segue sendo o padrão: é o
+modo denso, o certo para quem abre o painel procurando alguma coisa.
+
+**Ações no modo cards.** No cartão, as ações ocupam uma **linha própria no
+rodapé, dividida em partes iguais** — N ações, N colunas de mesma largura,
+cada ícone centralizado na sua fatia (a área de clique é a coluna inteira).
+São **só ícone**, com o nome no hover e a **cor dizendo o que a ação faz**:
+
+| Cor | Significado | Ações |
+| --- | --- | --- |
+| `info` (azul) | consulta, não altera nada | Visualizar |
+| `success` (verde) | constrói ou devolve acesso | Editar, Desbloquear, Restaurar |
+| `danger` (vermelho) | tira acesso ou destrói | Bloquear, Excluir, Revogar |
+| `warning` (âmbar) | substitui um segredo em uso | Rotacionar |
+| `gray` | neutra | Abrir arquivo, Baixar |
+
+Na **tabela** nada muda: continua o link com rótulo do Filament. Ali o
+texto ajuda (a linha é densa e se varre coluna a coluna); no cartão, uma
+fileira de links come metade do rodapé e faz todo registro parecer um
+formulário.
+
+O resource **não precisa saber disso**: quem converte é a base
+(`BaseResource::table()` → `App\Filament\Support\CardActions`), via o hook
+`modifyUngroupedRecordActionsUsing` do Filament, e só quando o modo vigente
+é cards. A grade de colunas iguais é CSS do tema
+(`resources/css/filament.css`). Ação com nome fora do mapa de semântica
+**não é adivinhada**: mantém a cor que o resource declarou — uma ação nova
+nasce neutra, não vermelha por acidente.
 
 **Onde a escolha mora (decisão documentada):** na **sessão**, com uma chave
 por recurso (`App\Filament\Support\ViewMode`). A sessão já é por usuário,

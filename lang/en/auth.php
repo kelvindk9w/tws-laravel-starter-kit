@@ -49,6 +49,14 @@ return [
     ],
 
     // UI strings (authentication forms/screens).
+    // Demo account hardening (DemoAccountGuard): messages for anything that
+    // tries to touch them outside the super admin UI — tinker, artisan
+    // command, job. See the README, "Demo accounts are untouchable".
+    'demo_account' => [
+        'update_blocked' => 'Protected demo account: ":email" does not accept changes to :fields. Name, photo, language and theme remain editable.',
+        'delete_blocked' => 'Protected demo account: ":email" cannot be deleted.',
+    ],
+
     'ui' => [
         'login_title' => 'Sign in',
         'login_submit' => 'Sign in',

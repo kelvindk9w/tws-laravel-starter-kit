@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Core\Auth\Models\User;
+use App\Filament\Support\AvatarUpload;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -17,6 +19,9 @@ use Filament\Support\Icons\Heroicon;
 /**
  * Perfil do super admin (/admin — demo-safe).
  *
+ * - FOTO: editável — sobe pela função global de upload do kit
+ *   (AvatarUpload → SecureUploadService) e aparece na hora no avatar do
+ *   cabeçalho, porque o InitialsAvatarProvider lê o mesmo vínculo.
  * - NOME: editável e funcional (grava na conta logada).
  * - E-MAIL: read-only com nota explicativa — mudar o e-mail da conta demo
  *   quebraria o login para os próximos visitantes.
@@ -44,6 +49,7 @@ final class Profile extends Page implements HasForms
         $this->form->fill([
             'name' => $user?->name,
             'email' => $user?->email,
+            'avatar' => AvatarUpload::stateFor($user),
         ]);
     }
 
@@ -56,6 +62,7 @@ final class Profile extends Page implements HasForms
     {
         return $schema
             ->components([
+                AvatarUpload::field()->label(__('panel.profile.avatar_heading')),
                 TextInput::make('name')
                     ->label(__('panel.common.name'))
                     ->required()
@@ -80,10 +87,15 @@ final class Profile extends Page implements HasForms
 
     public function save(): void
     {
-        /** @var array{name: string} $state */
+        /** @var array{name: string, avatar?: mixed} $state */
         $state = $this->form->getState();
 
-        auth()->user()->forceFill(['name' => $state['name']])->save();
+        /** @var User $user */
+        $user = auth()->user();
+
+        $user->forceFill(['name' => $state['name']])->save();
+
+        AvatarUpload::applyTo($user, $state['avatar'] ?? null);
 
         Notification::make()
             ->success()

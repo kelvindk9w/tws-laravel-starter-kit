@@ -13,16 +13,19 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Support\AdminColumns;
+use App\Filament\Support\AvatarUpload;
 use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
@@ -31,6 +34,7 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
@@ -90,6 +94,10 @@ final class UserResource extends BaseResource
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
+                        // A foto passa pela função global de upload do kit
+                        // (SecureUploadService) e é servida por URL assinada
+                        // — ver AvatarUpload.
+                        AvatarUpload::field()->columnSpanFull(),
                     ]),
                 Section::make(__('admin.users.section_access'))
                     ->columnSpanFull()
@@ -139,6 +147,7 @@ final class UserResource extends BaseResource
     public static function tableColumns(): array
     {
         return [
+            self::avatarColumn(),
             AdminColumns::publicCode(),
             // `name` é criptografado em repouso (checklist 12): exibido,
             // mas NÃO pesquisável/ordenável (a coluna é o ciphertext).
@@ -175,6 +184,7 @@ final class UserResource extends BaseResource
         return [
             Stack::make([
                 Split::make([
+                    self::avatarColumn()->grow(false),
                     TextColumn::make('name')
                         ->label(__('panel.common.name'))
                         ->weight(FontWeight::SemiBold)
@@ -202,6 +212,20 @@ final class UserResource extends BaseResource
                 ]),
             ])->space(2),
         ];
+    }
+
+    /**
+     * A foto do usuário na listagem. Sem foto, o mesmo desenho de iniciais
+     * do menu do painel (InitialsAvatarProvider, via Filament) — nunca um
+     * quadrado vazio, que parece imagem quebrada. A URL vem assinada quando
+     * há foto de verdade (Upload::url()).
+     */
+    private static function avatarColumn(): ImageColumn
+    {
+        return ImageColumn::make('avatar')
+            ->label(__('admin.users.avatar'))
+            ->circular()
+            ->getStateUsing(fn (User $record): string => Filament::getUserAvatarUrl($record));
     }
 
     private static function statusColumn(): TextColumn
@@ -297,6 +321,10 @@ final class UserResource extends BaseResource
     {
         return $schema
             ->components([
+                ImageEntry::make('avatar')
+                    ->label(__('admin.users.avatar'))
+                    ->circular()
+                    ->getStateUsing(fn (User $record): string => Filament::getUserAvatarUrl($record)),
                 TextEntry::make('codigo_publico')->label(__('admin.common.code')),
                 TextEntry::make('name')->label(__('panel.common.name')),
                 TextEntry::make('email')->label(__('auth.ui.email')),

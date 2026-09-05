@@ -68,6 +68,41 @@ test('super admin demo: auditoria web, vitrine de ataques, produtos e i18n', asy
         await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
     });
 
+
+    await test.step('usuários: alternador na barra da tabela e ações do card em partes iguais', async () => {
+        await page.goto('/admin/users', { waitUntil: 'networkidle' });
+        await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
+
+        // O alternador saiu do cabeçalho: agora é um botão SÓ DE ÍCONE na
+        // barra da tabela, vizinho do filtro e da busca.
+        const barra = page.locator('.fi-ta-header-toolbar');
+        const alternador = barra.locator('.fi-ac-icon-btn-action').first();
+        await expect(alternador).toBeVisible();
+        await expect(alternador).toHaveAttribute('aria-label', /cards|tabela|table/i);
+        // Sem texto: o rótulo vive no aria-label/tooltip, não no botão.
+        expect((await alternador.innerText()).trim()).toBe('');
+
+        await alternador.click();
+        const rodape = page.locator('.fi-ta-content-grid .fi-ta-record-content-ctn > .fi-ta-actions').first();
+        await expect(rodape).toBeVisible({ timeout: 15000 });
+
+        // N ações = N colunas de MESMA largura, cada ícone centralizado.
+        const larguras = await rodape.evaluate((el) =>
+            Array.from(el.children).map((c) => Math.round(c.getBoundingClientRect().width)),
+        );
+        expect(larguras.length).toBeGreaterThan(1);
+        expect(new Set(larguras).size).toBe(1);
+
+        // Só ícone, com o nome no hover (title do tooltip do Filament).
+        const acoes = rodape.locator('.fi-ac-icon-btn-action');
+        expect(await acoes.count()).toBe(larguras.length);
+        expect((await acoes.first().innerText()).trim()).toBe('');
+
+        // Volta para a tabela (o banco de dev é compartilhado entre runs).
+        await barra.locator('.fi-ac-icon-btn-action').first().click();
+        await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
+    });
+
     await test.step('seletor de idioma (bandeira em SVG + nome) troca o idioma do painel', async () => {
         await page.goto('/admin', { waitUntil: 'networkidle' });
 

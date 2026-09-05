@@ -25,6 +25,7 @@ return [
         'image_reencode_unavailable' => 'Não foi possível processar a imagem no momento.',
         'image_reencode_failed' => 'Não foi possível processar a imagem enviada.',
         'too_large' => 'O arquivo excede o tamanho máximo permitido de :max KB.',
+        'unreadable' => 'Não foi possível ler o arquivo enviado.',
     ],
 
 ];

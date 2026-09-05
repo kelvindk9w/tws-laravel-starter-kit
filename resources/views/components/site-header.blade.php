@@ -10,20 +10,20 @@
     $user = auth()->user();
     $accountNav = $user !== null ? Navigation::account() : [];
 
-    // VARIANTE 'floating' (landing v3, rota /v3): a MESMA barra — mesma marca,
-    // mesma nav, mesmo menu da conta, mesma gaveta — dentro de uma pílula que
-    // flutua sobre o céu, em vez de colada no topo com uma linha embaixo.
-    // Muda só o invólucro: nenhum item, nenhuma regra e nenhum estado do
-    // cabeçalho do produto sabe que ela existe (as classes v3-nav* moram em
-    // resources/css/landing-v3.css, que só a /v3 carrega).
+    // VARIANTE 'floating' (landing oficial, rota /): a MESMA barra — mesma
+    // marca, mesma nav, mesmo menu da conta, mesma gaveta — dentro de uma
+    // pílula que flutua sobre o céu, em vez de colada no topo com uma linha
+    // embaixo. Muda só o invólucro: nenhum item, nenhuma regra e nenhum estado
+    // do cabeçalho do produto sabe que ela existe (as classes sky-nav* moram
+    // em resources/css/landing.css, que só a landing carrega).
     $floating = $variant === 'floating';
 
     $shellClasses = $floating
-        ? 'v3-nav px-4 pt-3'
+        ? 'sky-nav px-4 pt-3'
         : 'sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur';
 
     $innerClasses = $floating
-        ? 'v3-nav-shell mx-auto flex h-14 '.$width.' items-center gap-3 px-4 sm:gap-6'
+        ? 'sky-nav-shell mx-auto flex h-14 '.$width.' items-center gap-3 px-4 sm:gap-6'
         : 'mx-auto flex h-16 '.$width.' items-center gap-3 px-4 sm:gap-6';
 @endphp
 

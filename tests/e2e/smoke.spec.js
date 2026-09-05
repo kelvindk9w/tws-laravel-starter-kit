@@ -9,33 +9,33 @@ test('landing responde e exibe o hero com o nome da plataforma', async ({ page }
     expect(response?.ok()).toBeTruthy();
 
     // Headline da landing (lang/pt_BR/landing.php) e nome vindo de PLATFORM_NAME.
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Seu SaaS Laravel');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('IA não precisa gerar');
     await expect(page).toHaveTitle(/TWS Starter Kit/);
 });
 
-test('link "Explorar componentes" leva ao showcase /ui', async ({ page }) => {
+test('link "Componentes" do cabeçalho leva ao showcase /ui', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('link', { name: 'Explorar componentes' }).click();
+    await page.getByRole('link', { name: 'Componentes', exact: true }).first().click();
 
     await expect(page).toHaveURL(/\/ui$/);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Componentes UI');
     await expect(page.getByRole('heading', { name: 'Botões' })).toBeVisible();
 });
 
-test('landing tem CTA "Testar demo" e link do repositório', async ({ page }) => {
+test('landing tem CTA da demo e o clone do repositório', async ({ page }) => {
     await page.goto('/');
 
-    // CTA demo (hero e CTA final) aponta para o login com credenciais demo.
-    await expect(page.getByRole('link', { name: 'Testar demo' }).first()).toHaveAttribute('href', /\/login$/);
+    // CTA secundário do herói aponta para o login com credenciais demo.
+    await expect(page.getByRole('link', { name: 'Ver a demo' }).first()).toHaveAttribute('href', /\/login$/);
 
-    // CTA do repositório (PLATFORM_REPO_URL) no CTA final, em nova aba.
-    const repo = page.getByRole('link', { name: 'Ver o código no repositório' });
-    await expect(repo).toBeVisible();
-    await expect(repo).toHaveAttribute('target', '_blank');
+    // CTA final: clonar o repositório (PLATFORM_REPO_URL) ou, sem ele
+    // configurado, criar conta — nunca uma URL quebrada.
+    const clone = page.getByRole('link', { name: 'Clonar o repositório' });
+    await expect(clone).toBeVisible();
 
-    // O hero usa o screenshot real do painel (asset local commitado).
-    await expect(page.locator('img[src*="img/landing/dashboard.png"]')).toBeVisible();
+    // As telas do herói são capturas REAIS do produto (assets commitados).
+    await expect(page.locator('img[src*="img/landing/dashboard-"]').first()).toBeVisible();
 });
 
 // O seletor de idioma é um dropdown do kit (era um <select> nativo com emoji):
@@ -45,11 +45,11 @@ test('seletor de idioma: landing renderiza em inglês e espanhol', async ({ page
 
     await page.locator('[data-dropdown-trigger]').first().click();
     await page.getByRole('menuitem', { name: 'English' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Your Laravel SaaS');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('The base your AI');
 
     await page.locator('[data-dropdown-trigger]').first().click();
     await page.getByRole('menuitem', { name: 'Español' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Tu SaaS Laravel');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('La base que tu IA');
 });
 
 // Abaixo de sm: a nav vira drawer (QA bug 11): hambúrguer abre, Esc fecha.
@@ -75,8 +75,11 @@ test('formulário de contato: envio válido mostra toast de sucesso', async ({ p
 
     await page.getByLabel('Nome', { exact: true }).fill('Maria E2E');
     await page.getByLabel('E-mail', { exact: true }).fill('maria-e2e@example.com');
-    await page.getByLabel('Assunto').selectOption('complaint');
-    await page.getByLabel('Mensagem').fill('Mensagem de teste E2E do formulário de contato.');
+    // `exact`: o SplitText da landing devolve o texto revelado num aria-label,
+    // e o subtítulo da seção contém a palavra "assunto". O rótulo do campo é
+    // exatamente "Assunto".
+    await page.getByLabel('Assunto', { exact: true }).selectOption('complaint');
+    await page.getByLabel('Mensagem', { exact: true }).fill('Mensagem de teste E2E do formulário de contato.');
     await page.getByRole('button', { name: 'Enviar mensagem' }).click();
 
     // Redirect de volta + toast do kit com a confirmação.
