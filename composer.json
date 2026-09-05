@@ -67,7 +67,7 @@
             "@php artisan filament:upgrade"
         ],
         "post-install-cmd": [
-            "@php artisan livewire:publish --assets --ansi --force",
+            "@php artisan livewire:publish --assets --ansi",
             "@php artisan filament:assets --ansi"
         ],
         "post-root-package-install": [
