@@ -183,12 +183,17 @@ window.twsToast = (id, message = null, timeout = 3000) => {
 
 // Flash de sessão: toasts renderizados JÁ visíveis (sem .hidden — ex.:
 // confirmação do formulário de contato) entram visíveis e auto-escondem.
+// Ficam mais tempo que um toast de ação (8s vs 3s): a página acabou de
+// recarregar no topo e quem enviou o formulário lá embaixo ainda está se
+// situando — com 4s a confirmação sumia antes de ser lida.
 // [data-toast-sticky] desliga o auto-esconder (demo estática no /ui).
+const FLASH_TOAST_TIMEOUT = 8000;
+
 document.querySelectorAll('[data-toast]:not(.hidden)').forEach((toast) => {
     toast.classList.add('is-visible');
 
     if (! toast.hasAttribute('data-toast-sticky')) {
-        toastTimers.set(toast, setTimeout(() => hideToast(toast), 4000));
+        toastTimers.set(toast, setTimeout(() => hideToast(toast), FLASH_TOAST_TIMEOUT));
     }
 });
 

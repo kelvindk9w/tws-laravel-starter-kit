@@ -49,9 +49,10 @@ docker compose exec app php artisan <comando>        # artisan
 docker compose exec app php artisan test             # testes (Pest 4)
 docker run --rm -v $(pwd):/app -w /app composer:latest composer <cmd>
 
-# Build do frontend (Node 24 em container):
-docker run --rm -v $(pwd):/app -w /app node:24-alpine npm install
-docker run --rm -v $(pwd):/app -w /app node:24-alpine npm run build
+# Build do frontend (Node 24 em container; --user evita node_modules e
+# public/build com dono root, que o php-fpm não conseguiria sobrescrever):
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm install
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm run build
 ```
 
 ### Testes E2E (Playwright)

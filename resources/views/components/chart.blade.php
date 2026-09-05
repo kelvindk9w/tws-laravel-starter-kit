@@ -19,9 +19,11 @@
     $hasData = $values !== [] && array_sum(array_map('intval', $values)) > 0;
 @endphp
 
-<div {{ $attributes->only('class') }}>
+{{-- min-w-0 + relative: num item de grid/flex, o canvas do Chart.js
+     herda a largura intrínseca e estoura a página no mobile sem isso. --}}
+<div {{ $attributes->merge(['class' => 'min-w-0']) }}>
     @if ($hasData)
-        <div class="{{ $height }} w-full">
+        <div class="relative {{ $height }} w-full min-w-0 overflow-hidden">
             <canvas
                 data-chart="line"
                 data-chart-label="{{ $label }}"

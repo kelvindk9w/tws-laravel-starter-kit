@@ -14,7 +14,7 @@
     $bodyPadding = $padding === 'none' ? '' : 'p-5';
 @endphp
 
-<div {{ $attributes->merge(['class' => 'rounded-xl border border-border bg-surface shadow-sm']) }}>
+<div {{ $attributes->merge(['class' => 'min-w-0 rounded-xl border border-border bg-surface shadow-sm']) }}>
     @if ($title !== null)
         <div class="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
             <div>

@@ -179,13 +179,16 @@ final class UserResource extends Resource
                 // Só o "sim" é sinalizado: um ⊗ vermelho em cada linha comum
                 // (a maioria) transforma o estado normal em alarme e é a
                 // única cor saturada do painel (crítica de design).
-                // Sem ->boolean(): ele impõe um ícone para "false" e o
-                // ->falseIcon(null) não o remove no Filament 5. Aqui usuário
-                // comum fica em branco; só admin recebe o escudo.
+                // O Filament 5 detecta o cast bool do model e trata a coluna
+                // como booleana sozinho; null em falseIcon significa "use o
+                // padrão" (x-circle). Só `false` remove o ícone de verdade:
+                // usuário comum fica em branco, admin recebe o escudo.
                 IconColumn::make('is_admin')
                     ->label(__('admin.users.admin'))
-                    ->icon(fn (bool $state): ?Heroicon => $state ? Heroicon::OutlinedShieldCheck : null)
-                    ->color('gray')
+                    ->boolean()
+                    ->trueIcon(Heroicon::OutlinedShieldCheck)
+                    ->trueColor('gray')
+                    ->falseIcon(false)
                     ->alignCenter(),
                 TextColumn::make('created_at')
                     ->label(__('admin.users.created_at'))
