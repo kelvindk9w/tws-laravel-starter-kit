@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
+use App\Core\Auth\Support\DemoAccountGuard;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use Livewire\Livewire;
 
@@ -13,6 +14,11 @@ use Livewire\Livewire;
 // com uma notification clara.
 
 beforeEach(function () {
+    // O modo demo depende do ambiente (DEMO_LOGIN_ENABLED / APP_ENV=local);
+    // aqui ele fica LIGADO explicitamente para o teste valer igual no CI e
+    // na máquina de quem roda com outro .env.
+    config()->set('ui.demo_login.enabled', true);
+
     $this->admin = User::factory()->create(['is_admin' => true]);
     $this->actingAs($this->admin);
 });
@@ -49,7 +55,9 @@ it('recusa bloquear o super admin demo', function () {
 
 it('recusa desbloquear conta demo (caminho reverso também protegido)', function () {
     $demo = User::factory()->create(['email' => config('ui.demo_login.email')]);
-    $demo->forceFill(['status' => UserStatus::Blocked])->save();
+    // Preparar o cenário exige passar por cima da blindagem do model (é o
+    // mesmo caminho que os seeders usam) — o teste é sobre a UI recusar.
+    DemoAccountGuard::withoutProtection(fn () => $demo->forceFill(['status' => UserStatus::Blocked])->save());
 
     Livewire::test(ListUsers::class)
         ->callTableAction('unblock', $demo)
