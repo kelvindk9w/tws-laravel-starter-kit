@@ -1,0 +1,1302 @@
+/* =============================================================================
+   LANDING OFICIAL "CÉU" — folha PRÓPRIA, carregada só na rota /.
+
+   Por que existe separada: só esta página tem ambiente (céu, 3D, manuscrita).
+   Nada aqui pode vazar para o produto — por isso tudo mora sob a classe `.sky`
+   e nenhum token do kit é redefinido. Quando (e se) a direção vencer, este
+   arquivo vira a base do novo app.css; enquanto não vencer, apagá-lo não deixa
+   rastro.
+
+   O QUE ESTE ARQUIVO ADICIONA AO KIT
+   1) Uma COR DE AMBIENTE. O kit é monocromático de propósito (quase-preto no
+      claro, quase-branco no escuro — esquema Vercel/Linear) e azul só
+      sobrevive como cor de STATUS. A landing não quebra isso: o azul-céu NUNCA
+      pinta um botão, um texto ou uma borda. Ele é ATMOSFERA — o fundo do
+      herói, o fundo do rodapé e a luz que ilumina os objetos 3D. Marca,
+      tipografia e controles seguem monocromáticos, exatamente como no resto
+      do produto.
+      Hue 236 (azul-céu), croma no TETO de 0.085 no claro: dessaturado o
+      bastante para nunca competir com a marca e ainda assim ler como céu.
+      No tema escuro o mesmo hue vira noite (L 0.18–0.30) — o kit tem tema
+      escuro de verdade e um céu que só existe de dia seria meia página.
+   2) Uma tipografia MÍNIMA: uma família (Space Grotesk, a --font-display do
+      kit) em dois pesos (500 e 700), tracking apertado nos títulos. A segunda
+      voz é a manuscrita (Caveat), e ela só diz duas coisas na página inteira.
+   3) A PÍLULA como única forma de UI: nav, prova social, botões, chips,
+      rótulos de etapa e etiquetas de cursor são todos a mesma forma.
+   ============================================================================= */
+
+/* Manuscrita das anotações — self-hosted (@fontsource), SÓ no bundle da landing:
+   a CSP do kit não permite font-src externo e o resto do produto não usa
+   esta voz. UM peso só (600): a anotação compete com um fundo de céu, e
+   trazer o 400 junto custaria ~49 kB de woff2 para duas palavras que nunca o
+   usam. */
+@import '@fontsource/caveat/600.css';
+
+.sky {
+    /* --- Céu (dia) --------------------------------------------------------
+       AZUL CHEIO, não pálido. O ambiente só é ambiente se ele DOMINA: um céu
+       lavado vira um fundo cinza-azulado e o herói perde a única cor da
+       página. Do zênite saturado (oklch 0.58 0.2 262 ≈ #3B7BFF) até o azul
+       claro em que as nuvens vivem (≈ #8FC1FF), no terço de baixo. */
+    --sky-top: oklch(0.58 0.2 262);
+    --sky-mid: oklch(0.68 0.163 258);
+    --sky-low: oklch(0.8 0.11 252);
+
+    /* Nuvens: BRANCAS, e só no terço inferior — é onde o céu encosta no
+       horizonte. Elas são volume, não forma desenhada. */
+    --sky-cloud: oklch(1 0 0 / 0.92);
+    --sky-cloud-soft: oklch(1 0 0 / 0.55);
+
+    /* Grade do céu: branco a 8%. Quase invisível de propósito — ela dá
+       ESCALA ao azul sem virar papel milimetrado. */
+    --sky-grid: oklch(1 0 0 / 0.08);
+    --sky-grid-size: 56px;
+
+    /* --- Tinta ------------------------------------------------------------
+       Estes dois tokens são CONTEXTUAIS: no miolo branco da página valem os
+       cinzas do kit; dentro de .sky-env eles viram branco (bloco adiante). É o
+       mesmo componente lendo a cor do ambiente em que caiu. */
+    --sky-ink: var(--color-gray-900);
+    --sky-ink-soft: var(--color-text-muted);
+
+    /* Vidro das pílulas (sobre o céu é redefinido em .sky-env). */
+    --sky-glass: var(--color-surface);
+    --sky-glass-border: var(--color-border);
+
+    /* Âmbar: a ÚNICA cor de destaque da página, e ela aparece UMA vez — no
+       número da pílula de prova social. Sobre azul, âmbar é o complementar: o
+       olho vai nele antes de ir em qualquer outra coisa. Não é cor de marca
+       nem de status do kit; é um grifo. */
+    --sky-amber: oklch(0.85 0.16 84);
+    --sky-amber-ink: oklch(0.34 0.09 68);
+
+    /* Sombra do que flutua: deslocamento + desfoque, tingida do céu (uma
+       sombra cinza sobre azul lê como sujeira). */
+    --sky-shadow-float: 0 24px 60px -20px oklch(0.35 0.16 262 / 0.5), 0 6px 16px -8px oklch(0.35 0.16 262 / 0.35);
+    --sky-shadow-card: 0 48px 100px -30px oklch(0.3 0.15 262 / 0.55), 0 12px 28px -12px oklch(0.3 0.15 262 / 0.35);
+
+    /* Uma família, dois pesos. */
+    font-family: var(--font-display);
+    font-weight: 500;
+    color: var(--sky-ink);
+}
+
+.dark .sky {
+    /* Céu de NOITE: o equivalente noturno do MESMO azul — #0B1B4A no zênite,
+       #1E3A8A perto do horizonte. O título continua branco nos dois. */
+    --sky-top: oklch(0.21 0.11 268);
+    --sky-mid: oklch(0.29 0.13 265);
+    --sky-low: oklch(0.38 0.14 262);
+
+    --sky-cloud: oklch(0.75 0.08 258 / 0.32);
+    --sky-cloud-soft: oklch(0.75 0.08 258 / 0.16);
+
+    --sky-grid: oklch(1 0 0 / 0.06);
+
+    --sky-ink: var(--color-gray-100);
+    --sky-ink-soft: var(--color-text-muted);
+
+    --sky-shadow-float: 0 24px 60px -20px oklch(0 0 0 / 0.6), 0 6px 16px -8px oklch(0 0 0 / 0.45);
+    --sky-shadow-card: 0 48px 100px -30px oklch(0 0 0 / 0.75), 0 12px 28px -12px oklch(0 0 0 / 0.5);
+}
+
+/* -----------------------------------------------------------------------------
+   DENTRO DO CÉU — o contexto que reescreve a tinta.
+
+   Tudo que cai aqui (título, subtítulo, anotação manuscrita, pílulas e até o
+   rodapé institucional do kit) passa a ler BRANCO. É por isso que os tokens
+   acima são contextuais em vez de fixos: o MESMO componente serve as seções
+   brancas e o céu sem saber em qual dos dois caiu.
+   -------------------------------------------------------------------------- */
+.sky-env,
+.dark .sky-env {
+    color: #ffffff;
+
+    --sky-ink: #ffffff;
+    --sky-ink-soft: oklch(1 0 0 / 0.85);
+
+    /* A cápsula da referência: branco a 12%, borda branca a 30%. Aqui o
+       desfoque NÃO é decoração — atrás dele passa um gradiente vivo com
+       nuvens em movimento, e sem ele o texto perde contraste conforme a
+       nuvem passa. */
+    --sky-glass: oklch(1 0 0 / 0.12);
+    --sky-glass-border: oklch(1 0 0 / 0.3);
+}
+
+
+/* -----------------------------------------------------------------------------
+   AMBIENTE — as duas únicas seções coloridas da página (herói e rodapé).
+   O miolo é a superfície do kit: branco puro no claro.
+   -------------------------------------------------------------------------- */
+.sky-env {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 52%, var(--sky-low) 100%);
+}
+
+/* Rodapé: o MESMO azul cheio, mas com o horizonte NO MEIO — azul saturado em
+   cima (onde mora o título branco), a faixa clara e as nuvens na altura do
+   arco de tecnologias, e azul de novo embaixo (onde mora o rodapé
+   institucional, também em branco).
+
+   Por que não simplesmente virar o gradiente do herói: com a faixa clara em
+   cima, o título sumia dentro dela; com a faixa clara embaixo, era o rodapé
+   institucional que sumia. O horizonte no meio resolve os dois E entrega o
+   que o briefing pede — os ícones 3D flutuando SOBRE as nuvens. */
+.sky-env-inverted {
+    background: linear-gradient(
+        180deg,
+        var(--sky-top) 0%,
+        var(--sky-mid) 24%,
+        var(--sky-low) 48%,
+        var(--sky-mid) 72%,
+        var(--sky-top) 100%
+    );
+}
+
+/* As nuvens acompanham o horizonte: sobem para a faixa do meio. */
+.sky-env-inverted .sky-cloud-2 {
+    top: 30%;
+    bottom: auto;
+}
+
+.sky-env-inverted .sky-cloud-3 {
+    top: 38%;
+    bottom: auto;
+}
+
+/* Grade: some para as bordas com máscara radial — uma grade que bate na
+   margem vira moldura. */
+.sky-env::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image:
+        linear-gradient(to right, var(--sky-grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--sky-grid) 1px, transparent 1px);
+    background-size: var(--sky-grid-size) var(--sky-grid-size);
+    -webkit-mask-image: radial-gradient(120% 80% at 50% 30%, #000 35%, transparent 78%);
+    mask-image: radial-gradient(120% 80% at 50% 30%, #000 35%, transparent 78%);
+}
+
+/* Nuvens: três volumes desfocados, cada um com a sua deriva. Não são formas
+   desenhadas — são luz. */
+.sky-clouds {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.sky-cloud {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(48px);
+    will-change: transform;
+}
+
+.sky-cloud-1 {
+    left: -8%;
+    top: 58%;
+    width: 52vw;
+    height: 24vw;
+    background: var(--sky-cloud);
+    animation: sky-drift-a 46s var(--ease-in-out) infinite alternate;
+}
+
+.sky-cloud-2 {
+    right: -12%;
+    top: 66%;
+    width: 46vw;
+    height: 20vw;
+    background: var(--sky-cloud-soft);
+    animation: sky-drift-b 62s var(--ease-in-out) infinite alternate;
+}
+
+.sky-cloud-3 {
+    left: 20%;
+    bottom: -10%;
+    width: 70vw;
+    height: 26vw;
+    background: var(--sky-cloud);
+    filter: blur(64px);
+    animation: sky-drift-a 78s var(--ease-in-out) infinite alternate-reverse;
+}
+
+@keyframes sky-drift-a {
+    to {
+        transform: translate3d(6%, -3%, 0) scale(1.08);
+    }
+}
+
+@keyframes sky-drift-b {
+    to {
+        transform: translate3d(-7%, 4%, 0) scale(1.12);
+    }
+}
+
+/* Sobre o céu o display recebe um degradê MUITO curto no pé da letra
+   (branco → azul-claro): é a luz do ambiente batendo na tipografia, não uma
+   decoração — por isso ele é quase imperceptível e só existe aqui. */
+.sky-env .sky-display {
+    /* O degradê é CURTO e claro de propósito: ele lê como luz do ambiente no
+       pé da letra, não como texto colorido. Com a queda antiga (L 0,92) a
+       segunda linha do título encostava em 2,4:1 contra o céu quando o
+       degradê pegava o bloco inteiro (é o que acontece sem SplitText, com
+       `prefers-reduced-motion`). */
+    background: linear-gradient(180deg, #ffffff 62%, oklch(0.95 0.03 250) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* -----------------------------------------------------------------------------
+   TIPOGRAFIA — dois pesos, e só.
+   -------------------------------------------------------------------------- */
+.sky-display {
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 0.94;
+    font-size: clamp(2.75rem, 9.5vw, 6rem);
+    text-wrap: balance;
+}
+
+.sky-title {
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    text-wrap: balance;
+}
+
+.sky-lede {
+    font-weight: 500;
+    letter-spacing: -0.012em;
+    color: var(--sky-ink-soft);
+    font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+    line-height: 1.5;
+    max-width: 62ch;
+}
+
+/* Anotação manuscrita. Só duas na página inteira: mais do que isso deixa de
+   ser um aparte e vira um segundo tom de voz. */
+.sky-hand {
+    font-family: 'Caveat', var(--font-display), cursive;
+    font-weight: 600;
+    line-height: 1;
+    font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+    color: var(--sky-ink-soft);
+    transform: rotate(-6deg);
+    white-space: nowrap;
+}
+
+/* -----------------------------------------------------------------------------
+   A PÍLULA — a única forma de UI da página.
+   -------------------------------------------------------------------------- */
+.sky-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+/* As utilitárias de display do kit têm de vencer a pílula: `.sky-pill` e
+   `.hidden` têm a MESMA especificidade, e esta folha carrega depois do
+   app.css — sem esta linha, um chip marcado `hidden sm:inline-flex`
+   continuava visível no celular e três deles se empilhavam sobre o leque. */
+.sky-pill.hidden {
+    display: none;
+}
+
+/* Pílula sobre o céu: vidro. Aqui o blur NÃO é decoração — o que está atrás
+   é um gradiente vivo com nuvens em movimento, e sem o desfoque o texto
+   perde contraste conforme a nuvem passa. */
+.sky-pill-glass {
+    background: var(--sky-glass);
+    border: 1px solid var(--sky-glass-border);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    box-shadow: var(--sky-shadow-float);
+    color: var(--sky-ink);
+}
+
+/* Pílula sobre branco (eyebrow, rótulos das seções do miolo). */
+.sky-pill-quiet {
+    background: var(--color-surface-sunken);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
+/* Botões: mesma pílula, a hierarquia é de PESO, não de cor. O primário usa a
+   marca monocromática do kit — o céu não vira botão. */
+.sky-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding-inline: 1.5rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.015em;
+    transition:
+        transform 180ms var(--ease-out),
+        box-shadow 180ms var(--ease-out),
+        background-color 150ms var(--ease-out);
+}
+
+.sky-btn-primary {
+    background: var(--color-brand);
+    color: var(--color-brand-foreground);
+    box-shadow: var(--sky-shadow-float);
+}
+
+.sky-btn-primary:hover {
+    background: var(--color-brand-hover);
+    transform: translateY(-1px);
+}
+
+.sky-btn-primary:active {
+    transform: translateY(0);
+}
+
+.sky-btn-ghost {
+    color: var(--sky-ink);
+    min-height: 3rem;
+    padding-inline: 1rem;
+    font-weight: 500;
+}
+
+.sky-btn-ghost:hover {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+    text-decoration-thickness: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sky-btn:hover,
+    .sky-btn:active {
+        transform: none;
+    }
+}
+
+/* Link discreto — o aparte que NÃO é um dos dois caminhos da página (hoje, o
+   super admin em demonstração, que só existe em ambiente de desenvolvimento).
+   Herda a tinta do ambiente em que caiu: branco sobre o céu, cinza no miolo. */
+.sky-quiet-link {
+    color: var(--sky-ink-soft);
+    font-size: 0.875rem;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 5px;
+    text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+    transition: color 150ms var(--ease-out, ease-out);
+}
+
+.sky-quiet-link:hover {
+    color: var(--sky-ink);
+}
+
+/* No rodapé o link cai na FAIXA CLARA (a das nuvens), onde o branco do céu não
+   tem contraste nenhum: ali ele usa a tinta da faixa, como todo o resto que
+   vive nela. */
+.sky-env-inverted .sky-quiet-link {
+    color: color-mix(in oklab, var(--sky-on-band) 82%, transparent);
+}
+
+.sky-env-inverted .sky-quiet-link:hover {
+    color: var(--sky-on-band);
+}
+
+/* -----------------------------------------------------------------------------
+   NAV FLUTUANTE — a pílula que segura a marca e os links.
+   -------------------------------------------------------------------------- */
+.sky-nav {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 40;
+    /* A barra NÃO ocupa altura no fluxo: ela flutua SOBRE o céu, que é o
+       ponto inteiro da cápsula translúcida. Sem isto ela se apoiava na
+       superfície branca do <body> acima do herói — e uma cápsula de vidro
+       sobre branco é uma cápsula branca, com os links brancos sumindo
+       dentro dela. (0,75rem de topo + h-14 = 4,25rem.) */
+    margin-bottom: -4.25rem;
+}
+
+.sky-nav-shell {
+    border-radius: 999px;
+    background: var(--sky-glass);
+    border: 1px solid var(--sky-glass-border);
+    backdrop-filter: blur(14px) saturate(1.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    box-shadow: var(--sky-shadow-float);
+}
+
+/* -----------------------------------------------------------------------------
+   LEQUE DE CARTÕES — o produto como objeto físico.
+   As telas são as capturas REAIS do kit (public/img/landing), viradas em
+   torno de um eixo baixo, como um leque de cartas na mão.
+   -------------------------------------------------------------------------- */
+.sky-fan {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    perspective: 1600px;
+}
+
+.sky-fan-card {
+    position: relative;
+    flex: 0 0 auto;
+    width: min(30vw, 21rem);
+    border-radius: 1.125rem;
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--sky-glass-border);
+    box-shadow: var(--sky-shadow-card);
+    transform-origin: 50% 120%;
+    transform: rotate(var(--sky-fan-angle, 0deg)) translateY(var(--sky-fan-lift, 0px));
+    /* `translate` (propriedade própria, não `transform`) porque o leque é
+       animado no scroll pelo GSAP, que escreve `transform` inline. As duas
+       camadas se compõem em vez de brigar — e sem JS o repouso do CSS acima
+       continua sendo o leque. */
+    translate: 0 0;
+    transition:
+        translate 420ms var(--ease-out),
+        box-shadow 420ms var(--ease-out);
+}
+
+/* Cartas laterais entram por baixo da central: um leque tem uma ordem. */
+.sky-fan-card + .sky-fan-card {
+    margin-left: -12%;
+}
+
+.sky-fan-card img {
+    width: 100%;
+    height: auto;
+}
+
+.sky-fan-card:hover,
+.sky-fan-card:focus-within {
+    translate: 0 -14px;
+    z-index: 5;
+    box-shadow:
+        var(--sky-shadow-card),
+        0 0 0 1px var(--sky-glass-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sky-fan-card:hover,
+    .sky-fan-card:focus-within {
+        translate: 0 0;
+    }
+}
+
+/* Rótulo da carta: pílula no ALTO à esquerda. Embaixo ela caía justamente na
+   faixa em que as cartas se cobrem, e quatro rótulos se empilhavam no meio do
+   leque; o canto superior esquerdo é a parte de cada carta que fica exposta. */
+.sky-fan-label {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+}
+
+/* Chips que flutuam POR CIMA das telas. Sólidos de propósito: eles pousam
+   sobre um cartão BRANCO, e ali um vidro a 12% não existe. A sombra própria é
+   o que os separa da captura embaixo. */
+.sky-chip,
+.sky-fan-label {
+    background: var(--color-surface);
+    border: 1px solid oklch(1 0 0 / 0.7);
+    color: var(--color-gray-900);
+    box-shadow: var(--sky-shadow-float);
+    backdrop-filter: none;
+}
+
+.dark .sky-chip,
+.dark .sky-fan-label {
+    background: var(--color-surface-raised);
+    border-color: var(--color-border);
+    color: var(--color-gray-100);
+}
+
+.sky-chip {
+    position: absolute;
+    z-index: 6;
+    animation: sky-bob 7s var(--ease-in-out) infinite alternate;
+}
+
+.sky-chip:nth-child(2n) {
+    animation-duration: 9s;
+    animation-delay: -2.5s;
+}
+
+.sky-chip:nth-child(3n) {
+    animation-duration: 11s;
+    animation-delay: -5s;
+}
+
+@keyframes sky-bob {
+    to {
+        transform: translateY(-12px);
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   SPLIT-SCREEN — código à esquerda, tela à direita, uma linha luminosa entre
+   os dois. A linha é arrastável (mouse, toque e TECLADO: o handle é um
+   <input type=range> de verdade, com rótulo).
+   -------------------------------------------------------------------------- */
+.sky-split {
+    position: relative;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-sunken);
+    --sky-split: 50%;
+}
+
+.sky-split-pane {
+    position: absolute;
+    inset: 0;
+}
+
+/* A tela renderizada fica embaixo; o código por cima, recortado até a linha. */
+.sky-split-code {
+    clip-path: inset(0 calc(100% - var(--sky-split)) 0 0);
+    background: var(--color-surface);
+    z-index: 2;
+}
+
+.sky-split-screen {
+    display: grid;
+    place-items: center;
+    padding: clamp(1rem, 3vw, 2.5rem);
+    background: var(--color-surface-sunken);
+    z-index: 1;
+}
+
+.sky-split-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--sky-split);
+    width: 2px;
+    transform: translateX(-1px);
+    z-index: 3;
+    background: linear-gradient(180deg, transparent, oklch(0.72 0.11 240), transparent);
+    box-shadow: 0 0 18px 2px oklch(0.72 0.11 240 / 0.55);
+    pointer-events: none;
+}
+
+/* O controle real: um range invisível sobre a linha, com alvo generoso.
+   Um <div> com mousedown não é arrastável no teclado — este é. */
+.sky-split-range {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: ew-resize;
+}
+
+.sky-split-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 44px;
+    height: 100%;
+    background: transparent;
+    cursor: ew-resize;
+}
+
+.sky-split-range::-moz-range-thumb {
+    width: 44px;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    cursor: ew-resize;
+}
+
+.sky-split-range:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: -4px;
+}
+
+/* O punho visível, ancorado na linha. */
+.sky-split-grip {
+    position: absolute;
+    top: 50%;
+    left: var(--sky-split);
+    z-index: 3;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.sky-split-tag {
+    position: absolute;
+    top: 0.875rem;
+    z-index: 3;
+}
+
+.sky-split-code-block {
+    height: 100%;
+    overflow: auto;
+    padding: clamp(1rem, 2.5vw, 1.75rem);
+    padding-top: 3.5rem;
+    font-family: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+    font-size: clamp(0.6875rem, 1.05vw, 0.8125rem);
+    line-height: 1.75;
+    tab-size: 4;
+    color: var(--color-gray-600);
+    scrollbar-width: thin;
+}
+
+.dark .sky-split-code-block {
+    color: var(--color-gray-400);
+}
+
+/* Realce de sintaxe: três papéis, e só (tag, atributo, valor). Uma paleta de
+   sete cores num trecho de catorze linhas é confete. */
+.sky-tok-tag {
+    color: var(--color-gray-900);
+    font-weight: 600;
+}
+
+.dark .sky-tok-tag {
+    color: var(--color-gray-100);
+}
+
+.sky-tok-attr {
+    color: oklch(0.55 0.1 250);
+}
+
+.dark .sky-tok-attr {
+    color: oklch(0.78 0.09 250);
+}
+
+.sky-tok-str {
+    color: var(--color-gray-500);
+}
+
+.sky-tok-cmt {
+    color: var(--color-gray-400);
+    font-style: italic;
+}
+
+/* -----------------------------------------------------------------------------
+   COMO FUNCIONA — colagem do produto + etiquetas de cursor.
+   -------------------------------------------------------------------------- */
+.sky-step {
+    position: relative;
+    border-radius: 1.25rem;
+    background: var(--color-surface-sunken);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+}
+
+.sky-step-collage {
+    position: relative;
+    height: 11rem;
+    overflow: hidden;
+    background:
+        radial-gradient(120% 100% at 50% 0%, var(--sky-low), transparent 70%),
+        var(--color-surface-sunken);
+}
+
+.sky-step-collage img {
+    position: absolute;
+    left: 8%;
+    top: 14%;
+    width: 92%;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--sky-shadow-float);
+}
+
+/* Etiqueta de cursor: o balão nomeia a etapa e a setinha diz de onde ele
+   está apontando. É a mesma pílula da página, com um bico. */
+.sky-cursor {
+    position: absolute;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    padding: 0.3125rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    color: var(--color-brand-foreground);
+    background: var(--color-brand);
+    box-shadow: var(--sky-shadow-float);
+}
+
+.sky-cursor svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex: none;
+}
+
+/* -----------------------------------------------------------------------------
+   BENTO DE SEGURANÇA — uma célula VIVA por vez.
+   -------------------------------------------------------------------------- */
+.sky-bento {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .sky-bento {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Seis trilhos, três fileiras cheias: 4+2 · 2+4 · 3+3. As peças que o
+       produto mais defende (2FA, uploads) ficam largas; nenhuma fileira sobra
+       pela metade — um bento com buraco é uma grade que errou a conta. */
+    .sky-bento {
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .sky-bento > :nth-child(1) {
+        grid-column: span 4;
+    }
+
+    .sky-bento > :nth-child(2),
+    .sky-bento > :nth-child(3) {
+        grid-column: span 2;
+    }
+
+    .sky-bento > :nth-child(4) {
+        grid-column: span 4;
+    }
+
+    .sky-bento > :nth-child(5),
+    .sky-bento > :nth-child(6) {
+        grid-column: span 3;
+    }
+}
+
+.sky-cell {
+    position: relative;
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    padding: clamp(1.25rem, 2.5vw, 1.75rem);
+    transition:
+        border-color 420ms var(--ease-out),
+        box-shadow 420ms var(--ease-out),
+        transform 420ms var(--ease-out);
+}
+
+.sky-cell.is-live {
+    border-color: oklch(0.72 0.1 240 / 0.55);
+    box-shadow:
+        0 0 0 1px oklch(0.72 0.1 240 / 0.25),
+        0 22px 50px -26px oklch(0.5 0.1 250 / 0.6);
+    transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sky-cell.is-live {
+        transform: none;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   3D — canvas dos objetos e o FALLBACK em CSS.
+   O fallback não é uma caixa vazia: são os mesmos objetos, em vidro de CSS,
+   parados. Quem pede menos movimento continua vendo a página, não um buraco.
+   -------------------------------------------------------------------------- */
+.sky-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.sky-canvas canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.sky-glass-tile {
+    display: grid;
+    place-items: center;
+    border-radius: 1.125rem;
+    background: linear-gradient(145deg, oklch(1 0 0 / 0.75), oklch(1 0 0 / 0.35));
+    border: 1px solid var(--sky-glass-border);
+    box-shadow:
+        var(--sky-shadow-float),
+        inset 0 1px 0 oklch(1 0 0 / 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--sky-ink);
+}
+
+.dark .sky-glass-tile {
+    background: linear-gradient(145deg, oklch(0.42 0.04 252 / 0.7), oklch(0.28 0.03 252 / 0.4));
+    box-shadow:
+        var(--sky-shadow-float),
+        inset 0 1px 0 oklch(1 0 0 / 0.12);
+}
+
+/* O arco de tecnologias do rodapé, em CSS (é também o layout que o Three.js
+   ocupa: mesmo arco, mesmos ângulos — o 3D substitui, não desloca). */
+.sky-arc {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+.sky-arc-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transform: translateY(var(--sky-arc-lift, 0));
+}
+
+.sky-arc-item .sky-glass-tile {
+    width: clamp(3.25rem, 6vw, 4.5rem);
+    height: clamp(3.25rem, 6vw, 4.5rem);
+}
+
+.sky-arc-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    color: var(--sky-ink-soft);
+}
+
+/* -----------------------------------------------------------------------------
+   ENTRADA — UM momento autoral: o herói sobe do horizonte, uma vez.
+   Estado inicial só com JS presente (data-sky-motion no <html>): sem JS, sem
+   reduced-motion e sem WebGL a página nasce inteira e visível.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+    [data-sky-motion] .sky-rise {
+        opacity: 0;
+        transform: translate3d(0, 22px, 0);
+    }
+
+    [data-sky-motion] .sky-rise.is-in {
+        opacity: 1;
+        transform: none;
+        transition:
+            opacity 720ms var(--ease-out),
+            transform 720ms var(--ease-out);
+        transition-delay: var(--sky-delay, 0ms);
+    }
+}
+
+/* Superfícies do navegador: seleção e barra de rolagem falam a língua da
+   página, não a do sistema. */
+.sky ::selection {
+    background: oklch(0.72 0.11 240 / 0.28);
+}
+
+.sky [data-sky-scroll] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+}
+
+/* O fallback só SAI DE CENA quando o 3D confirmou que montou. Se o WebGL
+   falhar no meio (contexto perdido, driver, política do navegador), os
+   ladrilhos de vidro do CSS continuam ali — a página nunca fica com um
+   buraco onde deveria haver um objeto. */
+[data-sky-3d-scope][data-sky-3d-active] [data-sky-3d-fallback]:not(.sky-arc) {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 600ms var(--ease-out),
+        visibility 0s linear 600ms;
+}
+
+/* No arco, o 3D substitui só o LADRILHO. Os nomes das tecnologias são
+   conteúdo — sumir com eles trocaria informação por efeito — e o <ul> continua
+   ocupando a altura, senão o rodapé encolheria ao 3D entrar (CLS). */
+[data-sky-3d-scope][data-sky-3d-active] #sky-arc-marks .sky-tech-cube {
+    display: none;
+}
+
+/* Sem o ladrilho, a linha de nomes desce para a base do quadro — é ali que
+   ela fica por baixo dos objetos 3D em vez de atrás deles. */
+[data-sky-3d-scope][data-sky-3d-active] #sky-arc-marks .sky-arc-item {
+    transform: none;
+}
+
+/* Os nomes se abrem na MESMA largura em que o arco 3D se abre — a fileira
+   compacta do fallback ficaria estreita demais debaixo dos objetos. */
+[data-sky-3d-scope][data-sky-3d-active] #sky-arc-marks {
+    justify-content: space-between;
+    padding-inline: 5%;
+}
+
+/* =============================================================================
+   PROFUNDIDADE — os três planos do herói.
+
+   `translate` (propriedade própria) para a paralaxe do PONTEIRO e `transform`
+   para a do SCROLL (escrito pelo GSAP): as duas camadas se compõem em vez de
+   uma sobrescrever a outra. Sem JS os dois valores são zero e nada se move.
+   ========================================================================== */
+[data-sky-layer] {
+    will-change: transform, translate;
+}
+
+[data-sky-layer='back'] {
+    translate: calc(var(--sky-px, 0) * 16px) calc(var(--sky-py, 0) * 12px);
+}
+
+[data-sky-layer='mid'] {
+    translate: calc(var(--sky-px, 0) * -24px) calc(var(--sky-py, 0) * -15px);
+}
+
+[data-sky-layer='front'] {
+    translate: calc(var(--sky-px, 0) * -9px) calc(var(--sky-py, 0) * -6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-sky-layer] {
+        translate: none;
+        will-change: auto;
+    }
+}
+
+/* Grão: ruído fractal gerado no próprio SVG (data:), sem imagem baixada. Ele
+   existe para o céu não ser um degradê liso — sem grão, um gradiente grande
+   BANDEIA em telas de 8 bits, e o banding é o que faz um fundo parecer
+   renderizado às pressas. */
+.sky-grain {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+.dark .sky-grain {
+    opacity: 0.28;
+    mix-blend-mode: overlay;
+}
+
+/* Máscara das linhas de texto (SplitText com `mask: 'lines'`): a linha sobe de
+   dentro do próprio bloco. O overflow-hidden é do wrapper que o plugin cria;
+   aqui só garantimos que descendentes (g, j, ç) não sejam cortados. */
+.sky-line {
+    padding-bottom: 0.12em;
+    /* Devolvido em margem: a altura do bloco tem de ser EXATAMENTE a mesma
+       antes e depois da divisão em linhas, senão o reveal empurra a página. */
+    margin-bottom: -0.12em;
+}
+
+/* CONSERTO (só aparece no navegador, com JS): o degradê do display SOME com o
+   SplitText. O reveal por linha embrulha cada linha em `.sky-line-mask >
+   .sky-line`; com o degradê no <h1> e `color: transparent`, quem passa a
+   pintar o texto é o FILHO — que não tem fundo nenhum. O título ficava
+   invisível sobre o céu. O degradê desce para a LINHA: cada uma recebe o seu,
+   o que também é melhor de ler (a luz acompanha a altura da linha em vez de
+   esticar por um bloco de duas). */
+.sky-env .sky-display .sky-line {
+    background: linear-gradient(180deg, #ffffff 62%, oklch(0.95 0.03 250) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Chips: reagem ao ponteiro. Eles são a única coisa "tocável" do leque, e um
+   objeto que flutua sem responder ao mouse lê como imagem. */
+.sky-chip {
+    pointer-events: auto;
+    transition:
+        translate 260ms var(--ease-out),
+        box-shadow 260ms var(--ease-out);
+}
+
+.sky-chip:hover {
+    translate: 0 -6px;
+    box-shadow:
+        var(--sky-shadow-float),
+        0 0 0 1px var(--sky-glass-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sky-chip {
+        animation: none;
+    }
+
+    .sky-chip:hover {
+        translate: none;
+    }
+}
+
+/* Herói pinado: enquanto a cena roda, o conteúdo tem de caber na tela. Abaixo
+   de md não há pin (uma tela de 844px travada por 1,6 tela é uma parede), e a
+   altura volta a ser a do conteúdo. */
+@media (min-width: 768px) {
+    [data-sky-hero] .sky-fan-card {
+        width: min(24vw, 19rem);
+    }
+}
+
+/* =============================================================================
+   SOBRE O CÉU — o que muda quando um componente do kit pousa no azul.
+
+   Nada aqui é uma cópia: são as MESMAS peças (o <x-site-header>, o
+   <x-site-footer>, o botão primário) lendo a cor do ambiente. As regras vivem
+   neste arquivo, que só a landing carrega — o produto não sabe que existem.
+   ========================================================================== */
+
+/* Nav flutuante: a cápsula translúcida da referência.
+
+   Os tokens de vidro são declarados AQUI, e não herdados: o cabeçalho é irmão
+   do <main>, mora FORA de .sky-env, e herdando ele pegava o vidro das seções
+   brancas — uma cápsula branca opaca sobre o azul, com os links brancos
+   sumindo dentro dela. Na landing esta barra só existe sobre o céu. */
+.sky-nav-shell {
+    --sky-glass: oklch(1 0 0 / 0.12);
+    --sky-glass-border: oklch(1 0 0 / 0.3);
+
+    background: var(--sky-glass);
+    border-color: var(--sky-glass-border);
+}
+
+/* Marca, links, seletor de idioma e tema: brancos. A especificidade de duas
+   classes vence as utilitárias `text-gray-*` do componente sem !important. */
+.sky-nav-shell a,
+.sky-nav-shell button,
+.sky-nav-shell span,
+.sky-nav-shell svg {
+    color: oklch(1 0 0 / 0.88);
+}
+
+.sky-nav-shell a:hover,
+.sky-nav-shell button:hover {
+    color: #ffffff;
+    background-color: oklch(1 0 0 / 0.12);
+}
+
+.sky-nav-shell [class*='border'] {
+    border-color: oklch(1 0 0 / 0.25);
+}
+
+/* -----------------------------------------------------------------------------
+   A BARRA POUSA (data-sky-landed).
+
+   A cápsula é translúcida porque flutua SOBRE O CÉU. Passado o herói, a página
+   vira superfície branca (ou, no tema escuro, cinza-quase-preto) — e vidro
+   branco sobre branco é uma cápsula branca com os links sumindo dentro dela:
+   marca, nav e seletores ficavam invisíveis por três telas de rolagem.
+
+   Ao sair do céu a barra POUSA: pega a superfície do kit, a borda do kit e a
+   tinta do kit. É o mesmo cabeçalho, no ambiente em que caiu — a mesma regra
+   que rege o texto da página inteira. A troca é de estado, não de componente:
+   quem escreve o Blade continua vendo <x-site-header variant="floating">.
+   -------------------------------------------------------------------------- */
+[data-sky-landed] .sky-nav-shell {
+    --sky-glass: color-mix(in oklab, var(--color-surface) 86%, transparent);
+    --sky-glass-border: var(--color-border);
+}
+
+[data-sky-landed] .sky-nav-shell a,
+[data-sky-landed] .sky-nav-shell button,
+[data-sky-landed] .sky-nav-shell span,
+[data-sky-landed] .sky-nav-shell svg {
+    color: var(--color-text-muted);
+}
+
+[data-sky-landed] .sky-nav-shell a:hover,
+[data-sky-landed] .sky-nav-shell button:hover {
+    color: var(--color-gray-900);
+    background-color: var(--color-surface-sunken);
+}
+
+.dark [data-sky-landed] .sky-nav-shell a:hover,
+.dark [data-sky-landed] .sky-nav-shell button:hover {
+    color: #ffffff;
+}
+
+[data-sky-landed] .sky-nav-shell [class*='border'] {
+    border-color: var(--color-border);
+}
+
+/* O botão sólido do cabeçalho (Criar conta) fica BRANCO sobre o céu — um
+   quase-preto sobre azul saturado lê como buraco. Pousado, ele volta a ser o
+   botão do kit: primária cheia, tinta do kit. (Sem isto ele seguia branco
+   sobre branco — um botão que existe e não se vê.) */
+[data-sky-landed] .sky-nav-shell .bg-brand,
+[data-sky-landed] .sky-nav-shell .bg-brand span,
+[data-sky-landed] .sky-nav-shell .bg-brand svg {
+    background-color: var(--color-brand);
+    color: var(--color-brand-foreground);
+}
+
+[data-sky-landed] .sky-nav-shell .bg-brand span,
+[data-sky-landed] .sky-nav-shell .bg-brand svg {
+    background-color: transparent;
+}
+
+[data-sky-landed] .sky-nav-shell .bg-brand:hover {
+    background-color: var(--color-brand-hover, var(--color-brand));
+    color: var(--color-brand-foreground);
+}
+
+/* O único botão cheio da barra vira BRANCO: a primária monocromática do kit é
+   quase-preta, e um botão preto sobre azul saturado lê como buraco. */
+.sky-nav-shell .bg-brand,
+.sky-env .sky-btn-primary {
+    background: #ffffff;
+    color: var(--color-gray-900);
+}
+
+.sky-nav-shell .bg-brand:hover,
+.sky-env .sky-btn-primary:hover {
+    background: oklch(0.96 0.01 250);
+    color: var(--color-gray-900);
+}
+
+.sky-env .sky-btn-ghost {
+    color: oklch(1 0 0 / 0.9);
+}
+
+/* Rodapé institucional do kit dentro do céu: mesmo conteúdo, tinta do ambiente.
+   Sem isto o cinza-500 dele encosta em 1,6:1 contra o azul — ilegível. */
+.sky-env footer,
+.sky-env footer p,
+.sky-env footer a {
+    color: oklch(1 0 0 / 0.8);
+}
+
+.sky-env footer a:hover {
+    color: #ffffff;
+}
+
+.sky-env footer .font-display {
+    color: #ffffff;
+}
+
+/* A CONTA DAS HORAS — a linha da seção "Economia". Mesma pílula âmbar da
+   prova social do herói, agora sobre a superfície branca: o número puxa o
+   olho, a frase explica, e nada mais na seção compete com os dois. */
+.sky-hours {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    font-size: clamp(1.25rem, 1rem + 1.2vw, 1.875rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    text-wrap: balance;
+    color: var(--sky-ink);
+}
+
+/* O número da faixa é o protagonista: a pílula cresce junto com a frase. */
+.sky-hours .sky-badge-amber {
+    font-size: 0.75em;
+    padding: 0.2em 0.6em;
+}
+
+/* Pílula de prova social: o número em ÂMBAR. É a única cor de destaque da
+   página e ela aparece uma vez — sobre azul, âmbar puxa o olho antes de
+   qualquer outra coisa. Contraste do texto sobre o âmbar: 8,9:1. */
+.sky-badge-amber {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.125rem 0.5rem;
+    background: var(--sky-amber);
+    color: var(--sky-amber-ink);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+
+/* =============================================================================
+   CUBO DE TECNOLOGIA — o fallback do 3D não pode parecer chato.
+
+   Quando o WebGL não roda, o que fica no lugar do objeto é ISTO: um cubo de
+   canto grande, com a cor da tecnologia, um brilho especular no topo, uma
+   sombra macia projetada e uma inclinação. Não é um quadrado branco com um
+   ícone de linha — é a mesma leitura do objeto 3D, parada.
+   ========================================================================== */
+.sky-tech-cube {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border-radius: 28%;
+    /* A tinta do decalque vem do Blade (luminância da cor da marca): branco na
+       maioria, quase-preto sobre o âmbar do Filament. */
+    color: var(--sky-tech-ink, #ffffff);
+    background:
+        linear-gradient(160deg, oklch(1 0 0 / 0.42), oklch(1 0 0 / 0) 45%),
+        linear-gradient(200deg, color-mix(in oklab, var(--sky-tech) 88%, white 12%), color-mix(in oklab, var(--sky-tech) 72%, black 28%));
+    box-shadow:
+        inset 0 2px 0 oklch(1 0 0 / 0.55),
+        inset 0 -8px 14px -8px oklch(0 0 0 / 0.5),
+        0 18px 34px -14px color-mix(in oklab, var(--sky-tech) 55%, transparent),
+        0 26px 50px -20px oklch(0.3 0.15 262 / 0.55);
+    transform: rotate(var(--sky-tech-tilt, -8deg));
+}
+
+/* O brilho especular do topo: uma lasca de luz, não um degradê inteiro. */
+.sky-tech-cube::after {
+    content: '';
+    position: absolute;
+    inset: 8% 12% auto 12%;
+    height: 26%;
+    border-radius: 999px;
+    background: linear-gradient(180deg, oklch(1 0 0 / 0.55), oklch(1 0 0 / 0));
+    pointer-events: none;
+}
+
+.sky-tech-cube svg {
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 1px 2px oklch(0 0 0 / 0.35));
+}
+
+/* O arco pousa na FAIXA CLARA do rodapé — a das nuvens. Ali o branco do resto
+   do céu não tem contraste nenhum, então o texto que vive nessa faixa (o
+   rótulo de cada tecnologia e o título do arco) usa uma tinta própria: azul
+   profundo no tema claro, quase-branco no escuro. É a mesma regra do resto da
+   página — a tinta vem do ambiente em que o texto caiu —, só que a faixa é um
+   ambiente dentro do outro. */
+.sky-env-inverted {
+    --sky-on-band: oklch(0.32 0.14 265);
+}
+
+.dark .sky-env-inverted {
+    --sky-on-band: oklch(0.95 0.02 250);
+}
+
+.sky-arc-label,
+.sky-arc-heading {
+    color: var(--sky-on-band);
+}

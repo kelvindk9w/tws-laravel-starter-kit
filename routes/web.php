@@ -22,17 +22,19 @@ use App\Livewire\Profile;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'landing');
+// Landing oficial do kit — a direção "Céu" venceu e virou a home. Página
+// pública, sem estado e sem formulário próprio: uma view basta. Os números que
+// ela exibe vêm de config/landing.php (ADR-007), as strings de
+// lang/*/landing.php e os bundles próprios estão registrados no vite.config.js.
+Route::view('/', 'landing')->name('landing');
 
-// Landing "Céu" (v3) — direção visual em avaliação ao lado de / (atual) e /v2.
-// Página pública, sem estado e sem formulário: uma view basta. Os números que
-// ela exibe vêm de config/landing_v3.php (ADR-007), as strings de
-// lang/*/landing_v3.php e os bundles próprios estão registrados no
-// vite.config.js. Quando uma das direções vencer, as outras somem daqui.
-Route::view('v3', 'landing-v3')->name('landing.v3');
+// /v3 foi o endereço dessa mesma página enquanto ela era uma direção em
+// avaliação. Links já compartilhados continuam valendo: 301 para a home (nunca
+// 404 e nunca uma segunda URL servindo o mesmo conteúdo).
+Route::permanentRedirect('v3', '/');
 
 // Landing alternativa "O Rastro" (/v2) — mesma verdade do produto, outra
-// direção de arte. Fica ao lado da atual para comparação; a home segue em '/'.
+// direção de arte. Fica ao lado da oficial como conceito.
 Route::get('v2', LandingV2Controller::class)->name('landing.v2');
 
 // Formulário de contato da landing (público): honeypot + validação + rate

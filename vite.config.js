@@ -15,11 +15,11 @@ export default defineConfig({
                 // carrega GSAP, Lenis e a fonte display (Instrument Serif).
                 'resources/css/landing-v2.css',
                 'resources/js/landing-v2.js',
-                // Landing "Céu" (/v3) — bundle próprio: GSAP/Lenis e o
+                // Landing oficial "Céu" (/) — bundle próprio: GSAP/Lenis e o
                 // Three.js entram por import() dinâmico, em pedaços à parte.
                 // Nenhuma outra tela do produto baixa um byte disso.
-                'resources/css/landing-v3.css',
-                'resources/js/landing-v3.js',
+                'resources/css/landing.css',
+                'resources/js/landing.js',
             ],
             refresh: true,
         }),

@@ -36,7 +36,7 @@ it('v2 tem rota nomeada e não substitui a landing atual', function () {
     expect(route('landing.v2'))->toEndWith('/v2');
 
     // A home continua sendo a landing atual — a /v2 é comparação, não troca.
-    $this->get('/')->assertOk()->assertSee(__('landing.hero.title'));
+    $this->get('/')->assertOk()->assertSee(__('landing.hero.title_line_1'));
 });
 
 it('v2 carrega o bundle próprio e nenhum script de CDN', function () {

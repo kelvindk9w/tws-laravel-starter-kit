@@ -2,9 +2,27 @@
 
 declare(strict_types=1);
 
-// Cadenas de la landing pública (/) — es (ADR-007). NUNCA texto fijo en views.
+// Strings de la landing oficial (ruta /) — español (ADR-007).
+//
+// Decisión: el kit promete i18n COMPLETA en los tres idiomas (pt-BR, en, es) y
+// tiene un test de paridad de claves. Dejar el inglés aquí como «fallback»
+// rompería esa promesa justo en la página que vende el kit — por eso sale
+// traducida de verdad, igual que el resto de lang/es.
+//
+// Los NÚMEROS (clones, tests, horas) no viven aquí: vienen de
+// config/landing.php. Las claves `nav.*` y la mitad institucional de `footer.*`
+// las usan también la cabecera y el pie del producto.
 
 return [
+
+    'meta' => [
+        'title' => 'La base que tu IA no necesita generar',
+        'description' => 'Auth, 2FA, API keys, logs enmascarados, subidas, panel y super admin ya listos y probados en un starter kit de Laravel. Clona la base y gasta tus tokens en lo que solo es tuyo.',
+    ],
+
+    'a11y' => [
+        'skip' => 'Saltar al contenido',
+    ],
 
     'nav' => [
         'features' => 'Recursos',
@@ -12,89 +30,136 @@ return [
         'stack' => 'Stack',
         'components' => 'Componentes',
         'login' => 'Entrar',
-        'demo' => 'Probar demo',
         'register' => 'Crear cuenta',
-        'dashboard' => 'Ir al panel',
-        'menu' => 'Menú',
-        'open_menu' => 'Abrir menú de navegación',
     ],
 
     'hero' => [
-        'title' => 'Tu SaaS Laravel en producción en días, no meses',
-        'subtitle' => 'Autenticación con 2FA, claves de API con rotación, multitenancy, panel Livewire, admin Filament, uploads seguros, backup y tests — todo listo y auditado. Tú construyes solo lo que es de tu producto.',
-        'cta_components' => 'Explorar componentes',
-        'cta_demo' => 'Probar demo',
+        'proof_clones' => 'desarrolladores ya lo clonaron',
+        'proof_tests' => 'tests en verde en cada commit',
+        'proof_avatar_alt' => 'Foto de perfil de alguien que ya clonó el kit',
+        'title_line_1' => 'La base que tu IA',
+        'title_line_2' => 'no tiene que generar',
+        'subtitle' => 'Auth, 2FA, API keys, logs enmascarados, subidas, panel y admin ya listos y probados. Clónalo y gasta tus tokens en lo que solo es tuyo.',
+        'cta_primary' => 'Clonar',
+        'cta_demo' => 'Ver la demo',
         'cta_admin_demo' => 'Ver admin demo',
-        'cta_register' => 'Crear cuenta',
-        'screenshot_alt' => 'Captura de pantalla real del panel del kit',
-        'mockup_title' => 'Panel',
-        'mockup_row_1' => 'Claves de API activas',
-        'mockup_row_2' => 'Proyectos',
-        'mockup_row_3' => 'Peticiones auditadas',
+        'note' => 'gratis, MIT',
+        'note_secondary' => 'sin tarjeta',
+        'screens_heading' => 'Pantallas reales del kit',
+        'screens' => [
+            'dashboard' => ['label' => 'Panel', 'alt' => 'Panel de usuario del kit: métricas de API keys, gráfico de peticiones y últimas llamadas'],
+            'admin' => ['label' => 'Super admin', 'alt' => 'Super admin en Filament: usuarios, peticiones auditadas y envíos de formulario'],
+            'ui' => ['label' => 'Componentes', 'alt' => 'Showcase /ui: documentación viva de los componentes del kit'],
+            'login' => ['label' => 'Entrar', 'alt' => 'Pantalla de acceso del kit'],
+        ],
+        'chip_tenancy' => 'Multitenancy',
+        'chip_2fa' => '2FA',
+        'chip_api_keys' => 'API keys con scopes',
+        'chip_lgpd' => 'RGPD/LGPD',
     ],
 
-    'stack' => [
-        'heading' => 'Stack actual, probado en producción',
-        'items' => ['Laravel 13', 'PHP 8.4', 'PostgreSQL 18', 'Redis 8', 'Livewire 4', 'Filament 5', 'Tailwind 4', 'Horizon', 'Pest', 'Docker'],
-        'dev_note' => 'Entorno dev completo en compose: Mailpit (bandeja de correos), Horizon (colas) y scheduler — sin instalar nada más que Docker.',
+    'components' => [
+        'eyebrow' => 'Componentes',
+        'title' => 'No vas a dibujar la tabla otra vez',
+        'subtitle' => 'El código que escribes y la pantalla que ve tu cliente son lo mismo. Arrastra la línea y compruébalo.',
+        'code_label' => 'Código',
+        'screen_label' => 'Pantalla',
+        'drag_hint' => 'Arrastra',
+        'slider_label' => 'Revelar el código o la pantalla renderizada',
+        'screen_alt' => 'La tabla del kit renderizada en el showcase /ui, con badges de estado y acciones por fila',
+        'items' => [
+            [
+                'title' => 'La tabla se vuelve tarjeta',
+                'text' => 'Por debajo de sm cada fila cambia de forma y muestra su propia etiqueta. Ninguna columna cortada, ningún scroll lateral escondido.',
+            ],
+            [
+                'title' => 'Una cabecera para todo',
+                'text' => 'Landing, showcase, pantallas de acceso y panel comparten un esqueleto. Entrar en la cuenta no puede parecer cambiar de producto.',
+            ],
+            [
+                'title' => 'La identidad en un archivo',
+                'text' => 'Colores, tipografía, superficies, radios y motion viven en theme.css. Rebranding es editar un archivo y el .env.',
+            ],
+        ],
     ],
 
+    'how' => [
+        'title' => 'Del clone a la primera pantalla en tres comandos',
+        'subtitle' => 'La tarde perdida montando el entorno se acabó en Docker: solo él en tu máquina, nada de PHP, Composer o Node.',
+        'steps' => [
+            [
+                'cursor' => 'clona',
+                'title' => 'Clona',
+                'text' => 'Un repositorio, una licencia MIT y ninguna dependencia de pago escondida.',
+                'command' => 'git clone <repo> mi-proyecto',
+            ],
+            [
+                'cursor' => 'rellena el .env',
+                'title' => 'Rellena el .env',
+                'text' => 'Nombre, logo, color, idiomas y correos de la plataforma. Nada de texto institucional dentro del código.',
+                'command' => 'cp .env.example .env',
+            ],
+            [
+                'cursor' => 'levántalo',
+                'title' => 'Levántalo',
+                'text' => 'Postgres, Redis, colas, scheduler y buzón de correo suben juntos, con tu usuario.',
+                'command' => 'docker compose up -d --build',
+            ],
+        ],
+    ],
+
+    'security' => [
+        'title' => 'Seguridad de fábrica',
+        'subtitle' => 'La parte para la que nunca hay plazo — y que nadie perdona cuando falta — ya viene implementada, probada y encendida.',
+        'items' => [
+            ['title' => '2FA por correo', 'text' => 'Código de un solo uso, caducidad corta y bloqueo por intentos — en el acceso y en las acciones sensibles.'],
+            ['title' => 'Contraseña de transacción', 'text' => 'Un segundo secreto, con hash aparte del de la contraseña de acceso, para lo que no se puede deshacer.'],
+            ['title' => 'API keys con scopes', 'text' => 'Prefijo público, hash en la base, rotación, caducidad por inactividad y denegación por defecto.'],
+            ['title' => 'Logs con redaction', 'text' => 'Cada petición auditada de punta a punta, con los campos sensibles enmascarados antes de guardarse.'],
+            ['title' => 'Subidas re-codificadas', 'text' => 'Magic bytes, techo de píxeles y re-encode de la imagen: el archivo que entra no es el que se queda.'],
+            ['title' => 'Backup cifrado', 'text' => 'Base de datos y archivos hacia R2, con contraseña, validación cruzada y aviso cuando el backup falla.'],
+        ],
+    ],
+
+    // «Listo para producir»: lo que la base entrega más allá de la seguridad —
+    // los dos recursos que vinieron de la landing anterior al retirarse.
+    'ready' => [
+        'title' => 'Listo para producir',
+        'items' => [
+            ['title' => 'Mailpit y correos listos', 'text' => 'Servidor de correo de desarrollo ya en el compose, plantilla transaccional única en los tres idiomas, texto plano automático y pantalla de vista previa.'],
+            ['title' => 'Hecho de componentes', 'text' => 'Panel, admin y correos montados sobre los mismos componentes reutilizables — documentados y navegables en el showcase /ui.'],
+        ],
+    ],
+
+    // La cuenta que le importa a quien construye con IA. El NÚMERO viene de
+    // config('landing.hours_saved'); cero esconde la línea entera.
     'hours' => [
-        'heading' => 'Horas que no vas a tener que gastar',
-        'subtitle' => 'Estimación conservadora de lo que ya viene implementado, probado y documentado.',
-        'items' => [
-            ['task' => 'Autenticación completa con 2FA por correo y bloqueo por intentos', 'hours' => 40],
-            ['task' => 'Contraseña de transacción + confirmación de acciones sensibles', 'hours' => 24],
-            ['task' => 'Claves de API con scopes, rotación y expiración por inactividad', 'hours' => 40],
-            ['task' => 'Multitenancy por proyectos con aislamiento de datos', 'hours' => 24],
-            ['task' => 'Panel de usuario (Livewire) + super admin (Filament)', 'hours' => 56],
-            ['task' => 'Uploads seguros con re-codificación de imagen y URLs firmadas', 'hours' => 24],
-            ['task' => 'Request logging, auditoría y redacción de datos (LGPD)', 'hours' => 16],
-            ['task' => 'Backup cifrado a R2 con validación cruzada', 'hours' => 16],
-            ['task' => 'Colas con Horizon, CSP y rate limiting', 'hours' => 16],
-            ['task' => 'Suite de tests Pest + E2E Playwright', 'hours' => 24],
-        ],
-        'total_label' => 'Total ahorrado',
-        'total_value' => ':hours horas',
-        'total_unit' => 'horas de trabajo ya hechas',
-        'total_caption' => 'Estimación conservadora de lo que ya viene implementado, probado y documentado — detallado abajo.',
+        'label' => 'horas de trabajo que nadie tiene que generar otra vez',
+        'caption' => 'Suma conservadora de lo que ya viene implementado, probado y documentado — auth, 2FA, API keys, multitenancy, panel, admin, subidas, logs, backup y la suite de tests.',
     ],
 
-    'features' => [
-        'heading' => 'Todo lo que un SaaS serio necesita',
-        'subtitle' => 'No es un boilerplate de juguete: cada recurso sigue un checklist de seguridad y tiene tests.',
-        'items' => [
-            ['icon' => 'shield-check', 'title' => 'Autenticación + 2FA', 'description' => 'Registro, inicio de sesión, restablecimiento de contraseña y verificación por código de correo, con bloqueo por intentos y sesión regenerada.'],
-            ['icon' => 'lock-closed', 'title' => 'Contraseña de transacción', 'description' => 'Segundo secreto (hash separado) para confirmar acciones sensibles, con token de uso único y corta duración.'],
-            ['icon' => 'key', 'title' => 'Claves de API con rotación', 'description' => 'Claves pk_/sk_ con scopes granulares, período de gracia en la rotación y desactivación por inactividad.'],
-            ['icon' => 'building-office', 'title' => 'Multitenancy por proyectos', 'description' => 'Cada usuario organiza recursos en proyectos con aislamiento garantizado por global scopes y tests.'],
-            ['icon' => 'squares-2x2', 'title' => 'Panel Livewire', 'description' => 'Dashboard, claves de API, proyectos, notificaciones y perfil en Livewire 4 — UI directa, modales en lugar de navegación.'],
-            ['icon' => 'cog-6-tooth', 'title' => 'Super admin Filament', 'description' => 'Panel /admin en Filament 5 restringido a administradores, con allowlist de IP para producción.'],
-            ['icon' => 'arrow-up-tray', 'title' => 'Uploads seguros', 'description' => 'Validación por firma real del archivo, re-codificación de imágenes en GD y URLs firmadas de corta duración.'],
-            ['icon' => 'clipboard-document-list', 'title' => 'Auditoría y logs', 'description' => 'Request logging en base de datos y archivo con redacción de datos sensibles (LGPD) y retención configurable.'],
-            ['icon' => 'archive-box', 'title' => 'Backup y colas', 'description' => 'Dump PostgreSQL cifrado a R2 con webhook de validación cruzada, y Horizon para las colas.'],
-            ['icon' => 'beaker', 'title' => 'Tests de verdad', 'description' => 'Cobertura Pest de feature en todos los módulos + E2E Playwright — validación de contenido, no solo de estado.'],
-            ['icon' => 'language', 'title' => 'i18n nativo', 'description' => 'Toda cadena pasa por archivos de idioma (lang/), nunca texto fijo en views — multi-idioma listo desde el inicio.'],
-            ['icon' => 'server-stack', 'title' => 'Docker autocontenido', 'description' => 'Solo Docker en tu máquina: compose levanta app, base de datos, Redis, colas y scheduler — incluso el stack de producción.'],
-            // Dos recursos que el kit ya entrega y la grilla no contaba: el
-            // correo transaccional listo (servidor de desarrollo y vista
-            // previa) y que panel, admin y correos salen de los MISMOS
-            // componentes.
-            ['icon' => 'envelope', 'title' => 'Mailpit y correos listos', 'description' => 'Servidor de correo de desarrollo ya en el compose, plantilla transaccional única en tres idiomas, texto plano automático y pantalla de vista previa.'],
-            ['icon' => 'code-bracket', 'title' => 'Hecho de componentes', 'description' => 'Panel, admin y correos armados sobre los mismos componentes reutilizables — documentados y navegables en el showcase /ui.'],
-        ],
-    ],
-
-    'cta' => [
-        'heading' => '¿Listo para construir?',
-        'subtitle' => 'Crea tu cuenta y explora el panel, o sumérgete en el código: cada decisión está documentada en ADRs.',
-        'repo' => 'Ver el código en el repositorio',
-        'register' => 'Crear cuenta',
-        'demo' => 'Probar demo',
-        'login' => 'Entrar',
+    'contact' => [
+        'anchor_label' => 'Contacto',
     ],
 
     'footer' => [
+        'title' => 'Empieza por tu producto',
+        'subtitle' => 'El día 1 de tu proyecto ya trae la seguridad del día 300.',
+        'cta' => 'Clonar el repositorio',
+        'tech_heading' => 'El stack ya montado',
+        'tech' => [
+            'laravel' => 'Laravel',
+            'php' => 'PHP',
+            'postgres' => 'PostgreSQL',
+            'redis' => 'Redis',
+            'docker' => 'Docker',
+            'livewire' => 'Livewire',
+            'filament' => 'Filament',
+            'tailwind' => 'Tailwind',
+        ],
+
+        // Pie institucional del kit (<x-site-footer>) — presente en todas las
+        // pantallas, no solo aquí.
         'tagline' => 'Starter kit Laravel para SaaS — base estructural lista para construir.',
         'links_heading' => 'Atajos',
         'showcase' => 'Componentes',

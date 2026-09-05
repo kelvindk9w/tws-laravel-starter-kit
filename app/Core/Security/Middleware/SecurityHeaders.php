@@ -72,12 +72,13 @@ final class SecurityHeaders
             }
         }
 
-        // Landings alternativas (/v2, /v3): páginas públicas de vitrine que
-        // leem a contagem de estrelas do repositório na API pública do
+        // Landing alternativa (/v2 "O Rastro"): página pública de vitrine
+        // que lê a contagem de estrelas do repositório na API pública do
         // GitHub. A exceção é MÍNIMA — apenas o host no connect-src, apenas
-        // nessas rotas. Tudo o mais (script-src, style-src, font-src) segue
-        // a CSP base: nenhum script de CDN entra nessas páginas.
-        if ($request->is('v2') || $request->is('v3')) {
+        // nessa rota. Tudo o mais (script-src, style-src, font-src) segue a
+        // CSP base: nenhum script de CDN entra na página. A landing oficial
+        // (/) não faz requisição externa nenhuma e fica na CSP base.
+        if ($request->is('v2')) {
             $landingCsp = config('security.headers.content_security_policy_landing_alt');
 
             if (is_string($landingCsp) && $landingCsp !== '') {
