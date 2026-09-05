@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RequestLogs\Pages;
 
 use App\Filament\Resources\RequestLogs\RequestLogResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Support\BaseListRecords;
 
-final class ListRequestLogs extends ListRecords
+final class ListRequestLogs extends BaseListRecords
 {
     protected static string $resource = RequestLogResource::class;
 }

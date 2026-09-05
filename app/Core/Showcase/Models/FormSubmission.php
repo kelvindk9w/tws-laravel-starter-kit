@@ -20,8 +20,10 @@ use Illuminate\Database\Eloquent\Model;
  *   bloqueia a submissão (xss/sqli/null_byte/path_traversal/honeypot).
  *   O payload fica armazenado INERTE (texto cru) — a exibição escapa via
  *   Blade (NUNCA {!! !!}); testes provam que scripts nunca executam.
+ * - ip: origem da submissão — evidência forense da tela de detalhe do
+ *   super admin. Nullable (registros antigos e execuções fora de HTTP).
  */
-#[Fillable(['nickname', 'sender_email', 'subject', 'message', 'origin', 'blocked_at', 'attack_type'])]
+#[Fillable(['nickname', 'sender_email', 'subject', 'message', 'origin', 'ip', 'blocked_at', 'attack_type'])]
 class FormSubmission extends Model
 {
     /** @use HasFactory<FormSubmissionFactory> */

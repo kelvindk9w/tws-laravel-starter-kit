@@ -8,14 +8,19 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
+use App\Filament\Support\AdminColumns;
+use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -32,35 +37,17 @@ use Illuminate\Database\Eloquent\Builder;
  * sem tenant = possível ataque/tentativa de burla; log preso em INICIADA =
  * requisição que não chegou ao fim (incidente a investigar).
  */
-final class RequestLogResource extends Resource
+final class RequestLogResource extends BaseResource
 {
     protected static ?string $model = RequestLog::class;
 
-    protected static ?string $recordRouteKeyName = 'uuid';
+    protected static string $translationKey = 'admin.request_logs';
+
+    protected static ?string $navigationGroupKey = 'admin.nav.group_security';
 
     // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
     // metade da nav aparecia como bolinha sem ícone).
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
-
-    public static function getNavigationLabel(): string
-    {
-        return __('admin.request_logs.plural');
-    }
-
-    public static function getModelLabel(): string
-    {
-        return __('admin.request_logs.label');
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return __('admin.request_logs.plural');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('admin.nav.group_security');
-    }
 
     public static function canCreate(): bool
     {
@@ -85,47 +72,105 @@ final class RequestLogResource extends Resource
         };
     }
 
-    public static function table(Table $table): Table
+    public static function tableColumns(): array
+    {
+        return [
+            AdminColumns::dateTime('created_at', __('panel.common.created_at'), 'd/m/Y H:i:s'),
+            self::statusColumn(),
+            self::tenantColumn(),
+            self::methodColumn(),
+            self::endpointColumn(),
+            TextColumn::make('http_status_response')
+                ->label(__('admin.request_logs.response_status'))
+                ->placeholder('—'),
+            TextColumn::make('duration_ms')
+                ->label(__('admin.request_logs.duration'))
+                ->suffix(' ms')
+                ->placeholder('—')
+                ->sortable(),
+            TextColumn::make('ip')
+                ->label(__('admin.request_logs.ip'))
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
+
+    /**
+     * Modo cards: o endpoint em destaque (é o que se lê primeiro numa
+     * investigação), com status, tenant e quando aconteceu em volta.
+     */
+    public static function cardComponents(): array
+    {
+        return [
+            Stack::make([
+                Split::make([
+                    self::methodColumn()->grow(false),
+                    self::endpointColumn()
+                        ->weight(FontWeight::SemiBold)
+                        ->limit(80),
+                ]),
+                Split::make([
+                    self::statusColumn(),
+                    TextColumn::make('http_status_response')
+                        ->label(__('admin.request_logs.response_status'))
+                        ->badge()
+                        ->color('gray')
+                        ->placeholder('—')
+                        ->grow(false),
+                    TextColumn::make('duration_ms')
+                        ->label(__('admin.request_logs.duration'))
+                        ->suffix(' ms')
+                        ->size(TextSize::Small)
+                        ->color('gray')
+                        ->placeholder('—')
+                        ->grow(false),
+                ]),
+                self::tenantColumn(),
+                AdminColumns::dateTime('created_at', __('panel.common.created_at'), 'd/m/Y H:i:s')
+                    ->size(TextSize::Small)
+                    ->color('gray'),
+            ])->space(2),
+        ];
+    }
+
+    private static function statusColumn(): TextColumn
+    {
+        return TextColumn::make('status')
+            ->label(__('panel.common.status'))
+            ->badge()
+            ->formatStateUsing(fn (RequestLogStatus $state): string => self::statusLabel($state))
+            ->color(fn (RequestLogStatus $state): string => self::statusColor($state));
+    }
+
+    private static function tenantColumn(): TextColumn
+    {
+        return TextColumn::make('tenant_uuid')
+            ->label(__('admin.request_logs.tenant'))
+            // ÓRFÃO destacado: log sem tenant = sinal de ataque (ADR-010).
+            // A linha inteira também fica vermelha (recordClasses).
+            ->placeholder(__('admin.request_logs.orphan'))
+            ->badge()
+            ->color(fn (?string $state): string => $state === null ? 'danger' : 'gray')
+            ->limit(14);
+    }
+
+    private static function methodColumn(): TextColumn
+    {
+        return TextColumn::make('method')
+            ->badge()
+            ->color('gray');
+    }
+
+    private static function endpointColumn(): TextColumn
+    {
+        return TextColumn::make('endpoint')
+            ->label(__('admin.request_logs.endpoint'))
+            ->limit(48)
+            ->searchable();
+    }
+
+    protected static function tableExtras(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('created_at')
-                    ->label(__('panel.common.created_at'))
-                    ->dateTime('d/m/Y H:i:s', platform()->displayTimezone)
-                    ->sortable(),
-                TextColumn::make('status')
-                    ->label(__('panel.common.status'))
-                    ->badge()
-                    ->formatStateUsing(fn (RequestLogStatus $state): string => self::statusLabel($state))
-                    ->color(fn (RequestLogStatus $state): string => self::statusColor($state)),
-                TextColumn::make('tenant_uuid')
-                    ->label(__('admin.request_logs.tenant'))
-                    // ÓRFÃO destacado: log sem tenant = sinal de ataque (ADR-010).
-                    // A linha inteira também fica vermelha (recordClasses).
-                    ->placeholder(__('admin.request_logs.orphan'))
-                    ->badge()
-                    ->color(fn (?string $state): string => $state === null ? 'danger' : 'gray')
-                    ->limit(14),
-                TextColumn::make('method')
-                    ->badge()
-                    ->color('gray'),
-                TextColumn::make('endpoint')
-                    ->label(__('admin.request_logs.endpoint'))
-                    ->limit(48)
-                    ->searchable(),
-                TextColumn::make('http_status_response')
-                    ->label(__('admin.request_logs.response_status'))
-                    ->placeholder('—'),
-                TextColumn::make('duration_ms')
-                    ->label(__('admin.request_logs.duration'))
-                    ->suffix(' ms')
-                    ->placeholder('—')
-                    ->sortable(),
-                TextColumn::make('ip')
-                    ->label(__('admin.request_logs.ip'))
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->defaultSort('created_at', 'desc')
             ->filters([
                 SelectFilter::make('status')
                     ->label(__('admin.request_logs.filter_status'))

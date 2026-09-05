@@ -39,10 +39,20 @@ test('super admin demo: auditoria web, vitrine de ataques, produtos e i18n', asy
     await test.step('submissões: ataques bloqueados no topo + filtro na URL', async () => {
         await page.goto('/admin/form-submissions', { waitUntil: 'networkidle' });
 
-        // Vitrine: badge de ataque bloqueado visível (seeds) e payload XSS
-        // como TEXTO literal (inerte — nunca executa).
-        await expect(page.getByText(/Ataque bloqueado/).first()).toBeVisible({ timeout: 15000 });
-        await expect(page.getByText(/<script>alert/).first()).toBeVisible();
+        // Vitrine: a LISTAGEM mostra o selo do tipo de ataque e o trecho
+        // neutralizado — nunca o payload cru (decisão do dono: a lista não
+        // pode virar catálogo de ataques, mesmo escapada).
+        await expect(page.getByText(/XSS|SQL injection|Honeypot|Null byte|Path traversal/).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(/neutraliz/i).first()).toBeVisible();
+        await expect(page.getByText(/<script>alert/)).toHaveCount(0);
+
+        // O payload íntegro existe só no DETALHE, como evidência forense,
+        // escapado (texto literal, inerte — nunca executa).
+        const detalhe = page.locator('a[href*="/admin/form-submissions/"]').first();
+        await expect(detalhe).toBeVisible({ timeout: 15000 });
+        await detalhe.click();
+        await page.waitForLoadState('networkidle');
+        await expect(page.getByText(/<script>alert/).first()).toBeVisible({ timeout: 15000 });
 
         // Filtro por origem refletido na URL (query string do Livewire).
         await page.goto('/admin/form-submissions?filters[origin][value]=classic', { waitUntil: 'networkidle' });

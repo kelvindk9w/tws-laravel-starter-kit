@@ -13,6 +13,21 @@ return [
         'group_system' => 'Sistema',
     ],
 
+    // Blocos que TODA listagem do super admin usa (ver BaseResource e
+    // AdminColumns): não repetir rótulo comum resource a resource.
+    'common' => [
+        'copied' => 'Código copiado.',
+        'created_at' => 'Cadastrado em',
+        'empty_heading' => 'Nenhum registro em :records',
+        'empty_description' => 'Assim que houver dados, eles aparecem nesta lista.',
+        'view_as_cards' => 'Ver em cards',
+        'view_as_table' => 'Ver em tabela',
+    ],
+
+    'menu' => [
+        'back_to_site' => 'Voltar ao site',
+    ],
+
     'users' => [
         'label' => 'Usuário',
         'plural' => 'Usuários',
@@ -99,6 +114,29 @@ return [
         'accepted' => 'Aceita',
         'blocked_attack' => 'Ataque bloqueado (:type)',
         'received_at' => 'Recebida em',
+        'blocked_at' => 'Bloqueada em',
+        'ip' => 'IP de origem',
+        'no_sender' => 'Sem remetente (formulário anônimo)',
+        'filter_blocked' => 'Somente bloqueadas',
+        'view_evidence' => 'Ver evidência',
+        // A listagem nunca mostra payload: mostra o selo do ataque e um
+        // trecho neutralizado, com esta legenda dizendo o que se está lendo.
+        'neutralized' => 'conteúdo neutralizado',
+        'metadata_section' => 'Metadados',
+        'metadata_hint' => 'De onde veio, quando chegou e o que a plataforma decidiu.',
+        'content_section' => 'Mensagem',
+        'forensic_section' => 'Evidência forense',
+        'forensic_heading' => 'Conteúdo enviado por terceiro',
+        'forensic_warning' => 'Abaixo está o payload íntegro da tentativa, exibido escapado para auditoria. Ele nunca é executado por esta página — mas não o copie para fora do painel.',
+        'raw_nickname' => 'Apelido (payload íntegro)',
+        'raw_subject' => 'Assunto (payload íntegro)',
+        'raw_message' => 'Mensagem (payload íntegro)',
+        'attack_xss' => 'XSS',
+        'attack_sqli' => 'SQL injection',
+        'attack_null_byte' => 'Null byte',
+        'attack_path_traversal' => 'Path traversal',
+        'attack_honeypot' => 'Honeypot',
+        'attack_unknown' => 'Não classificado',
     ],
 
     'products' => [

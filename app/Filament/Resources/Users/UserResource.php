@@ -12,6 +12,8 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
+use App\Filament\Support\AdminColumns;
+use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -23,11 +25,14 @@ use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
-use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -53,33 +58,15 @@ use Filament\Tables\Table;
  *
  * Rotas e buscas usam o UUID — o id interno nunca é exposto (ADR-010).
  */
-final class UserResource extends Resource
+final class UserResource extends BaseResource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $recordRouteKeyName = 'uuid';
+    protected static string $translationKey = 'admin.users';
+
+    protected static ?string $navigationGroupKey = 'admin.nav.group_management';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
-
-    public static function getNavigationLabel(): string
-    {
-        return __('admin.users.plural');
-    }
-
-    public static function getModelLabel(): string
-    {
-        return __('admin.users.label');
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return __('admin.users.plural');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('admin.nav.group_management');
-    }
 
     /**
      * Formulário de criação/edição. `status` e `is_admin` são gravados por
@@ -146,54 +133,97 @@ final class UserResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
+    /**
+     * Colunas da listagem clássica.
+     */
+    public static function tableColumns(): array
     {
-        return $table
-            ->columns([
-                TextColumn::make('codigo_publico')
-                    ->label(__('admin.users.code'))
-                    ->searchable()
-                    ->copyable(),
-                // `name` é criptografado em repouso (checklist 12): exibido,
-                // mas NÃO pesquisável/ordenável (a coluna é o ciphertext).
-                TextColumn::make('name')
-                    ->label(__('panel.common.name')),
+        return [
+            AdminColumns::publicCode(),
+            // `name` é criptografado em repouso (checklist 12): exibido,
+            // mas NÃO pesquisável/ordenável (a coluna é o ciphertext).
+            TextColumn::make('name')
+                ->label(__('panel.common.name')),
+            TextColumn::make('email')
+                ->label(__('auth.ui.email'))
+                ->searchable(),
+            self::statusColumn(),
+            // Só o "sim" é sinalizado: um ⊗ vermelho em cada linha comum
+            // (a maioria) transforma o estado normal em alarme e é a
+            // única cor saturada do painel (crítica de design).
+            // O Filament 5 detecta o cast bool do model e trata a coluna
+            // como booleana sozinho; null em falseIcon significa "use o
+            // padrão" (x-circle). Só `false` remove o ícone de verdade:
+            // usuário comum fica em branco, admin recebe o escudo.
+            IconColumn::make('is_admin')
+                ->label(__('admin.users.admin'))
+                ->boolean()
+                ->trueIcon(Heroicon::OutlinedShieldCheck)
+                ->trueColor('gray')
+                ->falseIcon(false)
+                ->alignCenter(),
+            AdminColumns::dateTime('created_at', __('admin.users.created_at')),
+        ];
+    }
+
+    /**
+     * Modo cards: identidade (nome + e-mail), situação e o selo de admin —
+     * o suficiente para reconhecer a conta sem abrir o registro.
+     */
+    public static function cardComponents(): array
+    {
+        return [
+            Stack::make([
+                Split::make([
+                    TextColumn::make('name')
+                        ->label(__('panel.common.name'))
+                        ->weight(FontWeight::SemiBold)
+                        ->size(TextSize::Large),
+                    IconColumn::make('is_admin')
+                        ->label(__('admin.users.admin'))
+                        ->boolean()
+                        ->trueIcon(Heroicon::OutlinedShieldCheck)
+                        ->trueColor('gray')
+                        ->falseIcon(false)
+                        ->grow(false),
+                ]),
                 TextColumn::make('email')
                     ->label(__('auth.ui.email'))
+                    ->icon(Heroicon::OutlinedEnvelope)
+                    ->color('gray')
+                    ->size(TextSize::Small)
                     ->searchable(),
-                TextColumn::make('status')
-                    ->label(__('panel.common.status'))
-                    ->badge()
-                    ->formatStateUsing(fn (UserStatus $state): string => match ($state) {
-                        UserStatus::Active => __('admin.users.active'),
-                        UserStatus::Blocked => __('admin.users.blocked'),
-                        UserStatus::Pending => __('admin.users.pending'),
-                    })
-                    ->color(fn (UserStatus $state): string => match ($state) {
-                        UserStatus::Active => 'success',
-                        UserStatus::Blocked => 'danger',
-                        UserStatus::Pending => 'warning',
-                    }),
-                // Só o "sim" é sinalizado: um ⊗ vermelho em cada linha comum
-                // (a maioria) transforma o estado normal em alarme e é a
-                // única cor saturada do painel (crítica de design).
-                // O Filament 5 detecta o cast bool do model e trata a coluna
-                // como booleana sozinho; null em falseIcon significa "use o
-                // padrão" (x-circle). Só `false` remove o ícone de verdade:
-                // usuário comum fica em branco, admin recebe o escudo.
-                IconColumn::make('is_admin')
-                    ->label(__('admin.users.admin'))
-                    ->boolean()
-                    ->trueIcon(Heroicon::OutlinedShieldCheck)
-                    ->trueColor('gray')
-                    ->falseIcon(false)
-                    ->alignCenter(),
-                TextColumn::make('created_at')
-                    ->label(__('admin.users.created_at'))
-                    ->dateTime('d/m/Y H:i', platform()->displayTimezone)
-                    ->sortable(),
-            ])
-            ->defaultSort('created_at', 'desc')
+                Split::make([
+                    self::statusColumn(),
+                    AdminColumns::publicCode()
+                        ->size(TextSize::Small)
+                        ->color('gray')
+                        ->grow(false),
+                ]),
+            ])->space(2),
+        ];
+    }
+
+    private static function statusColumn(): TextColumn
+    {
+        return TextColumn::make('status')
+            ->label(__('panel.common.status'))
+            ->badge()
+            ->formatStateUsing(fn (UserStatus $state): string => match ($state) {
+                UserStatus::Active => __('admin.users.active'),
+                UserStatus::Blocked => __('admin.users.blocked'),
+                UserStatus::Pending => __('admin.users.pending'),
+            })
+            ->color(fn (UserStatus $state): string => match ($state) {
+                UserStatus::Active => 'success',
+                UserStatus::Blocked => 'danger',
+                UserStatus::Pending => 'warning',
+            });
+    }
+
+    protected static function tableExtras(Table $table): Table
+    {
+        return $table
             ->filters([
                 SelectFilter::make('status')
                     ->label(__('panel.common.status'))
@@ -267,7 +297,7 @@ final class UserResource extends Resource
     {
         return $schema
             ->components([
-                TextEntry::make('codigo_publico')->label(__('admin.users.code')),
+                TextEntry::make('codigo_publico')->label(__('admin.common.code')),
                 TextEntry::make('name')->label(__('panel.common.name')),
                 TextEntry::make('email')->label(__('auth.ui.email')),
                 TextEntry::make('status')

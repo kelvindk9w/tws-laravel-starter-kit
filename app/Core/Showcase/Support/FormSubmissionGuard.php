@@ -48,6 +48,9 @@ final class FormSubmissionGuard
             'subject' => $subject,
             'message' => $message,
             'origin' => $origin,
+            // Evidência forense: sem a origem, a tela de detalhe do admin
+            // conta o "o quê" e não conta o "de onde".
+            'ip' => request()->ip(),
             'blocked_at' => $attackType !== null ? now() : null,
             'attack_type' => $attackType,
         ]);

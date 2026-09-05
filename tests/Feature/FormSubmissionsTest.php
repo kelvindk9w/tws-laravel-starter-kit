@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
 use App\Core\Showcase\Models\FormSubmission;
+use App\Core\Showcase\Support\SubmissionExcerpt;
+use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Livewire\ContactForm;
 use Database\Seeders\FormSubmissionSeeder;
@@ -190,7 +192,7 @@ it('admin lista submissões: bloqueadas no TOPO, depois as mais recentes', funct
         ]);
 });
 
-it('admin vê o badge de ataque bloqueado com o tipo', function () {
+it('admin vê o selo de ataque bloqueado com o tipo traduzido', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     FormSubmission::factory()->blocked('sqli')->create();
@@ -199,7 +201,10 @@ it('admin vê o badge de ataque bloqueado com o tipo', function () {
     Livewire::actingAs($admin)
         ->test(ListFormSubmissions::class)
         ->call('loadTable')
-        ->assertSee(__('admin.submissions.blocked_attack', ['type' => 'sqli']))
+        // O tipo aparece pelo NOME (SQL injection), não pela sigla interna.
+        ->assertSee(__('admin.submissions.blocked_attack', [
+            'type' => FormSubmissionResource::attackLabel('sqli'),
+        ]))
         ->assertSee(__('admin.submissions.accepted'));
 });
 
@@ -217,29 +222,59 @@ it('admin filtra por origem e o filtro vem da query string', function () {
 });
 
 // ---------------------------------------------------------------------------
-// XSS inerte na exibição: o alert NUNCA executa e o texto aparece literal
+// Payload: NEUTRALIZADO na listagem, íntegro (e escapado) só no detalhe
 // ---------------------------------------------------------------------------
 
-it('payload de script é exibido ESCAPADO na listagem do admin (nunca executa)', function () {
+it('a listagem do admin NÃO mostra o payload — nem cru, nem escapado', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     FormSubmission::factory()->blocked('xss')->create([
+        'nickname' => '<script>alert(1)</script>',
         'message' => "<script>alert('ola')</script>",
     ]);
 
-    $response = $this->actingAs($admin)->get('/admin/form-submissions');
+    $html = $this->actingAs($admin)->get('/admin/form-submissions')
+        ->assertOk()
+        ->assertSee(__('admin.submissions.neutralized'))
+        ->getContent();
 
-    $response->assertOk();
+    // A página do painel carrega os próprios <script>, então o que se prova
+    // aqui é que a MARCAÇÃO do payload sumiu da listagem — nas duas formas,
+    // crua e escapada — e que o trecho neutralizado tomou o lugar dela.
+    expect($html)
+        ->not->toContain('<script>alert(')
+        ->not->toContain('&lt;script&gt;alert(')
+        ->not->toContain('&lt;/script&gt;')
+        ->toContain(__('admin.submissions.neutralized'));
 
-    // O HTML escapado aparece (texto literal)…
-    $response->assertSee('&lt;script&gt;alert(&#039;ola&#039;)&lt;/script&gt;', false);
+    // E o trecho exibido é, ele mesmo, incapaz de virar marcação.
+    expect(SubmissionExcerpt::neutralize("<script>alert('ola')</script>"))
+        ->not->toContain('<')
+        ->not->toContain('>');
+});
 
-    // …e o payload cru NUNCA aparece fora de contexto JSON escapado.
+it('o detalhe mostra o payload íntegro ESCAPADO como evidência forense', function () {
+    $admin = User::factory()->create(['is_admin' => true]);
+
+    $submission = FormSubmission::factory()->blocked('xss')->create([
+        'message' => "<script>alert('ola')</script>",
+    ]);
+
+    $response = $this->actingAs($admin)->get("/admin/form-submissions/{$submission->uuid}");
+
+    $response->assertOk()
+        // O bloco se identifica como evidência e avisa o operador.
+        ->assertSee(__('admin.submissions.forensic_section'))
+        ->assertSee(__('admin.submissions.forensic_warning'))
+        // O payload aparece por extenso, ESCAPADO (texto, jamais marcação).
+        ->assertSee('&lt;script&gt;alert(&#039;ola&#039;)&lt;/script&gt;', false);
+
+    // …e nunca em forma executável.
     $html = $response->getContent();
     $cru = substr_count($html, "<script>alert('ola')</script>");
     $emSnapshot = substr_count($html, '<script>alert(\u0027ola\u0027)<\/script>');
 
-    expect($cru - $emSnapshot)->toBe(0); // nenhuma ocorrência executável
+    expect($cru - $emSnapshot)->toBe(0);
 });
 
 it('nenhum template exibe submissões com echo cru ({!! !!})', function () {

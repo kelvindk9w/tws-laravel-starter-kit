@@ -13,6 +13,21 @@ return [
         'group_system' => 'System',
     ],
 
+    // Blocks every super admin listing uses (see BaseResource and
+    // AdminColumns): shared labels are not repeated resource by resource.
+    'common' => [
+        'copied' => 'Code copied.',
+        'created_at' => 'Created at',
+        'empty_heading' => 'No records in :records',
+        'empty_description' => 'As soon as there is data, it shows up in this list.',
+        'view_as_cards' => 'View as cards',
+        'view_as_table' => 'View as table',
+    ],
+
+    'menu' => [
+        'back_to_site' => 'Back to the site',
+    ],
+
     'users' => [
         'label' => 'User',
         'plural' => 'Users',
@@ -99,6 +114,29 @@ return [
         'accepted' => 'Accepted',
         'blocked_attack' => 'Blocked attack (:type)',
         'received_at' => 'Received at',
+        'blocked_at' => 'Blocked at',
+        'ip' => 'Source IP',
+        'no_sender' => 'No sender (anonymous form)',
+        'filter_blocked' => 'Blocked only',
+        'view_evidence' => 'View evidence',
+        // The listing never shows a payload: it shows the attack badge and a
+        // neutralised excerpt, with this caption naming what is being read.
+        'neutralized' => 'neutralised content',
+        'metadata_section' => 'Metadata',
+        'metadata_hint' => 'Where it came from, when it arrived and what the platform decided.',
+        'content_section' => 'Message',
+        'forensic_section' => 'Forensic evidence',
+        'forensic_heading' => 'Content submitted by a third party',
+        'forensic_warning' => 'Below is the full payload of the attempt, displayed escaped for auditing. This page never executes it — but do not copy it outside the panel.',
+        'raw_nickname' => 'Nickname (full payload)',
+        'raw_subject' => 'Subject (full payload)',
+        'raw_message' => 'Message (full payload)',
+        'attack_xss' => 'XSS',
+        'attack_sqli' => 'SQL injection',
+        'attack_null_byte' => 'Null byte',
+        'attack_path_traversal' => 'Path traversal',
+        'attack_honeypot' => 'Honeypot',
+        'attack_unknown' => 'Unclassified',
     ],
 
     'products' => [

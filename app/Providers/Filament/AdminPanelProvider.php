@@ -10,6 +10,7 @@ use App\Core\Security\Middleware\UseEvalBundleForAdmin;
 use App\Core\Support\BrandMark;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Profile;
+use App\Filament\Support\InitialsAvatarProvider;
 use App\Filament\Widgets\PlatformStatsOverview;
 use App\Filament\Widgets\RequestsChart;
 use Filament\FontProviders\LocalFontProvider;
@@ -96,13 +97,32 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::TOPBAR_END,
                 fn (): string => view('filament.topbar-locale-switcher')->render(),
             )
-            // Perfil demo-safe no menu do usuário (nome editável, e-mail
-            // read-only, seção de senha só prévia — ver Pages\Profile).
+            // Avatar do menu do usuário: foto de perfil de quem já subiu uma
+            // (Upload validado da Fase 5) e, sem foto, iniciais desenhadas
+            // localmente em SVG. O provider de fábrica chama a ui-avatars.com
+            // — CDN externa no caminho de toda página do painel só para
+            // desenhar duas letras. Ver InitialsAvatarProvider.
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
+            // Menu do usuário (ADR-011): perfil, alternador de tema
+            // (claro/escuro/sistema — o Filament o injeta entre os itens de
+            // sort negativo e os demais), voltar ao site e sair (o "Sair" é
+            // acrescentado pelo próprio Filament no fim da lista).
+            //
+            // O seletor de IDIOMA continua na topbar, não aqui: trocar de
+            // idioma é uma ação de leitura da tela inteira (decisão do dono).
             ->userMenuItems([
+                // Perfil demo-safe (nome editável, e-mail read-only, seção
+                // de senha só prévia — ver Pages\Profile).
                 'profile' => MenuItem::make()
                     ->label(fn (): string => __('admin.profile.heading'))
                     ->url(fn (): string => Profile::getUrl())
-                    ->icon(Heroicon::OutlinedUserCircle),
+                    ->icon(Heroicon::OutlinedUserCircle)
+                    // Sort negativo = ANTES do alternador de tema.
+                    ->sort(-1),
+                'site' => MenuItem::make()
+                    ->label(fn (): string => __('admin.menu.back_to_site'))
+                    ->url(fn (): string => url('/'))
+                    ->icon(Heroicon::OutlinedArrowLeftOnRectangle),
             ])
             ->middleware([
                 // Bundle JS normal do Livewire (com eval) só no /admin — o

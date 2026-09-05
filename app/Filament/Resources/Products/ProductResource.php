@@ -9,16 +9,21 @@ use App\Core\Money\Money;
 use App\Filament\Resources\Products\Pages\CreateProduct;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
+use App\Filament\Support\AdminColumns;
+use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -37,33 +42,19 @@ use Throwable;
  * - Paginação: 10/página; página e filtros refletidos na query string
  *   (#[Url] na página de listagem — ver ListProducts).
  */
-final class ProductResource extends Resource
+final class ProductResource extends BaseResource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $recordRouteKeyName = 'uuid';
+    protected static string $translationKey = 'admin.products';
+
+    protected static ?string $navigationGroupKey = 'admin.nav.group_catalog';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingBag;
 
-    public static function getNavigationLabel(): string
-    {
-        return __('admin.products.plural');
-    }
-
-    public static function getModelLabel(): string
-    {
-        return __('admin.products.label');
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return __('admin.products.plural');
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('admin.nav.group_catalog');
-    }
+    // 10 por página, sem alternativa: a vitrine demonstra a paginação
+    // refletida na URL (?page=2 — Livewire query string).
+    protected static array $paginationOptions = [10];
 
     public static function form(Schema $schema): Schema
     {
@@ -118,38 +109,77 @@ final class ProductResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
+    public static function tableColumns(): array
     {
-        return $table
-            ->columns([
+        return [
+            ImageColumn::make('image')
+                ->label(__('admin.products.image'))
+                ->disk('public')
+                ->imageHeight(48)
+                ->defaultImageUrl('https://placehold.co/96x96?text=—'),
+            TextColumn::make('title')
+                ->label(__('admin.products.title'))
+                ->searchable()
+                ->sortable()
+                ->limit(40),
+            self::priceColumn(),
+            TextColumn::make('description')
+                ->label(__('admin.products.description'))
+                ->limit(60)
+                ->toggleable(),
+            AdminColumns::dateTime('created_at', __('admin.products.created_at')),
+        ];
+    }
+
+    /**
+     * Modo cards: catálogo é o caso em que a grade ganha da tabela — a foto
+     * ocupa o topo do cartão e o preço vem logo abaixo do título.
+     */
+    public static function cardComponents(): array
+    {
+        return [
+            Stack::make([
                 ImageColumn::make('image')
                     ->label(__('admin.products.image'))
                     ->disk('public')
-                    ->imageHeight(48)
-                    ->defaultImageUrl('https://placehold.co/96x96?text=—'),
+                    ->imageHeight(160)
+                    ->extraImgAttributes(['style' => 'width:100%;object-fit:cover;border-radius:0.5rem;'])
+                    ->defaultImageUrl('https://placehold.co/320x160?text=—'),
                 TextColumn::make('title')
                     ->label(__('admin.products.title'))
+                    ->weight(FontWeight::SemiBold)
+                    ->size(TextSize::Large)
                     ->searchable()
-                    ->sortable()
-                    ->limit(40),
-                TextColumn::make('price')
-                    ->label(__('admin.products.price'))
-                    ->formatStateUsing(fn (int $state): string => Money::format($state))
-                    ->sortable(),
+                    ->limit(60),
+                Split::make([
+                    self::priceColumn()
+                        ->weight(FontWeight::Bold),
+                    AdminColumns::dateTime('created_at', __('admin.products.created_at'))
+                        ->size(TextSize::Small)
+                        ->color('gray')
+                        ->grow(false),
+                ]),
                 TextColumn::make('description')
                     ->label(__('admin.products.description'))
-                    ->limit(60)
-                    ->toggleable(),
-                TextColumn::make('created_at')
-                    ->label(__('admin.products.created_at'))
-                    ->dateTime('d/m/Y H:i', platform()->displayTimezone)
-                    ->sortable(),
-            ])
-            ->defaultSort('created_at', 'desc')
-            // 10 por página, sem alternativa: a vitrine demonstra a
-            // paginação refletida na URL (?page=2 — Livewire query string).
-            ->defaultPaginationPageOption(10)
-            ->paginationPageOptions([10])
+                    ->color('gray')
+                    ->size(TextSize::Small)
+                    ->limit(120)
+                    ->wrap(),
+            ])->space(2),
+        ];
+    }
+
+    private static function priceColumn(): TextColumn
+    {
+        return TextColumn::make('price')
+            ->label(__('admin.products.price'))
+            ->formatStateUsing(fn (int $state): string => Money::format($state))
+            ->sortable();
+    }
+
+    protected static function tableExtras(Table $table): Table
+    {
+        return $table
             ->filters([
                 // SelectFilter (valores string): estado limpo na query string
                 // (?filters[price_range]=ate_100 — ver ListProducts #[Url]).
