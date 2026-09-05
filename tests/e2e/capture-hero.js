@@ -23,8 +23,14 @@ await page.getByRole('button', { name: 'Entrar' }).click();
 await page.waitForURL('**/dashboard', { timeout: 10000 });
 await page.waitForLoadState('networkidle');
 
-// Recorta o vazio abaixo do conteúdo do dashboard (o painel termina ~y=415).
-await page.screenshot({ path: `${out}/dashboard.png`, clip: { x: 0, y: 0, width: 1280, height: 470 } });
+// O gráfico (Chart.js) anima ao entrar: sem a espera, o print sai com a
+// linha pela metade.
+await page.waitForTimeout(1500);
+
+// Recorte 16:9 com o que prova o produto: as 4 métricas + o gráfico de
+// requisições por dia. (Antes eram 470px, o suficiente só para dois
+// contadores e três botões — o print do herói vendia uma tela vazia.)
+await page.screenshot({ path: `${out}/dashboard.png`, clip: { x: 0, y: 0, width: 1280, height: 700 } });
 console.log('hero dashboard.png capturado');
 
 await browser.close();

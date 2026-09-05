@@ -85,7 +85,7 @@ it('exclui com confirmação inline', function () {
         ->test(Index::class)
         ->call('startDelete', $project->uuid)
         ->assertSet('confirmingDeleteUuid', $project->uuid)
-        ->call('delete');
+        ->call('removeProject');
 
     expect(Project::query()->count())->toBe(0);
 });

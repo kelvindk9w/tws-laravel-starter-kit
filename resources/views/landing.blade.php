@@ -7,13 +7,19 @@
         <p class="mx-auto mt-6 max-w-2xl text-lg text-gray-600 dark:text-gray-400">
             {{ __('landing.hero.subtitle') }}
         </p>
+        {{-- UM primário (a conversão), UM secundário (a prova), e o resto
+             como link de texto. Quatro botões lado a lado não são quatro
+             opções: são nenhuma — e antes o CTA de conversão era justamente
+             o único SEM forma de botão. --}}
         <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <x-button :href="route('ui.showcase')" size="lg">{{ __('landing.hero.cta_components') }}</x-button>
+            <x-button :href="route('register')" size="lg">{{ __('landing.hero.cta_register') }}</x-button>
             <x-button :href="route('login')" variant="secondary" size="lg">{{ __('landing.hero.cta_demo') }}</x-button>
+        </div>
+        <div class="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+            <a href="{{ route('ui.showcase') }}" class="text-gray-600 underline decoration-gray-300 underline-offset-4 transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-white">{{ __('landing.hero.cta_components') }}</a>
             @if (config('ui.demo_login.enabled'))
-                <x-button href="{{ url('/admin') }}" variant="outline" size="lg">{{ __('landing.hero.cta_admin_demo') }}</x-button>
+                <a href="{{ url('/admin') }}" class="text-gray-600 underline decoration-gray-300 underline-offset-4 transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-white">{{ __('landing.hero.cta_admin_demo') }}</a>
             @endif
-            <x-button :href="route('register')" variant="ghost" size="lg">{{ __('landing.hero.cta_register') }}</x-button>
         </div>
 
         {{-- Screenshot real do painel em browser frame CSS --}}
@@ -22,14 +28,14 @@
                 <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
                 <span class="h-3 w-3 rounded-full bg-yellow-500/80"></span>
                 <span class="h-3 w-3 rounded-full bg-green-500/80"></span>
-                <span class="ml-3 flex-1 rounded-md bg-gray-800 px-3 py-1 text-xs text-gray-500">{{ platform()->officialUrl }}/dashboard</span>
+                <span class="ml-3 flex-1 truncate rounded-md bg-gray-800 px-3 py-1 text-xs text-gray-400">{{ platform()->officialUrl }}/dashboard</span>
             </div>
             <img
                 src="{{ asset('img/landing/dashboard.png') }}"
                 alt="{{ __('landing.hero.screenshot_alt') }}"
                 class="block w-full"
                 width="1280"
-                height="470"
+                height="700"
                 loading="lazy"
                 decoding="async"
             >
@@ -37,42 +43,59 @@
     </section>
 
     {{-- Barra de stack --}}
-    <section id="stack" class="scroll-mt-16 border-y border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50">
+    <section id="stack" class="scroll-mt-16 border-y border-border bg-surface-sunken">
         <div class="mx-auto max-w-6xl px-4 py-12" data-reveal>
-            <h2 class="text-center text-sm font-semibold uppercase tracking-widest text-gray-500">{{ __('landing.stack.heading') }}</h2>
+            <h2 class="text-center text-sm font-semibold uppercase tracking-widest text-text-muted">{{ __('landing.stack.heading') }}</h2>
             <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
                 @foreach (__('landing.stack.items') as $tech)
-                    <x-badge class="border border-gray-200 px-3 py-1 text-sm dark:border-gray-800">{{ $tech }}</x-badge>
+                    <x-badge class="px-3 py-1 text-sm">{{ $tech }}</x-badge>
                 @endforeach
             </div>
-            <p class="mx-auto mt-6 max-w-2xl text-center text-sm text-gray-500 dark:text-gray-400">{{ __('landing.stack.dev_note') }}</p>
+            <p class="mx-auto mt-6 max-w-2xl text-center text-sm text-text-muted">{{ __('landing.stack.dev_note') }}</p>
         </div>
     </section>
 
-    {{-- Horas economizadas --}}
+    {{-- Horas economizadas — o argumento comercial mais forte da página.
+         Era uma lista de 10 linhas em text-sm com pílulas azuis de 12px: a
+         informação de maior valor renderizada com a MENOR ênfase. Agora o
+         total é um número display e a lista é o detalhamento dele.
+         As pílulas viraram cinzas: azul, no theme.css deste kit, é cor de
+         STATUS (badge/alert info) — usá-lo como decoração de quantidade era
+         a única cor saturada da página inteira, gasta com enfeite. --}}
+    @php
+        $hoursItems = __('landing.hours.items');
+        $hoursTotal = array_sum(array_column($hoursItems, 'hours'));
+    @endphp
     <section id="horas" class="mx-auto max-w-6xl scroll-mt-16 px-4 py-20">
         <div class="mx-auto max-w-2xl text-center" data-reveal>
             <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('landing.hours.heading') }}</h2>
             <p class="mt-3 text-balance text-gray-600 dark:text-gray-400">{{ __('landing.hours.subtitle') }}</p>
         </div>
-        <div class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800" data-reveal>
-            <ul class="divide-y divide-gray-200 dark:divide-gray-800">
-                @foreach (__('landing.hours.items') as $item)
-                    <li class="flex items-center justify-between gap-4 bg-white px-5 py-3 dark:bg-gray-900/40">
+
+        <div class="mx-auto mt-12 flex max-w-3xl flex-col items-center text-center" data-reveal>
+            <p class="font-display text-display tabular-nums">{{ $hoursTotal }}</p>
+            <p class="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('landing.hours.total_unit') }}</p>
+            <p class="mt-2 max-w-md text-sm text-text-muted">{{ __('landing.hours.total_caption') }}</p>
+        </div>
+
+        <div class="mx-auto mt-10 max-w-3xl overflow-hidden rounded-xl border border-border" data-reveal>
+            <ul class="divide-y divide-border">
+                @foreach ($hoursItems as $item)
+                    <li class="flex items-center justify-between gap-4 bg-surface px-5 py-3">
                         <span class="text-sm text-gray-700 dark:text-gray-300">{{ $item['task'] }}</span>
-                        <x-badge color="blue" class="shrink-0">{{ $item['hours'] }}h</x-badge>
+                        <x-badge class="shrink-0 tabular-nums">{{ $item['hours'] }}h</x-badge>
                     </li>
                 @endforeach
             </ul>
-            <div class="flex items-center justify-between gap-4 border-t border-gray-300 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900">
+            <div class="flex items-center justify-between gap-4 border-t border-border-strong bg-surface-sunken px-5 py-4">
                 <span class="font-semibold">{{ __('landing.hours.total_label') }}</span>
-                <x-badge color="green" class="px-3 py-1 text-sm">{{ __('landing.hours.total_value', ['hours' => array_sum(array_column(__('landing.hours.items'), 'hours'))]) }}</x-badge>
+                <span class="font-display text-lg font-semibold tabular-nums">{{ __('landing.hours.total_value', ['hours' => $hoursTotal]) }}</span>
             </div>
         </div>
     </section>
 
     {{-- Grid de features --}}
-    <section id="recursos" class="scroll-mt-16 border-y border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50">
+    <section id="recursos" class="scroll-mt-16 border-y border-border bg-surface-sunken">
         <div class="mx-auto max-w-6xl px-4 py-20">
             <div class="mx-auto max-w-2xl text-center" data-reveal>
                 <h2 class="font-display text-3xl font-bold tracking-[-0.02em]">{{ __('landing.features.heading') }}</h2>
@@ -81,7 +104,7 @@
             <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach (__('landing.features.items') as $feature)
                     <div
-                        class="rounded-xl border border-gray-200 bg-white p-6 transition-colors duration-200 ease-(--ease-out) hover:border-gray-300 dark:border-gray-800 dark:bg-gray-950 dark:hover:border-gray-700"
+                        class="rounded-xl border border-border bg-surface p-6 transition-colors duration-200 ease-(--ease-out) hover:border-border-strong"
                         data-reveal
                         style="transition-delay: {{ $loop->index % 3 * 60 }}ms"
                     >
@@ -149,20 +172,21 @@
                 <p class="mx-auto mt-3 max-w-xl text-gray-600 dark:text-gray-400">{{ __('landing.cta.subtitle') }}</p>
             </div>
 
-            {{-- Repositório público do kit (config via platform()/env). --}}
-            @if (platform()->repoUrl)
-                <div class="mt-8" data-reveal>
-                    <x-button :href="platform()->repoUrl" variant="outline" size="lg" target="_blank" rel="noopener">
-                        <x-ui-icon name="code-bracket" class="h-5 w-5" />
-                        {{ __('landing.cta.repo') }}
-                    </x-button>
-                </div>
-            @endif
-
             <div class="mt-8 flex flex-wrap items-center justify-center gap-3" data-reveal>
                 <x-button :href="route('register')" size="lg">{{ __('landing.cta.register') }}</x-button>
                 <x-button :href="route('login')" variant="secondary" size="lg">{{ __('landing.cta.demo') }}</x-button>
             </div>
+
+            {{-- Repositório público do kit (config via platform()/env): link
+                 de texto, não um terceiro botão competindo com a conversão. --}}
+            @if (platform()->repoUrl)
+                <div class="mt-6" data-reveal>
+                    <a href="{{ platform()->repoUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-sm text-gray-600 underline decoration-gray-300 underline-offset-4 transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:text-gray-400 dark:decoration-gray-600 dark:hover:text-white">
+                        <x-ui-icon name="code-bracket" class="h-4 w-4" />
+                        {{ __('landing.cta.repo') }}
+                    </a>
+                </div>
+            @endif
         </div>
     </section>
 </x-layouts.landing>

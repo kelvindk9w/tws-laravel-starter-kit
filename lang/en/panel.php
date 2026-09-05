@@ -15,6 +15,8 @@ return [
         'notifications' => 'Notifications',
         'profile' => 'Profile',
         'toggle_theme' => 'Toggle light/dark theme',
+        'menu' => 'Menu',
+        'open_menu' => 'Open navigation menu',
     ],
 
     'common' => [
@@ -33,6 +35,9 @@ return [
         'none' => 'None',
         'saved' => 'Saved successfully.',
         'optional' => 'optional',
+        'copy' => 'Copy',
+        'copied' => 'Copied!',
+        'more_actions' => 'More actions',
     ],
 
     // Dashboard.
@@ -46,6 +51,22 @@ return [
         'new_api_key' => 'Create API key',
         'new_project' => 'Create project',
         'manage_profile' => 'My profile',
+
+        // Métricas e tráfego real da conta (request_logs — ADR-004/010).
+        'summary_requests' => 'Requests (:days days)',
+        'summary_last_key_use' => 'Last key use',
+        'last_key_use_empty' => 'No authenticated call yet.',
+        'chart_title' => 'Requests per day (:days days)',
+        'chart_hint' => 'Every authenticated API call from your account, grouped by day.',
+        'chart_series' => 'Requests',
+        'chart_empty_title' => 'No requests in this period',
+        'chart_empty_description' => 'As soon as your integration starts calling the API, traffic shows up here.',
+        'recent_calls_title' => 'Latest API calls',
+        'recent_calls_hint' => 'The 5 most recent for this account.',
+        'recent_calls_empty_title' => 'Your API has not received any calls yet',
+        'recent_calls_empty_description' => 'Create an API key and make the first request to see the audit trail here.',
+        'call_endpoint' => 'Endpoint',
+        'call_when' => 'When',
     ],
 
     // Profile.
@@ -68,6 +89,15 @@ return [
         'transaction_password_hint' => 'Used to authorize sensitive actions (API key creation/rotation). It must be different from the login password.',
         'transaction_password_set' => 'Set',
         'transaction_password_not_set' => 'Not set — define it to be able to create API keys.',
+        'subtitle' => 'Your data, appearance, photo and the two account passwords.',
+        'password_hint' => 'Requires the current password. The new one needs upper case, lower case and a number.',
+        'choose_file' => 'Choose image',
+        'avatar_uploading' => 'Uploading the image…',
+        // Cada botão nomeia o próprio escopo (a tela salva 4 coisas).
+        'save_data' => 'Save details',
+        'save_avatar' => 'Save photo',
+        'save_password' => 'Change login password',
+        'save_transaction_password' => 'Change transaction password',
     ],
 
     // Projects (ADR-005 — organizational layer, name only).
@@ -85,6 +115,10 @@ return [
         'status_active' => 'Active',
         'status_archived' => 'Archived',
         'linked_keys' => ':count linked key(s)',
+        'name_placeholder' => 'E.g. Online Store',
+        'empty_title' => 'No projects yet',
+        'code' => 'Code',
+        'keys_column' => 'Keys',
     ],
 
     // API keys (ADR-006 — the most important screen).
@@ -131,6 +165,11 @@ return [
         'copy' => 'Copy',
         'copied' => 'Copied!',
         'secret_done' => 'I have safely stored the key',
+        'secret_key' => 'Secret key',
+        'name_placeholder' => 'E.g. Checkout integration',
+        'empty_title' => 'No API keys yet',
+        'copy_public' => 'Copy public key',
+        'copied_public' => 'Public key copied.',
 
         // Sensitive action flow (transaction password + email code).
         'sensitive_heading' => 'Security confirmation',
@@ -175,6 +214,8 @@ return [
         'pref_security_alerts' => 'Security alerts',
         'pref_security_alerts_hint' => 'Sign-ins and sensitive actions. Always on — they cannot be disabled.',
         'locked' => 'Always on',
+        'emails_heading' => 'Emails you receive',
+        'save' => 'Save preferences',
     ],
 
 ];

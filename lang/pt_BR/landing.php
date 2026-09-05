@@ -15,6 +15,8 @@ return [
         'demo' => 'Testar demo',
         'register' => 'Criar conta',
         'dashboard' => 'Ir para o painel',
+        'menu' => 'Menu',
+        'open_menu' => 'Abrir menu de navegação',
     ],
 
     'hero' => [
@@ -54,6 +56,8 @@ return [
         ],
         'total_label' => 'Total economizado',
         'total_value' => ':hours horas',
+        'total_unit' => 'horas de trabalho já feitas',
+        'total_caption' => 'Estimativa conservadora do que já vem implementado, testado e documentado — item a item abaixo.',
     ],
 
     'features' => [

@@ -15,6 +15,8 @@ return [
         'demo' => 'Try the demo',
         'register' => 'Create account',
         'dashboard' => 'Go to dashboard',
+        'menu' => 'Menu',
+        'open_menu' => 'Open navigation menu',
     ],
 
     'hero' => [
@@ -54,6 +56,8 @@ return [
         ],
         'total_label' => 'Total saved',
         'total_value' => ':hours hours',
+        'total_unit' => 'hours of work already done',
+        'total_caption' => 'A conservative estimate of what already ships implemented, tested and documented — itemised below.',
     ],
 
     'features' => [

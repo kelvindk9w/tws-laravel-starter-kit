@@ -58,21 +58,24 @@ test('super admin demo: auditoria web, vitrine de ataques, produtos e i18n', asy
         await expect(page.getByRole('row').nth(1)).toBeVisible({ timeout: 15000 });
     });
 
-    await test.step('seletor compacto (bandeira + sigla) troca o idioma do painel', async () => {
+    await test.step('seletor de idioma (bandeira em SVG + nome) troca o idioma do painel', async () => {
         await page.goto('/admin', { waitUntil: 'networkidle' });
 
-        const switcher = page.locator('.fi-topbar select, header select').first();
+        // Era um <select> nativo com emoji; virou o menu do kit (<details>
+        // autocontido: o /admin não carrega o ui.js nem os utilitários do app).
+        const switcher = page.locator('details.tws-locale');
         await expect(switcher).toBeVisible();
-        await expect(switcher.locator('option', { hasText: '🇺🇸 EN' })).toBeAttached();
 
-        await switcher.selectOption({ label: '🇺🇸 EN' });
+        await switcher.locator('summary').click();
+        await switcher.getByRole('menuitem', { name: 'English' }).click();
         await page.waitForLoadState('networkidle');
         // Painel em inglês: o grupo de navegação traduz.
         await expect(page.getByText('Security and audit').first()).toBeVisible();
 
         // Cleanup: a troca persiste users.locale na conta demo (banco de dev
         // compartilhado) — volta para PT para o próximo run da suíte.
-        await switcher.selectOption({ label: '🇧🇷 PT' });
+        await page.locator('details.tws-locale summary').click();
+        await page.locator('details.tws-locale').getByRole('menuitem', { name: 'Português (Brasil)' }).click();
         await page.waitForLoadState('networkidle');
         await expect(page.getByText('Segurança e auditoria').first()).toBeVisible();
     });

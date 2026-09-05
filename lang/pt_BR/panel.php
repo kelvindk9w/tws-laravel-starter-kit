@@ -15,6 +15,8 @@ return [
         'notifications' => 'Notificações',
         'profile' => 'Perfil',
         'toggle_theme' => 'Alternar tema claro/escuro',
+        'menu' => 'Menu',
+        'open_menu' => 'Abrir menu de navegação',
     ],
 
     'common' => [
@@ -33,6 +35,9 @@ return [
         'none' => 'Nenhum',
         'saved' => 'Salvo com sucesso.',
         'optional' => 'opcional',
+        'copy' => 'Copiar',
+        'copied' => 'Copiado!',
+        'more_actions' => 'Mais ações',
     ],
 
     // Dashboard.
@@ -46,6 +51,22 @@ return [
         'new_api_key' => 'Criar chave de API',
         'new_project' => 'Criar projeto',
         'manage_profile' => 'Meu perfil',
+
+        // Métricas e tráfego real da conta (request_logs — ADR-004/010).
+        'summary_requests' => 'Requisições (:days dias)',
+        'summary_last_key_use' => 'Último uso de chave',
+        'last_key_use_empty' => 'Nenhuma chamada autenticada ainda.',
+        'chart_title' => 'Requisições por dia (:days dias)',
+        'chart_hint' => 'Toda chamada autenticada da sua conta na API, agrupada por dia.',
+        'chart_series' => 'Requisições',
+        'chart_empty_title' => 'Nenhuma requisição no período',
+        'chart_empty_description' => 'Assim que sua integração começar a chamar a API, o tráfego aparece aqui.',
+        'recent_calls_title' => 'Últimas chamadas da API',
+        'recent_calls_hint' => 'As 5 mais recentes desta conta.',
+        'recent_calls_empty_title' => 'Sua API ainda não recebeu chamadas',
+        'recent_calls_empty_description' => 'Crie uma chave de API e faça a primeira requisição para ver a trilha de auditoria aqui.',
+        'call_endpoint' => 'Endpoint',
+        'call_when' => 'Quando',
     ],
 
     // Perfil.
@@ -68,6 +89,15 @@ return [
         'transaction_password_hint' => 'Usada para autorizar ações sensíveis (criação/rotação de chaves de API). Deve ser diferente da senha de login.',
         'transaction_password_set' => 'Definida',
         'transaction_password_not_set' => 'Não definida — defina para poder criar chaves de API.',
+        'subtitle' => 'Seus dados, aparência, foto e as duas senhas da conta.',
+        'password_hint' => 'Exige a senha atual. A nova precisa ter maiúscula, minúscula e número.',
+        'choose_file' => 'Escolher imagem',
+        'avatar_uploading' => 'Enviando a imagem…',
+        // Cada botão nomeia o próprio escopo (a tela salva 4 coisas).
+        'save_data' => 'Salvar dados',
+        'save_avatar' => 'Salvar foto',
+        'save_password' => 'Alterar senha de login',
+        'save_transaction_password' => 'Alterar senha de transação',
     ],
 
     // Projetos (ADR-005 — camada organizacional, só nome).
@@ -85,6 +115,10 @@ return [
         'status_active' => 'Ativo',
         'status_archived' => 'Arquivado',
         'linked_keys' => ':count chave(s) vinculada(s)',
+        'name_placeholder' => 'Ex.: Loja Virtual',
+        'empty_title' => 'Nenhum projeto ainda',
+        'code' => 'Código',
+        'keys_column' => 'Chaves',
     ],
 
     // Chaves de API (ADR-006 — a tela mais importante).
@@ -131,6 +165,11 @@ return [
         'copy' => 'Copiar',
         'copied' => 'Copiada!',
         'secret_done' => 'Já guardei a chave com segurança',
+        'secret_key' => 'Chave secreta',
+        'name_placeholder' => 'Ex.: Integração do checkout',
+        'empty_title' => 'Nenhuma chave de API ainda',
+        'copy_public' => 'Copiar chave pública',
+        'copied_public' => 'Chave pública copiada.',
 
         // Fluxo de ação sensível (senha de transação + código por e-mail).
         'sensitive_heading' => 'Confirmação de segurança',
@@ -175,6 +214,8 @@ return [
         'pref_security_alerts' => 'Alertas de segurança',
         'pref_security_alerts_hint' => 'Logins e ações sensíveis. Sempre ativos — não podem ser desligados.',
         'locked' => 'Sempre ativo',
+        'emails_heading' => 'E-mails que você recebe',
+        'save' => 'Salvar preferências',
     ],
 
 ];

@@ -159,9 +159,13 @@ it('estratégia inline (padrão): erro junto ao campo, sem resumo', function () 
 
     $response->assertOk()->assertDontSee('href="#classic_nickname"', false);
 
-    // Erro inline no <p> do próprio campo (markup do <x-input>).
+    // Erro inline no <p> do próprio campo (markup do <x-input>), ligado ao
+    // input por aria-describedby — o leitor de tela chega ao motivo da recusa.
     $expected = __('validation.required', ['attribute' => __('showcase.form_patterns.demo_nickname')]);
-    $response->assertSee('<p class="mt-1.5 text-sm text-red-600 dark:text-red-400">'.$expected.'</p>', false);
+    $response->assertSee('id="classic_nickname-error"', false)
+        ->assertSee('aria-describedby="classic_nickname-error"', false)
+        ->assertSee('aria-invalid="true"', false)
+        ->assertSee($expected);
 });
 
 it('override por formulário (classic_display) troca a estratégia de exibição', function () {

@@ -11,9 +11,14 @@
    - O token --color-brand expõe utilitários (bg-brand, text-brand,
      ring-brand…) e --color-brand-foreground é o texto SOBRE a primária
      (branco no claro, preto no escuro) — use-o em vez de text-white.
-   - Azul sobrevive só como cor de status (badge/alert "info"). 
-   - Tipografia: --font-sans (corpo) e --font-display (títulos da landing e
-     do showcase; Space Grotesk self-hosted via @fontsource-variable).
+   - Azul sobrevive só como cor de status (badge/alert "info").
+   - SUPERFÍCIES SEMÂNTICAS (ver bloco abaixo): nunca escreva
+     `bg-white dark:bg-gray-900` num componente — use bg-surface. A escala do
+     Tailwind é matéria-prima; a linguagem do kit são os tokens semânticos.
+   - Tipografia: --font-sans (corpo, Instrument Sans) e --font-display
+     (títulos, Space Grotesk) — as DUAS self-hosted via @fontsource-variable,
+     importadas em app.css. Escala de 5 degraus em --text-display/h1/h2/
+     body/caption.
    - Radii: escala usada pelos componentes (rounded-lg/xl).
    - Motion: easings fortes e durações (regra: UI abaixo de 300ms).
 
@@ -27,12 +32,72 @@
     --color-brand: var(--brand, var(--color-neutral-900));
     --color-brand-foreground: var(--brand-foreground, #ffffff);
 
-    /* Tipografia */
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Hover explícito da primária: `brightness-110` sobre um quase-preto é
+       invisível (clarear preto dá preto). Uma cor de hover declarada é a
+       única forma de o botão principal responder ao ponteiro nos 2 temas. */
+    --color-brand-hover: var(--brand-hover, var(--color-neutral-700));
 
-    /* Voz display (títulos da landing/showcase) — self-hosted via @fontsource. */
-    --font-display: 'Space Grotesk Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    /* ---------------------------------------------------------------------
+       SUPERFÍCIES SEMÂNTICAS — o modelo de elevação do kit.
+       Regra: sunken (fundo da página) < surface (cartão) < raised (o que
+       flutua: modal, dropdown, popover). A ORDEM é a mesma nos dois temas —
+       no claro o que sobe fica mais claro; no escuro, também. Um tema escuro
+       que inverte a elevação não é um tema, é uma inversão de cores.
+       --------------------------------------------------------------------- */
+    --color-surface: #ffffff;
+    --color-surface-raised: #ffffff;
+    --color-surface-sunken: var(--color-gray-50);
+
+    /* Fundo de campo desabilitado: um input inerte precisa PARECER inerte —
+       opacidade sozinha não cria diferença perceptível. */
+    --color-surface-disabled: var(--color-gray-100);
+
+    --color-border: var(--color-gray-200);
+    --color-border-strong: var(--color-gray-300);
+
+    /* Texto secundário com contraste AA garantido nos dois temas
+       (gray-500 sobre branco = 4,83:1; gray-400 sobre gray-950 = 7,3:1). */
+    --color-text-muted: var(--color-gray-500);
+
+    /* Tipografia — as duas famílias são self-hosted (@fontsource-variable),
+       importadas em resources/css/app.css. */
+    --font-sans: 'Instrument Sans Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Voz display (títulos da landing/showcase/painel). */
+    --font-display: 'Space Grotesk Variable', 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+    /* ---------------------------------------------------------------------
+       ESCALA TIPOGRÁFICA — 5 degraus, e só. Cada degrau tem um trabalho:
+         display  número/manchete de campanha (landing)
+         h1       título da tela
+         h2       título de seção/cartão
+         body     texto corrido e controles
+         caption  metadado, rótulo, legenda
+       Tracking negativo só nos dois primeiros (texto grande aperta; texto
+       pequeno respira). Use text-display/text-h1/text-h2/text-body/
+       text-caption em vez de reinventar text-2xl+font-semibold a cada tela.
+       --------------------------------------------------------------------- */
+    --text-display: 3.5rem;
+    --text-display--line-height: 1;
+    --text-display--letter-spacing: -0.035em;
+    --text-display--font-weight: 700;
+
+    --text-h1: 1.875rem;
+    --text-h1--line-height: 1.15;
+    --text-h1--letter-spacing: -0.022em;
+    --text-h1--font-weight: 600;
+
+    --text-h2: 1.125rem;
+    --text-h2--line-height: 1.35;
+    --text-h2--letter-spacing: -0.012em;
+    --text-h2--font-weight: 600;
+
+    --text-body: 0.9375rem;
+    --text-body--line-height: 1.6;
+
+    --text-caption: 0.8125rem;
+    --text-caption--line-height: 1.45;
 
     /* Radii da linguagem (componentes usam rounded-lg/xl). */
     --radius-lg: 0.5rem;
@@ -67,9 +132,22 @@
 }
 
 /* Tema escuro: a primária monocromática inverte (quase-branco sobre a
-   superfície escura, texto quase-preto sobre ela). O override de marca via
-   .env (--brand), quando definido, vale para os dois temas. */
+   superfície escura, texto quase-preto sobre ela) e as superfícies são
+   REDEFINIDAS mantendo a ordem de elevação (sunken < surface < raised).
+   O override de marca via .env (--brand), quando definido, vale para os
+   dois temas. */
 .dark {
     --color-brand: var(--brand, var(--color-neutral-50));
     --color-brand-foreground: var(--brand-foreground, var(--color-neutral-900));
+    --color-brand-hover: var(--brand-hover, var(--color-neutral-300));
+
+    --color-surface: var(--color-gray-900);
+    --color-surface-raised: var(--color-gray-800);
+    --color-surface-sunken: var(--color-gray-950);
+    --color-surface-disabled: var(--color-gray-800);
+
+    --color-border: var(--color-gray-800);
+    --color-border-strong: var(--color-gray-700);
+
+    --color-text-muted: var(--color-gray-400);
 }

@@ -30,16 +30,23 @@ it('data-theme-default reflete a preferência salva na conta', function () {
         ->assertSee('data-theme-default="dark"', false);
 });
 
-it('toggle de 3 estados aparece na landing, showcase e painel', function () {
-    $this->get('/')->assertOk()->assertSee('data-theme-toggle', false);
+// O seletor de tema é um DROPDOWN com os 3 estados nomeados (era um ícone que
+// ciclava às cegas): o contrato verificado é o item de cada estado, com rótulo.
+it('seletor de tema com os 3 estados nomeados aparece na landing, showcase e painel', function () {
+    foreach (['system', 'light', 'dark'] as $state) {
+        $this->get('/')->assertOk()->assertSee('data-theme-set="'.$state.'"', false);
+    }
+
+    $this->get('/')->assertOk()->assertSee(__('ui.theme.dark'));
 
     config()->set('ui.showcase_enabled', true);
-    $this->get('/ui')->assertOk()->assertSee('data-theme-toggle', false);
+    $this->get('/ui')->assertOk()->assertSee('data-theme-set="dark"', false);
 
     $this->actingAs(User::factory()->create())
         ->get('/dashboard')
         ->assertOk()
-        ->assertSee('data-theme-toggle', false);
+        ->assertSee('data-theme-set="dark"', false)
+        ->assertSee(__('ui.theme.system'));
 });
 
 it('perfil exibe o segmented control de aparência', function () {

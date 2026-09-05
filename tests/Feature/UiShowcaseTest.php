@@ -34,13 +34,13 @@ it('showcase renderiza os componentes reais do kit', function () {
         ->assertSee('animate-spin', false);
 });
 
-it('showcase renderiza snippets copiáveis, toggle de tema e scrollspy', function () {
+it('showcase renderiza snippets copiáveis, seletor de tema e scrollspy', function () {
     config()->set('ui.showcase_enabled', true);
 
     $this->get('/ui')
         ->assertOk()
         ->assertSee('data-copy', false)
-        ->assertSee('data-theme-toggle', false)
+        ->assertSee('data-theme-set="dark"', false)
         ->assertSee('data-scrollspy', false)
         ->assertSee('data-toast-show', false)
         ->assertSee('clipboard-toast', false);
@@ -76,8 +76,15 @@ it('componentes Blade do kit existem e renderizam', function (string $component,
     'textarea' => ['textarea', '<x-textarea label="Mensagem" name="msg" />', '<textarea'],
     'skeleton' => ['skeleton', '<x-skeleton :lines="2" />', 'skeleton'],
     'loading-overlay' => ['loading-overlay', '<x-loading-overlay message="Aguarde" />', 'data-loading-overlay'],
-    'locale-switcher' => ['locale-switcher', '<x-locale-switcher />', 'data-locale-switch'],
-    'theme-toggle' => ['theme-toggle', '<x-theme-toggle />', 'data-theme-toggle'],
+    // <x-dropdown> é exercitado pelos dois componentes que o consomem
+    // (o slot nomeado dentro de Blade::render marca o teste como risky).
+    'locale-switcher' => ['locale-switcher', '<x-locale-switcher />', 'data-dropdown-menu'],
+    'theme-toggle' => ['theme-toggle', '<x-theme-toggle />', 'data-theme-set'],
+    'drawer' => ['drawer', '<x-drawer id="menu" title="Menu">conteudo</x-drawer>', 'drawer-panel'],
+    'table' => ['table', '<x-table :headers="[\'Nome\']"><x-table-row><x-table-cell label="Nome">Ana</x-table-cell></x-table-row></x-table>', '<th'],
+    'file-input' => ['file-input', '<x-file-input name="foto" />', 'data-file-input'],
+    'stat' => ['stat', '<x-stat label="Chaves" value="7" />', 'tabular-nums'],
+    'flag' => ['flag', '<x-flag locale="pt_BR" />', '<svg'],
     'select' => ['select', '<x-select label="Plano" name="plano"><option>A</option></x-select>', '<select'],
     'checkbox' => ['checkbox', '<x-checkbox label="Aceito" name="termos" />', 'type="checkbox"'],
     'toggle' => ['toggle', '<x-toggle label="2FA" name="tfa" />', 'peer'],
@@ -89,3 +96,42 @@ it('componentes Blade do kit existem e renderizam', function (string $component,
     'spinner' => ['spinner', '<x-spinner />', 'animate-spin'],
     'ui-icon' => ['ui-icon', '<x-ui-icon name="key" />', '<svg'],
 ]);
+
+// =============================================================================
+// Snippets e componentes novos (tabela, dados e navegação).
+// =============================================================================
+
+it('snippets mostram o código INTEIRO (nada de truncate)', function () {
+    $snippet = (string) file_get_contents(resource_path('views/components/snippet.blade.php'));
+
+    // Numa página cujo propósito é mostrar código copiável, 100% do código
+    // aparecia cortado no meio (`<x-input label="…" name="demo_na`).
+    expect($snippet)->toContain('whitespace-pre-wrap')
+        ->and($snippet)->toContain('break-all')
+        // Sem classes de corte no markup (o comentário do arquivo explica
+        // por quê — por isso a busca é pela CLASSE, não pela palavra).
+        ->and($snippet)->not->toContain('class="truncate')
+        ->and($snippet)->not->toContain(' truncate ')
+        ->and($snippet)->not->toContain('whitespace-nowrap');
+});
+
+it('showcase documenta os componentes novos do sistema', function () {
+    config()->set('ui.showcase_enabled', true);
+
+    $response = $this->get('/ui')->assertOk();
+
+    // Seções na sidebar (scrollspy) e no corpo.
+    $response->assertSee(__('showcase.categories.data_display'))
+        ->assertSee(__('showcase.categories.navigation'))
+        ->assertSee('id="data_display"', false)
+        ->assertSee('id="navigation"', false);
+
+    // Snippet copiável de cada componente novo.
+    foreach (['<x-table', '<x-stat', '<x-chart', '<x-dropdown', '<x-drawer', '<x-file-input'] as $componente) {
+        $response->assertSee($componente);
+    }
+
+    // O gráfico com dados renderiza o canvas; o vazio, o estado desenhado.
+    $response->assertSee('data-chart="line"', false)
+        ->assertSee(__('ui.chart.empty_title'));
+});

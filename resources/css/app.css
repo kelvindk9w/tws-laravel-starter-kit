@@ -1,5 +1,11 @@
 @import 'tailwindcss';
+
+/* As DUAS famílias da identidade são self-hosted (nada de CDN de fonte: a
+   CSP do kit não permite font-src externo, e a voz tipográfica não pode
+   depender do sistema operacional de quem abre a página).
+   --font-display = Space Grotesk · --font-sans = Instrument Sans. */
 @import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/instrument-sans';
 
 /* Identidade visual (cores de marca, fontes, radii, motion): UM arquivo —
    resources/css/theme.css. Edite lá + .env para rebranding completo. */
@@ -12,6 +18,14 @@
    (sistema/claro/escuro) em resources/js/ui.js; anti-flash no <head>
    (partials/theme-script). A preferência do SO é o default. */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Corpo do texto no degrau 'body' da escala tipográfica (theme.css). */
+@layer base {
+    body {
+        font-size: var(--text-body);
+        line-height: var(--text-body--line-height);
+    }
+}
 
 @layer components {
     /*
@@ -93,13 +107,6 @@
         background: color-mix(in oklab, var(--color-brand) 12%, transparent);
     }
 
-    /* Segmented control de tema (Perfil): estado ativo via .is-active
-       (resources/js/ui.js). Só cor/fundo — motion-reduce não precisa agir. */
-    [data-theme-set].is-active {
-        background-color: var(--color-brand);
-        color: var(--color-brand-foreground);
-    }
-
     /* Skeleton (<x-skeleton>): barra base + shimmer via ::after (translateX,
        GPU-friendly). A duração/easing vêm dos tokens (--animate-shimmer). */
     .skeleton {
@@ -134,6 +141,19 @@
     }
 }
 
+/* Segmented control de tema (Perfil): estado ativo via .is-active
+   (resources/js/ui.js). Só cor/fundo — motion-reduce não precisa agir.
+   No dropdown de tema o estado ativo é o ✓ do item, não um bloco de cor:
+   por isso a regra ignora itens de menu.
+
+   FORA de @layer: as utilitárias do Tailwind (dark:text-gray-300 no botão)
+   vencem qualquer regra da camada `components`, e o rótulo do estado ativo
+   saía cinza-claro sobre fundo quase-branco — ilegível no tema escuro. */
+[data-theme-set].is-active:not([role='menuitem']) {
+    background-color: var(--color-brand);
+    color: var(--color-brand-foreground);
+}
+
 /* Superfícies do navegador também carregam o design: seleção e foco. */
 ::selection {
     background: color-mix(in oklab, var(--color-brand) 40%, transparent);
@@ -142,4 +162,55 @@
 :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
+    /* O anel sozinho some quando a marca e a superfície são quase a mesma cor
+       (primária quase-preta sobre botão quase-preto; quase-branca sobre card
+       claro). O halo da cor da superfície SEPARA o anel do que está embaixo —
+       contraste garantido nos dois temas. */
+    box-shadow: 0 0 0 4px var(--color-surface);
+}
+
+@layer components {
+    /*
+        Drawer (<x-drawer>): mesmo motor do modal ([data-modal] + .is-open em
+        resources/js/ui.js — abrir, Esc, backdrop, foco preso), outra
+        geometria: um painel colado na borda que ENTRA deslizando. É o padrão
+        de navegação mobile do painel e da landing.
+    */
+    .drawer-panel {
+        transition:
+            opacity 220ms var(--ease-out),
+            transform 220ms var(--ease-out);
+    }
+
+    [data-modal]:not(.is-open) .drawer-panel {
+        opacity: 0;
+        transition-duration: 160ms;
+    }
+
+    /*
+        Dropdown (<x-dropdown>): menu ancorado no gatilho — seletor de idioma,
+        seletor de tema e menu de ações destrutivas (⋯). Ancorado ≠ modal:
+        a origem da escala é o canto de onde ele nasce.
+    */
+    .dropdown-menu {
+        transform-origin: var(--dropdown-origin, top right);
+        transition:
+            opacity 150ms var(--ease-out),
+            transform 150ms var(--ease-out);
+    }
+
+    [data-dropdown]:not(.is-open) .dropdown-menu {
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-modal]:not(.is-open) .drawer-panel {
+        transform: translateX(var(--drawer-offset, 100%));
+    }
+
+    [data-dropdown]:not(.is-open) .dropdown-menu {
+        transform: scale(0.96);
+    }
 }

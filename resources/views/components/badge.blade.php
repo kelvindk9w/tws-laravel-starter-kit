@@ -8,7 +8,7 @@
         'red' => 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300',
         'blue' => 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300',
         'brand' => 'bg-brand/10 text-brand',
-        default => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+        default => 'bg-surface-sunken text-gray-700 ring-1 ring-inset ring-border dark:text-gray-300',
     };
 @endphp
 

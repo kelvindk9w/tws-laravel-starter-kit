@@ -289,3 +289,53 @@ it('não revoga chave de outro tenant (404 uniforme)', function () {
         ->test(Index::class)
         ->call('startRevoke', $alheia->uuid);
 })->throws(ModelNotFoundException::class);
+
+// =============================================================================
+// Regressões de interface (QA): o que a tela mostra, não só o que ela grava.
+// =============================================================================
+
+it('não empilha dois modais: a confirmação de segurança substitui o de rotação', function () {
+    $user = User::factory()->withTransactionPassword()->create();
+    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Produção'])['api_key'];
+
+    $component = Livewire::actingAs($user)
+        ->test(Index::class)
+        ->call('startRotate', $chave->uuid);
+
+    // Passo 1: só o modal de rotação está na tela.
+    $component->assertSee(__('panel.api_keys.rotate_title'))
+        ->assertDontSee(__('panel.api_keys.sensitive_heading'));
+
+    // Passo 2: a confirmação de segurança abre e o de rotação SAI — antes os
+    // dois ficavam sobrepostos, o de trás visível através do backdrop.
+    $component->set('gracePeriodMinutes', 0)
+        ->call('requestRotate')
+        ->assertSee(__('panel.api_keys.sensitive_heading'))
+        ->assertDontSee(__('panel.api_keys.rotate_title'));
+
+    // Cancelar a confirmação volta para o passo anterior (nada some sem aviso).
+    $component->call('cancelSensitiveAction')
+        ->assertSee(__('panel.api_keys.rotate_title'));
+});
+
+it('oferece copiar a chave pública em cada linha da listagem', function () {
+    $user = User::factory()->withTransactionPassword()->create();
+    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Integração'])['api_key'];
+
+    Livewire::actingAs($user)
+        ->test(Index::class)
+        ->assertSee('data-copy="'.$chave->public_key.'"', false)
+        ->assertSee(__('panel.api_keys.copy_public'));
+});
+
+it('mantém a ação destrutiva fora da linha de frente (menu de overflow)', function () {
+    $user = User::factory()->withTransactionPassword()->create();
+    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Integração'])['api_key'];
+
+    Livewire::actingAs($user)
+        ->test(Index::class)
+        // Rotina: botões visíveis. Destrutiva: dentro de [data-dropdown-menu].
+        ->assertSee(__('panel.api_keys.rotate'))
+        ->assertSee('data-dropdown-menu', false)
+        ->assertSee(__('panel.common.more_actions'));
+});

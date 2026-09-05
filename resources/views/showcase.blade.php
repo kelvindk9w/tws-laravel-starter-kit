@@ -47,6 +47,15 @@
         'form_errors_toast' => '<x-form-errors display="toast" />',
         'form_errors_both' => '<x-form-errors display="both" /> + :error="field_error(\'email\')"',
         'field_error' => ':error="field_error(\'email\')" // respeita a estratégia configurada',
+        'table' => '<x-table :headers="[…]"><x-table-row><x-table-cell label="Nome">…</x-table-cell></x-table-row></x-table>',
+        'stat' => '<x-stat label="…" value="12" icon="key" href="…" />',
+        'chart' => '<x-chart :labels="[…]" :values="[…]" label="…" />',
+        'dropdown' => '<x-dropdown><x-slot:trigger>…</x-slot:trigger><x-dropdown-item href="…">…</x-dropdown-item></x-dropdown>',
+        'dropdown_danger' => '<x-dropdown-item danger wire:click="…">…</x-dropdown-item>',
+        'drawer' => '<x-button data-modal-open="menu">…</x-button> + <x-drawer id="menu" title="…" side="left">…</x-drawer>',
+        'file_input' => '<x-file-input name="avatar" accept="image/*" />',
+        'locale_switcher' => '<x-locale-switcher />',
+        'theme_toggle' => '<x-theme-toggle />',
         'classic_form' => '<form method="POST">…old(\'campo\')…</form> + redirect back()',
         'ajax_form' => '<form wire:submit="send">…wire:model…</form>',
     ];
@@ -326,6 +335,139 @@
                     <x-snippet :code="$snip['overlay']" />
                 </div>
                 <x-loading-overlay id="showcase-overlay" :message="__('showcase.loading.saving')" />
+            </section>
+
+            {{-- Dados: tabela, métrica e gráfico (o painel do usuário consome os 3) --}}
+            <section id="data_display" class="mb-16 scroll-mt-24">
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.data_display') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.data_display.guide') }}</p>
+
+                <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.data_display.table_heading') }}</h3>
+                <p class="mb-4 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.data_display.table_hint') }}</p>
+                <x-table :headers="[__('showcase.data_display.col_name'), __('showcase.data_display.col_status'), __('showcase.data_display.col_actions')]">
+                    @foreach ([['Checkout', 'green'], ['Webhooks', 'green'], ['Legado', 'gray']] as [$rowName, $rowColor])
+                        <x-table-row>
+                            <x-table-cell :label="__('showcase.data_display.col_name')">
+                                <span class="font-medium text-gray-900 dark:text-gray-100">{{ $rowName }}</span>
+                            </x-table-cell>
+                            <x-table-cell :label="__('showcase.data_display.col_status')">
+                                <x-badge :color="$rowColor">{{ $rowColor === 'green' ? __('showcase.data_display.status_active') : __('showcase.data_display.status_off') }}</x-badge>
+                            </x-table-cell>
+                            <x-table-cell :label="__('showcase.data_display.col_actions')" align="end">
+                                <span class="flex items-center justify-end gap-2">
+                                    <x-button variant="secondary" size="sm">{{ __('showcase.data_display.row_action') }}</x-button>
+                                    <x-dropdown>
+                                        <x-slot:trigger>
+                                            <button type="button" aria-label="{{ __('panel.common.more_actions') }}" class="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border text-gray-500 hover:bg-surface-sunken sm:h-8 sm:w-8 dark:text-gray-400">
+                                                <x-ui-icon name="ellipsis-horizontal" class="h-4 w-4" />
+                                            </button>
+                                        </x-slot:trigger>
+                                        <x-dropdown-item danger>
+                                            <x-ui-icon name="trash" class="h-4 w-4" />
+                                            {{ __('panel.common.delete') }}
+                                        </x-dropdown-item>
+                                    </x-dropdown>
+                                </span>
+                            </x-table-cell>
+                        </x-table-row>
+                    @endforeach
+                </x-table>
+                <div class="mt-2"><x-snippet :code="$snip['table']" /></div>
+
+                <h3 class="mb-2 mt-10 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.data_display.stat_heading') }}</h3>
+                <p class="mb-4 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.data_display.stat_hint') }}</p>
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <x-stat :label="__('showcase.data_display.stat_keys')" value="12" icon="key" />
+                    <x-stat :label="__('showcase.data_display.stat_projects')" value="3" icon="folder" />
+                    <x-stat :label="__('showcase.data_display.stat_requests')" value="1.284" icon="signal" :hint="__('showcase.data_display.stat_hint_days')" />
+                </div>
+                <div class="mt-2"><x-snippet :code="$snip['stat']" /></div>
+
+                <h3 class="mb-2 mt-10 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.data_display.chart_heading') }}</h3>
+                <p class="mb-4 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.data_display.chart_hint') }}</p>
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <x-card :title="__('showcase.data_display.chart_with_data')">
+                        <x-chart
+                            :labels="['01/09', '02/09', '03/09', '04/09', '05/09', '06/09', '07/09']"
+                            :values="[8, 14, 9, 22, 17, 26, 31]"
+                            :label="__('showcase.data_display.chart_series')"
+                        />
+                    </x-card>
+                    <x-card :title="__('showcase.data_display.chart_empty')">
+                        <x-chart :labels="[]" :values="[]" :label="__('showcase.data_display.chart_series')" :empty-description="__('showcase.data_display.chart_empty_hint')" />
+                    </x-card>
+                </div>
+                <div class="mt-2"><x-snippet :code="$snip['chart']" /></div>
+            </section>
+
+            {{-- Navegação: dropdown, drawer, arquivo, idioma e tema --}}
+            <section id="navigation" class="mb-16 scroll-mt-24">
+                <h2 class="mb-2 font-display text-xl font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">{{ __('showcase.categories.navigation') }}</h2>
+                <p class="mb-6 max-w-2xl text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.guide') }}</p>
+
+                <div class="grid gap-8 sm:grid-cols-2">
+                    <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.dropdown_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.dropdown_hint') }}</p>
+                        <x-dropdown align="left">
+                            <x-slot:trigger>
+                                <x-button variant="secondary" size="sm">
+                                    {{ __('showcase.navigation.dropdown_trigger') }}
+                                    <x-ui-icon name="chevron-down" class="h-3.5 w-3.5" />
+                                </x-button>
+                            </x-slot:trigger>
+                            <x-dropdown-item active>
+                                <x-ui-icon name="check-circle" class="h-4 w-4" />
+                                {{ __('showcase.navigation.dropdown_item_active') }}
+                            </x-dropdown-item>
+                            <x-dropdown-item>
+                                <x-ui-icon name="pencil-square" class="h-4 w-4" />
+                                {{ __('showcase.navigation.dropdown_item') }}
+                            </x-dropdown-item>
+                            <x-dropdown-item danger>
+                                <x-ui-icon name="trash" class="h-4 w-4" />
+                                {{ __('showcase.navigation.dropdown_item_danger') }}
+                            </x-dropdown-item>
+                        </x-dropdown>
+                        <div class="mt-3 flex flex-col gap-2">
+                            <x-snippet :code="$snip['dropdown']" />
+                            <x-snippet :code="$snip['dropdown_danger']" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.drawer_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.drawer_hint') }}</p>
+                        <x-button variant="secondary" size="sm" data-modal-open="showcase-drawer">
+                            <x-ui-icon name="bars-3" class="h-4 w-4" />
+                            {{ __('showcase.navigation.drawer_demo') }}
+                        </x-button>
+                        <x-drawer id="showcase-drawer" :title="__('showcase.navigation.drawer_title')">
+                            <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('showcase.navigation.drawer_body') }}</p>
+                        </x-drawer>
+                        <div class="mt-3"><x-snippet :code="$snip['drawer']" /></div>
+                    </div>
+
+                    <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.file_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.file_hint') }}</p>
+                        <x-file-input name="showcase_file" accept="image/*" />
+                        <div class="mt-3"><x-snippet :code="$snip['file_input']" /></div>
+                    </div>
+
+                    <div>
+                        <h3 class="mb-2 font-semibold text-gray-900 dark:text-gray-100">{{ __('showcase.navigation.locale_heading') }}</h3>
+                        <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ __('showcase.navigation.locale_hint') }}</p>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <x-locale-switcher />
+                            <x-theme-toggle />
+                        </div>
+                        <div class="mt-3 flex flex-col gap-2">
+                            <x-snippet :code="$snip['locale_switcher']" />
+                            <x-snippet :code="$snip['theme_toggle']" />
+                        </div>
+                    </div>
+                </div>
             </section>
 
             {{-- Padrões de formulário: Blade clássico × Livewire + estratégias de erro --}}

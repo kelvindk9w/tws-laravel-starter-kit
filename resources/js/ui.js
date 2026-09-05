@@ -17,17 +17,42 @@
 //   [data-password-toggle]  botão "olho" do <x-input type="password">
 //   [data-overlay-show="id"] abre o <x-loading-overlay id>; data-overlay-timeout
 //                           (ms, opcional) auto-esconde — usado na demo do /ui
+//   [data-dropdown]         <x-dropdown> — menu ancorado (idioma, tema, ⋯)
+//   [data-dropdown-trigger] botão que abre/fecha o dropdown ancestral
+//   [data-file-input]       <x-file-input> — botão do kit + nome do arquivo
+//   [data-chart]            <x-chart> — gráfico Chart.js com tokens do tema
 // =============================================================================
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// --- Modal -------------------------------------------------------------------
+// --- Modal / drawer ----------------------------------------------------------
+//
+// O MESMO motor serve <x-modal> (painel centrado) e <x-drawer> (painel colado
+// na borda): as duas raízes são [data-modal] e a diferença é só a geometria do
+// painel (.modal-panel / .drawer-panel) — ver app.css.
+
+const PANEL = '.modal-panel, .drawer-panel';
+
+// Elementos que podem receber foco DENTRO do painel aberto.
+const FOCUSABLE =
+    'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// De onde o usuário veio, por modal aberto: ao fechar, o foco VOLTA para lá
+// (quem abriu um diálogo com o teclado não pode ser largado no topo da página).
+const focusOrigin = new WeakMap();
 
 function openModal(modal) {
+    focusOrigin.set(modal, document.activeElement);
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     void modal.offsetWidth; // reflow: a transition parte do estado inicial
     modal.classList.add('is-open');
+
+    // Foco no primeiro alvo do painel (fallback: o próprio painel).
+    const panel = modal.querySelector(PANEL);
+    const first = panel?.querySelector(FOCUSABLE);
+    (first ?? panel)?.focus?.({ preventScroll: true });
 }
 
 function closeModal(modal) {
@@ -40,9 +65,44 @@ function closeModal(modal) {
         }
     };
 
-    modal.querySelector('.modal-panel')?.addEventListener('transitionend', hide, { once: true });
+    modal.querySelector(PANEL)?.addEventListener('transitionend', hide, { once: true });
     setTimeout(hide, 250); // fallback caso a transition não dispare
+
+    const origin = focusOrigin.get(modal);
+    if (origin instanceof HTMLElement && document.contains(origin)) {
+        origin.focus({ preventScroll: true });
+    }
+    focusOrigin.delete(modal);
 }
+
+// Foco PRESO: Tab dentro de um diálogo aberto circula no próprio painel.
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return;
+
+    const modal = document.querySelector('[data-modal].is-open');
+    if (!modal) return;
+
+    const panel = modal.querySelector(PANEL);
+    const targets = [...(panel?.querySelectorAll(FOCUSABLE) ?? [])].filter(
+        (el) => el.offsetParent !== null || el === document.activeElement,
+    );
+
+    if (targets.length === 0) return;
+
+    const first = targets[0];
+    const last = targets[targets.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    } else if (!panel?.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+    }
+});
 
 document.addEventListener('click', (event) => {
     const opener = event.target.closest('[data-modal-open]');
@@ -63,9 +123,22 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        document.querySelectorAll('[data-modal].is-open').forEach(closeModal);
-    }
+    if (event.key !== 'Escape') return;
+
+    document.querySelectorAll('[data-modal].is-open').forEach((modal) => {
+        // Modal controlado pelo servidor (<x-modal dismiss="…">): o Esc precisa
+        // avisar o Livewire, senão o painel some da tela e volta no próximo
+        // render — o servidor continua achando que está aberto.
+        const dismiss = modal.querySelector('[data-modal-dismiss]');
+
+        if (dismiss) {
+            dismiss.click();
+
+            return;
+        }
+
+        closeModal(modal);
+    });
 });
 
 // --- Toast -------------------------------------------------------------------
@@ -185,6 +258,16 @@ if (revealTargets.length && !reduceMotion && 'IntersectionObserver' in window) {
         el.classList.add('reveal');
         observer.observe(el);
     });
+
+    // REDE DE SEGURANÇA: o reveal esconde conteúdo com opacity:0 via JS. Se o
+    // IntersectionObserver não disparar (aba em segundo plano, captura de tela
+    // sem scroll, layout que nunca cruza o limiar), a página fica EM BRANCO.
+    // Depois de 2s, tudo o que sobrou aparece — animação é enfeite, conteúdo
+    // não é opcional.
+    setTimeout(() => {
+        revealTargets.forEach((el) => el.classList.add('is-visible'));
+        observer.disconnect();
+    }, 2000);
 }
 
 // --- Scrollspy (sidebar do showcase) ------------------------------------------
@@ -250,6 +333,11 @@ function applyTheme(setting) {
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
         button.classList.toggle('is-active', active);
     });
+
+    // Dropdown de tema (<x-theme-toggle>): o ✓ marca o estado escolhido.
+    document.querySelectorAll('[data-theme-check]').forEach((check) => {
+        check.classList.toggle('hidden', check.dataset.themeCheck !== setting);
+    });
 }
 
 function setTheme(setting) {
@@ -292,13 +380,126 @@ themeMedia.addEventListener('change', () => {
 
 applyTheme(themeSetting());
 
-// --- Seletor de idioma ---------------------------------------------------------
+// --- Dropdown ancorado (idioma, tema, menu de ações) ----------------------------
+//
+// <x-dropdown>: um <button data-dropdown-trigger> e um painel .dropdown-menu
+// dentro de [data-dropdown]. Fecha no clique fora, no Esc e ao escolher um
+// item. Teclado: setas percorrem os itens, Home/End vão às pontas.
+//
+// O seletor de idioma (<x-locale-switcher>) é este dropdown com links reais —
+// cada item é uma URL da rota locale.switch, então funciona com o teclado, no
+// menu de contexto do navegador e sem depender de fonte de emoji.
 
-// <x-locale-switcher>: a URL de troca (cookie + preferência da conta) vai no
-// value da <option> — navegar já resolve tudo server-side.
+function closeDropdown(dropdown) {
+    dropdown.classList.remove('is-open');
+    dropdown.querySelector('[data-dropdown-trigger]')?.setAttribute('aria-expanded', 'false');
+}
+
+function openDropdown(dropdown) {
+    document.querySelectorAll('[data-dropdown].is-open').forEach((other) => {
+        if (other !== dropdown) closeDropdown(other);
+    });
+
+    dropdown.classList.add('is-open');
+    dropdown.querySelector('[data-dropdown-trigger]')?.setAttribute('aria-expanded', 'true');
+}
+
+function dropdownItems(dropdown) {
+    return [...dropdown.querySelectorAll('[data-dropdown-menu] a, [data-dropdown-menu] button')];
+}
+
+document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-dropdown-trigger]');
+
+    if (trigger) {
+        const dropdown = trigger.closest('[data-dropdown]');
+        if (!dropdown) return;
+
+        if (dropdown.classList.contains('is-open')) {
+            closeDropdown(dropdown);
+        } else {
+            openDropdown(dropdown);
+        }
+
+        return;
+    }
+
+    // Clique fora (ou num item do menu) fecha o que estiver aberto.
+    const inside = event.target.closest('[data-dropdown]');
+
+    document.querySelectorAll('[data-dropdown].is-open').forEach((dropdown) => {
+        if (dropdown !== inside || event.target.closest('[data-dropdown-menu]')) {
+            closeDropdown(dropdown);
+        }
+    });
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('[data-dropdown].is-open').forEach((dropdown) => {
+            closeDropdown(dropdown);
+            dropdown.querySelector('[data-dropdown-trigger]')?.focus();
+        });
+
+        return;
+    }
+
+    const dropdown = event.target.closest?.('[data-dropdown]');
+    if (!dropdown) return;
+
+    const isTrigger = event.target.closest('[data-dropdown-trigger]') !== null;
+
+    if (isTrigger && (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ')) {
+        if (!dropdown.classList.contains('is-open')) {
+            event.preventDefault();
+            openDropdown(dropdown);
+            dropdownItems(dropdown)[0]?.focus();
+        }
+
+        return;
+    }
+
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+
+    const items = dropdownItems(dropdown);
+    if (items.length === 0) return;
+
+    event.preventDefault();
+
+    const current = items.indexOf(document.activeElement);
+    const next = {
+        ArrowDown: current < 0 ? 0 : (current + 1) % items.length,
+        ArrowUp: current <= 0 ? items.length - 1 : current - 1,
+        Home: 0,
+        End: items.length - 1,
+    }[event.key];
+
+    items[next].focus();
+});
+
+// --- Seletor de arquivo do kit ---------------------------------------------------
+//
+// <x-file-input>: o chrome nativo do <input type="file"> ("Choose File / No
+// file chosen") é desenhado e TRADUZIDO pelo sistema operacional — num kit que
+// entrega pt-BR/en/es, ele é a única coisa em inglês na tela. Aqui o input
+// fica escondido e quem aparece é o botão do kit + o nome do arquivo.
+
+document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-file-trigger]');
+    if (!trigger) return;
+
+    trigger.closest('[data-file-input]')?.querySelector('input[type="file"]')?.click();
+});
+
 document.addEventListener('change', (event) => {
-    const select = event.target.closest('[data-locale-switch]');
-    if (select) window.location.assign(select.value);
+    const input = event.target.closest('[data-file-input] input[type="file"]');
+    if (!input) return;
+
+    const field = input.closest('[data-file-input]');
+    const name = field?.querySelector('[data-file-name]');
+    if (!name) return;
+
+    name.textContent = input.files?.[0]?.name ?? name.dataset.emptyText ?? '';
 });
 
 // --- Senha: botão "olho" do <x-input type="password"> ---------------------------

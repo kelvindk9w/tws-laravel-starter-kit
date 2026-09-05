@@ -111,7 +111,17 @@ final class Index extends Component
         $this->reset('confirmingDeleteUuid');
     }
 
-    public function delete(): void
+    /**
+     * Exclui o projeto em confirmação.
+     *
+     * O nome NÃO pode ser `delete`: o Livewire 4 em modo CSP-safe compila a
+     * expressão de `wire:click` com um parser de JS, e `delete` é PALAVRA
+     * RESERVADA da linguagem (operador). O resultado era um erro de parser no
+     * console e a exclusão nunca acontecia — a ação parecia inerte. Toda ação
+     * Livewire do kit evita nomes reservados do JavaScript (delete, new,
+     * class, default, typeof, in, …).
+     */
+    public function removeProject(): void
     {
         $project = $this->findOwned((string) $this->confirmingDeleteUuid);
 

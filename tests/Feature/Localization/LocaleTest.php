@@ -99,13 +99,18 @@ it('perfil rejeita idioma fora da whitelist', function () {
         ->assertHasErrors(['locale']);
 });
 
-it('seletor de idioma aparece na landing e no painel', function () {
-    $this->get('/')->assertOk()->assertSee('data-locale-switch', false);
+// O seletor é um dropdown de LINKS reais para locale.switch (era um <select>
+// nativo com bandeira em emoji): o contrato é a URL de cada idioma + o nome.
+it('seletor de idioma aparece na landing e no painel com um link por idioma', function () {
+    $landing = $this->get('/')->assertOk();
+    $painel = $this->actingAs(User::factory()->create())->get('/dashboard')->assertOk();
 
-    $this->actingAs(User::factory()->create())
-        ->get('/dashboard')
-        ->assertOk()
-        ->assertSee('data-locale-switch', false);
+    foreach (platform()->availableLocales as $locale) {
+        $landing->assertSee(route('locale.switch', $locale), false)
+            ->assertSee(__("ui.locale.names.{$locale}"));
+
+        $painel->assertSee(route('locale.switch', $locale), false);
+    }
 });
 
 it('e-mail transacional sai no locale do destinatário', function () {

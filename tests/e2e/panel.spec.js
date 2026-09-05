@@ -68,12 +68,14 @@ test.describe('autenticado', () => {
 
         await expect(page).toHaveURL(/\/api-keys$/);
         await expect(page.getByRole('heading', { level: 1 })).toContainText('Chaves de API');
-        await expect(page.getByRole('button', { name: 'Nova chave' })).toBeVisible();
+        // .first(): com a conta vazia o estado vazio (<x-empty-state>) repete
+        // a mesma ação — o CTA aparece no cabeçalho e dentro do bloco.
+        await expect(page.getByRole('button', { name: 'Nova chave' }).first()).toBeVisible();
     });
 
     test('chaves de API: formulário de criação abre na mesma tela (ADR-005)', async ({ page }) => {
         await page.goto('/api-keys');
-        await page.getByRole('button', { name: 'Nova chave' }).click();
+        await page.getByRole('button', { name: 'Nova chave' }).first().click();
 
         // O formulário abre via Livewire (prova que o JS hidratou — bundle
         // CSP-safe compatível com a CSP estrita do painel).
@@ -89,5 +91,65 @@ test.describe('autenticado', () => {
         const response = await page.goto('/admin');
 
         expect(response?.status()).toBe(403);
+    });
+});
+
+// -----------------------------------------------------------------------------
+// Regressões de QA (bugs 1 e 8) — o que quebrou de verdade no navegador.
+// -----------------------------------------------------------------------------
+test.describe('regressões', () => {
+    test.use({ storageState: 'tests/e2e/.auth/e2e.json' });
+
+    test('projetos: criar e EXCLUIR de verdade (parser CSP-safe do Livewire)', async ({ page }) => {
+        const nome = `Projeto E2E ${Date.now()}`;
+        const erros = [];
+        page.on('console', (msg) => msg.type() === 'error' && erros.push(msg.text()));
+
+        await page.goto('/projects');
+        await page.getByRole('button', { name: 'Novo projeto' }).first().click();
+        await page.getByLabel('Nome', { exact: true }).fill(nome);
+        await page.getByRole('button', { name: 'Criar', exact: true }).click();
+        await expect(page.getByText(nome)).toBeVisible();
+
+        // Excluir: menu de overflow → modal de confirmação → Excluir.
+        const linha = page.getByRole('row').filter({ hasText: nome });
+        await linha.getByRole('button', { name: 'Mais ações' }).click();
+        await linha.getByRole('menuitem', { name: 'Excluir' }).click();
+
+        const modal = page.locator('#delete-project');
+        await expect(modal).toBeVisible();
+        await modal.getByRole('button', { name: 'Excluir' }).click();
+
+        // O projeto SAI da lista de verdade (o bug antigo: `wire:click="delete"`
+        // estourava o parser CSP do Livewire e a ação nunca rodava).
+        await expect(page.getByText(nome)).toHaveCount(0);
+        await page.reload();
+        await expect(page.getByText(nome)).toHaveCount(0);
+
+        expect(erros.filter((e) => e.includes('CSP Parser Error'))).toHaveLength(0);
+    });
+
+    test('painel no mobile: hambúrguer abre o drawer, Esc fecha', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto('/dashboard');
+
+        const drawer = page.locator('#panel-menu');
+        await expect(drawer).toBeHidden();
+
+        await page.getByRole('button', { name: 'Abrir menu de navegação' }).click();
+        await expect(drawer).toBeVisible();
+        await expect(drawer.getByRole('link', { name: 'Chaves de API' })).toBeVisible();
+
+        await page.keyboard.press('Escape');
+        await expect(drawer).toBeHidden();
+    });
+
+    test('dashboard: métricas, gráfico e últimas chamadas da API', async ({ page }) => {
+        await page.goto('/dashboard');
+
+        await expect(page.getByText('Chaves de API ativas')).toBeVisible();
+        await expect(page.getByText('Projetos', { exact: true }).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Requisições por dia/ })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Últimas chamadas da API' })).toBeVisible();
     });
 });

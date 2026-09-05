@@ -1,38 +1,46 @@
+@php
+    $deletingProject = $confirmingDeleteUuid !== null
+        ? $projects->firstWhere('uuid', $confirmingDeleteUuid)
+        : null;
+@endphp
+
 <div class="space-y-6">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-semibold">{{ __('panel.projects.title') }}</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.projects.subtitle') }}</p>
+            <h1 class="font-display text-h1">{{ __('panel.projects.title') }}</h1>
+            <p class="mt-1.5 max-w-2xl text-sm text-text-muted">{{ __('panel.projects.subtitle') }}</p>
         </div>
         @unless ($showCreateForm)
-            <button type="button" wire:click="startCreate" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">
+            <x-button type="button" wire:click="startCreate" size="sm">
+                <x-ui-icon name="plus" class="h-4 w-4" />
                 {{ __('panel.projects.new') }}
-            </button>
+            </x-button>
         @endunless
     </div>
 
     @if (session('projects_status'))
-        <p class="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{{ session('projects_status') }}</p>
+        <x-alert type="success">{{ session('projects_status') }}</x-alert>
     @endif
 
     {{-- Criação inline (mesma tela — ADR-005) --}}
     @if ($showCreateForm)
-        <form wire:submit="create" class="flex flex-wrap items-start gap-2 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <div class="min-w-0 flex-1">
-                <label for="projectName" class="sr-only">{{ __('panel.common.name') }}</label>
-                <input id="projectName" type="text" wire:model="name" placeholder="{{ __('panel.common.name') }}" maxlength="255"
-                       class="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-            </div>
-            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.create') }}</button>
-            <button type="button" wire:click="cancelCreate" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
-        </form>
-    @endif
-
-    @if ($projects->isEmpty() && ! $showCreateForm)
-        <p class="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500 dark:border-gray-700">
-            {{ __('panel.projects.empty') }}
-        </p>
+        <x-card :title="__('panel.projects.new')">
+            <form wire:submit="create" class="flex flex-wrap items-end gap-3">
+                <x-input
+                    class="min-w-0 flex-1"
+                    :label="__('panel.common.name')"
+                    name="projectName"
+                    wire:model="name"
+                    maxlength="255"
+                    :placeholder="__('panel.projects.name_placeholder')"
+                    :error="$errors->first('name')"
+                />
+                <div class="flex gap-2">
+                    <x-button type="submit">{{ __('panel.common.create') }}</x-button>
+                    <x-button type="button" variant="secondary" wire:click="cancelCreate">{{ __('panel.common.cancel') }}</x-button>
+                </div>
+            </form>
+        </x-card>
     @endif
 
     {{-- Skeleton durante ações Livewire (criar/editar/excluir): mostra a
@@ -41,46 +49,103 @@
         <x-skeleton :lines="3" />
     </div>
 
-    <div wire:loading.remove class="space-y-3">
-        @foreach ($projects as $project)
-            <article class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                @if ($editingUuid === $project->uuid)
-                    {{-- Edição inline --}}
-                    <form wire:submit="update" class="flex flex-wrap items-start gap-2">
-                        <div class="min-w-0 flex-1">
-                            <label for="editingName" class="sr-only">{{ __('panel.projects.edit') }}</label>
-                            <input id="editingName" type="text" wire:model="editingName" maxlength="255"
-                                   class="w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                            @error('editingName') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                        <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
-                        <button type="button" wire:click="cancelEdit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
-                    </form>
-                @elseif ($confirmingDeleteUuid === $project->uuid)
-                    {{-- Confirmação de exclusão inline --}}
-                    <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('panel.projects.delete_warning', ['name' => $project->name]) }}</p>
-                    <div class="mt-3 flex gap-2">
-                        <button type="button" wire:click="delete" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white">{{ __('panel.common.delete') }}</button>
-                        <button type="button" wire:click="cancelDelete" class="rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-700">{{ __('panel.common.cancel') }}</button>
-                    </div>
-                @else
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <h3 class="font-medium">{{ $project->name }}</h3>
-                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                <code>{{ $project->codigo_publico }}</code>
-                                · {{ __('panel.projects.linked_keys', ['count' => $project->api_keys_count]) }}
-                            </p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button type="button" wire:click="startEdit('{{ $project->uuid }}')"
-                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium dark:border-gray-700">{{ __('panel.common.edit') }}</button>
-                            <button type="button" wire:click="startDelete('{{ $project->uuid }}')"
-                                    class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 dark:border-red-800 dark:text-red-400">{{ __('panel.common.delete') }}</button>
-                        </div>
-                    </div>
-                @endif
-            </article>
-        @endforeach
+    <div wire:loading.remove>
+        @if ($projects->isEmpty())
+            @unless ($showCreateForm)
+                <x-empty-state
+                    icon="folder"
+                    :title="__('panel.projects.empty_title')"
+                    :description="__('panel.projects.empty')"
+                >
+                    <x-button type="button" wire:click="startCreate">{{ __('panel.projects.new') }}</x-button>
+                </x-empty-state>
+            @endunless
+        @else
+            <x-table :headers="[
+                __('panel.common.name'),
+                __('panel.projects.code'),
+                __('panel.projects.keys_column'),
+                __('panel.common.actions'),
+            ]">
+                @foreach ($projects as $project)
+                    <x-table-row>
+                        @if ($editingUuid === $project->uuid)
+                            {{-- Edição inline: a linha inteira vira o formulário. --}}
+                            <td colspan="4" class="block p-0 sm:table-cell sm:px-5 sm:py-3">
+                                <form wire:submit="update" class="flex flex-wrap items-end gap-3">
+                                    <x-input
+                                        class="min-w-0 flex-1"
+                                        :label="__('panel.projects.edit')"
+                                        name="editingName"
+                                        wire:model="editingName"
+                                        maxlength="255"
+                                        :error="$errors->first('editingName')"
+                                    />
+                                    <div class="flex gap-2">
+                                        <x-button type="submit" size="sm">{{ __('panel.common.save') }}</x-button>
+                                        <x-button type="button" variant="secondary" size="sm" wire:click="cancelEdit">{{ __('panel.common.cancel') }}</x-button>
+                                    </div>
+                                </form>
+                            </td>
+                        @else
+                            <x-table-cell :label="__('panel.common.name')">
+                                <span class="font-medium text-gray-900 dark:text-gray-100">{{ $project->name }}</span>
+                            </x-table-cell>
+                            <x-table-cell :label="__('panel.projects.code')">
+                                <code class="font-mono text-caption text-text-muted">{{ $project->codigo_publico }}</code>
+                            </x-table-cell>
+                            <x-table-cell :label="__('panel.projects.keys_column')">
+                                <span class="text-caption text-text-muted">{{ __('panel.projects.linked_keys', ['count' => $project->api_keys_count]) }}</span>
+                            </x-table-cell>
+                            <x-table-cell :label="__('panel.common.actions')" align="end">
+                                <span class="flex items-center justify-end gap-2">
+                                    <x-button type="button" variant="secondary" size="sm" wire:click="startEdit('{{ $project->uuid }}')">{{ __('panel.common.edit') }}</x-button>
+
+                                    {{-- Ação destrutiva mora num menu de overflow:
+                                         no mobile, três botões encostados fazem o
+                                         dedo errar o alvo — e o alvo errado aqui
+                                         apaga dado. --}}
+                                    <x-dropdown>
+                                        <x-slot:trigger>
+                                            <button
+                                                type="button"
+                                                aria-label="{{ __('panel.common.more_actions') }}"
+                                                class="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border text-gray-500 transition-colors duration-150 ease-(--ease-out) hover:bg-surface-sunken hover:text-gray-900 sm:h-8 sm:w-8 dark:text-gray-400 dark:hover:text-gray-100"
+                                            >
+                                                <x-ui-icon name="ellipsis-horizontal" class="h-4 w-4" />
+                                            </button>
+                                        </x-slot:trigger>
+                                        <x-dropdown-item danger wire:click="startDelete('{{ $project->uuid }}')">
+                                            <x-ui-icon name="trash" class="h-4 w-4" />
+                                            {{ __('panel.common.delete') }}
+                                        </x-dropdown-item>
+                                    </x-dropdown>
+                                </span>
+                            </x-table-cell>
+                        @endif
+                    </x-table-row>
+                @endforeach
+            </x-table>
+        @endif
     </div>
+
+    {{-- Confirmação de exclusão: modal do kit, controlado pelo servidor
+         (:open + dismiss ligam backdrop/X/Esc à ação Livewire). --}}
+    @if ($deletingProject !== null)
+        <x-modal
+            id="delete-project"
+            :open="true"
+            dismiss="cancelDelete"
+            :title="__('panel.projects.delete_title')"
+        >
+            {{ __('panel.projects.delete_warning', ['name' => $deletingProject->name]) }}
+
+            <x-slot:footer>
+                <x-button type="button" variant="secondary" wire:click="cancelDelete">{{ __('panel.common.cancel') }}</x-button>
+                {{-- wire:click="removeProject": `delete` é palavra reservada do
+                     JS e quebra o parser CSP-safe do Livewire (ver o método). --}}
+                <x-button type="button" variant="danger" wire:click="removeProject">{{ __('panel.common.delete') }}</x-button>
+            </x-slot:footer>
+        </x-modal>
+    @endif
 </div>

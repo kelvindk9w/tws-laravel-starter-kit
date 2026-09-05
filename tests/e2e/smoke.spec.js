@@ -38,14 +38,34 @@ test('landing tem CTA "Testar demo" e link do repositório', async ({ page }) =>
     await expect(page.locator('img[src*="img/landing/dashboard.png"]')).toBeVisible();
 });
 
+// O seletor de idioma é um dropdown do kit (era um <select> nativo com emoji):
+// bandeira em SVG + nome do idioma por extenso, com links reais.
 test('seletor de idioma: landing renderiza em inglês e espanhol', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('[data-locale-switch]').first().selectOption({ label: '🇺🇸 EN' });
+    await page.locator('[data-dropdown-trigger]').first().click();
+    await page.getByRole('menuitem', { name: 'English' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Your Laravel SaaS');
 
-    await page.locator('[data-locale-switch]').first().selectOption({ label: '🇪🇸 ES' });
+    await page.locator('[data-dropdown-trigger]').first().click();
+    await page.getByRole('menuitem', { name: 'Español' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Tu SaaS Laravel');
+});
+
+// Abaixo de sm: a nav vira drawer (QA bug 11): hambúrguer abre, Esc fecha.
+test('landing no mobile: menu hambúrguer abre o drawer e o Esc fecha', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    const drawer = page.locator('#landing-menu');
+    await expect(drawer).toBeHidden();
+
+    await page.getByRole('button', { name: 'Abrir menu de navegação' }).click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Componentes' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
 });
 
 test('formulário de contato: envio válido mostra toast de sucesso', async ({ page }) => {
@@ -75,15 +95,20 @@ test('showcase: snippets copiam com feedback e o tema alterna claro/escuro', asy
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(copied).toContain('<x-button');
 
-    // Toggle de 3 estados: sistema → claro → escuro → sistema
-    // (colorScheme padrão do Playwright = light, então 'system' não tem .dark).
+    // Seletor de tema: 3 estados NOMEADOS num dropdown (era um ícone que
+    // ciclava às cegas). colorScheme padrão do Playwright = light, então
+    // 'Sistema' não aplica .dark.
     const html = page.locator('html');
-    await page.locator('[data-theme-toggle]').first().click(); // system → light
-    await expect(html).not.toHaveClass(/dark/);
-    await page.locator('[data-theme-toggle]').first().click(); // light → dark
+    const themeTrigger = page.locator('[data-theme-set="dark"]').first();
+
+    await page.getByRole('button', { name: 'Tema' }).first().click();
+    await themeTrigger.click();
     await expect(html).toHaveClass(/dark/);
+
     await page.reload(); // persistido em localStorage
     await expect(html).toHaveClass(/dark/);
-    await page.locator('[data-theme-toggle]').first().click(); // dark → system
+
+    await page.getByRole('button', { name: 'Tema' }).first().click();
+    await page.locator('[data-theme-set="light"]').first().click();
     await expect(html).not.toHaveClass(/dark/);
 });

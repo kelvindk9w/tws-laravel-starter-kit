@@ -15,6 +15,8 @@ return [
         'notifications' => 'Notificaciones',
         'profile' => 'Perfil',
         'toggle_theme' => 'Alternar tema claro/oscuro',
+        'menu' => 'Menú',
+        'open_menu' => 'Abrir menú de navegación',
     ],
 
     'common' => [
@@ -33,6 +35,9 @@ return [
         'none' => 'Ninguno',
         'saved' => 'Guardado con éxito.',
         'optional' => 'opcional',
+        'copy' => 'Copiar',
+        'copied' => '¡Copiado!',
+        'more_actions' => 'Más acciones',
     ],
 
     // Dashboard.
@@ -46,6 +51,22 @@ return [
         'new_api_key' => 'Crear clave de API',
         'new_project' => 'Crear proyecto',
         'manage_profile' => 'Mi perfil',
+
+        // Métricas e tráfego real da conta (request_logs — ADR-004/010).
+        'summary_requests' => 'Solicitudes (:days días)',
+        'summary_last_key_use' => 'Último uso de clave',
+        'last_key_use_empty' => 'Todavía no hay llamadas autenticadas.',
+        'chart_title' => 'Solicitudes por día (:days días)',
+        'chart_hint' => 'Cada llamada autenticada de tu cuenta a la API, agrupada por día.',
+        'chart_series' => 'Solicitudes',
+        'chart_empty_title' => 'Sin solicitudes en el período',
+        'chart_empty_description' => 'En cuanto tu integración empiece a llamar a la API, el tráfico aparece aquí.',
+        'recent_calls_title' => 'Últimas llamadas a la API',
+        'recent_calls_hint' => 'Las 5 más recientes de esta cuenta.',
+        'recent_calls_empty_title' => 'Tu API aún no ha recibido llamadas',
+        'recent_calls_empty_description' => 'Crea una clave de API y haz la primera solicitud para ver la traza de auditoría aquí.',
+        'call_endpoint' => 'Endpoint',
+        'call_when' => 'Cuándo',
     ],
 
     // Perfil.
@@ -68,6 +89,15 @@ return [
         'transaction_password_hint' => 'Se usa para autorizar acciones sensibles (creación/rotación de claves de API). Debe ser diferente de la contraseña de acceso.',
         'transaction_password_set' => 'Definida',
         'transaction_password_not_set' => 'No definida — defínela para poder crear claves de API.',
+        'subtitle' => 'Tus datos, apariencia, foto y las dos contraseñas de la cuenta.',
+        'password_hint' => 'Requiere la contraseña actual. La nueva necesita mayúscula, minúscula y número.',
+        'choose_file' => 'Elegir imagen',
+        'avatar_uploading' => 'Subiendo la imagen…',
+        // Cada botão nomeia o próprio escopo (a tela salva 4 coisas).
+        'save_data' => 'Guardar datos',
+        'save_avatar' => 'Guardar foto',
+        'save_password' => 'Cambiar contraseña de acceso',
+        'save_transaction_password' => 'Cambiar contraseña de transacción',
     ],
 
     // Proyectos (ADR-005 — capa organizacional, solo nombre).
@@ -85,6 +115,10 @@ return [
         'status_active' => 'Activo',
         'status_archived' => 'Archivado',
         'linked_keys' => ':count clave(s) vinculada(s)',
+        'name_placeholder' => 'Ej.: Tienda en línea',
+        'empty_title' => 'Todavía no hay proyectos',
+        'code' => 'Código',
+        'keys_column' => 'Claves',
     ],
 
     // Claves de API (ADR-006 — la pantalla más importante).
@@ -131,6 +165,11 @@ return [
         'copy' => 'Copiar',
         'copied' => '¡Copiada!',
         'secret_done' => 'Ya guardé la clave de forma segura',
+        'secret_key' => 'Clave secreta',
+        'name_placeholder' => 'Ej.: Integración del checkout',
+        'empty_title' => 'Todavía no hay claves de API',
+        'copy_public' => 'Copiar clave pública',
+        'copied_public' => 'Clave pública copiada.',
 
         // Flujo de acción sensible (contraseña de transacción + código por correo).
         'sensitive_heading' => 'Confirmación de seguridad',
@@ -175,6 +214,8 @@ return [
         'pref_security_alerts' => 'Alertas de seguridad',
         'pref_security_alerts_hint' => 'Inicios de sesión y acciones sensibles. Siempre activas — no se pueden desactivar.',
         'locked' => 'Siempre activo',
+        'emails_heading' => 'Correos que recibes',
+        'save' => 'Guardar preferencias',
     ],
 
 ];

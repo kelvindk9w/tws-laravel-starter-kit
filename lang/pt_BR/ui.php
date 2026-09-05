@@ -18,9 +18,21 @@ return [
 
     'theme' => [
         'toggle' => 'Tema: alterna entre sistema, claro e escuro',
+        'label' => 'Tema',
         'system' => 'Sistema',
         'light' => 'Claro',
         'dark' => 'Escuro',
+    ],
+
+    // Seletor de arquivo do kit (<x-file-input>): o chrome nativo do
+    // <input type="file"> é traduzido pelo SISTEMA OPERACIONAL, não por nós.
+    'file' => [
+        'choose' => 'Escolher arquivo',
+        'empty' => 'Nenhum arquivo selecionado',
+    ],
+
+    'chart' => [
+        'empty_title' => 'Sem dados no período',
     ],
 
     'password' => [

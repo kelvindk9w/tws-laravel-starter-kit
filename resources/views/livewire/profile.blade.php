@@ -1,91 +1,112 @@
 <div class="space-y-6">
-    <h1 class="text-2xl font-semibold">{{ __('panel.profile.title') }}</h1>
+    <div>
+        <h1 class="font-display text-h1">{{ __('panel.profile.title') }}</h1>
+        <p class="mt-1.5 max-w-2xl text-sm text-text-muted">{{ __('panel.profile.subtitle') }}</p>
+    </div>
 
     {{-- Dados básicos ------------------------------------------------------ --}}
-    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 class="font-semibold">{{ __('panel.profile.data_heading') }}</h2>
-
+    <x-card :title="__('panel.profile.data_heading')">
         @if (session('profile_status'))
-            <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{{ session('profile_status') }}</p>
+            <x-alert type="success" class="mb-4">{{ session('profile_status') }}</x-alert>
         @endif
 
-        <form wire:submit="updateProfile" class="mt-4 space-y-4">
-            <div>
-                <label for="name" class="text-sm font-medium">{{ __('panel.common.name') }}</label>
-                <input id="name" type="text" wire:model="name" required
-                       class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
-                @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label for="locale" class="text-sm font-medium">{{ __('panel.profile.locale_label') }}</label>
-                <select id="locale" wire:model="locale"
-                        class="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 dark:border-gray-700">
+        <form wire:submit="updateProfile" class="space-y-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <x-input
+                    :label="__('panel.common.name')"
+                    name="name"
+                    wire:model="name"
+                    required
+                    :error="$errors->first('name')"
+                />
+                <x-select
+                    :label="__('panel.profile.locale_label')"
+                    name="locale"
+                    wire:model="locale"
+                    :hint="__('panel.profile.locale_hint')"
+                    :error="$errors->first('locale')"
+                >
                     @foreach (platform()->availableLocales as $availableLocale)
                         <option value="{{ $availableLocale }}">{{ __("ui.locale.names.{$availableLocale}") }}</option>
                     @endforeach
-                </select>
-                <p class="mt-1 text-xs text-gray-500">{{ __('panel.profile.locale_hint') }}</p>
-                @error('locale') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                </x-select>
             </div>
-            <div>
-                <label class="text-sm font-medium">{{ __('auth.ui.email') }}</label>
-                <p class="mt-1 rounded-lg bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $user->email }}</p>
-                <p class="mt-1 text-xs text-gray-500">{{ __('panel.profile.email_readonly') }}</p>
+
+            {{-- O e-mail é a chave de acesso: campo desabilitado (com fundo
+                 próprio, via --color-surface-disabled) em vez de um parágrafo
+                 solto — a tela não muda de vocabulário no meio. --}}
+            <x-input
+                :label="__('auth.ui.email')"
+                name="email"
+                type="email"
+                :value="$user->email"
+                :disabled="true"
+                :hint="__('panel.profile.email_readonly')"
+            />
+
+            <div class="flex justify-end">
+                {{-- Quatro botões "Salvar" idênticos numa tela que salva quatro
+                     coisas diferentes não dizem o que fazem. Cada um nomeia o
+                     próprio escopo. --}}
+                <x-button type="submit">{{ __('panel.profile.save_data') }}</x-button>
             </div>
-            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
         </form>
-    </section>
+    </x-card>
 
     {{-- Aparência (tema claro/escuro/sistema) -------------------------------- --}}
-    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 class="font-semibold">{{ __('panel.profile.theme_heading') }}</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.profile.theme_hint') }}</p>
-
-        <div class="mt-4 inline-flex gap-1 rounded-lg border border-gray-200 p-1 dark:border-gray-700" role="group" aria-label="{{ __('panel.profile.theme_heading') }}">
+    <x-card :title="__('panel.profile.theme_heading')" :description="__('panel.profile.theme_hint')">
+        <div class="inline-flex gap-1 rounded-lg border border-border p-1" role="group" aria-label="{{ __('panel.profile.theme_heading') }}">
             @foreach (['system' => 'computer-desktop', 'light' => 'sun', 'dark' => 'moon'] as $themeValue => $themeIcon)
                 <button type="button" data-theme-set="{{ $themeValue }}" aria-pressed="false"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-600 transition-[background-color,color] duration-150 ease-(--ease-out) dark:text-gray-300">
+                        class="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 transition-[background-color,color] duration-150 ease-(--ease-out) sm:min-h-0 sm:py-1.5 dark:text-gray-300">
                     <x-ui-icon :name="$themeIcon" class="h-4 w-4" />
                     {{ __("ui.theme.{$themeValue}") }}
                 </button>
             @endforeach
         </div>
-    </section>
+    </x-card>
 
     {{-- Avatar (função global de upload da Fase 5) --------------------------- --}}
-    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 class="font-semibold">{{ __('panel.profile.avatar_heading') }}</h2>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.profile.avatar_hint') }}</p>
-
+    <x-card :title="__('panel.profile.avatar_heading')" :description="__('panel.profile.avatar_hint')">
         @if (session('avatar_status'))
-            <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{{ session('avatar_status') }}</p>
+            <x-alert type="success" class="mb-4">{{ session('avatar_status') }}</x-alert>
         @endif
 
-        <form wire:submit="updateAvatar" class="mt-4 flex items-center gap-4">
+        <form wire:submit="updateAvatar" class="flex flex-wrap items-center gap-4">
             @if ($user->avatarUrl())
-                <img src="{{ $user->avatarUrl() }}" alt="" class="h-16 w-16 rounded-full object-cover">
+                <img src="{{ $user->avatarUrl() }}" alt="" class="h-16 w-16 shrink-0 rounded-full object-cover">
             @else
-                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-brand text-xl font-semibold text-brand-foreground">{{ mb_substr($user->name, 0, 1) }}</span>
+                <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-brand text-xl font-semibold text-brand-foreground">{{ mb_substr($user->name, 0, 1) }}</span>
             @endif
-            <div class="flex-1">
-                <input type="file" wire:model="avatar" accept="image/*"
-                       class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-brand-foreground">
-                @error('avatar') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                <div wire:loading wire:target="avatar" class="mt-1 text-xs text-gray-500">…</div>
+
+            <div class="min-w-0 flex-1">
+                {{-- Seletor de arquivo do KIT: o nativo desenha o próprio botão
+                     com o texto do sistema operacional ("Choose File / No file
+                     chosen") — em inglês, numa tela pt-BR. --}}
+                <x-file-input
+                    name="avatar"
+                    wire:model="avatar"
+                    accept="image/*"
+                    :button-label="__('panel.profile.choose_file')"
+                    :error="$errors->first('avatar')"
+                />
+                <div wire:loading wire:target="avatar" class="mt-2 flex items-center gap-2 text-caption text-text-muted">
+                    <x-spinner size="sm" />
+                    {{ __('panel.profile.avatar_uploading') }}
+                </div>
             </div>
-            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground" @disabled(! $avatar)>{{ __('panel.common.save') }}</button>
+
+            <x-button type="submit" :disabled="! $avatar">{{ __('panel.profile.save_avatar') }}</x-button>
         </form>
-    </section>
+    </x-card>
 
     {{-- Senha de login -------------------------------------------------------- --}}
-    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 class="font-semibold">{{ __('panel.profile.password_heading') }}</h2>
-
+    <x-card :title="__('panel.profile.password_heading')" :description="__('panel.profile.password_hint')">
         @if (session('password_status'))
-            <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{{ session('password_status') }}</p>
+            <x-alert type="success" class="mb-4">{{ session('password_status') }}</x-alert>
         @endif
 
-        <form wire:submit="updatePassword" class="mt-4 space-y-4">
+        <form wire:submit="updatePassword" class="space-y-4">
             <x-input :label="__('panel.profile.current_password')" name="currentPassword" type="password"
                      wire:model="currentPassword" autocomplete="current-password"
                      :error="$errors->first('currentPassword')" />
@@ -97,27 +118,25 @@
                          wire:model="passwordConfirmation" autocomplete="new-password"
                          :error="$errors->first('passwordConfirmation')" />
             </div>
-            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
+            <div class="flex justify-end">
+                <x-button type="submit">{{ __('panel.profile.save_password') }}</x-button>
+            </div>
         </form>
-    </section>
+    </x-card>
 
     {{-- Senha de transação (ADR-006 — hash separado) --------------------------- --}}
-    <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <div class="flex items-center justify-between gap-4">
-            <h2 class="font-semibold">{{ __('panel.profile.transaction_password_heading') }}</h2>
-            <span @class(['rounded-full px-2.5 py-1 text-xs font-medium',
-                          'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200' => $user->hasTransactionPassword(),
-                          'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' => ! $user->hasTransactionPassword()])>
+    <x-card :title="__('panel.profile.transaction_password_heading')" :description="__('panel.profile.transaction_password_hint')">
+        <x-slot:actions>
+            <x-badge :color="$user->hasTransactionPassword() ? 'green' : 'yellow'">
                 {{ $user->hasTransactionPassword() ? __('panel.profile.transaction_password_set') : __('panel.profile.transaction_password_not_set') }}
-            </span>
-        </div>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('panel.profile.transaction_password_hint') }}</p>
+            </x-badge>
+        </x-slot:actions>
 
         @if (session('transaction_password_status'))
-            <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">{{ session('transaction_password_status') }}</p>
+            <x-alert type="success" class="mb-4">{{ session('transaction_password_status') }}</x-alert>
         @endif
 
-        <form wire:submit="updateTransactionPassword" class="mt-4 space-y-4">
+        <form wire:submit="updateTransactionPassword" class="space-y-4">
             @if ($user->hasTransactionPassword())
                 <x-input :label="__('auth.ui.current_transaction_password')" name="currentTransactionPassword" type="password"
                          wire:model="currentTransactionPassword" autocomplete="off"
@@ -131,7 +150,9 @@
                          wire:model="transactionPasswordConfirmation" autocomplete="new-password"
                          :error="$errors->first('transactionPasswordConfirmation')" />
             </div>
-            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground">{{ __('panel.common.save') }}</button>
+            <div class="flex justify-end">
+                <x-button type="submit">{{ __('panel.profile.save_transaction_password') }}</x-button>
+            </div>
         </form>
-    </section>
+    </x-card>
 </div>
