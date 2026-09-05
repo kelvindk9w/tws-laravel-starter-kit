@@ -1,6 +1,15 @@
 @props([
     'width' => 'max-w-6xl',
+    'variant' => 'default',
 ])
+
+@php
+    // VARIANTE 'plain' (landing v3, rota /v3): o MESMO rodapé, sem a linha
+    // superior. Existe porque lá ele mora DENTRO da seção de céu, que já tem
+    // o próprio horizonte separando-a do que vem antes — uma segunda régua em
+    // cima dela seria uma divisão que não divide nada. Conteúdo idêntico.
+    $shellClasses = $variant === 'plain' ? 'mt-auto' : 'mt-auto border-t border-border';
+@endphp
 
 {{-- Rodapé do site — <x-site-footer />. O MESMO em landing, /ui, auth e
      painel: quem entrou na conta continua no site, e o suporte, o status da
@@ -9,7 +18,7 @@
      Contraste AA: era text-gray-400 (2,60:1 sobre branco) e dark:text-gray-500
      (4,16:1 sobre gray-950) — os dois reprovam. --color-text-muted é
      gray-500/gray-400 por tema: passa nos dois. --}}
-<footer class="mt-auto border-t border-border">
+<footer class="{{ $shellClasses }}">
     <div class="mx-auto flex {{ $width }} flex-wrap items-start justify-between gap-x-10 gap-y-6 px-4 py-10 text-sm text-text-muted">
         <div>
             <p class="font-display font-semibold tracking-tight text-gray-900 dark:text-gray-200">{{ platform()->name }}</p>

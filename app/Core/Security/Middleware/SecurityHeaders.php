@@ -72,6 +72,25 @@ final class SecurityHeaders
             }
         }
 
+        // Landings alternativas (/v2, /v3): páginas públicas de vitrine que
+        // leem a contagem de estrelas do repositório na API pública do
+        // GitHub. A exceção é MÍNIMA — apenas o host no connect-src, apenas
+        // nessas rotas. Tudo o mais (script-src, style-src, font-src) segue
+        // a CSP base: nenhum script de CDN entra nessas páginas.
+        if ($request->is('v2') || $request->is('v3')) {
+            $landingCsp = config('security.headers.content_security_policy_landing_alt');
+
+            if (is_string($landingCsp) && $landingCsp !== '') {
+                $csp = $landingCsp;
+            } elseif (is_string($csp) && $csp !== '') {
+                $hosts = implode(' ', (array) config('security.headers.landing_alt_connect_src', []));
+
+                if ($hosts !== '') {
+                    $csp = (string) preg_replace('/connect-src /', 'connect-src '.$hosts.' ', $csp, 1);
+                }
+            }
+        }
+
         if (is_string($csp) && $csp !== '') {
             $response->headers->set('Content-Security-Policy', $csp);
         }

@@ -1,0 +1,784 @@
+/* =============================================================================
+   LANDING "O RASTRO" (/v2) — folha de estilo EXCLUSIVA desta rota.
+
+   Não toca em app.css nem em theme.css: é uma entrada própria do Vite,
+   carregada só por resources/views/landing-v2.blade.php. Tudo aqui vale
+   apenas enquanto esta página está aberta.
+
+   O mundo visual: um LIVRO-RAZÃO. Papel morno e tinta quase-preta no tema
+   claro, tinta e off-white no escuro, fios de 1px no lugar de sombras
+   (uma trilha de auditoria é pautada, não flutuante) e âmbar de terminal
+   como ÚNICO acento — reservado para o que está vivo: o cursor, a linha
+   ativa, a redação acontecendo.
+
+   Por que os tokens do KIT são redefinidos aqui: o cabeçalho, o rodapé e os
+   componentes reais do kit (usados de propósito na seção "Não acredite:
+   mexa") leem --color-surface, --color-border e a rampa de cinzas. Retonando
+   ESSAS variáveis dentro desta folha, o chrome inteiro adota o mundo da
+   página sem que nenhum componente compartilhado seja editado — e a troca
+   de tema continua funcionando, porque a redefinição existe nos dois temas.
+   ============================================================================= */
+
+/* Voz display desta página — Instrument Serif, self-hosted (a CSP do kit não
+   permite font-src externo). Irmã tipográfica da Instrument Sans que o kit já
+   usa no corpo: a relação é real, não um par escolhido ao acaso. O serifado
+   é o livro-razão; a mono é a máquina. A tensão entre os dois é a página. */
+@import '@fontsource/instrument-serif/latin-400.css';
+@import '@fontsource/instrument-serif/latin-ext-400.css';
+@import '@fontsource/instrument-serif/latin-400-italic.css';
+
+:root {
+    /* --- Mundo: PAPEL (tema claro) ------------------------------------- */
+    --lv2-bg: #f4f2ed;
+    --lv2-bg-deep: #eae7e0;
+    --lv2-raised: #fbfaf7;
+    --lv2-ink: #14120e;
+    --lv2-muted: #6b655b;
+    --lv2-hairline: #dcd7cc;
+    --lv2-hairline-strong: #c6c0b2;
+
+    /* Âmbar de terminal — o ÚNICO acento.
+       Dois papéis, porque um só não passa em contraste nos dois temas:
+       --lv2-amber é a MARCA (preenchimento, traço, bloco de redação) e
+       --lv2-amber-ink é o âmbar LEGÍVEL como texto (7,0:1 sobre o papel). */
+    --lv2-amber: #d98200;
+    --lv2-amber-ink: #8a5200;
+    --lv2-amber-soft: rgb(217 130 0 / 12%);
+
+    /* O RASTRO por tema. No papel, âmbar claro sobre off-white é névoa: a
+       cor legível é o âmbar ESCURO, e o glow não existe (brilho sobre branco
+       não é luz, é borrão). Na tinta é o contrário — ali o rastro é luz. */
+    --lv2-trace-alpha: 0.55;
+    --lv2-trace-color: var(--lv2-amber-ink);
+    --lv2-trace-glow: 0;
+
+    --lv2-display: 'Instrument Serif', ui-serif, Georgia, 'Times New Roman', serif;
+    --lv2-mono: 'Space Grotesk Variable', ui-monospace, 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+
+    /* --- Retom dos tokens DO KIT para este mundo ------------------------ */
+    --color-surface: var(--lv2-bg);
+    --color-surface-raised: var(--lv2-raised);
+    --color-surface-sunken: var(--lv2-bg-deep);
+    --color-surface-disabled: var(--lv2-bg-deep);
+    --color-border: var(--lv2-hairline);
+    --color-border-strong: var(--lv2-hairline-strong);
+    --color-text-muted: var(--lv2-muted);
+    --color-brand: var(--lv2-ink);
+    --color-brand-foreground: var(--lv2-bg);
+    --color-brand-hover: #322d24;
+
+    /* A rampa de cinzas do Tailwind vira uma rampa QUENTE. É o que faz o
+       cabeçalho e o rodapé do kit (text-gray-600, dark:text-gray-300…)
+       falarem a mesma língua sem editar nenhum componente. */
+    --color-gray-50: #f7f5f1;
+    --color-gray-100: #efece6;
+    --color-gray-200: #dcd7cc;
+    --color-gray-300: #c6c0b2;
+    --color-gray-400: #9c9587;
+    --color-gray-500: #6b655b;
+    --color-gray-600: #55504a;
+    --color-gray-700: #3d3934;
+    --color-gray-800: #2a2723;
+    --color-gray-900: #14120e;
+    --color-gray-950: #0b0a08;
+}
+
+.dark .lv2-ambient {
+    /* Na tinta o campo existe de verdade — mas como ATMOSFERA, não como cor
+       da página. Acima de ~0,6 o âmbar tinge o preto de sépia e as linhas de
+       log deixam de brilhar, porque não há mais escuro contra o que brilhar. */
+    opacity: 0.5;
+}
+
+.dark {
+    /* --- Mundo: TINTA (tema escuro) ------------------------------------- */
+    --lv2-bg: #0b0b0c;
+    --lv2-bg-deep: #060607;
+    --lv2-raised: #141416;
+    --lv2-ink: #edeae3;
+    --lv2-muted: #8f8b83;
+    --lv2-hairline: #26262a;
+    --lv2-hairline-strong: #3a3a40;
+
+    --lv2-amber: #ffb000;
+    --lv2-amber-ink: #ffb000;
+    --lv2-amber-soft: rgb(255 176 0 / 14%);
+
+    --lv2-trace-alpha: 0.8;
+    --lv2-trace-color: var(--lv2-amber);
+    --lv2-trace-glow: 1;
+
+    --color-surface: var(--lv2-bg);
+    --color-surface-raised: var(--lv2-raised);
+    --color-surface-sunken: var(--lv2-bg-deep);
+    --color-surface-disabled: var(--lv2-raised);
+    --color-border: var(--lv2-hairline);
+    --color-border-strong: var(--lv2-hairline-strong);
+    --color-text-muted: var(--lv2-muted);
+    --color-brand: var(--lv2-ink);
+    --color-brand-foreground: #0b0b0c;
+    --color-brand-hover: #ffffff;
+
+    --color-gray-50: #0b0b0c;
+    --color-gray-100: #edeae3;
+    --color-gray-200: #26262a;
+    --color-gray-300: #b7b3ab;
+    --color-gray-400: #8f8b83;
+    --color-gray-500: #8f8b83;
+    --color-gray-600: #b7b3ab;
+    --color-gray-700: #3a3a40;
+    --color-gray-800: #26262a;
+    --color-gray-900: #141416;
+    --color-gray-950: #060607;
+}
+
+/* -----------------------------------------------------------------------------
+   Superfícies DO NAVEGADOR — as partes que a gente não desenha continuam
+   carregando o design. Seleção, cursor de texto, barra de rolagem, anel de
+   foco e sublinhado saem do padrão do sistema operacional, que não pertence
+   a nenhum design system.
+   -------------------------------------------------------------------------- */
+.lv2 ::selection {
+    background: var(--lv2-amber);
+    color: #0b0b0c;
+}
+
+.lv2 {
+    caret-color: var(--lv2-amber-ink);
+    scrollbar-color: var(--lv2-hairline-strong) transparent;
+    scrollbar-width: thin;
+    background: var(--lv2-bg);
+    color: var(--lv2-ink);
+    text-underline-offset: 0.25em;
+    text-decoration-thickness: 1px;
+}
+
+.lv2 :focus-visible {
+    outline: 2px solid var(--lv2-amber-ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+   Tipografia da página
+   -------------------------------------------------------------------------- */
+.lv2-display {
+    font-family: var(--lv2-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+    text-wrap: balance;
+}
+
+.lv2-mono {
+    font-family: var(--lv2-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.01em;
+}
+
+/* Medida de leitura (~65ch de Instrument Sans no tamanho de corpo desta
+   página). Em REM, não em `ch`: `ch` é a largura do "0" DA FONTE DO ELEMENTO,
+   e enquanto a fonte não chega esse valor é o da família de fallback — a
+   caixa muda de largura no swap, o texto requebra e a página salta (foi a
+   maior fonte de CLS da /v2, 0,105). Uma medida em rem não depende de fonte
+   nenhuma e chega igual no primeiro paint. */
+.lv2-measure {
+    max-width: 35rem;
+}
+
+.lv2-eyebrowless-rule {
+    /* Fio de pauta que abre uma seção. Substitui o "eyebrow" que a página
+       NÃO usa: quem anuncia a seção é o título, não um rótulo acima dele. */
+    height: 1px;
+    background: linear-gradient(to right, var(--lv2-hairline-strong), transparent);
+}
+
+/* -----------------------------------------------------------------------------
+   FRASE DE DOR — a sentença que abre cada seção.
+
+   Não é um "eyebrow": não fica acima do título em versalete minúsculo
+   dizendo a categoria. É uma FRASE, no corpo do texto, em tamanho de
+   subtítulo, dizendo o que dá errado quando o sistema não se lembra — e o
+   título logo abaixo é a promessa que responde a ela.
+   -------------------------------------------------------------------------- */
+.lv2-pain {
+    font-size: clamp(1rem, 1.6vw, 1.125rem);
+    line-height: 1.5;
+    color: var(--lv2-muted);
+    text-wrap: balance;
+    max-width: 26rem;
+}
+
+/* -----------------------------------------------------------------------------
+   REVELAÇÃO POR LINHA — a máscara que o SplitText cria (`mask: 'lines'`).
+   A linha sobe de DENTRO de uma faixa recortada: é o que separa um texto que
+   "aparece" de um texto que é impresso.
+   -------------------------------------------------------------------------- */
+.lv2-line-reveal {
+    display: block;
+    will-change: transform;
+}
+
+/* -----------------------------------------------------------------------------
+   Herói — os quatro planos
+   -------------------------------------------------------------------------- */
+.lv2-hero {
+    /* Os planos são transformados de forma independente; sem um contexto de
+       empilhamento próprio, o pin do ScrollTrigger e o -z-30 do fundo
+       escapam para fora da seção. */
+    isolation: isolate;
+}
+
+/* Plano 0 — campo ambiente procedural. */
+.lv2-ambient {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* No PAPEL o campo é quase um sussurro: sobre off-white, âmbar em
+       qualquer intensidade vira uma névoa amarelada que suja o texto. Na
+       TINTA ele pode existir de verdade — luz sobre preto é profundidade,
+       sobre branco é sujeira. */
+    opacity: 0.35;
+    -webkit-mask-image: radial-gradient(130% 100% at 50% 42%, #000 30%, transparent 78%);
+    mask-image: radial-gradient(130% 100% at 50% 42%, #000 30%, transparent 78%);
+}
+
+/* O campo ambiente do CTA final: mesma matéria do herói, sem a máscara
+   radial (ali ele preenche o bloco inteiro) e mais discreto. */
+.lv2-ambient-final {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 35%, #000 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 35%, #000 70%, transparent 100%);
+    opacity: 0.55;
+}
+
+/* Plano 2 — o objeto flutuante. O palco carrega a perspectiva; o filho é
+   quem gira. Perspectiva no mesmo elemento que rotaciona não produz
+   profundidade nenhuma — é o erro mais comum de tilt em CSS. */
+.lv2-object-stage {
+    perspective: 1100px;
+    perspective-origin: 50% 40%;
+}
+
+.lv2-object {
+    position: relative;
+    transform-style: preserve-3d;
+    border-radius: var(--radius-xl);
+
+    /* VIDRO ESCURO: a superfície é translúcida de propósito, para as linhas
+       de log continuarem passando POR TRÁS do cartão. É esse reflexo que faz
+       o objeto pertencer à cena em vez de estar colado por cima dela. */
+    border: 1px solid color-mix(in srgb, var(--lv2-amber) 38%, transparent);
+    background: color-mix(in srgb, var(--lv2-raised) 78%, transparent);
+
+    /* Blur baixo de propósito: `backdrop-filter` é recomposto a cada frame de
+       rolagem, e o objeto se move numa cena que já tem dois canvas no mesmo
+       orçamento. 8px separa o objeto do fundo sem apagar o rastro atrás. */
+    backdrop-filter: blur(8px) saturate(115%);
+
+    /* Sombra profunda COM deslocamento e borrão (um halo sem offset é
+       decoração, não profundidade) + um brilho âmbar rente à borda, que é o
+       que dá a leitura de "aceso". */
+    box-shadow:
+        0 2px 6px -2px rgb(0 0 0 / 25%),
+        0 40px 80px -32px rgb(0 0 0 / 70%),
+        0 0 0 1px color-mix(in srgb, var(--lv2-amber) 10%, transparent),
+        0 0 32px -10px color-mix(in srgb, var(--lv2-amber) 30%, transparent);
+}
+
+/* Reflexo especular: uma faixa diagonal clara no topo do vidro. Fica atrás
+   do conteúdo e não intercepta ponteiro nenhum. */
+.lv2-object::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+        152deg,
+        color-mix(in srgb, var(--lv2-ink) 10%, transparent) 0%,
+        transparent 38%,
+        transparent 100%
+    );
+}
+
+/* No papel o vidro escuro não existe: sobre off-white, translucidez e brilho
+   âmbar viram sujeira. Ali o cartão é papel opaco com um fio. */
+:root:not(.dark) .lv2-object {
+    border-color: var(--lv2-hairline-strong);
+    background: var(--lv2-raised);
+    backdrop-filter: none;
+    box-shadow:
+        0 2px 4px -2px rgb(0 0 0 / 10%),
+        0 26px 60px -34px rgb(0 0 0 / 40%);
+}
+
+.lv2-live-input {
+    font-family: var(--lv2-mono);
+    font-size: 0.875rem;
+}
+
+.lv2-live-output {
+    font-family: var(--lv2-mono);
+    color: var(--lv2-ink);
+    word-break: break-word;
+}
+
+.lv2-live-output.is-redacted {
+    color: var(--lv2-amber-ink);
+}
+
+/* -----------------------------------------------------------------------------
+   Herói — canvas das linhas de log
+   -------------------------------------------------------------------------- */
+.lv2-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    /* A máscara faz as linhas nascerem e morrerem sem uma borda dura, e abre
+       um vazio no meio para o título respirar. */
+    -webkit-mask-image: radial-gradient(120% 78% at 50% 46%, transparent 0%, transparent 34%, #000 70%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%),
+        linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%);
+    mask-image: radial-gradient(120% 78% at 50% 46%, transparent 0%, transparent 34%, #000 70%),
+        linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%),
+        linear-gradient(to right, transparent 0%, #000 9%, #000 91%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+/* Chars do título: partem invisíveis SÓ quando o JS assume (sem JS, o título
+   está lá — animação é enfeite, conteúdo não é opcional). */
+.lv2-split-ready .lv2-char {
+    opacity: 0;
+}
+
+/* A palavra é uma caixa: sem isto o título quebra NO MEIO de uma palavra
+   ("aconte / ce"), porque cada caractere virou um elemento próprio e a
+   quebra de linha passou a poder acontecer entre dois deles. */
+.lv2-word {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* -----------------------------------------------------------------------------
+   Coluna-espinha: o carimbo de tempo que desce com o scroll.
+   O scroll É a linha do tempo — a espinha é onde isso fica visível.
+   -------------------------------------------------------------------------- */
+.lv2-spine {
+    /* Os marcadores são posicionados em % DENTRO do fio: ele é o mapa da
+       página inteira, então o contexto de posicionamento é ele. */
+    position: fixed;
+    left: max(1rem, calc(50vw - 40rem));
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--lv2-hairline);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.lv2-spine::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: var(--lv2-progress, 0%);
+    background: var(--lv2-amber);
+}
+
+/* MARCADOR DE SEÇÃO no fio. Três estados: por vir (fio apagado), já passado
+   (âmbar cheio — registrado) e VIVO (pulsa, é a linha que está acontecendo).
+   O rótulo só aparece no marcador vivo: cinco rótulos permanentes ao lado do
+   texto seriam uma segunda coluna de leitura competindo com a primeira. */
+.lv2-mark {
+    /* Invisíveis até o JS ancorar cada um na SUA seção: um marcador que nasce
+       em top:0 e salta para a posição certa é uma mudança de layout que o
+       navegador contabiliza (e o visitante vê). Ver `.is-placed`. */
+    opacity: 0;
+    transition: opacity 400ms var(--ease-out);
+    position: absolute;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    margin-left: -3.5px;
+    margin-top: -3.5px;
+    border-radius: 9999px;
+    background: var(--lv2-bg);
+    box-shadow: inset 0 0 0 1px var(--lv2-hairline-strong);
+    transition:
+        background-color 300ms var(--ease-out),
+        box-shadow 300ms var(--ease-out);
+}
+
+.lv2-spine.is-placed .lv2-mark {
+    opacity: 1;
+}
+
+.lv2-mark.is-done {
+    background: var(--lv2-amber);
+    box-shadow: inset 0 0 0 1px var(--lv2-amber);
+}
+
+.lv2-mark.is-live {
+    background: var(--lv2-amber);
+    box-shadow:
+        inset 0 0 0 1px var(--lv2-amber),
+        0 0 0 0 color-mix(in srgb, var(--lv2-amber) 55%, transparent);
+    animation: lv2-pulse 2s var(--ease-out) infinite;
+}
+
+@keyframes lv2-pulse {
+    0% {
+        box-shadow:
+            inset 0 0 0 1px var(--lv2-amber),
+            0 0 0 0 color-mix(in srgb, var(--lv2-amber) 55%, transparent);
+    }
+
+    70% {
+        box-shadow:
+            inset 0 0 0 1px var(--lv2-amber),
+            0 0 0 9px color-mix(in srgb, var(--lv2-amber) 0%, transparent);
+    }
+
+    100% {
+        box-shadow:
+            inset 0 0 0 1px var(--lv2-amber),
+            0 0 0 0 color-mix(in srgb, var(--lv2-amber) 0%, transparent);
+    }
+}
+
+.lv2-mark-label {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--lv2-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+    color: var(--lv2-amber-ink);
+    opacity: 0;
+    transition: opacity 300ms var(--ease-out);
+}
+
+.lv2-mark.is-live .lv2-mark-label {
+    opacity: 1;
+}
+
+/* Com movimento reduzido a espinha continua contando a história (o fio cresce,
+   o marcador vivo fica âmbar) — o que some é o pulso periférico. */
+.lv2-spine-still .lv2-mark.is-live {
+    animation: none;
+}
+
+.lv2-spine-stamp {
+    position: fixed;
+    left: max(1rem, calc(50vw - 40rem));
+    top: 50%;
+    z-index: 5;
+    transform: translate(-50%, -50%) rotate(180deg);
+    writing-mode: vertical-rl;
+    font-family: var(--lv2-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    color: var(--lv2-muted);
+    background: var(--lv2-bg);
+    padding: 0.75rem 0;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+@media (max-width: 1279px) {
+    .lv2-spine,
+    .lv2-spine-stamp {
+        display: none;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+   Linha de log (usada no herói, na tese e no terminal)
+   -------------------------------------------------------------------------- */
+.lv2-line {
+    font-family: var(--lv2-mono);
+    font-size: 0.8125rem;
+    line-height: 1.9;
+    white-space: pre;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Dentro do objeto do herói o texto é do VISITANTE: ele pode digitar uma
+   frase inteira, e `pre` transformaria isso em rolagem horizontal infinita. */
+.lv2-object .lv2-line {
+    white-space: normal;
+    line-height: 1.7;
+}
+
+.lv2-json {
+    font-family: var(--lv2-mono);
+    font-size: 0.8125rem;
+    line-height: 2;
+    font-variant-numeric: tabular-nums;
+}
+
+.lv2-status {
+    font-family: var(--lv2-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.lv2-status-ok {
+    color: var(--lv2-muted);
+}
+
+.lv2-status-warn {
+    color: var(--lv2-amber-ink);
+}
+
+/* -----------------------------------------------------------------------------
+   MOMENTO-ASSINATURA — a redação LGPD acontecendo.
+   O bloco █ é o estado TRANSITÓRIO: a varredura passa da esquerda para a
+   direita cobrindo o valor e, atrás dela, o valor volta já redigido —
+   a saída de verdade do Redactor. Terminar em ████ seria terminar numa
+   ilustração; terminar no valor redigido é terminar no fato.
+   -------------------------------------------------------------------------- */
+.lv2-field {
+    /* Cada campo é UMA LINHA do payload: bloco, não inline. Um <p> que vira
+       inline junta os quatro campos numa linha só e o JSON deixa de parecer
+       JSON. */
+    display: block;
+    transition: color 200ms var(--ease-out);
+}
+
+.lv2-field-value {
+    position: relative;
+    display: inline-block;
+    white-space: pre;
+}
+
+.lv2-field.is-redacted .lv2-field-value {
+    color: var(--lv2-amber-ink);
+}
+
+.lv2-sweep {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background: var(--lv2-amber);
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.lv2-rule-note {
+    opacity: 0;
+    transform: translateY(2px);
+    transition:
+        opacity 260ms var(--ease-out),
+        transform 260ms var(--ease-out);
+}
+
+.lv2-audit.is-redacted .lv2-rule-note {
+    opacity: 1;
+    transform: none;
+}
+
+.lv2-audit {
+    border: 1px solid var(--lv2-hairline);
+    background: var(--lv2-raised);
+    transition:
+        border-color 220ms var(--ease-out),
+        box-shadow 220ms var(--ease-out);
+}
+
+.lv2-audit:hover,
+.lv2-audit:focus-within,
+.lv2-audit.is-redacted {
+    border-color: var(--lv2-amber-ink);
+    box-shadow: 0 18px 40px -28px rgb(0 0 0 / 45%);
+}
+
+/* -----------------------------------------------------------------------------
+   Bento — uma célula VIVA por vez
+   -------------------------------------------------------------------------- */
+.lv2-cell {
+    position: relative;
+    border: 1px solid var(--lv2-hairline);
+    background: var(--lv2-bg);
+    text-align: start;
+    width: 100%;
+    transition:
+        background-color 260ms var(--ease-out),
+        border-color 260ms var(--ease-out),
+        color 260ms var(--ease-out);
+}
+
+.lv2-cell[aria-selected='true'] {
+    background: var(--lv2-raised);
+    border-color: var(--lv2-amber-ink);
+}
+
+/* O fio âmbar que marca a célula viva: 1px, no topo — não é uma borda
+   colorida grossa na lateral, que é o clichê do card "destacado". */
+.lv2-cell::before {
+    content: '';
+    position: absolute;
+    inset: -1px auto auto -1px;
+    height: 1px;
+    width: 0;
+    background: var(--lv2-amber);
+    transition: width 420ms var(--ease-out);
+}
+
+.lv2-cell[aria-selected='true']::before {
+    width: calc(100% + 2px);
+}
+
+.lv2-code {
+    font-family: var(--lv2-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    tab-size: 2;
+    white-space: pre;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.lv2-code .tok-comment {
+    color: var(--lv2-muted);
+}
+
+.lv2-code .tok-string {
+    color: var(--lv2-amber-ink);
+}
+
+.lv2-code .tok-keyword {
+    color: var(--lv2-ink);
+    font-weight: 600;
+}
+
+/* -----------------------------------------------------------------------------
+   Terminal coreografado (mecanismo em 3 passos)
+   -------------------------------------------------------------------------- */
+.lv2-terminal {
+    border: 1px solid var(--lv2-hairline);
+    background: var(--lv2-bg-deep);
+}
+
+.lv2-caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    margin-left: 0.1em;
+    vertical-align: -0.18em;
+    background: var(--lv2-amber);
+    animation: lv2-blink 1.05s steps(1) infinite;
+}
+
+@keyframes lv2-blink {
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.lv2-step[aria-current='step'] .lv2-step-index {
+    color: var(--lv2-amber-ink);
+}
+
+.lv2-step-index {
+    font-family: var(--lv2-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.16em;
+    color: var(--lv2-muted);
+    transition: color 240ms var(--ease-out);
+}
+
+/* -----------------------------------------------------------------------------
+   Botão de som (cabeçalho) — mesma altura e mesmo raio dos controles do kit
+   -------------------------------------------------------------------------- */
+.lv2-sound {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    width: 2.25rem;
+    border-radius: var(--radius-lg);
+    color: var(--color-text-muted);
+    transition:
+        color 150ms var(--ease-out),
+        background-color 150ms var(--ease-out);
+}
+
+.lv2-sound:hover {
+    background: var(--color-surface-sunken);
+    color: var(--lv2-ink);
+}
+
+.lv2-sound[aria-pressed='true'] {
+    color: var(--lv2-amber-ink);
+}
+
+/* As duas hastes da onda só existem quando o som está ligado — um ícone que
+   não mostra o próprio estado é um ícone que precisa ser clicado para se
+   descobrir. */
+.lv2-sound-waves {
+    opacity: 0;
+    transition: opacity 200ms var(--ease-out);
+}
+
+.lv2-sound[aria-pressed='true'] .lv2-sound-waves {
+    opacity: 1;
+}
+
+/* -----------------------------------------------------------------------------
+   Revelação de seção — UM movimento autoral por seção, partindo de um estado
+   já visível sob prefers-reduced-motion (menos movimento, nunca zero).
+   -------------------------------------------------------------------------- */
+.lv2-reveal {
+    opacity: 1;
+}
+
+.lv2-js .lv2-reveal {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lv2-caret {
+        animation: none;
+    }
+
+    /* Sem pin: a cena do herói não é dirigida pelo scroll, então tudo nela
+       nasce montado. O `backdrop-filter` também sai — é caro e não carrega
+       informação nenhuma. */
+    .lv2-object {
+        backdrop-filter: none;
+    }
+
+    .lv2-js .lv2-reveal {
+        /* Sem deslocamento: só a chegada da opacidade, e curta. */
+        opacity: 0;
+        transition: opacity 200ms linear;
+    }
+
+    .lv2-split-ready .lv2-char {
+        opacity: 1;
+    }
+}
+
+/* Rede de segurança de 2s (mesma regra da landing atual): se por qualquer
+   motivo o JS não revelar o conteúdo, ele aparece assim mesmo. */
+.lv2-safety .lv2-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+}

@@ -2,6 +2,13 @@
     'title' => null,
     'background' => 'bg-surface',
     'width' => 'max-w-6xl',
+    'bodyClass' => '',
+    // Mundo padrão da TELA quando o visitante não escolheu claro/escuro:
+    // normalmente é a preferência da conta (ou 'system'). Uma tela com
+    // direção de arte própria — a landing /v2 — pode declarar o seu.
+    'themeDefault' => null,
+    'head' => null,
+    'headerExtra' => null,
 ])
 
 {{-- Esqueleto ÚNICO do site — <x-layouts.site>. Landing, showcase, telas de
@@ -20,7 +27,7 @@
      não podem quebrar o rótulo em duas linhas. Marca, menu e conteúdo
      continuam começando no mesmo x. --}}
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-default="{{ auth()->user()?->theme ?? 'system' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme-default="{{ $themeDefault ?? auth()->user()?->theme ?? 'system' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -41,9 +48,16 @@
     @include('partials.theme-script')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- Assets EXTRAS de uma tela específica (ex.: o bundle próprio da
+         landing /v2). Fica no <head> para não custar um segundo paint;
+         quem não passa o slot não carrega nada a mais. --}}
+    {{ $head }}
 </head>
-<body @auth data-authenticated @endauth class="flex min-h-screen flex-col {{ $background }} text-gray-900 antialiased dark:text-gray-100">
-    <x-site-header :width="$width" />
+<body @auth data-authenticated @endauth class="flex min-h-screen flex-col {{ $background }} text-gray-900 antialiased dark:text-gray-100 {{ $bodyClass }}">
+    {{-- `headerExtra` = controle EXTRA da tela ao lado do seletor de idioma
+         (ex.: o botão de som da landing /v2). O cabeçalho continua UM só. --}}
+    <x-site-header :width="$width">{{ $headerExtra }}</x-site-header>
 
     {{ $slot }}
 

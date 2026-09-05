@@ -11,6 +11,7 @@ use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Contact\Http\Controllers\ContactController;
 use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
+use App\Http\Controllers\LandingV2Controller;
 use App\Http\Controllers\ShowcaseFormDemoController;
 use App\Http\Controllers\ThemePreferenceController;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
@@ -21,6 +22,17 @@ use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing');
+
+// Landing "Céu" (v3) — direção visual em avaliação ao lado de / (atual) e /v2.
+// Página pública, sem estado e sem formulário: uma view basta. Os números que
+// ela exibe vêm de config/landing_v3.php (ADR-007), as strings de
+// lang/*/landing_v3.php e os bundles próprios estão registrados no
+// vite.config.js. Quando uma das direções vencer, as outras somem daqui.
+Route::view('v3', 'landing-v3')->name('landing.v3');
+
+// Landing alternativa "O Rastro" (/v2) — mesma verdade do produto, outra
+// direção de arte. Fica ao lado da atual para comparação; a home segue em '/'.
+Route::get('v2', LandingV2Controller::class)->name('landing.v2');
 
 // Formulário de contato da landing (público): honeypot + validação + rate
 // limit de rotas sensíveis. E-mail enfileirado para PLATFORM_CONTACT_EMAIL.

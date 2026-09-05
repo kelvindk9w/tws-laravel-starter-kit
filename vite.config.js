@@ -7,7 +7,20 @@ export default defineConfig({
         laravel({
             // filament.css = tema do /admin (mesmos tokens de theme.css) —
             // apontado por ->viteTheme() no AdminPanelProvider.
-            input: ['resources/css/app.css', 'resources/css/filament.css', 'resources/js/app.js'],
+            input: [
+                'resources/css/app.css',
+                'resources/css/filament.css',
+                'resources/js/app.js',
+                // Landing "O Rastro" (/v2) — bundle próprio: só essa rota
+                // carrega GSAP, Lenis e a fonte display (Instrument Serif).
+                'resources/css/landing-v2.css',
+                'resources/js/landing-v2.js',
+                // Landing "Céu" (/v3) — bundle próprio: GSAP/Lenis e o
+                // Three.js entram por import() dinâmico, em pedaços à parte.
+                // Nenhuma outra tela do produto baixa um byte disso.
+                'resources/css/landing-v3.css',
+                'resources/js/landing-v3.js',
+            ],
             refresh: true,
         }),
         tailwindcss(),

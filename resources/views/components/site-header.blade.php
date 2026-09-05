@@ -1,5 +1,6 @@
 @props([
     'width' => 'max-w-6xl',
+    'variant' => 'bar',
 ])
 
 @php
@@ -8,6 +9,22 @@
     $siteNav = Navigation::site();
     $user = auth()->user();
     $accountNav = $user !== null ? Navigation::account() : [];
+
+    // VARIANTE 'floating' (landing v3, rota /v3): a MESMA barra — mesma marca,
+    // mesma nav, mesmo menu da conta, mesma gaveta — dentro de uma pílula que
+    // flutua sobre o céu, em vez de colada no topo com uma linha embaixo.
+    // Muda só o invólucro: nenhum item, nenhuma regra e nenhum estado do
+    // cabeçalho do produto sabe que ela existe (as classes v3-nav* moram em
+    // resources/css/landing-v3.css, que só a /v3 carrega).
+    $floating = $variant === 'floating';
+
+    $shellClasses = $floating
+        ? 'v3-nav px-4 pt-3'
+        : 'sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur';
+
+    $innerClasses = $floating
+        ? 'v3-nav-shell mx-auto flex h-14 '.$width.' items-center gap-3 px-4 sm:gap-6'
+        : 'mx-auto flex h-16 '.$width.' items-center gap-3 px-4 sm:gap-6';
 @endphp
 
 {{-- Cabeçalho do site — <x-site-header />. UM cabeçalho para landing, /ui,
@@ -22,8 +39,8 @@
 
      Altura fixa (h-16): a barra compacta do <x-side-nav> e o scroll-mt das
      âncoras dependem de um número, não de um palpite. --}}
-<header class="sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur">
-    <div class="mx-auto flex h-16 {{ $width }} items-center gap-3 px-4 sm:gap-6">
+<header class="{{ $shellClasses }}">
+    <div class="{{ $innerClasses }}">
         <x-brand :href="url('/')" />
 
         <nav aria-label="{{ __('ui.nav.site') }}" class="hidden flex-1 items-center gap-1 text-sm sm:flex">
@@ -35,7 +52,12 @@
         <div class="ms-auto flex items-center gap-2 sm:ms-0">
             {{-- Seletor de idioma VISÍVEL nos dois estados (decisão do dono):
                  trocar de idioma não pode custar dois cliques num menu. --}}
-            <div class="hidden sm:block"><x-locale-switcher /></div>
+            <div class="hidden sm:flex sm:items-center sm:gap-2">
+                <x-locale-switcher />
+                {{-- Controle extra da tela (slot). Vazio na maioria das
+                     telas; a landing /v2 põe aqui o botão de som. --}}
+                {{ $slot }}
+            </div>
 
             @auth
                 <x-user-menu />
@@ -106,7 +128,10 @@
 
             <div class="flex items-center justify-between gap-3 pt-1">
                 <x-locale-switcher />
-                <x-theme-toggle />
+                <div class="flex items-center gap-2">
+                    {{ $slot }}
+                    <x-theme-toggle />
+                </div>
             </div>
         </div>
     </x-slot:footer>

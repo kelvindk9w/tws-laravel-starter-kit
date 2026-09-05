@@ -45,6 +45,17 @@ return [
         // Aplica-se SOMENTE às rotas do Horizon (is_admin + IP allowlist).
         'content_security_policy_horizon' => env('SECURITY_CSP_HORIZON', ''),
 
+        // CSP das landings alternativas (/v2, /v3): a única diferença para a
+        // CSP base é o connect-src — essas páginas leem a contagem de estrelas
+        // do repositório direto na API pública do GitHub (client-side, com
+        // fallback silencioso). Nenhum script de CDN, nenhum 'unsafe-eval',
+        // nenhuma exceção de style/font: só o host de dados, e só nessas
+        // rotas. Vazio = CSP base + esse host no connect-src.
+        'content_security_policy_landing_alt' => env('SECURITY_CSP_LANDING_ALT', ''),
+
+        // Hosts liberados no connect-src das landings alternativas.
+        'landing_alt_connect_src' => array_filter(explode(',', (string) env('SECURITY_LANDING_ALT_CONNECT_SRC', 'https://api.github.com'))),
+
         // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
