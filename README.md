@@ -18,6 +18,10 @@ cp .env.example .env
 docker run --rm -v $(pwd):/app -w /app composer:latest composer install --no-interaction
 
 # 2) Subir a stack
+#    Os containers de dev rodam com o uid/gid do SEU usuário (padrão 1000),
+#    então tudo que o app grava no volume (logs, cache, uploads, `make:*`)
+#    fica editável no host e nada vira root-owned. Se `id -u` não for 1000:
+#    export UID GID=$(id -g)   # antes do build
 docker compose up -d --build
 
 # 3) Gerar a chave da aplicação no .env e RECRIAR os containers

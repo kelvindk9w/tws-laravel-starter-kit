@@ -61,7 +61,25 @@ WORKDIR /var/www/html
 # -----------------------------------------------------------------------------
 FROM base AS dev
 
+# Usuário de desenvolvimento com o MESMO uid/gid do host (build args, padrão
+# 1000). php-fpm, queue, scheduler e `docker compose exec` passam a gravar
+# como esse usuário: os arquivos que nascem no volume (views compiladas,
+# logs, cache, uploads, `artisan make:*`) são editáveis no host e nenhum
+# processo cria arquivo que outro não consiga sobrescrever. Sem isso, um
+# artisan rodado como root deixava views compiladas e logs root-owned, o
+# php-fpm (www-data) não conseguia reescrevê-los e o app inteiro respondia
+# 500 até alguém corrigir a permissão à mão.
+ARG UID=1000
+ARG GID=1000
+RUN (getent group "${GID}" >/dev/null || addgroup -g "${GID}" -S dev) \
+    && adduser -u "${UID}" -G "$(getent group "${GID}" | cut -d: -f1)" -S -D -h /home/dev dev \
+    && chown -R dev /var/www/html /home/dev
+
 COPY docker/php/php-dev.ini /usr/local/etc/php/conf.d/zz-dev.ini
+
+# php-fpm sem root ignora as diretivas user/group do pool e roda os workers
+# como o próprio usuário do processo (dev) — exatamente o que queremos.
+USER dev
 
 CMD ["php-fpm"]
 

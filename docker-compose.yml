@@ -17,6 +17,11 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: dev
+      # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
+      # não for 1000: `export UID GID` antes do `docker compose build`.
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     env_file: .env
     volumes:
       - .:/var/www/html
@@ -86,12 +91,12 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: dev
+      # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
+      # não for 1000: `export UID GID` antes do `docker compose build`.
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     env_file: .env
-    # Roda como www-data (uid 82), o MESMO usuário dos workers do php-fpm.
-    # Como root, este serviço criava o arquivo diário de log à meia-noite
-    # com dono root:root e o php-fpm não conseguia escrever nele — toda
-    # requisição virava 500 até alguém corrigir a permissão à mão.
-    user: "82:82"
     command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
     volumes:
       - .:/var/www/html
@@ -106,13 +111,13 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: dev
+      # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
+      # não for 1000: `export UID GID` antes do `docker compose build`.
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     env_file: .env
     # Loop do scheduler nativo do Laravel (equivale ao cron de 1 em 1 minuto).
-    # Roda como www-data (uid 82), o MESMO usuário dos workers do php-fpm.
-    # Como root, este serviço criava o arquivo diário de log à meia-noite
-    # com dono root:root e o php-fpm não conseguia escrever nele — toda
-    # requisição virava 500 até alguém corrigir a permissão à mão.
-    user: "82:82"
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
       - .:/var/www/html

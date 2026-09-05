@@ -50,7 +50,15 @@
     .tws-locale-item:hover { background: var(--color-surface-sunken); }
 </style>
 
-<details class="tws-locale">
+{{-- Alpine já vem com o Filament: fecha no Esc e no clique fora (abrir o
+     menu do usuário do Filament conta como clique fora, e vice-versa —
+     nunca ficam os dois abertos). --}}
+<details
+    class="tws-locale"
+    x-data
+    x-on:keydown.escape.window="$el.open = false"
+    x-on:click.outside="$el.open = false"
+>
     <summary
         aria-label="{{ __('ui.locale.label') }}"
         title="{{ __('ui.locale.label') }}"
