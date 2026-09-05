@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Notifications;
 
+use App\Core\Mail\KitMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -21,6 +22,10 @@ use Illuminate\Notifications\Notification;
  * DESTINATÁRIO: o User implementa HasLocalePreference e o Laravel usa essa
  * preferência ao enfileirar/enviar (o e-mail sai no idioma da conta,
  * não no de quem estiver navegando no servidor).
+ *
+ * O corpo é o layout ÚNICO do kit (KitMailMessage → <x-email::layouts.kit>),
+ * o mesmo dos Mailables — o padrão ->line()/->action() do framework fazia
+ * esta mensagem chegar com outra identidade visual que as demais.
  *
  * SEMPRE enfileirada (mesma política do VerificationCodeMail).
  */
@@ -40,14 +45,14 @@ final class ResetPasswordNotification extends Notification implements ShouldQueu
 
     public function toMail(object $notifiable): MailMessage
     {
-        $minutes = (int) config('auth.passwords.users.expire', 60);
-
-        return (new MailMessage)
-            ->subject(__('mail.password_reset.subject', ['platform' => platform()->name]))
-            ->line(__('mail.password_reset.intro'))
-            ->action(__('mail.password_reset.action'), $this->resetUrl($notifiable))
-            ->line(__('mail.password_reset.expires', ['minutes' => $minutes]))
-            ->line(__('mail.password_reset.ignore'));
+        return KitMailMessage::make(
+            __('mail.password_reset.subject', ['platform' => platform()->name]),
+            'mail.messages.password-reset',
+            [
+                'resetUrl' => $this->resetUrl($notifiable),
+                'expiresInMinutes' => (int) config('auth.passwords.users.expire', 60),
+            ],
+        );
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Contact\Http\Controllers\ContactController;
 use App\Core\Localization\Http\Controllers\LocaleController;
+use App\Core\Mail\Http\Controllers\MailPreviewController;
 use App\Core\Uploads\Http\Controllers\AvatarController;
 use App\Http\Controllers\LandingV2Controller;
 use App\Http\Controllers\ShowcaseFormDemoController;
@@ -52,6 +53,12 @@ Route::get('ui', function () {
 
     return view('showcase');
 })->name('ui.showcase');
+
+// Pré-visualização dos e-mails transacionais (/mail-preview) — ferramenta de
+// DESENVOLVIMENTO, atrás da mesma flag do login demo (config/ui.php ←
+// DEMO_LOGIN_ENABLED; padrão: só em local). Em produção responde 404 — uma
+// galeria pública com o desenho de todos os e-mails é presente de phishing.
+Route::get('mail-preview/{slug?}', MailPreviewController::class)->name('mail.preview');
 
 // Exemplo funcional do padrão Blade clássico (seção "Padrões de formulário"
 // do /ui): POST + redirect + old() + erros. Mesma flag do showcase.

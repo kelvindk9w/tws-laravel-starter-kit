@@ -76,6 +76,11 @@ return [
             ['icon' => 'beaker', 'title' => 'Real tests', 'description' => 'Pest feature coverage across every module + Playwright E2E — content validation, not just status codes.'],
             ['icon' => 'language', 'title' => 'Native i18n', 'description' => 'Every string goes through language files (lang/), never hardcoded text in views — multi-language ready out of the box.'],
             ['icon' => 'server-stack', 'title' => 'Self-contained Docker', 'description' => 'Only Docker on your machine: compose brings up app, database, Redis, queues and scheduler — including the production stack.'],
+            // Two features the kit already ships that the grid did not tell:
+            // ready-made transactional email (dev server + preview) and the
+            // fact that panel, admin and emails share the SAME components.
+            ['icon' => 'envelope', 'title' => 'Mailpit and ready-made emails', 'description' => 'A development mail server already in the compose file, a single transactional template in three languages, automatic plain text and a preview screen.'],
+            ['icon' => 'code-bracket', 'title' => 'Built out of components', 'description' => 'Panel, admin and emails are assembled from the same reusable components — documented and browsable in the /ui showcase.'],
         ],
     ],
 

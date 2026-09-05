@@ -107,6 +107,6 @@ it('toda string da landing passa pelo arquivo de idioma (sem fallback cru)', fun
     expect(__('landing.hero.title'))->not->toBe('landing.hero.title')
         ->and(__('landing.hours.heading'))->not->toBe('landing.hours.heading')
         ->and(__('landing.cta.heading'))->not->toBe('landing.cta.heading')
-        ->and(__('landing.features.items'))->toBeArray()->toHaveCount(12)
+        ->and(__('landing.features.items'))->toBeArray()->toHaveCount(14)
         ->and(__('landing.stack.items'))->toBeArray()->toHaveCount(10);
 });

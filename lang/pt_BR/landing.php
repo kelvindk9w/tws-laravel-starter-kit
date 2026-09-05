@@ -76,6 +76,11 @@ return [
             ['icon' => 'beaker', 'title' => 'Testes de verdade', 'description' => 'Cobertura Pest de feature em todos os módulos + E2E Playwright — validação de conteúdo, não só de status.'],
             ['icon' => 'language', 'title' => 'i18n pt-BR nativo', 'description' => 'Toda string passa por arquivos de idioma (lang/pt_BR), nunca texto fixo em views — multi-idioma já preparado.'],
             ['icon' => 'server-stack', 'title' => 'Docker autocontido', 'description' => 'Só Docker na máquina: o compose sobe app, banco, Redis, filas e scheduler — inclusive a stack de produção.'],
+            // Dois recursos que o kit já entrega e a grade não contava:
+            // o e-mail transacional pronto (com servidor de dev e preview) e o
+            // fato de painel, admin e e-mails saírem dos MESMOS componentes.
+            ['icon' => 'envelope', 'title' => 'Mailpit e e-mails prontos', 'description' => 'Servidor de e-mail de desenvolvimento já no compose, template transacional único nos três idiomas, texto puro automático e tela de pré-visualização.'],
+            ['icon' => 'code-bracket', 'title' => 'Feito em componentes', 'description' => 'Painel, admin e e-mails montados sobre os mesmos componentes reutilizáveis — documentados e navegáveis no showcase /ui.'],
         ],
     ],
 

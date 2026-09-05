@@ -76,6 +76,12 @@ return [
             ['icon' => 'beaker', 'title' => 'Tests de verdad', 'description' => 'Cobertura Pest de feature en todos los módulos + E2E Playwright — validación de contenido, no solo de estado.'],
             ['icon' => 'language', 'title' => 'i18n nativo', 'description' => 'Toda cadena pasa por archivos de idioma (lang/), nunca texto fijo en views — multi-idioma listo desde el inicio.'],
             ['icon' => 'server-stack', 'title' => 'Docker autocontenido', 'description' => 'Solo Docker en tu máquina: compose levanta app, base de datos, Redis, colas y scheduler — incluso el stack de producción.'],
+            // Dos recursos que el kit ya entrega y la grilla no contaba: el
+            // correo transaccional listo (servidor de desarrollo y vista
+            // previa) y que panel, admin y correos salen de los MISMOS
+            // componentes.
+            ['icon' => 'envelope', 'title' => 'Mailpit y correos listos', 'description' => 'Servidor de correo de desarrollo ya en el compose, plantilla transaccional única en tres idiomas, texto plano automático y pantalla de vista previa.'],
+            ['icon' => 'code-bracket', 'title' => 'Hecho de componentes', 'description' => 'Panel, admin y correos armados sobre los mismos componentes reutilizables — documentados y navegables en el showcase /ui.'],
         ],
     ],
 
