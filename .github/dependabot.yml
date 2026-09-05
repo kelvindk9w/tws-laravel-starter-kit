@@ -1,0 +1,31 @@
+# Atualizações automáticas de dependências, agrupadas por ecossistema, uma
+# vez por semana, abrindo PR contra a branch de trabalho.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    groups:
+      laravel:
+        patterns: ['laravel/*', 'livewire/*', 'filament/*', 'spatie/*']
+      dev:
+        dependency-type: development
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: desenvolvimento

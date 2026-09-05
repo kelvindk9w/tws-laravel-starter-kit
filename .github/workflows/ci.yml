@@ -1,0 +1,66 @@
+# CI do TWS Laravel Starter Kit — roda em todo push e PR.
+# É o mesmo conjunto que o README manda rodar localmente: Pint (estilo),
+# Pest (testes, SQLite em memória como no phpunit.xml), auditoria de
+# dependências PHP e Node, e o build do frontend. As branches sandbox e
+# producao exigem este workflow verde para receber push.
+name: CI
+
+on:
+  push:
+    branches: [desenvolvimento, sandbox, producao]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Pint · Pest · auditorias · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, intl, gd, bcmath, zip, pcntl, mbstring, redis
+          coverage: none
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Dependências PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Estilo (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Auditoria de dependências PHP
+        run: composer audit --no-interaction
+
+      - name: Dependências Node
+        run: npm ci --ignore-scripts
+
+      - name: Auditoria de dependências Node
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build do frontend
+        run: npm run build
+
+      - name: Ambiente de teste
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Testes (Pest)
+        run: ./vendor/bin/pest --ci

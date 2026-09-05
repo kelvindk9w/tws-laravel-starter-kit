@@ -1,0 +1,28 @@
+# Análise estática de segurança do GitHub (CodeQL) no JavaScript do kit.
+# PHP não é suportado pelo CodeQL; a cobertura de PHP vem dos testes, do
+# composer audit e das revisões de segurança documentadas em SECURITY.md.
+name: CodeQL
+
+on:
+  push:
+    branches: [desenvolvimento, sandbox, producao]
+  pull_request:
+  schedule:
+    - cron: '30 6 * * 1'
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analisar JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
