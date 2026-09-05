@@ -7,6 +7,7 @@ use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Testing\TestResponse;
 
 // =============================================================================
 // Helpers compartilhados da suíte de API Keys/Tenancy (Fase 4).
@@ -62,4 +63,34 @@ function tokenAcaoSensivel(User $user): string
     $response->assertOk();
 
     return (string) $response->json('token');
+}
+
+/**
+ * Envelope de ERRO da API (ADR-010 — ver ApiErrorRenderer e o README):
+ * {"error": {"code", "message", "correlation_id"}}, com "errors" em 422.
+ *
+ * Estes helpers existem para que a suíte inteira afirme o MESMO contrato:
+ * se o envelope mudar, muda em um lugar só.
+ */
+function assertErroApi(TestResponse $response, int $status, string $code): TestResponse
+{
+    return $response->assertStatus($status)
+        ->assertJsonStructure(['error' => ['code', 'message', 'correlation_id']])
+        ->assertJsonPath('error.code', $code);
+}
+
+/**
+ * 422 com erro no campo informado (a chave pode ter ponto — "scopes.0" —,
+ * por isso a checagem é por chave literal, não por caminho aninhado).
+ */
+function assertErroDeValidacaoApi(TestResponse $response, string $campo): TestResponse
+{
+    assertErroApi($response, 422, 'validation_failed');
+
+    /** @var array<string, mixed> $errors */
+    $errors = $response->json('error.errors') ?? [];
+
+    expect($errors)->toHaveKey($campo);
+
+    return $response;
 }

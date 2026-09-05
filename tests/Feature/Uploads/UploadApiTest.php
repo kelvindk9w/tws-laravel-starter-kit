@@ -94,8 +94,8 @@ it('rejeita PDF com JavaScript embutido (política: suspeita = não aceita)', fu
     $response = postUpload($user, fixtureArquivoEnviado(fixtureBytesPdfComJavaScript(), 'documento.pdf'));
 
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors('file')
-        ->assertJsonPath('errors.file.0', __('uploads.rejected.pdf_auto_action'));
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonPath('error.errors.file.0', __('uploads.rejected.pdf_auto_action'));
 
     // Rejeitado NUNCA toca o banco nem o disco (só o log).
     expect(Upload::query()->count())->toBe(0)
@@ -112,7 +112,7 @@ it('rejeita executável renomeado para .pdf (magic bytes, não extensão)', func
     $response = postUpload($user, fixtureArquivoEnviado(fixtureBytesElf(), 'boleto.pdf'));
 
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors('file');
+        ->assertJsonStructure(['error' => ['errors' => ['file']]]);
 
     expect(Upload::query()->count())->toBe(0);
 });
@@ -124,7 +124,7 @@ it('rejeita imagem polyglot com PHP embutido', function () {
     $response = postUpload($user, fixtureArquivoEnviado($bytes, 'foto.png'));
 
     $response->assertUnprocessable()
-        ->assertJsonPath('errors.file.0', __('uploads.rejected.embedded_script'));
+        ->assertJsonPath('error.errors.file.0', __('uploads.rejected.embedded_script'));
 
     expect(Upload::query()->count())->toBe(0);
 });
@@ -135,7 +135,7 @@ it('rejeita extensão divergente do conteúdo real', function () {
     $response = postUpload($user, fixtureArquivoEnviado(fixtureBytesPng(), 'documento.pdf'));
 
     $response->assertUnprocessable()
-        ->assertJsonPath('errors.file.0', __('uploads.rejected.extension_mismatch'));
+        ->assertJsonPath('error.errors.file.0', __('uploads.rejected.extension_mismatch'));
 
     expect(Upload::query()->count())->toBe(0);
 });
@@ -149,7 +149,7 @@ it('rejeita arquivo acima do tamanho máximo do tipo', function () {
     $response = postUpload($user, fixtureArquivoEnviado($bytes, 'grande.pdf'));
 
     $response->assertUnprocessable()
-        ->assertJsonPath('errors.file.0', __('uploads.rejected.too_large', ['max' => 1]));
+        ->assertJsonPath('error.errors.file.0', __('uploads.rejected.too_large', ['max' => 1]));
 
     expect(Upload::query()->count())->toBe(0);
 });
@@ -160,7 +160,7 @@ it('rejeita conteúdo de texto disfarçado de imagem', function () {
     $response = postUpload($user, fixtureArquivoEnviado('<?php echo 1;', 'avatar.png'));
 
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors('file');
+        ->assertJsonStructure(['error' => ['errors' => ['file']]]);
 
     expect(Upload::query()->count())->toBe(0);
 });
@@ -170,7 +170,7 @@ it('exige o scope uploads:create', function () {
 
     postUpload($user, fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'), scopes: ['projects:read'])
         ->assertForbidden()
-        ->assertJsonPath('message', __('api_keys.scopes.denied', ['scope' => 'uploads:create']));
+        ->assertJsonPath('error.message', __('api_keys.scopes.denied', ['scope' => 'uploads:create']));
 });
 
 it('exige credenciais de API válidas (deny-by-default)', function () {

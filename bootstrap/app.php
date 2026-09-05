@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
+use App\Core\Http\Exceptions\ApiErrorRenderer;
 use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Logging\Middleware\RequestLogging;
 use App\Core\Security\Middleware\SecurityHeaders;
@@ -66,6 +67,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Envelope padronizado de erro da API (`api/*`), contrapartida do
+        // envelope de sucesso {"data": …} — ver ApiErrorRenderer e o README
+        // (seção API). Nunca stack trace/caminho de servidor, nem com
+        // APP_DEBUG=true: o contrato do cliente é o mesmo em todo ambiente.
+        $exceptions->render(fn (Throwable $e, Request $request) => app(ApiErrorRenderer::class)($e, $request));
 
         // Captura a mensagem da exceção para o request log finalizar como ERRO
         // com o motivo (redigido depois pelo RequestLogging — LGPD).

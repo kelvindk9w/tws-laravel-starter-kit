@@ -87,7 +87,7 @@ it('exige scope projects:* por operação', function (string $metodo, string $ro
 
     $this->json($metodo, $rota, ['name' => 'X'], headersApi($key, $secret))
         ->assertForbidden()
-        ->assertJsonPath('message', __('api_keys.scopes.denied', ['scope' => $scopeExigido]));
+        ->assertJsonPath('error.message', __('api_keys.scopes.denied', ['scope' => $scopeExigido]));
 })->with([
     'listar' => ['GET', '/api/v1/projects', 'projects:read'],
     'criar' => ['POST', '/api/v1/projects', 'projects:create'],
@@ -99,5 +99,6 @@ it('valida o nome na criação', function () {
 
     $this->postJson('/api/v1/projects', [], headersApi($key, $secret))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('name');
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonStructure(['error' => ['errors' => ['name']]]);
 });

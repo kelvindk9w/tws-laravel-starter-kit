@@ -56,7 +56,7 @@ it('rejeita credenciais ausentes, secreta errada ou pk_ inexistente com 401 e lo
     $response = $this->getJson('/api/v1/_test/tenant', $headers);
 
     $response->assertUnauthorized()
-        ->assertJsonPath('message', __('api_keys.auth.invalid'));
+        ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
 
     // Log SEM tenant = sinal de possível ataque/tentativa de burla (ADR-010).
     $log = RequestLog::query()
@@ -90,7 +90,7 @@ it('rejeita chave revogada, expirada por data ou com usuário bloqueado', functi
 
     $this->getJson('/api/v1/_test/tenant', headersApi($key, $secret))
         ->assertUnauthorized()
-        ->assertJsonPath('message', __('api_keys.auth.invalid'));
+        ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
 })->with(['revogada', 'expirada', 'usuario bloqueado']);
 
 it('rejeita chave inativa além do limite configurado (middleware checa inatividade)', function () {
@@ -131,7 +131,7 @@ it('nega scope ausente com 403 e mensagem indicando o scope exigido', function (
 
     $this->getJson('/api/v1/_test/customers', headersApi($key, $secret))
         ->assertForbidden()
-        ->assertJsonPath('message', __('api_keys.scopes.denied', ['scope' => 'customers:read']));
+        ->assertJsonPath('error.message', __('api_keys.scopes.denied', ['scope' => 'customers:read']));
 });
 
 it('atualiza o last_used_at de forma throttled (no máximo 1x por janela)', function () {

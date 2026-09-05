@@ -37,9 +37,11 @@ function tenantBootstrap(): array
 it('cria chave exigindo ação sensível: sem o token, 403', function () {
     ['api_key' => $key, 'secret_key' => $secret] = tenantBootstrap();
 
-    $this->postJson('/api/v1/api-keys', ['name' => 'Minha chave'], headersApi($key, $secret))
-        ->assertForbidden()
-        ->assertJsonPath('message', __('auth.sensitive_action.invalid_token'));
+    assertErroApi(
+        $this->postJson('/api/v1/api-keys', ['name' => 'Minha chave'], headersApi($key, $secret)),
+        403,
+        'forbidden',
+    )->assertJsonPath('error.message', __('auth.sensitive_action.invalid_token'));
 
     expect(ApiKey::query()->count())->toBe(1); // só a bootstrap
 });
@@ -105,12 +107,13 @@ it('cria chave com scopes restritos e validade definida pelo usuário', function
 it('rejeita scopes em formato inválido na criação', function () {
     ['user' => $user, 'api_key' => $bootKey, 'secret_key' => $bootSecret] = tenantBootstrap();
 
-    $this->postJson('/api/v1/api-keys', [
-        'name' => 'X',
-        'scopes' => ['sem-dois-pontos'],
-    ], [...headersApi($bootKey, $bootSecret), 'X-Sensitive-Action-Token' => tokenAcaoSensivel($user)])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('scopes.0');
+    assertErroDeValidacaoApi(
+        $this->postJson('/api/v1/api-keys', [
+            'name' => 'X',
+            'scopes' => ['sem-dois-pontos'],
+        ], [...headersApi($bootKey, $bootSecret), 'X-Sensitive-Action-Token' => tokenAcaoSensivel($user)]),
+        'scopes.0',
+    );
 });
 
 it('lista somente as chaves do tenant autenticado (isolamento)', function () {
@@ -134,9 +137,8 @@ it('exige scope api-keys:read para listar', function () {
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user, ['scopes' => ['projects:read']]);
 
-    $this->getJson('/api/v1/api-keys', headersApi($key, $secret))
-        ->assertForbidden()
-        ->assertJsonPath('message', __('api_keys.scopes.denied', ['scope' => 'api-keys:read']));
+    assertErroApi($this->getJson('/api/v1/api-keys', headersApi($key, $secret)), 403, 'forbidden')
+        ->assertJsonPath('error.message', __('api_keys.scopes.denied', ['scope' => 'api-keys:read']));
 });
 
 it('revoga a própria chave e ela para de autenticar imediatamente', function () {
@@ -263,11 +265,12 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
         ->toEqualCanonicalizing([$projetoA->id, $projetoB->id]);
 
     // Projeto de OUTRO tenant: 422, sem vazar existência.
-    $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
-        'project_uuids' => [$projetoAlheio->uuid],
-    ], headersApi($key, $secret))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('project_uuids');
+    assertErroDeValidacaoApi(
+        $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
+            'project_uuids' => [$projetoAlheio->uuid],
+        ], headersApi($key, $secret)),
+        'project_uuids',
+    );
 
     // Lista vazia = sem vínculo (a chave volta a enxergar a conta toda — ADR-005).
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
@@ -304,5 +307,5 @@ it('não rotaciona chave já revogada', function () {
         ...headersApi($boot, $segredoBoot),
         'X-Sensitive-Action-Token' => tokenAcaoSensivel($user),
     ])->assertStatus(422)
-        ->assertJsonPath('message', __('api_keys.keys.not_rotatable'));
+        ->assertJsonPath('error.message', __('api_keys.keys.not_rotatable'));
 });
