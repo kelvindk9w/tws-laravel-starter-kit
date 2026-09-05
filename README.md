@@ -85,16 +85,26 @@ repositório e footer institucional), com layout próprio
 Strings em `lang/*/landing.php` + `lang/*/contact.php`; branding via
 `platform()`.
 
-- **Tipografia**: títulos em Space Grotesk Variable (self-hosted via
-  `@fontsource-variable/space-grotesk`, token `--font-display`), corpo em
-  Instrument Sans.
+- **Hierarquia de CTA**: UM primário ("Criar conta"), UM secundário ("Testar
+  demo") e o resto como link de texto sublinhado — no herói e no CTA final.
+  Quatro botões lado a lado não são quatro opções, são nenhuma.
+- **Tipografia**: títulos em Space Grotesk Variable e corpo em Instrument Sans
+  Variable — as **duas** self-hosted via `@fontsource-variable` e importadas
+  no `app.css` (tokens `--font-display` / `--font-sans`). Nenhuma fonte vem de
+  CDN: a CSP do kit não permite `font-src` externo.
+- **Mobile**: abaixo de `sm:` a nav vira um **drawer** (`<x-drawer>`) aberto
+  pelo hambúrguer, com Esc, backdrop, foco preso e alvos de 44px.
 - **Screenshot do hero**: `public/img/landing/dashboard.png` (commitado).
   Para regerar com a stack dev no ar: `node tests/e2e/capture-hero.js`
-  (faz login com o usuário demo e captura o /dashboard em tema escuro).
+  (faz login com o usuário demo e captura o /dashboard em tema escuro —
+  recorte 1280×700 com as métricas e o gráfico de requisições).
 - **Motion**: tokens de easing/duração em `resources/css/theme.css`
   (`--ease-out`, `--ease-in-out`); scroll-reveal discreto via
   IntersectionObserver em `resources/js/ui.js` (`data-reveal`), desligado
-  com `prefers-reduced-motion`.
+  com `prefers-reduced-motion`. **Rede de segurança de 2s**: o reveal esconde
+  conteúdo com `opacity: 0` via JS — se o observer não disparar (aba em
+  segundo plano, captura sem scroll), tudo aparece mesmo assim. Animação é
+  enfeite; conteúdo não é opcional.
 
 ### i18n (pt-BR · English · Español)
 
@@ -108,19 +118,40 @@ que nenhuma chave fica para trás). Resolução do locale (middleware `SetLocale
    landing, do showcase e do painel → rota `GET /locale/{locale}`);
 3. **Fallback** → `PLATFORM_LOCALE` (padrão do kit: pt-BR).
 
-Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php). O seletor é
-compacto — **bandeira + sigla** (🇧🇷 PT / 🇺🇸 EN / 🇪🇸 ES) — e o **super admin
-Filament (/admin) segue a MESMA resolução** (o middleware `SetLocale` está no
-stack do painel): seletor na topbar, `lang/*/admin.php` nos 3 idiomas.
+Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php).
+
+O seletor (`<x-locale-switcher>`) é um **dropdown do kit**: bandeira em **SVG
+inline** + sigla no gatilho, nome do idioma por extenso e ✓ no ativo na lista,
+navegável por teclado (setas/Home/End/Esc), nos dois temas. Cada item é um
+**link real** para `locale.switch`. Era um `<select>` nativo com bandeira em
+emoji — a lista era desenhada pelo sistema operacional e o emoji dependia da
+fonte instalada (no Windows 🇧🇷 vira "BR"); bandeira também não é idioma, por
+isso o nome por extenso é a informação e a bandeira é só apoio.
+
+O **super admin Filament (/admin) segue a MESMA resolução** (o middleware
+`SetLocale` está no stack do painel): seletor na topbar
+(`resources/views/filament/topbar-locale-switcher.blade.php` — mesma linguagem
+visual, mas autocontido em `<details>` + estilo inline, porque o /admin tem
+bundle CSS próprio e não carrega o `ui.js`), `lang/*/admin.php` nos 3 idiomas.
 
 ### Tema claro/escuro/sistema
 
-Toggle de **3 estados** (`<x-theme-toggle>`) nas navs e segmented control no
-Perfil. Padrão = **Sistema** (`prefers-color-scheme`), sem flash de tema errado
+Seletor de **3 estados NOMEADOS** (`<x-theme-toggle>` — um `<x-dropdown>` com
+Sistema/Claro/Escuro e ✓ no ativo) nas navs, e segmented control no Perfil.
+Era um ícone que ciclava os três às cegas: para saber onde se estava era
+preciso clicar. Padrão = **Sistema** (`prefers-color-scheme`), sem flash de tema errado
 no carregamento (script inline mínimo em `resources/views/partials/theme-script.blade.php`
 — coberto pela CSP base, que já permite `script-src 'unsafe-inline'`).
 Persistência: `localStorage.theme` (dispositivo) + `users.theme` (conta, via
 `POST /settings/theme` quando logado — padrão entre dispositivos).
+
+O escuro é um **tema**, não uma inversão: as superfícies vêm dos tokens
+semânticos do `theme.css` (`--color-surface`, `--color-surface-raised`,
+`--color-surface-sunken`, `--color-surface-disabled`, `--color-border`,
+`--color-text-muted`), definidos uma vez por tema, com a MESMA ordem de
+elevação nos dois (sunken < surface < raised). Nunca escreva
+`bg-white dark:bg-gray-900` num componente — use `bg-surface`. Um teste de
+arquitetura reprova quem escrever (ver "Painel do usuário").
 
 ### Formulário de contato (landing)
 
@@ -129,6 +160,15 @@ Persistência: `localStorage.theme` (dispositivo) + `users.theme` (conta, via
 falso para bots), rate limit de rota sensível (5/min) e e-mail **enfileirado**
 para `PLATFORM_CONTACT_EMAIL` (em dev, visível no **Mailpit**:
 http://localhost:18025). Feedback via toast do kit (flash de sessão).
+
+Além do e-mail, **toda mensagem vira registro auditável**: passa pelo MESMO
+`FormSubmissionGuard` dos forms demo do `/ui` e grava em `form_submissions`
+com origem `contact` e o e-mail do remetente (`sender_email` — os forms demo
+são anônimos). Tentativas bloqueadas (honeypot ou ataque detectado) também
+ficam registradas, com sucesso FALSO para quem enviou e **nenhum e-mail**
+disparado. A listagem em `/admin/form-submissions` mostra a origem e permite
+filtrar por ela. Sem isso, a única trilha de contato seria a caixa de
+entrada.
 
 ### Showcase de componentes (`/ui`)
 
@@ -140,18 +180,28 @@ notas de acessibilidade): `<x-button>` (primary/secondary/outline/ghost/danger),
 `<x-card>`, `<x-modal>`, `<x-toast>`, `<x-empty-state>`, `<x-spinner>`,
 `<x-skeleton>` (shimmer, com exemplo real via `wire:loading` em Projetos),
 `<x-loading-overlay>` (uso restrito documentado), `<x-snippet>`,
+`<x-table>` + `<x-table-row>` + `<x-table-cell>` (colunas declaradas; **vira
+cartões abaixo de `sm:`**, cada célula com o próprio rótulo), `<x-stat>`
+(métrica de dashboard), `<x-chart>` (Chart.js com estado vazio desenhado),
+`<x-dropdown>` + `<x-dropdown-item>` (menu ancorado, teclado completo),
+`<x-drawer>` (gaveta lateral — mesmo motor do modal), `<x-file-input>`
+(seletor de arquivo traduzido), `<x-flag>` (bandeiras em SVG),
 `<x-locale-switcher>`, `<x-theme-toggle>`, `<x-ui-icon>`, `<x-form-errors>` e
 `<x-flash-toast>` (em `resources/views/components/` — copie e use em qualquer
-tela). Abre com a seção **Tema** (design tokens vivos) e fecha com
+tela). Duas seções novas no `/ui`: **Tabela e dados** e **Navegação**. Abre com a seção **Tema** (design tokens vivos) e fecha com
 **Padrões de formulário**: os dois modos canônicos funcionais (Blade clássico
 e Livewire/AJAX) e as 4 estratégias de exibição de erros.
 
-- **Snippets copiáveis**: cada variante exibe o código `<x-…>` com botão de
-  copiar (clipboard via `data-copy` em `resources/js/ui.js`, feedback no
-  próprio botão + toast do kit).
-- **JS de UI centralizado**: modal (`data-modal-open`/`data-modal-close`),
+- **Snippets copiáveis**: cada variante exibe o código `<x-…>` **inteiro**
+  (quebra em várias linhas — nada de `truncate`: um snippet cortado no meio é
+  pior do que nenhum) com botão de copiar (clipboard via `data-copy` em
+  `resources/js/ui.js`, feedback no próprio botão + toast do kit).
+- **JS de UI centralizado**: modal e drawer (`data-modal-open`/
+  `data-modal-close`, com foco preso e devolvido), dropdown (`data-dropdown`),
   toast (`data-toast-show`), copiar, scroll-reveal, scrollspy, olho de senha
-  (`data-password-toggle`), tema e idioma vivem em `resources/js/ui.js`,
+  (`data-password-toggle`), seletor de arquivo (`data-file-input`), tema e
+  idioma vivem em `resources/js/ui.js`; os gráficos em `resources/js/chart.js`
+  (Chart.js — sem `eval`, roda sob a CSP estrita do painel),
   servido pelo Vite — nada de `<script>` inline nas views (CSP-friendly; a
   única exceção deliberada é o anti-flash de tema no `<head>`).
 
@@ -224,9 +274,16 @@ chamados automaticamente pelo `DatabaseSeeder` quando o flag está ligado:
 
 ```bash
 docker compose exec app php artisan migrate --seed   # cria os usuários demo
-# painel:  demo@tws.dev / demo-password       (DEMO_USER_EMAIL/PASSWORD)
-# /admin:  admin@tws.dev / demo-admin-password (DEMO_ADMIN_EMAIL/PASSWORD)
+# painel:  demo@tws.dev / Demo-password1        (DEMO_USER_EMAIL/PASSWORD)
+# /admin:  admin@tws.dev / Demo-admin-password1 (DEMO_ADMIN_EMAIL/PASSWORD)
 ```
+
+As senhas demo obedecem à **mesma política de senha do app**
+(`config/auth.php → password_rules`: mínimo de 12 caracteres, maiúscula +
+minúscula e dígito) — senha de demonstração que a própria validação do
+produto recusaria é armadilha, não conveniência. Um teste
+(`tests/Feature/Auth/PasswordPolicyTest.php`) prova que as credenciais
+semeadas passam na regra e que o login com elas funciona.
 
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
@@ -240,9 +297,20 @@ um visitante não pode quebrar a demo para os demais.
 Rebranding de um projeto novo = **1 arquivo + .env**:
 
 - **`resources/css/theme.css`** — bloco `@theme` do Tailwind 4 com os tokens da
-  linguagem: cor de marca (`--color-brand`), tipografia (`--font-display`,
-  `--font-sans`), radii (`--radius-lg/xl`) e motion (`--ease-out`,
-  `--ease-in-out`, `--animate-spin/shimmer`). Importado pelo `app.css`.
+  linguagem: cor de marca (`--color-brand`, `--color-brand-hover`),
+  **superfícies semânticas** (`--color-surface`, `--color-surface-raised`,
+  `--color-surface-sunken`, `--color-surface-disabled`, `--color-border`,
+  `--color-border-strong`, `--color-text-muted`), tipografia (`--font-display`,
+  `--font-sans`), **escala tipográfica de 5 degraus** (`--text-display`,
+  `--text-h1`, `--text-h2`, `--text-body`, `--text-caption` — utilitários
+  `text-display`/`text-h1`/…), radii (`--radius-lg/xl`) e motion (`--ease-out`,
+  `--ease-in-out`, `--animate-spin/shimmer`). Importado pelo `app.css` e pelo
+  `filament.css` (o /admin fala a mesma língua).
+- **Escala tipográfica**: cinco degraus e só. `display` (manchete/número de
+  campanha), `h1` (título da tela), `h2` (título de seção/cartão), `body`
+  (texto e controles), `caption` (metadado/rótulo). Tracking negativo só nos
+  dois primeiros. Use os degraus em vez de reinventar `text-2xl font-semibold`
+  a cada tela.
 - **Identidade monocromática por padrão** (esquema Vercel/Linear):
   `--color-brand` é quase-preto no tema claro e quase-branco no escuro
   (invertido pela classe `.dark`), com `--color-brand-foreground` para o texto
@@ -537,6 +605,73 @@ Checagem no model: `$apiKey->allows('pix:create')`. Proteção de rota:
 Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 ```
 
+### Contrato de resposta da API (sucesso e erro)
+
+**Sucesso** — sempre envelopado em `data`, via Resources
+(`App\Core\Http\Resources\BaseResource`); listagens paginadas acrescentam
+`links` e `meta` do Laravel:
+
+```json
+{ "data": { "uuid": "01a0…", "codigo_publico": "PRJ-7K2M4Q", "name": "Loja" } }
+```
+
+**Erro** — contrapartida simétrica, em `error`
+(`App\Core\Http\Exceptions\ApiErrorRenderer`, registrado em
+`bootstrap/app.php`). Vale para TODA rota `api/*`:
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Credenciais de API ausentes, inválidas ou expiradas.",
+    "correlation_id": "01a06e5d-5d70-72e3-b4e5-751f6cb0a5ad"
+  }
+}
+```
+
+| Campo | Papel |
+|---|---|
+| `code` | Identificador **estável**, em inglês, que o cliente programa. Não se traduz. |
+| `message` | Texto humano, **traduzido** no idioma da requisição (`lang/*/api.php`). |
+| `correlation_id` | O mesmo do header `X-Correlation-Id` e da linha em `request_logs` — é ele que liga a queixa do cliente à trilha de auditoria. |
+| `errors` | **Só em 422**: mapa `campo → [mensagens]`. |
+
+Códigos por status: `400 bad_request`, `401 unauthorized`, `403 forbidden`,
+`404 not_found`, `405 method_not_allowed`, `409 conflict`, `419 page_expired`,
+`422 validation_failed`, `429 too_many_requests`, `503 service_unavailable`,
+e `server_error` para qualquer 5xx.
+
+Exemplo de 422:
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "Os dados enviados são inválidos.",
+    "correlation_id": "01a0…",
+    "errors": { "name": ["O campo nome é obrigatório."] }
+  }
+}
+```
+
+**Regras inegociáveis do envelope de erro:**
+
+- **Nunca** stack trace, classe interna, arquivo ou linha do servidor — **nem
+  com `APP_DEBUG=true`**. O cliente recebe o mesmo contrato em todo ambiente
+  (antes, um 401 devolvia a página de debug do Symfony com
+  `/var/www/html/vendor/...` no corpo).
+- **5xx nunca ecoa a mensagem da exceção** (pode conter SQL, caminho ou
+  segredo): sai a mensagem genérica traduzida e o detalhe fica no log,
+  recuperável pelo `correlation_id`.
+- 4xx pode carregar a mensagem do `abort()` da aplicação (já traduzida na
+  origem, como o 401 do `resolve.tenant`); mensagens internas do
+  framework/Symfony são descartadas em favor da tradução do kit.
+- O `Retry-After` do rate limit é preservado no header (informação útil e
+  não sensível).
+
+Cobertura: `tests/Feature/Api/ErrorEnvelopeTest.php` — um teste por status
+(401/403/404/422/429/500), mais a checagem de que nada de servidor vaza.
+
 ### Endpoints da API v1 (`routes/api.php`)
 
 Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
@@ -709,11 +844,35 @@ default = preferência do SO).
 
 | Rota | Tela |
 |---|---|
-| `/dashboard` | Boas-vindas, código público, contadores e ações rápidas |
+| `/dashboard` | Boas-vindas, código público (com copiar), 4 métricas (chaves ativas, projetos, requisições em 7 dias, último uso de chave), gráfico de requisições por dia (30 dias) e as 5 últimas chamadas da API com status |
 | `/profile` | Dados, idioma, aparência (tema), senha de login, senha de transação e avatar (mesma tela) |
 | `/api-keys` | Chaves de API: criar (scopes + vínculo N:N com projetos), visualização única da secreta, rotacionar (grace period), revogar |
 | `/projects` | Projetos: CRUD só com nome, tudo inline (ADR-005) |
 | `/notifications` | Preferências de e-mail (esqueleto p/ notificações de pagamento) |
+
+**O dashboard mostra tráfego REAL**: as métricas, o gráfico e a lista saem de
+`request_logs` filtrados por `tenant_uuid` (o uuid do dono da chave, vinculado
+pelo middleware `ResolveTenant` da Fase 4). Sem dados, cada bloco tem estado
+vazio desenhado — um gráfico de eixos zerados não informa nada e parece
+defeito.
+
+**O painel consome o próprio design system.** Nenhuma view de
+`resources/views/livewire/**` escreve Tailwind cru de botão, modal, alerta,
+estado vazio ou superfície: se falta variante, o componente é estendido.
+Isso é lei verificada por teste, não convenção — `tests/Feature/Architecture/
+DesignSystemTest.php` reprova o build se aparecer `bg-brand px-4`,
+`fixed inset-0 z-40`, `border-dashed`, `dark:bg-gray-900` e companhia (a lista
+de padrões proibidos, com o componente que resolve cada um, está no topo do
+arquivo). O mesmo teste reprova **ação Livewire com nome de palavra reservada
+do JavaScript**: no build CSP-safe do Livewire 4 a expressão de `wire:click` é
+compilada por um parser de JS, e uma ação chamada `delete` estoura
+`Expected IDENTIFIER but got KEYWORD` — a ação nunca roda, sem erro visível
+(foi o bug de "excluir projeto"; hoje o método se chama `removeProject`).
+
+**Mobile**: abaixo de `sm:` a nav do painel vira um drawer (hambúrguer → Esc,
+backdrop, foco preso), as tabelas viram cartões e as ações destrutivas moram
+num menu de overflow (⋯) com modal de confirmação — mirar "Rotacionar" e
+acertar "Revogar" destruía uma credencial de produção.
 
 Princípio de UI (ADR-005): tudo se resolve na MESMA tela — formulários
 inline e modais em vez de navegação. Ações sensíveis (criar/rotacionar
@@ -726,8 +885,9 @@ chave) abrem o modal de confirmação: senha de transação → código por e-ma
 
 - **Acesso**: somente `is_admin` + conta ativa (`User::canAccessPanel`) —
   qualquer outro usuário recebe **403**; guest vai ao login do painel.
-- **Criar o primeiro admin** (a flag NUNCA é mass-assignable nem editável
-  por telas — a única porta é o comando):
+- **Criar o primeiro admin** (bootstrap e resgate de acesso — a flag NUNCA é
+  mass-assignable; pela UI ela só muda no formulário de usuário do painel,
+  que aplica as guardas descritas abaixo):
 
 ```bash
 docker compose exec app php artisan user:make-admin email@exemplo.com
@@ -736,13 +896,35 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 
 - **i18n + seletor compacto na topbar** (bandeira + sigla): o painel segue a
   mesma resolução de locale do app (preferência da conta → cookie → padrão).
-- **Resources**: Usuários (listar/ver/bloquear — contas demo protegidas),
+- **Dashboard com dados reais** (`/admin`): `StatsOverviewWidget` com seis
+  números da plataforma (usuários totais, novos em 7 dias, requisições em
+  24h, respostas 4xx/5xx em 24h, chaves de API ativas e submissões dos
+  últimos 7 dias) + `ChartWidget` de **requisições por dia nos últimos 30
+  dias**, com a série de erros destacada. Tudo lido de tabela real — o
+  `RequestLogSeeder` semeia ~30 dias de `request_logs` realistas
+  (append-only e com a mesma redaction do middleware) para que o gráfico
+  nasça com conteúdo em qualquer instalação.
+- **Identidade unificada com o resto do produto**: `->font('Space Grotesk
+  Variable')` (self-hosted, sem CDN de fonte — a CSP não permite),
+  `->viteTheme('resources/css/filament.css')` (que importa o preset do
+  Filament 5 + os tokens de `resources/css/theme.css`), primária
+  `Color::Neutral` casando com `--color-brand`, marca monocromática própria
+  quando `PLATFORM_LOGO_URL` está vazio e ícone Heroicon em **todos** os
+  resources e páginas.
+- **Resources**: **Usuários** (CRUD completo — listar, ver, criar, editar,
+  bloquear/desbloquear e excluir; senha com confirmação sob a MESMA política
+  do registro público; guardas de servidor no `UserAdminGuard`: contas demo
+  intocáveis, o admin não se exclui nem se bloqueia e o último admin ativo
+  não perde a flag/acesso; `UserSeeder` idempotente com 40 usuários
+  realistas para paginação e filtros nascerem com conteúdo),
   Chaves de API (visão global de todos os tenants + revogar), Projetos,
   **Produtos** (vitrine de CRUD: foto por upload validado ou URL, valor
   monetário em centavos — nunca float —, paginação de 10 e paginação/filtros
   refletidos na query string; `ProductSeeder` com 36 itens),
   **Submissões de formulário** (read-only; ataques bloqueados no topo com
-  badge vermelho; filtro por origem na URL), Request Logs (auditoria de API
+  badge vermelho; filtro por origem na URL — os dois forms demo do `/ui`
+  **e o formulário de contato real da landing**, origem `contact`, a única
+  com remetente identificado), Request Logs (auditoria de API
   + web + admin, com filtros de status/tenant/endpoint/período — logs órfãos,
   sem tenant, destacados em vermelho) e Uploads.
 - **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): nome
@@ -755,6 +937,9 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   editar .env. Somente a whitelist de `config/settings.php` é gravável;
   campo vazio = volta ao valor do .env. Os overrides são aplicados no boot
   (`SettingsServiceProvider`, cacheados) e lidos pelo helper `setting()`.
+  Os campos são **agrupados por assunto** (chaves de API / uploads / rate
+  limits) com largura proporcional ao número esperado — `group` e `span`
+  vêm do próprio `config/settings.php`, nada hardcoded na tela.
 - **IP allowlist** (ADR-011, checklist 25 — obrigatória em produção):
   `ADMIN_ALLOWED_IPS` no .env (IPs ou CIDRs separados por vírgula). Vazio =
   sem restrição (apenas desenvolvimento). Middleware: `EnsureAdminIpAllowed`.
@@ -774,9 +959,13 @@ publicados em `public/vendor/livewire` via `post-install-cmd`) e (2) ganham
 ### Testes
 
 `./vendor/bin/pest` (Pest): telas Livewire (renderização + ações com
-conteúdo — criar projeto, criar/rotacionar/revogar chave com o fluxo 2FA
-real e código capturado do mailable, avatar, preferências, isolamento
-anti-IDOR entre tenants), acesso ao /admin (403 a não-admin, comando de
+conteúdo — criar projeto, **excluir projeto de verdade**, criar/rotacionar/
+revogar chave com o fluxo 2FA real e código capturado do mailable, avatar,
+preferências, isolamento anti-IDOR entre tenants), dashboard com
+`request_logs` inseridos no próprio teste (janela de 7 dias, série de 30 dias
+sem buracos, 5 últimas chamadas, estados vazios), **arquitetura do design
+system** (`tests/Feature/Architecture/DesignSystemTest.php`), layout mobile
+(drawer, alvos de 44px), acesso ao /admin (403 a não-admin, comando de
 promoção, IP allowlist), resources Filament (listagens, bloquear usuário,
 revogar chave, filtros de request logs) e Settings (override, fallback ao
 .env, whitelist). E2E Playwright: login → dashboard → chaves de API,
