@@ -7,6 +7,7 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -62,9 +63,11 @@ it('registra requisição para endpoint inexistente (sinal de varredura — ADR-
 
     $log = RequestLog::query()->sole();
 
+    // Sem rota casada não há padrão a gravar — e o caminho bruto NÃO serve de
+    // reserva (pode carregar segredo). Fica o marcador + profundidade.
     expect($log->status)->toBe(RequestLogStatus::Concluida)
         ->and($log->http_status_response)->toBe(404)
-        ->and($log->endpoint)->toBe('api/endpoint-que-nao-existe')
+        ->and($log->endpoint)->toBe('[unmatched]:2')
         ->and($log->tenant_uuid)->toBeNull();
 });
 
@@ -126,8 +129,10 @@ it('registra updates genéricos do Livewire com payload RESUMIDO', function () {
         ],
     ]);
 
-    // A rota pode não existir no ambiente de teste (404) — o que importa é o log.
-    $log = RequestLog::query()->where('endpoint', 'livewire/update')->sole();
+    // A rota do Livewire pode não estar registrada no ambiente de teste (404),
+    // e aí o endpoint é o marcador de rota não casada — o resumo do payload não
+    // depende disso: é decidido pelo padrão de caminho (summarized_paths).
+    $log = RequestLog::query()->sole();
 
     expect($log->payload['_resumo'])->toBe('livewire.update')
         ->and($log->payload['componentes'])->toBe(['contact-form']);
@@ -229,4 +234,74 @@ it('markFinished recusa status fora do ciclo de vida', function () {
 
     expect(fn () => $log->markFinished(RequestLogStatus::Iniciada))
         ->toThrow(InvalidArgumentException::class);
+});
+
+// --- Segredo posicional no caminho da URL (achado de segurança) --------------
+// O link de recuperação de senha leva o token no PATH. O banco só guarda o
+// HASH do token: se o caminho real fosse gravado na trilha, o log viraria a
+// via de tomada de conta (visível no /admin, nos arquivos e nos backups).
+
+it('NÃO grava o token de recuperação de senha no endpoint — grava o padrão da rota', function () {
+    $token = 'TOKEN-EM-CLARO-NAO-PODE-VAZAR';
+
+    $this->get('/reset-password/'.$token.'?email=kelvin@example.com');
+
+    $log = RequestLog::query()->where('method', 'GET')->sole();
+
+    expect($log->endpoint)->toBe('reset-password/{token}')
+        ->and($log->endpoint)->not->toContain($token);
+
+    // Garantia no nível da linha crua: o token não aparece em NENHUMA coluna
+    // (nem no endpoint, nem no payload vindo da query string).
+    $linha = (string) json_encode((array) DB::table('request_logs')->first());
+
+    expect($linha)->not->toContain($token)
+        ->and($linha)->not->toContain('kelvin@example.com');
+});
+
+it('NÃO grava o token de recuperação de senha no canal de arquivo request_log', function () {
+    $token = 'TOKEN-DO-ARQUIVO-NAO-PODE-VAZAR';
+
+    $contextos = [];
+
+    $logger = Mockery::mock();
+    $logger->shouldIgnoreMissing();
+    $logger->shouldReceive('info')->andReturnUsing(function (string $mensagem, array $contexto = []) use (&$contextos): void {
+        $contextos[$mensagem] = $contexto;
+    });
+
+    Log::shouldReceive('channel')->andReturn($logger);
+    Log::getFacadeRoot()->shouldIgnoreMissing();
+
+    $this->get('/reset-password/'.$token.'?email=kelvin@example.com');
+
+    expect($contextos)->toHaveKey('request.started')
+        ->and($contextos['request.started']['endpoint'])->toBe('reset-password/{token}')
+        ->and(json_encode($contextos))->not->toContain($token);
+});
+
+it('rota inexistente com segredo no caminho não vaza o caminho bruto no arquivo', function () {
+    $segredo = 'SEGREDO-EM-ROTA-MORTA';
+
+    $contextos = [];
+
+    $logger = Mockery::mock();
+    $logger->shouldIgnoreMissing();
+    $logger->shouldReceive('info')->andReturnUsing(function (string $mensagem, array $contexto = []) use (&$contextos): void {
+        $contextos[$mensagem] = $contexto;
+    });
+
+    Log::shouldReceive('channel')->andReturn($logger);
+    Log::getFacadeRoot()->shouldIgnoreMissing();
+
+    $this->get('/rota-que-nao-existe/'.$segredo);
+
+    expect($contextos['request.started']['endpoint'])->toBe('[unmatched]:2')
+        ->and(json_encode($contextos))->not->toContain($segredo);
+});
+
+it('marcador de rota não casada preserva a profundidade do caminho para diagnóstico de varredura', function () {
+    $this->get('/a/b/c/d');
+
+    expect(RequestLog::query()->sole()->endpoint)->toBe('[unmatched]:4');
 });

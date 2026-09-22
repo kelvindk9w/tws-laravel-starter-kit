@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Security\Middleware;
 
 use App\Core\Logging\CorrelationId;
+use App\Core\Logging\EndpointSignature;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\Redactor;
@@ -136,12 +137,17 @@ final class SecurityValidation
             $this->sanitizer->sanitize(RequestInputs::extract($request)),
         );
 
+        // Padrão da rota, nunca o caminho real (ver EndpointSignature): a
+        // tentativa de ataque também pode chegar por uma URL que carrega
+        // segredo no path.
+        $endpoint = EndpointSignature::for($request);
+
         $context = [
             'correlation_id' => $correlationId,
             'attack_type' => $attackType,
             'ip' => $request->ip(),
             'method' => $request->method(),
-            'endpoint' => $request->path(),
+            'endpoint' => $endpoint,
         ];
 
         try {
@@ -150,7 +156,7 @@ final class SecurityValidation
                 'ip' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
                 'method' => $request->method(),
-                'endpoint' => Str::limit($request->path(), 2000, ''),
+                'endpoint' => Str::limit($endpoint, 2000, ''),
                 'payload' => $payload,
                 'status' => RequestLogStatus::Bloqueada,
                 'attack_type' => $attackType,

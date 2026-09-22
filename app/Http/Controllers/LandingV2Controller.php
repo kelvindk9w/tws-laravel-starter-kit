@@ -100,10 +100,12 @@ final class LandingV2Controller
                 'span' => 'lg:col-span-2',
                 'code' => <<<'PHP'
                     // A linha nasce no recebimento, com o payload já redigido.
+                    // O endpoint guarda o PADRÃO da rota, nunca o caminho real
+                    // (o path pode carregar segredo: /reset-password/{token}).
                     RequestLog::query()->create([
                         'correlation_id' => $correlationId,
                         'method' => $request->method(),
-                        'endpoint' => $request->path(),
+                        'endpoint' => EndpointSignature::for($request),
                         'payload' => $this->redactor->redactArray($inputs),
                         'status' => RequestLogStatus::Iniciada,
                     ]);

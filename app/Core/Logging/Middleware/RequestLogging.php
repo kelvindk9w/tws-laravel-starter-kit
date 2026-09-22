@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Logging\Middleware;
 
 use App\Core\Logging\CorrelationId;
+use App\Core\Logging\EndpointSignature;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\Redactor;
@@ -123,11 +124,15 @@ final class RequestLogging
             ? $this->summarizePayload($request)
             : $this->redactor->redactArray(RequestInputs::extract($request));
 
+        // Padrão da rota, nunca o caminho real: o path é dado do usuário e
+        // pode carregar segredo posicional (ver EndpointSignature).
+        $endpoint = EndpointSignature::for($request);
+
         $context = [
             'correlation_id' => $correlationId,
             'ip' => $request->ip(),
             'method' => $request->method(),
-            'endpoint' => $request->path(),
+            'endpoint' => $endpoint,
         ];
 
         try {
@@ -136,7 +141,7 @@ final class RequestLogging
                 'ip' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
                 'method' => $request->method(),
-                'endpoint' => Str::limit($request->path(), 2000, ''),
+                'endpoint' => Str::limit($endpoint, 2000, ''),
                 'payload' => $payload,
                 'status' => RequestLogStatus::Iniciada,
             ]);

@@ -112,6 +112,14 @@ return [
         // apenas os nomes dos componentes envolvidos. Continuam auditadas
         // (método, endpoint, duração, status), só sem o payload bruto.
         'summarized_paths' => array_filter(explode(',', (string) env('REQUEST_LOG_SUMMARIZED_PATHS', 'livewire/*,livewire-*,admin/livewire/*'))),
+
+        // Marcador gravado na coluna `endpoint` quando NENHUMA rota casa com
+        // a requisição (404, varredura, método não permitido). O caminho real
+        // NUNCA é gravado: ele é dado do usuário e pode carregar segredo
+        // posicional (ver App\Core\Logging\EndpointSignature). O marcador
+        // recebe a profundidade do caminho pedido (ex.: `[unmatched]:3`), que
+        // separa sondagem de raiz de traversal profundo sem revelar conteúdo.
+        'unmatched_endpoint' => (string) env('REQUEST_LOG_UNMATCHED_ENDPOINT', '[unmatched]'),
     ],
 
 ];
