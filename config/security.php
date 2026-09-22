@@ -79,6 +79,26 @@ return [
             'troque-esta-senha,troque-esta-chave,mude-esta-senha,change-me,changeme,change-this,'
             .'senha,password,secret,segredo,example,exemplo,placeholder,todo,tbd',
         )))),
+
+        // Comandos que fazem o processo PROCESSAR TRABALHO — ler e gravar dado
+        // real, como o HTTP faz. Só nestes (e em qualquer processo que atenda
+        // requisição) a chave inutilizável RECUSA o boot; nos demais comandos
+        // ela apenas avisa, para que `composer install`, `package:discover`,
+        // `config:cache`, `vendor:publish` e `migrate` não sejam derrubados —
+        // sem `.env`, o Laravel resolve APP_ENV como `production`, então uma
+        // recusa larga quebraria o CI, o build da imagem e o primeiro clone.
+        //
+        // A lista é de quem PROCESSA, e não de quem é liberado, porque uma
+        // lista de liberados tem o padrão errado: todo comando de manutenção
+        // novo (do Laravel, do Filament, do Horizon) voltaria a quebrar build
+        // até alguém lembrar de incluí-lo. Esta lista é definida pelo DEPLOY —
+        // são os nomes escritos no docker-compose.prod.yml — e por isso é
+        // estável. Aceita `*` no fim para worker próprio (`meu-worker:*`).
+        'processing_commands' => array_filter(array_map('trim', explode(',', (string) env(
+            'SECURITY_SECRETS_PROCESSING_COMMANDS',
+            'queue:work,queue:listen,horizon,horizon:work,horizon:supervisor,'
+            .'schedule:run,schedule:work',
+        )))),
     ],
 
     // --- Redirecionamento "de volta" (open redirect) ---------------------------

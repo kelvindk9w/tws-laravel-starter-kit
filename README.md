@@ -714,12 +714,38 @@ silenciosa de dado é pior que serviço que não sobe, então hoje:
 | Camada | Comportamento em `APP_ENV=production` |
 | --- | --- |
 | `docker/php/entrypoint-prod.sh` | Chave **ausente** → aborta com código **78** (`EX_CONFIG`) e imprime como gerar e onde colocar. Nunca escreve chave em arquivo. |
-| `App\Core\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`). Único comando liberado: `key:generate`, que é a saída. |
+| `App\Core\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`) nos processos que **servem tráfego ou processam trabalho**; nos comandos de instalação e manutenção, avisa em voz alta (log + stderr) e deixa passar. |
 | `docker-compose.prod.yml` | `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
 
 Fora de produção o entrypoint continua conveniente: gera uma chave efêmera,
 **só no ambiente do processo** (nunca em arquivo), e avisa em voz alta que ela
 morre com o container.
+
+**Por que o guard não recusa em todo lugar.** `config/app.php` resolve
+`env('APP_ENV', 'production')`: **sem `.env`, a aplicação se considera em
+produção**. E `composer install` dispara `artisan package:discover` no
+`post-autoload-dump`. Logo, um guard de recusa larga derrubava a instalação de
+dependências no CI (que instala antes de criar o `.env`), no build da imagem de
+produção (que nunca tem `.env`) e no **primeiro `composer install` de quem
+acabou de clonar o kit**. Fechar o vazamento não pode custar o caminho de
+entrada do projeto. O critério, então, é o dano real:
+
+| Processo | Resposta | Por quê |
+| --- | --- | --- |
+| Serve tráfego (php-fpm, Octane) | **Recusa** | É a requisição do usuário sendo atendida com o segredo errado. |
+| Processa trabalho (`queue:work`, `horizon*`, `schedule:run`) | **Recusa** | Lê e grava dado real como o HTTP faz. Lista em `SECURITY_SECRETS_PROCESSING_COMMANDS`. |
+| Instalação e manutenção (`package:discover`, `config:cache`, `vendor:publish`, `about`, `key:generate`) | **Aviso** | Não expõe nem grava dado. Recusar aqui só quebra build. |
+| `migrate` | **Aviso** | Escreve **esquema**, não dado criptografado. É o primeiro container do compose de produção: o aviso dele é o alerta mais precoce, e o deploy segue para parar na porta que importa (`app`, que serve tráfego). |
+
+A lista configurável é de quem **processa**, não de quem é liberado, porque uma
+lista de liberados tem o padrão errado: todo comando de manutenção novo (do
+Laravel, do Filament, do Horizon) voltaria a derrubar build até alguém lembrar
+de incluí-lo. A lista de quem processa é definida pelo **deploy** — são os nomes
+escritos no `docker-compose.prod.yml` — e por isso é estável.
+
+O aviso vai para o log **e para o stderr** quando há console: um alerta que só
+existe em `storage/logs` é invisível para quem está olhando a saída de um
+`composer install`, e é justamente essa pessoa que pode corrigir.
 
 **Procedimento.** Gere UMA chave, uma única vez:
 
@@ -792,6 +818,11 @@ docker compose -f docker-compose.prod.yml --env-file /dev/null config
 
 # 5) guard da aplicação
 docker compose exec -T app ./vendor/bin/pest tests/Feature/Security/ApplicationKeyProductionTest.php
+
+# 6) o caminho do `composer install`: sem .env e sem APP_ENV/APP_KEY no ambiente,
+#    a app se considera em produção e o package:discover AINDA passa (exit 0)
+docker compose run --rm --no-deps -v /dev/null:/var/www/html/.env --entrypoint sh app \
+  -c 'env -u APP_ENV -u APP_KEY php artisan env; env -u APP_ENV -u APP_KEY php artisan package:discover --no-ansi >/dev/null; echo "[exit=$?]"'
 ```
 
 ## Convenções (resumo dos ADRs — lei do projeto)

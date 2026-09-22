@@ -36,6 +36,13 @@
 # parar antes de subir o php-fpm. Chave presente mas de EXEMPLO/placeholder, e
 # senhas de infraestrutura com valor de placeholder, são reconhecidas no boot da
 # aplicação, onde existe vocabulário configurável e log estruturado.
+#
+# E há uma diferença de ALCANCE entre as duas camadas, de propósito: esta aqui
+# roda no `exec` do container, que é sempre um processo que vai servir ou
+# processar — então pode recusar sem ressalva. O guard da aplicação também boota
+# em `composer install`, `package:discover` e `migrate`, onde a recusa não
+# protege ninguém e só derrubaria build e deploy; lá ele avisa em voz alta e
+# deixa passar. Ver o cabeçalho do CriticalSecrets.
 # =============================================================================
 set -e
 
@@ -60,8 +67,8 @@ de API param de verificar (o pepper do hash tem fallback para a APP_KEY).
 COMO CORRIGIR
 
   1) Gere UMA chave, uma unica vez, num container DESCARTAVEL desta imagem
-     (o --entrypoint sh contorna esta verificacao, e o key:generate e o unico
-     comando liberado pelo guard da aplicacao justamente por ser a saida):
+     (o --entrypoint sh contorna esta verificacao do shell; o guard da
+     aplicacao nao recusa comandos de manutencao, e key:generate e um deles):
 
        docker run --rm --entrypoint sh <imagem> -c 'php artisan key:generate --show'
 
