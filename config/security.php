@@ -130,13 +130,38 @@ return [
         'sensitive' => (int) env('RATE_LIMIT_SENSITIVE', 5),
     ],
 
-    // --- Super admin (/admin — Filament) ---------------------------------------
+    // --- Superfícies administrativas (/admin — Filament, /horizon) -------------
+    // A barreira de ORIGEM das duas. A regra inteira e a justificativa das
+    // decisões estão em App\Core\Security\AdminIpAllowlist; aqui ficam apenas
+    // os valores que a operação ajusta.
     'admin' => [
-        // IP allowlist do painel super admin (ADR-011: obrigatória desde o
-        // go-live em produção — checklist item 25). Lista de IPs separados
-        // por vírgula no .env (ADMIN_ALLOWED_IPS); VAZIO = sem restrição
-        // (apenas para desenvolvimento). Middleware: EnsureAdminIpAllowed.
-        'allowed_ips' => array_filter(explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))),
+        // Origens permitidas no /admin e no /horizon (ADR-011, checklist item
+        // 25). Lista separada por vírgula em ADMIN_ALLOWED_IPS, aceitando IP
+        // exato, faixa CIDR IPv4 (`198.51.100.0/24`) e IPv6 com ou sem prefixo
+        // (`2001:db8::1`, `2001:db8::/32`). Espaços em volta de cada item são
+        // aparados: `10.0.0.1, 10.0.0.2` é como uma pessoa escreve uma lista, e
+        // antes o segundo valor chegava com espaço e era rejeitado em silêncio.
+        //
+        // EM PRODUÇÃO, LISTA VAZIA NÃO SIGNIFICA MAIS "SEM RESTRIÇÃO": o
+        // /admin e o /horizon RECUSAM (403) enquanto a origem permitida for
+        // desconhecida. Antes, vazia liberava geral — e vazia era o padrão do
+        // docker-compose.prod.yml, então a barreira que este arquivo prometia
+        // não existia em nenhuma instalação que não a tivesse preenchido à mão.
+        // Fora de produção, vazia continua liberando (conveniência de
+        // desenvolvimento: o IP de quem desenvolve é o que o Docker der).
+        'allowed_ips' => array_filter(array_map('trim', explode(',', (string) env('ADMIN_ALLOWED_IPS', '')))),
+
+        // ESCAPE HATCH da linha acima: assume a ausência de allowlist NA
+        // APLICAÇÃO como decisão declarada, em vez de recusa. Legítimo para
+        // quem administra de IP dinâmico e para quem já tem a segunda barreira
+        // FORA da aplicação (rede só por VPN, Cloudflare Access, WAF com regra
+        // de origem). Não tem valor padrão verdadeiro, não aparece
+        // descomentado em nenhum arquivo de exemplo, e enquanto estiver valendo
+        // o AppServiceProvider grava aviso no log a cada boot — opt-out de
+        // segurança que ninguém vê volta a ser esquecimento. Quando a lista
+        // acima tem conteúdo, ela VENCE: esta variável responde só "o que
+        // significa uma lista vazia em produção".
+        'allow_any_ip' => (bool) env('ADMIN_ALLOW_ANY_IP', false),
     ],
 
     // --- Delegação de detecção de ataques (vitrine de segurança do /ui) ------

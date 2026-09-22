@@ -3,14 +3,15 @@
 // =============================================================================
 // Horizon (Fase 7 — ADR-010): supervisor de filas Redis + dashboard /horizon.
 //
-// Acesso ao dashboard: gate viewHorizon (só is_admin — ADR-011, ver
-// App\Providers\HorizonServiceProvider) + IP allowlist do admin
+// Acesso ao dashboard: gate viewHorizon (is_admin + conta ativa — ADR-011, ver
+// App\Providers\HorizonServiceProvider) + barreira de origem do admin
 // (EnsureAdminIpAllowed no middleware abaixo). Em produção as filas rodam no
 // serviço `horizon` do docker-compose.prod.yml (php artisan horizon).
 // =============================================================================
 
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use Illuminate\Support\Str;
+use Laravel\Horizon\Http\Middleware\Authenticate;
 
 return [
 
@@ -93,11 +94,29 @@ return [
     |
     */
 
-    // IP allowlist do super admin (ADR-011, checklist 25) aplicada também às
-    // rotas do Horizon — mesma proteção do painel /admin. A autorização em
-    // si é o gate viewHorizon (App\Providers\HorizonServiceProvider): só
-    // is_admin acessa o dashboard fora do ambiente local.
-    'middleware' => ['web', EnsureAdminIpAllowed::class],
+    // Duas barreiras, na ordem em que custam menos:
+    //
+    //   EnsureAdminIpAllowed — barreira de ORIGEM, a mesma do painel /admin
+    //   (ADR-011, checklist 25). Vem antes da autenticação de propósito: uma
+    //   origem não permitida é recusada sem que a sessão seja nem consultada.
+    //
+    //   Authenticate (do pacote) — barreira de IDENTIDADE: roda o gate
+    //   viewHorizon (App\Providers\HorizonServiceProvider), que exige is_admin
+    //   + conta ativa fora do ambiente local.
+    //
+    // POR QUE O Authenticate ESTÁ ESCRITO AQUI: o Horizon já o aplica, mas de
+    // dentro do CONSTRUTOR do controller base dele
+    // (Laravel\Horizon\Http\Controllers\Controller). Ou seja, a autorização do
+    // dashboard dependia de um detalhe interno do vendor — de todo controller
+    // do pacote continuar herdando daquela classe e de middleware declarado em
+    // construtor de controller continuar existindo no Laravel. Declarado no
+    // grupo de rotas, o gate passa a valer por contrato nosso. Rodar o gate
+    // duas vezes é inofensivo: Gate::check é consulta pura, sem efeito.
+    //
+    // (Cuidado ao ler a pilha efetiva: o pacote ainda prepõe o
+    // SentinelMiddleware a esta lista, que NÃO é uma barreira de produção —
+    // o driver dele devolve `true` de imediato fora do ambiente local.)
+    'middleware' => ['web', EnsureAdminIpAllowed::class, Authenticate::class],
 
     /*
     |--------------------------------------------------------------------------

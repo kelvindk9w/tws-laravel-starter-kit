@@ -38,9 +38,11 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  *   os demais recebem 403). Promoção exclusiva via `php artisan user:make-admin`.
  * - Branding 100% via platform() (ADR-007/010): nome, logo e cor primária
  *   vêm do .env — nada hardcoded.
- * - IP allowlist: EnsureAdminIpAllowed (config security.admin.allowed_ips,
- *   ADMIN_ALLOWED_IPS). Lista vazia = sem restrição (só desenvolvimento);
- *   em produção, preencher com os IPs fixos/VPN (checklist item 25).
+ * - Barreira de ORIGEM: EnsureAdminIpAllowed, o PRIMEIRO middleware da pilha
+ *   (config security.admin.allowed_ips, ADMIN_ALLOWED_IPS). Lista vazia libera
+ *   fora de produção; em produção sem allowlist declarada o painel RECUSA (403)
+ *   — checklist item 25, regra e justificativa em
+ *   App\Core\Security\AdminIpAllowlist.
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -149,6 +151,14 @@ class AdminPanelProvider extends PanelProvider
                     ->icon(Heroicon::OutlinedArrowLeftOnRectangle),
             ])
             ->middleware([
+                // Barreira de ORIGEM (ADR-011) — PRIMEIRA da pilha de
+                // propósito: requisição de origem não permitida é recusada
+                // antes de a sessão ser aberta, o CSRF processado ou o painel
+                // montado. Ela estava no FIM da lista, o que fazia um IP
+                // barrado ainda ganhar cookie de sessão e passar por todo o
+                // pipeline do painel para só então receber 403. Barreira
+                // externa tem de ser externa. Ver AdminIpAllowlist.
+                EnsureAdminIpAllowed::class,
                 // Bundle JS normal do Livewire (com eval) só no /admin — o
                 // Filament 5 não funciona com o build CSP-safe do Alpine.
                 UseEvalBundleForAdmin::class,
@@ -164,8 +174,6 @@ class AdminPanelProvider extends PanelProvider
                 // Locale do painel (ADR-007): mesma resolução do app —
                 // preferência da conta → cookie → padrão da plataforma.
                 SetLocale::class,
-                // IP allowlist do super admin (ADR-011) — ver docblock acima.
-                EnsureAdminIpAllowed::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

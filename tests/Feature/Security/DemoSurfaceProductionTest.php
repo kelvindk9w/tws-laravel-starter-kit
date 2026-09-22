@@ -165,6 +165,13 @@ it('o login não imprime nem pré-preenche credenciais demo em produção', func
 it('o login do super admin não pré-preenche credenciais demo em produção', function (): void {
     simulaProducao();
 
+    // Produção BEM CONFIGURADA: o que está sob teste aqui são as credenciais
+    // demo na tela, não a barreira de origem. Sem allowlist declarada, o
+    // /admin recusa antes de renderizar qualquer tela (ver
+    // App\Core\Security\AdminIpAllowlist e AdminIpAllowlistTest) — e então
+    // este teste passaria por um 403, provando outra coisa.
+    config()->set('security.admin.allowed_ips', ['127.0.0.1']);
+
     $this->get('/admin/login')
         ->assertOk()
         ->assertDontSee(config('ui.demo_admin.password'));

@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Security\AdminIpAllowlist;
+use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Support\CriticalSecrets;
 use App\Core\Support\DemoSurface;
 use App\Core\Support\Platform;
@@ -14,6 +16,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -80,7 +83,32 @@ class AppServiceProvider extends ServiceProvider
             if (DemoSurface::allowedInProductionByOptOut()) {
                 Log::warning('DEMO_ALLOW_IN_PRODUCTION está ligado: em produção, as contas demo de credenciais públicas, a vitrine /ui, a galeria /mail-preview e os seeders de dado fictício estão LIBERADOS. Só use isto numa instalação descartável.');
             }
+
+            // Opt-out da barreira de ORIGEM das superfícies administrativas
+            // (ADMIN_ALLOW_ANY_IP, ou faixa universal escrita na própria
+            // allowlist). Mesmo princípio do aviso acima: sem allowlist, o
+            // /admin e o /horizon ficam com UMA barreira só (is_admin + conta
+            // ativa), e quem decidiu isso tem de reencontrar a decisão no log.
+            //
+            // Note que NÃO existe aviso de boot para o caso da allowlist
+            // AUSENTE: sem `.env`, o Laravel resolve APP_ENV como `production`,
+            // então um aviso ali sairia em todo `composer install` do CI, de
+            // todo build de imagem e de todo primeiro clone — ruído que ensina
+            // a ignorar avisos. Esse caso quem relata é o próprio middleware,
+            // no instante em que recusa uma requisição real, onde a mensagem é
+            // sempre verdadeira e sempre acionável.
+            if (AdminIpAllowlist::anyIpAllowedInProductionByOptOut()) {
+                Log::warning('A allowlist de IP do /admin e do /horizon está DESLIGADA por decisão explícita (ADMIN_ALLOW_ANY_IP, ou faixa universal na própria lista): as superfícies administrativas aceitam qualquer origem e contam apenas com is_admin + conta ativa. Isto só é seguro se a restrição de origem estiver na borda (VPN, Cloudflare Access, WAF, regra de firewall). Ver App\Core\Security\AdminIpAllowlist.');
+            }
         }
+
+        // Downloads de export/import do Filament (`/filament/exports/…`): o
+        // pacote registra esse grupo com `['web']` apenas, fora do painel — ou
+        // seja, o arquivo gerado A PARTIR do /admin (tabela de usuários, logs de
+        // requisição) era entregue por uma rota que a barreira de origem do
+        // painel não cobria. Mesma superfície, mesma barreira. O `push` mantém
+        // o que o pacote declarar amanhã, em vez de congelar a lista dele.
+        Route::pushMiddlewareToGroup('filament.actions', EnsureAdminIpAllowed::class);
 
         // Comandos próprios do kit (fora de app/Console/Commands).
         if ($this->app->runningInConsole()) {

@@ -1474,9 +1474,32 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   Os campos são **agrupados por assunto** (chaves de API / uploads / rate
   limits) com largura proporcional ao número esperado — `group` e `span`
   vêm do próprio `config/settings.php`, nada hardcoded na tela.
-- **IP allowlist** (ADR-011, checklist 25 — obrigatória em produção):
-  `ADMIN_ALLOWED_IPS` no .env (IPs ou CIDRs separados por vírgula). Vazio =
-  sem restrição (apenas desenvolvimento). Middleware: `EnsureAdminIpAllowed`.
+- **Barreira de origem** (ADR-011, checklist 25 — obrigatória em produção,
+  e agora VERIFICADA em runtime): `ADMIN_ALLOWED_IPS` no .env, aceitando IP
+  exato, faixa CIDR IPv4 e IPv6 com ou sem prefixo, separados por vírgula
+  (espaços são aparados). É o PRIMEIRO middleware da pilha do painel —
+  origem não permitida é recusada antes de a sessão ser aberta. Vale também
+  para o `/horizon` e para os downloads de export/import do Filament.
+  - **Fora de produção, vazio libera** (o IP de quem desenvolve é o que o
+    Docker der, e não há segredo atrás do `/admin` de dev).
+  - **Em produção, vazio RECUSA** (403). Antes, vazio liberava qualquer
+    origem — e vazio era o padrão do `docker-compose.prod.yml`, então a
+    barreira que esta documentação prometia não existia em nenhuma
+    instalação que não a tivesse preenchido à mão. Silêncio não pode
+    significar permitido.
+  - **Escape hatch**: `ADMIN_ALLOW_ANY_IP=true`, para quem administra de IP
+    dinâmico ou já tem a segunda barreira fora da aplicação (VPN,
+    Cloudflare Access, WAF). Grava aviso no log a cada boot.
+  - **Trancado fora?** Só a superfície administrativa para; site, API,
+    painel do usuário, filas e `/up` seguem atendendo. Corrija a variável no
+    ambiente dos serviços PHP e reinicie-os — o log diz o que falta. A
+    recuperação nunca depende de entrar no painel.
+  - **Atrás de CDN/load balancer**: o kit ainda não declara proxies
+    confiáveis, então o endereço comparado é o do PROXY. **Nunca** ponha o
+    IP do load balancer na lista: todas as requisições chegam com ele e a
+    barreira fica aberta para a internet inteira, parecendo configurada.
+  - Regra, decisões e justificativas: `App\Core\Security\AdminIpAllowlist`.
+    Middleware: `EnsureAdminIpAllowed`.
 
 ### Dashboards: escolhendo e adaptando a sua variante
 
@@ -1936,10 +1959,15 @@ evento, o app faz `POST BACKUP_WEBHOOK_URL` com JSON:
 
 ### Filas com Horizon (/horizon)
 
-- **Dashboard `/horizon`**: restrito a `is_admin` (gate `viewHorizon` no
-  `HorizonServiceProvider` — fora do ambiente `local`, guest e usuário
-  comum recebem 403) + a MESMA IP allowlist do /admin
-  (`EnsureAdminIpAllowed` nas rotas do Horizon). CSP própria: a SPA Vue do
+- **Dashboard `/horizon`**: restrito a `is_admin` **com conta ativa** (gate
+  `viewHorizon` no `HorizonServiceProvider`, o mesmo critério do
+  `canAccessPanel` do `/admin` — fora do ambiente `local`, guest, usuário
+  comum e admin desativado recebem 403). O gate olhava só `is_admin`, então
+  desativar um administrador tirava o `/admin` e **não** tirava o
+  `/horizon`: com a sessão viva ele seguia operando a fila. O middleware
+  `Authenticate` do pacote está declarado no `config/horizon.php` em vez de
+  depender do construtor do controller base do vendor. Vale também a MESMA
+  barreira de origem do /admin (`EnsureAdminIpAllowed`). CSP própria: a SPA Vue do
   dashboard precisa de `unsafe-eval` e das fontes do fonts.bunny.net —
   liberados SOMENTE nas rotas do Horizon (configurável por
   `SECURITY_CSP_HORIZON`); o resto da aplicação segue com a CSP estrita.

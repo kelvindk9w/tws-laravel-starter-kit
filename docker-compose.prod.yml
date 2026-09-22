@@ -42,8 +42,27 @@ x-app-env: &app-env
   PLATFORM_NAME: ${PROD_PLATFORM_NAME:-TWS Starter Kit}
   PLATFORM_LOGO_URL: ${PROD_PLATFORM_LOGO_URL:-}
   PLATFORM_PRIMARY_COLOR: ${PROD_PLATFORM_PRIMARY_COLOR:-#0284C7}
-  # IP allowlist do super admin /admin (ADR-011): OBRIGATÓRIA em produção.
+  # Origens permitidas no /admin e no /horizon (ADR-011).
+  #
+  # O fallback VAZIO aqui é deliberado e não é mais fail-open: quem recusa é a
+  # aplicação, no middleware da rota — com APP_ENV=production e sem allowlist
+  # declarada, o /admin e o /horizon respondem 403 e o log diz o que falta.
+  #
+  # POR QUE NÃO É `${VAR:?...}` COMO AS SENHAS: a senha padrão que FUNCIONA é
+  # invisível — a stack sobe, nada reclama, e nada dentro da aplicação consegue
+  # distinguir "senha do repositório" de "senha própria". Já a falta de
+  # allowlist a aplicação VÊ, e responde na medida: fica indisponível só a
+  # superfície administrativa. Exigir a variável aqui pararia a resolução do
+  # compose INTEIRO — nginx, postgres, site público, API — por um problema
+  # confinado a duas rotas, e ainda bloquearia quem legitimamente não tem
+  # allowlist (ver ADMIN_ALLOW_ANY_IP abaixo). Recusar é proporcional ao dano;
+  # derrubar o site não é.
   ADMIN_ALLOWED_IPS: ${PROD_ADMIN_ALLOWED_IPS:-}
+  # Escape hatch da linha acima, para instalação cuja segunda barreira está
+  # FORA da aplicação (VPN, Cloudflare Access, WAF) ou cujo administrador tem
+  # IP dinâmico. Vazio = não declarado = a recusa vale. Aviso no log a cada
+  # boot enquanto estiver ligado.
+  ADMIN_ALLOW_ANY_IP: ${PROD_ADMIN_ALLOW_ANY_IP:-}
   PLATFORM_OFFICIAL_URL: ${PROD_PLATFORM_OFFICIAL_URL:-https://localhost}
   PLATFORM_SUPPORT_EMAIL: ${PROD_PLATFORM_SUPPORT_EMAIL:-}
   PLATFORM_CNPJ: ${PROD_PLATFORM_CNPJ:-}
