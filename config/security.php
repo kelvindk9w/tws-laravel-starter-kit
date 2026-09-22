@@ -120,6 +120,14 @@ return [
         // recebe a profundidade do caminho pedido (ex.: `[unmatched]:3`), que
         // separa sondagem de raiz de traversal profundo sem revelar conteúdo.
         'unmatched_endpoint' => (string) env('REQUEST_LOG_UNMATCHED_ENDPOINT', '[unmatched]'),
+
+        // Tamanho máximo da correlação informada pelo CLIENTE (header de
+        // entrada X-Correlation-Id), gravada em `client_correlation_id`. É
+        // dado hostil: além deste limite, o valor é cortado, e fora da lista
+        // branca de caracteres nada sobrevive (ver
+        // App\Core\Logging\CorrelationId). O teto da coluna é 255 — valores
+        // maiores na configuração são limitados a ele.
+        'client_correlation_max_length' => (int) env('REQUEST_LOG_CLIENT_CORRELATION_MAX_LENGTH', 128),
     ],
 
 ];

@@ -8,6 +8,7 @@ use App\Core\Logging\CorrelationId;
 use App\Core\Logging\EndpointSignature;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
+use App\Core\Logging\PersistFailure;
 use App\Core\Logging\Redactor;
 use App\Core\Security\AttackDetector;
 use App\Core\Security\PayloadSanitizer;
@@ -53,6 +54,8 @@ final class SecurityValidation
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Primeira peça da cadeia: gera o id INTERNO da requisição (nunca
+        // aceito do cliente — ver CorrelationId) e o propaga adiante.
         $correlationId = CorrelationId::resolve($request);
 
         $attackType = $this->detector->detect(RequestInputs::extract($request));
@@ -142,8 +145,11 @@ final class SecurityValidation
         // segredo no path.
         $endpoint = EndpointSignature::for($request);
 
+        $clientCorrelationId = CorrelationId::fromClient($request);
+
         $context = [
             'correlation_id' => $correlationId,
+            'client_correlation_id' => $clientCorrelationId,
             'attack_type' => $attackType,
             'ip' => $request->ip(),
             'method' => $request->method(),
@@ -153,6 +159,7 @@ final class SecurityValidation
         try {
             RequestLog::query()->create([
                 'correlation_id' => $correlationId,
+                'client_correlation_id' => $clientCorrelationId,
                 'ip' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
                 'method' => $request->method(),
@@ -168,7 +175,7 @@ final class SecurityValidation
             // a trilha de arquivo sobrevive à falha do banco (pesquisa §2.3).
             Log::channel('request_log')->critical('security.blocked.persist_failed', [
                 ...$context,
-                'error' => $exception->getMessage(),
+                ...PersistFailure::describe($exception),
             ]);
         }
 

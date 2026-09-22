@@ -39,21 +39,74 @@ it('registra INICIADA→CONCLUÍDA e propaga o correlation_id na resposta', func
         ->and($log->tenant_uuid)->toBeNull(); // tenancy chega na Fase 4
 });
 
-it('reutiliza X-Correlation-Id de entrada quando é um UUID válido', function () {
+it('NUNCA adota o X-Correlation-Id de entrada como id da trilha', function () {
     $id = (string) Str::uuid7();
 
     $response = $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => $id]);
 
-    expect($response->headers->get('X-Correlation-Id'))->toBe($id);
+    // O header de resposta é o id do SERVIDOR; o do cliente vira só rótulo.
+    expect($response->headers->get('X-Correlation-Id'))->not->toBe($id);
+
+    $log = RequestLog::query()->sole();
+
+    expect($log->correlation_id)->not->toBe($id)
+        ->and($log->correlation_id)->toBe($response->headers->get('X-Correlation-Id'))
+        ->and($log->client_correlation_id)->toBe($id);
 });
 
-it('descarta X-Correlation-Id de entrada inválido e gera um novo', function () {
-    $response = $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => 'nao-e-uuid']);
+it('gera correlation_id próprio quando não vem header algum', function () {
+    $response = $this->postJson('/api/_test/echo', ['nome' => 'x']);
 
     $correlationId = $response->headers->get('X-Correlation-Id');
 
-    expect($correlationId)->not->toBe('nao-e-uuid')
-        ->and(Str::isUuid($correlationId))->toBeTrue();
+    expect(Str::isUuid($correlationId))->toBeTrue()
+        ->and(RequestLog::query()->sole()->client_correlation_id)->toBeNull();
+});
+
+// AUDITORIA NÃO DESLIGÁVEL: antes, repetir o mesmo X-Correlation-Id fazia o
+// INSERT seguinte violar o UNIQUE; a exceção era engolida e a requisição saía
+// sem linha nenhuma — o atacante apagava o próprio rastro.
+it('grava TODAS as requisições que repetem o mesmo X-Correlation-Id', function () {
+    $id = '11111111-2222-4333-8444-555555555555';
+
+    foreach (range(1, 3) as $ignored) {
+        $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => $id])->assertOk();
+    }
+
+    $logs = RequestLog::query()->where('client_correlation_id', $id)->get();
+
+    expect($logs)->toHaveCount(3)
+        // Três ids internos DISTINTOS, uma única correlação de cliente.
+        ->and($logs->pluck('correlation_id')->unique())->toHaveCount(3)
+        ->and($logs->pluck('correlation_id')->contains($id))->toBeFalse();
+});
+
+it('saneia o X-Correlation-Id do cliente sem quebrar a gravação', function (string $enviado, ?string $esperado) {
+    $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => $enviado])->assertOk();
+
+    expect(RequestLog::query()->sole()->client_correlation_id)->toBe($esperado);
+})->with([
+    // Lista branca: some tudo que poderia virar vetor de injeção.
+    'html/script' => ['<script>alert(1)</script>', 'scriptalert1script'],
+    'aspas e barra' => ["a'b\"c\\d", 'abcd'],
+    'quebra de linha (envenenamento de log)' => ["abc\ndef", 'abcdef'],
+    'só lixo' => ['<>"\'', null],
+    'vazio' => ['', null],
+    'traceparent do W3C sobrevive inteiro' => [
+        '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+    ],
+]);
+
+it('corta o X-Correlation-Id gigante no limite configurado', function () {
+    $gigante = str_repeat('a', 5000);
+
+    $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => $gigante])->assertOk();
+
+    $guardado = RequestLog::query()->sole()->client_correlation_id;
+
+    expect(strlen((string) $guardado))
+        ->toBe((int) config('security.request_logging.client_correlation_max_length'));
 });
 
 it('registra requisição para endpoint inexistente (sinal de varredura — ADR-010)', function () {

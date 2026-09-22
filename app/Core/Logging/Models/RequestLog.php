@@ -50,6 +50,7 @@ class RequestLog extends Model
     protected $fillable = [
         'uuid',
         'correlation_id',
+        'client_correlation_id',
         'tenant_uuid',
         'ip',
         'user_agent',

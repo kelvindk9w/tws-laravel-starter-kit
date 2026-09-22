@@ -8,6 +8,7 @@ use App\Core\Logging\CorrelationId;
 use App\Core\Logging\EndpointSignature;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
+use App\Core\Logging\PersistFailure;
 use App\Core\Logging\Redactor;
 use App\Core\Security\RequestInputs;
 use Closure;
@@ -55,6 +56,8 @@ final class RequestLogging
             return $next($request);
         }
 
+        // Id INTERNO, sempre gerado pelo servidor. O X-Correlation-Id que o
+        // cliente mandou é só um rótulo dele, guardado à parte.
         $correlationId = CorrelationId::resolve($request);
 
         $request->attributes->set('request_log_started_at', microtime(true));
@@ -63,6 +66,8 @@ final class RequestLogging
 
         $response = $next($request);
 
+        // O header de resposta devolve o id do SERVIDOR: é ele que identifica
+        // a linha da trilha e é ele que o suporte pede ao cliente.
         $response->headers->set(CorrelationId::HEADER, $correlationId);
 
         return $response;
@@ -102,7 +107,7 @@ final class RequestLogging
         } catch (Throwable $exception) {
             Log::channel('request_log')->critical('request.finished.persist_failed', [
                 'correlation_id' => $log->correlation_id,
-                'error' => $exception->getMessage(),
+                ...PersistFailure::describe($exception),
             ]);
         }
 
@@ -128,8 +133,13 @@ final class RequestLogging
         // pode carregar segredo posicional (ver EndpointSignature).
         $endpoint = EndpointSignature::for($request);
 
+        // Correlação do cliente: já saneada (lista branca + limite), sem
+        // unicidade, apenas informativa.
+        $clientCorrelationId = CorrelationId::fromClient($request);
+
         $context = [
             'correlation_id' => $correlationId,
+            'client_correlation_id' => $clientCorrelationId,
             'ip' => $request->ip(),
             'method' => $request->method(),
             'endpoint' => $endpoint,
@@ -138,6 +148,7 @@ final class RequestLogging
         try {
             $log = RequestLog::query()->create([
                 'correlation_id' => $correlationId,
+                'client_correlation_id' => $clientCorrelationId,
                 'ip' => $request->ip(),
                 'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
                 'method' => $request->method(),
@@ -150,9 +161,11 @@ final class RequestLogging
 
             Log::channel('request_log')->info('request.started', $context);
         } catch (Throwable $exception) {
+            // A causa é classificada: "banco fora do ar" e "colisão de chave
+            // única" pedem reações diferentes (ver PersistFailure).
             Log::channel('request_log')->critical('request.started.persist_failed', [
                 ...$context,
-                'error' => $exception->getMessage(),
+                ...PersistFailure::describe($exception),
             ]);
         }
     }

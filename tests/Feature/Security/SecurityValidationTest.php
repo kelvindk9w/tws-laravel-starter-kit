@@ -83,3 +83,30 @@ it('deixa passar payload limpo sem marcar ataque', function () {
 
     expect(RequestLog::query()->sole()->attack_type)->toBeNull();
 });
+
+// A evidência do ataque não pode ser desligada pelo atacante: antes, repetir
+// um X-Correlation-Id já usado fazia a linha BLOQUEADA colidir no UNIQUE e
+// sumir silenciosamente da trilha.
+it('registra a linha BLOQUEADA mesmo com X-Correlation-Id repetido', function () {
+    $id = '11111111-2222-4333-8444-555555555555';
+
+    // Primeira requisição, legítima: "queima" o valor na trilha.
+    $this->postJson('/api/_test/echo', ['nome' => 'x'], ['X-Correlation-Id' => $id])->assertOk();
+
+    $ataque = $this->postJson(
+        '/api/_test/echo',
+        ['filtro' => "1' OR '1'='1"],
+        ['X-Correlation-Id' => $id],
+    );
+
+    $ataque->assertUnprocessable();
+
+    $bloqueada = RequestLog::query()->where('status', RequestLogStatus::Bloqueada)->sole();
+
+    expect($bloqueada->attack_type)->toBe('sqli')
+        ->and($bloqueada->client_correlation_id)->toBe($id)
+        ->and($bloqueada->correlation_id)->not->toBe($id)
+        // O envelope e o header entregam o id do SERVIDOR (o que o suporte usa).
+        ->and($ataque->json('correlation_id'))->toBe($bloqueada->correlation_id)
+        ->and($ataque->headers->get('X-Correlation-Id'))->toBe($bloqueada->correlation_id);
+});

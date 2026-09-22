@@ -91,6 +91,14 @@ final class RequestLogResource extends BaseResource
             TextColumn::make('ip')
                 ->label(__('admin.request_logs.ip'))
                 ->toggleable(isToggledHiddenByDefault: true),
+            // Rótulo que o CLIENTE mandou no X-Correlation-Id (saneado, sem
+            // unicidade): é por ele que o suporte acha a chamada quando o
+            // cliente só conhece o id do lado dele. Oculto por padrão —
+            // raramente preenchido.
+            TextColumn::make('client_correlation_id')
+                ->label(__('admin.request_logs.client_correlation'))
+                ->placeholder('—')
+                ->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 
@@ -195,6 +203,15 @@ final class RequestLogResource extends BaseResource
                         filled($data['contains'] ?? null),
                         fn (Builder $q): Builder => $q->where('endpoint', 'like', '%'.str_replace(['%', '_'], '', (string) $data['contains']).'%'),
                     )),
+                Filter::make('client_correlation_id')
+                    ->label(__('admin.request_logs.filter_client_correlation'))
+                    ->schema([
+                        TextInput::make('value')->label(__('admin.request_logs.filter_client_correlation')),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        filled($data['value'] ?? null),
+                        fn (Builder $q): Builder => $q->where('client_correlation_id', (string) $data['value']),
+                    )),
                 Filter::make('created_at')
                     ->schema([
                         DatePicker::make('from')->label(__('admin.request_logs.filter_from')),
@@ -224,6 +241,11 @@ final class RequestLogResource extends BaseResource
         return $schema
             ->components([
                 TextEntry::make('correlation_id')->label('Correlation ID')->copyable(),
+                TextEntry::make('client_correlation_id')
+                    ->label(__('admin.request_logs.client_correlation'))
+                    ->helperText(__('admin.request_logs.client_correlation_hint'))
+                    ->placeholder('—')
+                    ->copyable(),
                 TextEntry::make('status')
                     ->label(__('panel.common.status'))
                     ->badge()
