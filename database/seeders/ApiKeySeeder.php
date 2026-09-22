@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
+use App\Core\Support\DemoSurface;
 use App\Core\Tenancy\Models\Project;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
@@ -33,6 +34,11 @@ final class ApiKeySeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $usuarios = User::query()->orderBy('id')->pluck('id')->all();
 
         if ($usuarios === []) {

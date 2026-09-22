@@ -3,14 +3,36 @@
 // =============================================================================
 // Landing pública, showcase de componentes (/ui) e login demo.
 //
-// Segurança: os padrões só são "ligados" em APP_ENV=local. Em produção,
-// UI_SHOWCASE_ENABLED=false (a rota /ui responde 404) e o login demo NUNCA
-// é habilitado (credenciais conhecidas pré-preenchidas seriam uma backdoor).
+// Segurança: as flags abaixo são a SEGUNDA barreira, não a única. Em
+// APP_ENV=production a superfície de demonstração (contas demo, vitrine /ui,
+// galeria /mail-preview e os seeders de dado fictício) é recusada mesmo com as
+// flags ligadas — quem decide é App\Core\Support\DemoSurface. As flags
+// continuam servindo para desligar a demo FORA de produção.
+//
+// Único jeito de ter demonstração em produção: declarar o opt-out
+// DEMO_ALLOW_IN_PRODUCTION=true (abaixo). Esquecimento não autoriza nada.
 // =============================================================================
 
 return [
 
+    'demo' => [
+        // ESCAPE HATCH da superfície de demonstração em produção.
+        //
+        // O roadmap do kit prevê uma demo pública hospedada (com reset
+        // automático) — essa é uma demonstração legitimamente rodando em
+        // produção, e ela precisa de um caminho. Este é o caminho, e ele é
+        // DECLARADO: sem valor padrão verdadeiro, sem aparecer descomentado em
+        // nenhum .env de exemplo, e com aviso no log a cada boot enquanto
+        // estiver ligado (AppServiceProvider).
+        //
+        // Ligar isto significa dizer: "este banco é descartável e estas
+        // credenciais são públicas". Nunca ligue numa instalação com dado real.
+        'allow_in_production' => (bool) env('DEMO_ALLOW_IN_PRODUCTION', false),
+    ],
+
     // Showcase de componentes UI em /ui (documentação viva do kit).
+    // Ler sempre por DemoSurface::showcaseEnabled(), nunca esta chave crua: é
+    // ela que soma o fail-closed de produção a esta flag.
     'showcase_enabled' => (bool) env('UI_SHOWCASE_ENABLED', env('APP_ENV') === 'local'),
 
     // As senhas demo obedecem à MESMA política de senha do app
@@ -19,6 +41,8 @@ return [
     // inconsistência, não conveniência (bug de QA #6).
     'demo_login' => [
         // Pré-preenche credenciais demo na tela de login e ativa o DemoUserSeeder.
+        // Ler sempre por DemoSurface::loginEnabled(), nunca esta chave crua: é
+        // ela que soma o fail-closed de produção a esta flag.
         'enabled' => (bool) env('DEMO_LOGIN_ENABLED', env('APP_ENV') === 'local'),
         'email' => env('DEMO_USER_EMAIL', 'demo@tws.dev'),
         'password' => env('DEMO_USER_PASSWORD', 'Demo-password1'),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Core\Showcase\Models\FormSubmission;
+use App\Core\Support\DemoSurface;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -57,6 +58,11 @@ final class SubmissionHistorySeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(DashboardHistorySeeder::SEMENTE);
 

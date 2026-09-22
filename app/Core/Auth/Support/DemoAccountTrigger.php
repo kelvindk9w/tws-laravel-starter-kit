@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Support;
 
+use App\Core\Support\DemoSurface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -48,7 +49,9 @@ final class DemoAccountTrigger
 
     /**
      * (Re)instala função + gatilho com os e-mails demo vigentes. Com o modo
-     * demo desligado, remove o gatilho: em produção não há o que proteger.
+     * demo desligado, remove o gatilho: em produção não há o que proteger — e
+     * um gatilho instalado lá tornaria as linhas demo indeletáveis justamente
+     * onde elas precisam ser apagáveis.
      */
     public static function install(): void
     {
@@ -56,7 +59,7 @@ final class DemoAccountTrigger
             return;
         }
 
-        if (! (bool) config('ui.demo_login.enabled')) {
+        if (! DemoSurface::loginEnabled()) {
             self::drop();
 
             return;

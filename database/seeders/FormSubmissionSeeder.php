@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Core\Showcase\Models\FormSubmission;
+use App\Core\Support\DemoSurface;
 use Illuminate\Database\Seeder;
 
 /**
@@ -28,6 +29,11 @@ final class FormSubmissionSeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         if (FormSubmission::query()->count() > 0) {
             return;
         }

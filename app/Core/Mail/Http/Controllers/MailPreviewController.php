@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Mail\Http\Controllers;
 
 use App\Core\Mail\MailPreview;
+use App\Core\Support\DemoSurface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -14,9 +15,11 @@ use Illuminate\View\View;
  * DESENVOLVIMENTO.
  *
  * Fica atrás da mesma flag do login demo (config/ui.php ← DEMO_LOGIN_ENABLED,
- * padrão: só em APP_ENV=local). Em produção a rota responde 404: uma galeria
+ * padrão: só em APP_ENV=local) E do fail-closed de produção (DemoSurface): em
+ * APP_ENV=production a rota responde 404 mesmo com a flag ligada. Uma galeria
  * pública com o desenho de todos os e-mails da plataforma é material pronto
- * para quem quiser montar um phishing convincente.
+ * para quem quiser montar um phishing convincente — e depender de a pessoa
+ * lembrar de desligar a flag era deixar essa porta aberta por padrão.
  *
  * Três formatos na mesma rota:
  *   (padrão) a galeria, no layout do site do kit;
@@ -54,11 +57,12 @@ final class MailPreviewController
     /**
      * A flag é a MESMA do login demo: as duas são "conveniências de dev que
      * viram risco em produção", e duas flags para a mesma decisão acabam
-     * desalinhadas.
+     * desalinhadas. A decisão final é do DemoSurface, que soma a flag ao
+     * ambiente.
      */
     public static function enabled(): bool
     {
-        return (bool) config('ui.demo_login.enabled');
+        return DemoSurface::mailPreviewEnabled();
     }
 
     /**

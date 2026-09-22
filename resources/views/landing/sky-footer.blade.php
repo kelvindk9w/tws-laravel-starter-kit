@@ -31,12 +31,13 @@
         </div>
 
         {{-- O super admin em demonstração é uma PORTA DE DESENVOLVIMENTO: só
-             existe onde o login demo está ligado (config/ui.php ←
-             DEMO_LOGIN_ENABLED). Em produção ela não aparece — e é por isso
-             que o link mora aqui embaixo, como aparte, e não ao lado do CTA:
-             um botão que some conforme o ambiente não pode ser um dos dois
-             caminhos principais da página. --}}
-        @if (config('ui.demo_login.enabled'))
+             existe onde o login demo está ligado (DemoSurface: a flag
+             DEMO_LOGIN_ENABLED somada ao fail-closed de produção, onde o link
+             não aparece nem com a flag ligada). É por isso que ele mora aqui
+             embaixo, como aparte, e não ao lado do CTA: um botão que some
+             conforme o ambiente não pode ser um dos dois caminhos principais
+             da página. --}}
+        @if (\App\Core\Support\DemoSurface::loginEnabled())
             <p class="sky-rise mt-5">
                 <a href="{{ url('/admin') }}" class="sky-quiet-link">{{ __('landing.hero.cta_admin_demo') }}</a>
             </p>

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Core\Showcase\Models\FormSubmission;
 use App\Core\Showcase\Support\FormSubmissionGuard;
+use App\Core\Support\DemoSurface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,13 +25,14 @@ use Illuminate\Validation\Rule;
  * A detecção neste endpoint é delegada pelo middleware global (config
  * security.validation.delegated_paths) para esta camada provar a defesa.
  *
- * Mesma flag do showcase: desabilitado → 404.
+ * Mesma regra do showcase (DemoSurface::showcaseEnabled): flag desligada ou
+ * APP_ENV=production sem opt-out declarado → 404.
  */
 final class ShowcaseFormDemoController extends Controller
 {
     public function store(Request $request, FormSubmissionGuard $guard): RedirectResponse
     {
-        abort_unless(config('ui.showcase_enabled'), 404);
+        abort_unless(DemoSurface::showcaseEnabled(), 404);
 
         /** @var array{classic_nickname: string, classic_subject: string, classic_message: string, website?: ?string} $validated */
         $validated = $request->validate([

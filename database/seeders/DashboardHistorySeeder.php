@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Core\Support\DemoSurface;
 use Illuminate\Database\Seeder;
 
 /**
@@ -44,6 +45,11 @@ final class DashboardHistorySeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $this->call(ProjectSeeder::class);
         $this->call(ApiKeySeeder::class);
         $this->call(UploadSeeder::class);

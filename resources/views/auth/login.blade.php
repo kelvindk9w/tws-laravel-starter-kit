@@ -5,9 +5,15 @@
 @section('content')
     <h1 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em]">{{ __('auth.ui.login_title') }}</h1>
 
+    {{-- As credenciais demo são IMPRESSAS na tela. Quem decide se elas
+         aparecem é o DemoSurface, não a flag crua: em APP_ENV=production
+         (sem DEMO_ALLOW_IN_PRODUCTION declarado) o aviso não aparece e os
+         campos nascem vazios, mesmo que DEMO_LOGIN_ENABLED tenha ficado
+         ligado no .env copiado do exemplo. --}}
     @php($demo = config('ui.demo_login'))
+    @php($demoEnabled = \App\Core\Support\DemoSurface::loginEnabled())
 
-    @if ($demo['enabled'])
+    @if ($demoEnabled)
         <x-alert type="info" class="mb-4">
             {{ __('auth.ui.demo_notice') }}<br>
             <strong>{{ __('auth.ui.demo_credentials') }}:</strong>
@@ -19,12 +25,12 @@
         @csrf
 
         <x-input :label="__('auth.ui.email')" name="email" type="email"
-                 :value="old('email', $demo['enabled'] ? $demo['email'] : '')"
+                 :value="old('email', $demoEnabled ? $demo['email'] : '')"
                  :error="field_error('email')"
                  required autofocus autocomplete="username" />
 
         <x-input :label="__('auth.ui.password')" name="password" type="password"
-                 :value="$demo['enabled'] ? $demo['password'] : ''"
+                 :value="$demoEnabled ? $demo['password'] : ''"
                  :error="field_error('password')"
                  required autocomplete="current-password" />
 

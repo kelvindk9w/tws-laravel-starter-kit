@@ -293,8 +293,9 @@ e Livewire/AJAX) e as 4 estratégias de exibição de erros.
   única exceção deliberada é o anti-flash de tema no `<head>`).
 
 Kill switch: `UI_SHOWCASE_ENABLED` (config/ui.php). **Padrão: ligado só em
-`APP_ENV=local`**; desabilitado, a rota responde **404**. Em produção,
-defina `UI_SHOWCASE_ENABLED=false` (já está no `.env.prod.example`).
+`APP_ENV=local`**; desabilitado, a rota responde **404**. Em `APP_ENV=production`
+a vitrine responde 404 **mesmo com a flag ligada** — ver
+[Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção).
 
 > Nota: o nome `<x-icon>` pertence ao pacote `blade-icons` (dependência do
 > Filament) — por isso os ícones inline do kit usam `<x-ui-icon>`.
@@ -351,6 +352,10 @@ tentativas aparecem **no topo da listagem do admin com badge vermelho**
 
 ### Login demo e admin demo (fricção zero em dev)
 
+> **Em produção nada disto existe**, e isso não depende de ninguém lembrar de
+> desligar flag nenhuma: ver
+> [Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção).
+
 Quando `DEMO_LOGIN_ENABLED=true` (**padrão só em `APP_ENV=local`**), a tela de
 login mostra um aviso e vem com as credenciais demo pré-preenchidas — basta
 clicar em "Entrar" (padrão demo.filamentphp.com). A MESMA flag ativa o **admin
@@ -370,6 +375,62 @@ mesmo com todas as regras ligadas — senha de demonstração que a própria
 validação do produto recusaria é armadilha, não conveniência. Um teste
 (`tests/Feature/Auth/PasswordPolicyTest.php`) prova isso e que o login com
 elas funciona.
+
+### Superfície de demonstração: fail-closed em produção
+
+O kit nasce com a demonstração inteira ligada — login demo de um clique com as
+credenciais impressas na tela, super admin demo (`admin@tws.dev`, senha
+publicada no `.env.example`), vitrine `/ui`, galeria `/mail-preview` e seeders
+que enchem o banco de dado fictício. Isso é excelente em desenvolvimento e é uma
+**porta dos fundos** em produção.
+
+Até a versão anterior, a única barreira era a flag (`DEMO_LOGIN_ENABLED`,
+`UI_SHOWCASE_ENABLED`) — e o `.env.example` entrega as duas ligadas. Ou seja: o
+caminho normal de um starter kit (`cp .env.example .env`, ajustar, subir) levava
+a demonstração toda para produção. **Esquecer não pode ser o mesmo que
+autorizar.**
+
+Agora quem decide é `app/Core/Support/DemoSurface.php`, e a regra é: em
+`APP_ENV=production` a superfície de demonstração **não existe**,
+independentemente do que as flags disserem. As flags continuam valendo — mas
+como **segunda** barreira, para desligar a demo fora de produção.
+
+Em produção, portanto:
+
+| Superfície | O que acontece | Por que assim |
+| --- | --- | --- |
+| `/ui`, `POST /ui/form-demo`, `/mail-preview` | **404** | 403 confirmaria que a rota existe e está a uma flag de distância de abrir; 404 é indistinguível de rota que nunca foi escrita. As rotas seguem **registradas** (o rodapé e o menu do site geram `route('ui.showcase')` incondicionalmente — desregistrar derrubaria a home com `RouteNotFoundException`) |
+| Credenciais demo no login do painel e do `/admin` | não aparecem e não são pré-preenchidas | entregar `admin@tws.dev` com a senha pública já digitada no login do super admin é a forma mais curta de perder a instalação |
+| Seeder demo chamado **direto** (`db:seed --class=DemoAdminSeeder`) | **lança exceção** | quem chamou aquele seeder **pediu** aquela conta; terminar com "DONE" sem criar nada faria a pessoa acreditar que ela existe |
+| `db:seed` (o agregador `DatabaseSeeder`) | **avisa no console e segue** | é o que um script de deploy roda; derrubar o deploy por causa de dado de demonstração trocaria uma armadilha por outra |
+| `APP_DEBUG=true` | forçado para `false`, com aviso no log | fechar o vazamento sem derrubar o site: recusar o boot transformaria uma configuração errada em site fora do ar |
+
+> **Em produção não se roda `db:seed`.** O kit não tem seeder de dado
+> estrutural (papéis, permissões, planos e configuração vêm das migrations e do
+> `.env`), então tudo o que a semeadura faria é dado de demonstração. O
+> container `migrate` do `docker-compose.prod.yml` roda apenas
+> `migrate --force`, sem `--seed`.
+
+#### Escape hatch: demo pública hospedada (`DEMO_ALLOW_IN_PRODUCTION`)
+
+O roadmap prevê uma **demo pública hospedada com reset automático** — que é,
+legitimamente, uma demonstração rodando em produção. Esse caso tem um caminho, e
+ele é **declarado**:
+
+```bash
+DEMO_ALLOW_IN_PRODUCTION=true
+```
+
+A variável não tem valor padrão verdadeiro, não aparece descomentada em nenhum
+`.env` de exemplo e, enquanto estiver ligada em produção, a aplicação grava um
+aviso no log **a cada boot** (`AppServiceProvider`): um opt-out de segurança que
+ninguém vê deixa de ser decisão e volta a ser esquecimento. **Silêncio nunca
+significa permitido.**
+
+Ligar isso é dizer "este banco é descartável e estas credenciais são públicas".
+Nunca numa instalação com dado real.
+
+Cobertura: `tests/Feature/Security/DemoSurfaceProductionTest.php`.
 
 ### Contas demo são intocáveis: como e por quê
 
@@ -409,9 +470,12 @@ corte é por **consequência**:
 A lista vive em `DemoAccountGuard::SENSITIVE_ATTRIBUTES` e é a **mesma nas
 três camadas** (o trigger é gerado a partir dela).
 
-**Quando vale**: só com o modo demo ligado (`DEMO_LOGIN_ENABLED`). Em
-produção o modo é desligado e as contas demo não deveriam existir — apagar
-`demo@…` de um banco de produção tem de continuar possível. Fora do
+**Quando vale**: só com o modo demo ligado (`DemoSurface::loginEnabled()` — a
+flag `DEMO_LOGIN_ENABLED` somada ao fail-closed de produção). Em produção o modo
+está desligado e as contas demo não deveriam existir — apagar `demo@…` de um
+banco de produção tem de continuar possível, **inclusive quando alguém deixou a
+flag ligada por engano**; é por isso que a pergunta passa pelo `DemoSurface` e
+não pela flag crua. Fora do
 PostgreSQL (o SQLite da suíte de testes) a camada 3 não existe e as camadas
 1 e 2 seguem valendo.
 
@@ -450,7 +514,9 @@ idiomas) e as mensagens de erro já existem em `lang/*/validation.php`. A
 senha de **transação** tem política própria (`AUTH_TRANSACTION_PASSWORD_MIN`).
 
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
-Em produção, `DEMO_LOGIN_ENABLED=false` e nada disso aparece na tela.
+Em produção nada disso aparece na tela — e não por causa da flag: a
+superfície de demonstração é recusada por ambiente (ver
+[Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção)).
 
 **Contas demo são intocáveis** (`User::isDemo()`) — e não só pela UI:
 bloquear, editar ou excluir essas contas é recusado no `/admin` com
@@ -535,9 +601,11 @@ lado do HTML. `?format=html` abre o e-mail sozinho na janela e `?format=text`
 mostra só o texto.
 
 A rota fica atrás da **mesma flag do login demo** (`DEMO_LOGIN_ENABLED`;
-padrão: só em `APP_ENV=local`). Em produção responde **404** — uma galeria
+padrão: só em `APP_ENV=local`) **e** do fail-closed de produção: em
+`APP_ENV=production` responde **404** mesmo com a flag ligada — uma galeria
 pública com o desenho oficial de todos os e-mails da plataforma é presente de
-phishing.
+phishing. Ver
+[Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção).
 
 Para ver o e-mail **como ele chega** (cabeçalhos, multipart, anexos), o
 `docker compose` já sobe o **Mailpit** em <http://localhost:18025> (SMTP em
@@ -609,6 +677,18 @@ Para produção real:
    `docker-compose.prod.yml` e `.env.prod.example`).
 3. TLS real: monte seus certificados (`server.crt`/`server.key`) em
    `/etc/nginx/certs` — ver comentário no `docker-compose.prod.yml`.
+4. **Não rode `db:seed`.** Todo seeder do kit cria dado de demonstração, e em
+   `APP_ENV=production` eles se recusam a rodar (ver
+   [Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção)).
+   Não há dado estrutural a semear: as migrations bastam.
+
+> **Copiar o `.env.example` para um servidor não abre a demonstração.** Aquele
+> arquivo é de desenvolvimento e traz `DEMO_LOGIN_ENABLED=true`,
+> `UI_SHOWCASE_ENABLED=true`, as credenciais demo e `APP_DEBUG=true` — mas com
+> `APP_ENV=production` nada disso é obedecido: as rotas de demonstração
+> respondem 404, as credenciais demo não aparecem em nenhum login, os seeders
+> recusam e o `APP_DEBUG` é forçado para `false` (com aviso no log). A proteção é
+> do ambiente, não da memória de quem faz o deploy.
 
 > **Dados NUNCA se perdem ao reiniciar/recriar containers** (ADR-010): banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
@@ -1439,7 +1519,10 @@ A profundidade de 200 dias é proposital: a janela de 90 dias precisa de
 outros 90 atrás dela, senão todo card diria "sem base de comparação".
 
 > `php artisan db:seed` roda tudo de novo sem duplicar nada (é o comando de
-> reseed do kit — **nunca** `migrate:fresh`).
+> reseed do kit — **nunca** `migrate:fresh`). Em `APP_ENV=production` ele não
+> semeia nada: todo seeder do kit cria dado fictício e é recusado (o agregador
+> avisa e segue; um seeder chamado direto lança). Ver
+> [Superfície de demonstração: fail-closed em produção](#superfície-de-demonstração-fail-closed-em-produção).
 
 
 ### Submissões bloqueadas: listagem neutralizada, detalhe forense

@@ -11,6 +11,7 @@ use App\Core\Auth\Http\Controllers\TransactionPasswordController;
 use App\Core\Contact\Http\Controllers\ContactController;
 use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Mail\Http\Controllers\MailPreviewController;
+use App\Core\Support\DemoSurface;
 use App\Core\Uploads\Http\Controllers\AvatarController;
 use App\Http\Controllers\LandingV2Controller;
 use App\Http\Controllers\ShowcaseFormDemoController;
@@ -48,17 +49,24 @@ Route::post('contato', [ContactController::class, 'store'])
 Route::get('locale/{locale}', LocaleController::class)->name('locale.switch');
 
 // Showcase de componentes UI (documentação viva do kit). Público apenas quando
-// habilitado (config/ui.php ← UI_SHOWCASE_ENABLED; padrão: só em local). Fora
-// isso responde 404 — em produção deve estar desabilitado (ver .env.example).
+// habilitado (config/ui.php ← UI_SHOWCASE_ENABLED; padrão: só em local) E fora
+// de produção: em APP_ENV=production a vitrine responde 404 mesmo com a flag
+// ligada, a não ser que DEMO_ALLOW_IN_PRODUCTION esteja declarado (DemoSurface).
+//
+// A rota continua REGISTRADA nos dois casos, respondendo 404: o rodapé e o menu
+// do site geram route('ui.showcase') incondicionalmente, e desregistrar a rota
+// derrubaria a home com RouteNotFoundException. 404 (e não 403) porque 403
+// confirmaria que a vitrine existe e está a uma flag de distância de abrir.
 Route::get('ui', function () {
-    abort_unless(config('ui.showcase_enabled'), 404);
+    abort_unless(DemoSurface::showcaseEnabled(), 404);
 
     return view('showcase');
 })->name('ui.showcase');
 
 // Pré-visualização dos e-mails transacionais (/mail-preview) — ferramenta de
 // DESENVOLVIMENTO, atrás da mesma flag do login demo (config/ui.php ←
-// DEMO_LOGIN_ENABLED; padrão: só em local). Em produção responde 404 — uma
+// DEMO_LOGIN_ENABLED; padrão: só em local) E do fail-closed de produção
+// (DemoSurface). Em produção responde 404 mesmo com a flag ligada — uma
 // galeria pública com o desenho de todos os e-mails é presente de phishing.
 Route::get('mail-preview/{slug?}', MailPreviewController::class)->name('mail.preview');
 

@@ -8,6 +8,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\Redactor;
+use App\Core\Support\DemoSurface;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -58,6 +59,11 @@ final class RequestLogHistorySeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(DashboardHistorySeeder::SEMENTE);
 

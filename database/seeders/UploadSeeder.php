@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Core\Auth\Models\User;
+use App\Core\Support\DemoSurface;
 use App\Core\Uploads\Enums\UploadStatus;
 use App\Core\Uploads\Models\Upload;
 use Faker\Factory as FakerFactory;
@@ -68,6 +69,11 @@ final class UploadSeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $usuarios = User::query()->orderBy('id')->pluck('id')->all();
 
         if ($usuarios === []) {

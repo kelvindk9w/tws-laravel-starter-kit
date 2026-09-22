@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Core\Support\DemoSurface;
 use Illuminate\Database\Seeder;
 
 /**
@@ -21,10 +22,33 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // FAIL-CLOSED: em APP_ENV=production nada de demonstração é semeado,
+        // nem com DEMO_LOGIN_ENABLED=true. Aqui a recusa é um AVISO e não uma
+        // exceção — este agregador é o que um script de deploy roda
+        // (`php artisan migrate --seed --force`), e derrubar o deploy por causa
+        // de dado de demonstração trocaria uma armadilha por outra. Quem chama
+        // um seeder demo DIRETAMENTE (`db:seed --class=DemoAdminSeeder`) recebe
+        // exceção: ali a intenção foi declarada e o silêncio enganaria.
+        //
+        // Não há o que perder nesse caminho: o kit NÃO tem seeder de dado
+        // estrutural (papéis, permissões, planos, configuração) — tudo isso vem
+        // das migrations e do .env. Em produção, `db:seed` corretamente não faz
+        // nada.
+        if (! DemoSurface::allowed()) {
+            $this->command?->warn(
+                'APP_ENV=production: semeadura de DEMONSTRAÇÃO recusada (contas demo, '
+                .'massa fictícia e histórico dos dashboards não foram criados). Isto é a '
+                .'proteção do kit, não uma falha. Para uma demo pública hospedada, declare '
+                .'DEMO_ALLOW_IN_PRODUCTION=true.'
+            );
+
+            return;
+        }
+
         // Usuário demo + super admin demo (credenciais conhecidas) e vitrine
         // de produtos apenas quando habilitado — padrão: APP_ENV=local
         // (config/ui.php). Nunca em produção.
-        if (config('ui.demo_login.enabled')) {
+        if (DemoSurface::loginEnabled()) {
             $this->call(DemoUserSeeder::class);
             $this->call(DemoAdminSeeder::class);
             // Massa de usuários: paginação e filtros do /admin nascem com

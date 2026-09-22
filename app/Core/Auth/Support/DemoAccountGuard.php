@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Auth\Support;
 
 use App\Core\Auth\Models\User;
+use App\Core\Support\DemoSurface;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -50,9 +51,12 @@ use Throwable;
  *
  * A lista é a mesma nas três camadas (o trigger é gerado a partir dela).
  *
- * QUANDO VALE: só com o modo demo LIGADO (config ui.demo_login.enabled).
- * Em produção o modo é desligado e as contas demo não deveriam existir —
- * apagar `demo@…` de um banco de produção tem de continuar possível.
+ * QUANDO VALE: só com o modo demo LIGADO (DemoSurface::loginEnabled — a flag
+ * DEMO_LOGIN_ENABLED somada ao fail-closed de produção). Em produção o modo
+ * está desligado e as contas demo não deveriam existir — apagar `demo@…` de um
+ * banco de produção tem de continuar possível, INCLUSIVE quando alguém deixou
+ * a flag ligada por engano; é por isso que a pergunta passa pelo DemoSurface e
+ * não pela flag crua.
  */
 final class DemoAccountGuard
 {
@@ -80,7 +84,7 @@ final class DemoAccountGuard
      */
     public static function isEnabled(): bool
     {
-        return ! self::$disabled && (bool) config('ui.demo_login.enabled');
+        return ! self::$disabled && DemoSurface::loginEnabled();
     }
 
     /**

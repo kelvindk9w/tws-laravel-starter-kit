@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
+use App\Core\Support\DemoSurface;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -40,6 +41,11 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(self::SEMENTE);
 

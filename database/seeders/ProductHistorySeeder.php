@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Core\Catalog\Models\Product;
+use App\Core\Support\DemoSurface;
 use Illuminate\Database\Seeder;
 
 /**
@@ -26,6 +27,11 @@ final class ProductHistorySeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         Product::query()
             ->orderBy('id')
             ->get(['id', 'uuid', 'created_at'])

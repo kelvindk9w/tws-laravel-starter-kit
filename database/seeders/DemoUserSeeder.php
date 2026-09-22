@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Support\DemoAccountGuard;
 use App\Core\Auth\Support\DemoAccountTrigger;
+use App\Core\Support\DemoSurface;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -22,7 +23,10 @@ use Illuminate\Support\Facades\Hash;
  * blindagem recusaria (model + gatilho do PostgreSQL). No mesmo passo o
  * gatilho é reinstalado, para o banco acompanhar o e-mail que está no .env.
  *
- * NUNCA rodar/habilitar em produção (ver .env.prod.example).
+ * NUNCA roda em produção, e isso não depende mais de ninguém lembrar de
+ * desligar a flag: com APP_ENV=production o seeder LANÇA (DemoSurface). O
+ * único jeito de semear a demo em produção é declarar
+ * DEMO_ALLOW_IN_PRODUCTION=true — ver .env.prod.example e o README.
  */
 class DemoUserSeeder extends Seeder
 {
@@ -30,6 +34,11 @@ class DemoUserSeeder extends Seeder
 
     public function run(): void
     {
+        // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
+        // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
+        // DemoSurface e DemoSurfaceInProductionException.
+        DemoSurface::ensureSeedingAllowed(self::class);
+
         DemoAccountGuard::withoutProtection(function (): void {
             User::query()->updateOrCreate(
                 ['email' => config('ui.demo_login.email')],
