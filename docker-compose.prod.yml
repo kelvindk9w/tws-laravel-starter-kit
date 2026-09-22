@@ -13,8 +13,21 @@
 #   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco — ADR-010).
 #
 # CONFIGURAÇÃO: as variáveis PROD_* abaixo podem ser definidas num arquivo
-# .env.prod (ver .env.prod.example) ou no ambiente do shell. Os valores de
-# fallback existem apenas para a primeira subida — TROQUE AS SENHAS.
+# .env.prod (ver .env.prod.example) ou no ambiente do shell. Onde a variável
+# carrega SEGREDO não existe valor de fallback: `${VAR:?...}` faz o Compose se
+# recusar a resolver este arquivo enquanto ela não for definida.
+#
+# POR QUE NÃO HÁ MAIS SENHA PADRÃO: este arquivo oferecia `troque-esta-senha`
+# como fallback de POSTGRES_PASSWORD e REDIS_PASSWORD. Uma senha padrão que
+# FUNCIONA é a mesma armadilha da flag que já vem ligada — a stack sobe, nada
+# reclama, e a instalação fica em produção com a senha publicada no
+# repositório. Silêncio não pode significar permitido: agora falta de senha
+# para o `up`, em vez de inventar uma.
+#
+# A APP_KEY segue o mesmo princípio, num lugar diferente: ela chega pelo
+# env_file (.env.prod), então quem a exige é o entrypoint da imagem, que aborta
+# com código 78 quando ela falta em produção — ver docker/php/entrypoint-prod.sh
+# e App\Core\Support\CriticalSecrets.
 #
 # ATENÇÃO: o Compose SEMPRE usa o .env da raiz para interpolar ${VAR} — por
 # isso aqui só existem nomes PROD_* (nunca presentes no .env de dev).
@@ -41,12 +54,12 @@ x-app-env: &app-env
   DB_PORT: 5432
   DB_DATABASE: ${PROD_POSTGRES_DB:-tws_starter}
   DB_USERNAME: ${PROD_POSTGRES_USER:-tws}
-  DB_PASSWORD: ${PROD_POSTGRES_PASSWORD:-troque-esta-senha}
+  DB_PASSWORD: ${PROD_POSTGRES_PASSWORD:?defina PROD_POSTGRES_PASSWORD (sem valor padrao - ver .env.prod.example)}
   CACHE_STORE: redis
   SESSION_DRIVER: redis
   QUEUE_CONNECTION: redis
   REDIS_HOST: redis
-  REDIS_PASSWORD: ${PROD_REDIS_PASSWORD:-troque-esta-senha}
+  REDIS_PASSWORD: ${PROD_REDIS_PASSWORD:?defina PROD_REDIS_PASSWORD (sem valor padrao - ver .env.prod.example)}
   REDIS_PORT: 6379
   MAIL_MAILER: ${PROD_MAIL_MAILER:-log}
   MAIL_HOST: ${PROD_MAIL_HOST:-}
@@ -64,8 +77,11 @@ services:
         required: false
     environment:
       <<: *app-env
-      # APP_KEY: definir via .env.prod (obrigatório em produção real).
-      # Sem ela, o entrypoint gera uma chave efêmera na primeira subida.
+      # APP_KEY: OBRIGATÓRIA, definida no .env.prod (ou no secret do
+      # orquestrador) e idêntica em app, migrate, horizon e scheduler. Sem ela
+      # o entrypoint ABORTA em produção, em vez de gerar uma chave por
+      # container — chave gerada na subida é diferente em cada container e não
+      # sobrevive ao restart, o que corrompe em silêncio tudo que depende dela.
     volumes:
       # Compartilha o public/ com o nginx (entrypoint copia na subida).
       - app_public:/app-public
@@ -121,7 +137,7 @@ services:
     environment:
       POSTGRES_DB: ${PROD_POSTGRES_DB:-tws_starter}
       POSTGRES_USER: ${PROD_POSTGRES_USER:-tws}
-      POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD:-troque-esta-senha}
+      POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD:?defina PROD_POSTGRES_PASSWORD (sem valor padrao - ver .env.prod.example)}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -137,7 +153,7 @@ services:
 
   redis:
     image: redis:8.10-alpine
-    command: redis-server --appendonly yes --requirepass ${PROD_REDIS_PASSWORD:-troque-esta-senha}
+    command: redis-server --appendonly yes --requirepass ${PROD_REDIS_PASSWORD:?defina PROD_REDIS_PASSWORD (sem valor padrao - ver .env.prod.example)}
     volumes:
       - redis_data:/data
     # SEM `ports:` — redis inacessível fora da rede interna (CVEs históricos).

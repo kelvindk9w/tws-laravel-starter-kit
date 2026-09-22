@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Support\CriticalSecrets;
 use App\Core\Support\DemoSurface;
 use App\Core\Support\Platform;
 use App\Core\Tenancy\TenantContext;
@@ -41,6 +42,19 @@ class AppServiceProvider extends ServiceProvider
         // HSTS na borda são do nginx; aqui garantimos que TODA URL gerada
         // pela aplicação (e-mails, webhooks, links assinados) saia em https.
         if ($this->app->isProduction()) {
+            // Segredos que não podem ser inventados (ver CriticalSecrets): a
+            // chave da aplicação recusa o boot, os segredos de infraestrutura
+            // com valor de fachada avisam no log.
+            //
+            // A ÚNICA exceção é o comando que GERA a chave: se o guard
+            // estourasse nele, a pessoa ficaria sem o caminho de saída — o
+            // remédio exigiria a aplicação de pé, e a aplicação exigiria o
+            // remédio. `key:generate` não atende requisição e não toca dado
+            // criptografado, então liberá-lo não reabre nada.
+            if (! $this->runningKeyGeneration()) {
+                CriticalSecrets::guard();
+            }
+
             URL::forceHttps();
 
             // APP_DEBUG em produção é vazamento de configuração, caminho de
@@ -92,5 +106,25 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) config('security.rate_limit.sensitive', 5))
                 ->by((string) ($request->user()?->getAuthIdentifier() ?: $request->ip()));
         });
+    }
+
+    /**
+     * A execução atual é o `key:generate` — o comando que existe justamente
+     * para consertar a ausência de chave?
+     *
+     * A leitura é do `argv` porque no boot do provider nenhum comando foi
+     * resolvido ainda: o container só descobre qual comando roda depois que
+     * todos os providers subiram.
+     */
+    private function runningKeyGeneration(): bool
+    {
+        if (! $this->app->runningInConsole()) {
+            return false;
+        }
+
+        /** @var list<string> $arguments */
+        $arguments = (array) ($_SERVER['argv'] ?? []);
+
+        return in_array('key:generate', $arguments, true);
     }
 }

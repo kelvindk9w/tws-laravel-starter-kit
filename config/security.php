@@ -60,6 +60,27 @@ return [
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
 
+    // --- Segredos que não podem ser inventados nem ter padrão ------------------
+    // Em produção, a aplicação RECUSA subir sem uma chave de aplicação
+    // utilizável e AVISA no log quando um segredo de infraestrutura está com
+    // valor de fachada. A regra e a justificativa das duas respostas diferentes
+    // estão em App\Core\Support\CriticalSecrets.
+    'secrets' => [
+        // Valores reconhecidos como "depois eu troco". A lista existe porque
+        // cada instalação tem o seu histórico de placeholder; o padrão já traz
+        // os que o próprio kit ofereceu algum dia. A comparação ignora
+        // maiúsculas e o prefixo `base64:`, e vale para o valor INTEIRO —
+        // `troque-esta-senha` é placeholder, `troque-esta-senha-7f3a` não é.
+        // NÃO existe variável para DESLIGAR a recusa da chave: não há
+        // instalação de produção legítima cuja chave de criptografia seja um
+        // valor público.
+        'placeholders' => array_filter(array_map('trim', explode(',', (string) env(
+            'SECURITY_SECRETS_PLACEHOLDERS',
+            'troque-esta-senha,troque-esta-chave,mude-esta-senha,change-me,changeme,change-this,'
+            .'senha,password,secret,segredo,example,exemplo,placeholder,todo,tbd',
+        )))),
+    ],
+
     // --- Redirecionamento "de volta" (open redirect) ---------------------------
     // Toda rota que devolve o usuário ao endereço anterior (alternador de
     // idioma, `back()`, parâmetros `?redirect=`) só pode redirecionar para

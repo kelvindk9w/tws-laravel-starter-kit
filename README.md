@@ -670,11 +670,13 @@ pelo projeto — firewall/DNS são responsabilidade de quem administra o servido
 
 Para produção real:
 
-1. `cp .env.prod.example .env.prod` e defina `APP_KEY` (sem ela cada container
-   gera uma chave efêmera própria na subida — serve só para testar a stack).
-2. Senhas/portas padrão da stack: defina `PROD_*` no shell ou no `.env` da raiz
-   (o Compose interpola `${PROD_*}` dali — ver cabeçalho do
-   `docker-compose.prod.yml` e `.env.prod.example`).
+1. `cp .env.prod.example .env.prod` e defina `APP_KEY` — **obrigatória**, e a
+   MESMA para `app`, `migrate`, `horizon` e `scheduler` (ver
+   [A chave da aplicação em produção](#a-chave-da-aplicação-em-produção)).
+2. Senhas da stack: `PROD_POSTGRES_PASSWORD` e `PROD_REDIS_PASSWORD` **não têm
+   valor padrão** — sem elas o Compose se recusa a resolver o arquivo. Defina
+   `PROD_*` no shell ou no `.env` da raiz (o Compose interpola `${PROD_*}` dali
+   — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
 3. TLS real: monte seus certificados (`server.crt`/`server.key`) em
    `/etc/nginx/certs` — ver comentário no `docker-compose.prod.yml`.
 4. **Não rode `db:seed`.** Todo seeder do kit cria dado de demonstração, e em
@@ -692,6 +694,105 @@ Para produção real:
 
 > **Dados NUNCA se perdem ao reiniciar/recriar containers** (ADR-010): banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
+
+### A chave da aplicação em produção
+
+A `APP_KEY` protege os atributos com cast `encrypted` (hoje: o nome do
+usuário), o cookie de sessão, as URLs assinadas e — por fallback — o pepper do
+hash das chaves de API. Em produção ela é **pré-requisito**, não efeito
+colateral da subida.
+
+**O que mudou e por quê.** O entrypoint da imagem de produção GERAVA a chave
+quando ela vinha vazia, e a escrevia no `.env` de dentro do container. Como a
+imagem é a mesma para os quatro serviços PHP (e para cada réplica), isso dava
+uma chave **diferente por container**; e como `.env` mora na camada gravável, a
+chave também **não sobrevivia ao restart**. Nada disso produzia erro na subida —
+o dado simplesmente deixava de descriptografar, o usuário caía deslogado ao
+atender por outro container e as chaves de API paravam de verificar. Perda
+silenciosa de dado é pior que serviço que não sobe, então hoje:
+
+| Camada | Comportamento em `APP_ENV=production` |
+| --- | --- |
+| `docker/php/entrypoint-prod.sh` | Chave **ausente** → aborta com código **78** (`EX_CONFIG`) e imprime como gerar e onde colocar. Nunca escreve chave em arquivo. |
+| `App\Core\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`). Único comando liberado: `key:generate`, que é a saída. |
+| `docker-compose.prod.yml` | `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
+
+Fora de produção o entrypoint continua conveniente: gera uma chave efêmera,
+**só no ambiente do processo** (nunca em arquivo), e avisa em voz alta que ela
+morre com o container.
+
+**Procedimento.** Gere UMA chave, uma única vez:
+
+```bash
+# num container descartável da própria imagem
+docker run --rm --entrypoint sh <imagem> -c 'php artisan key:generate --show'
+
+# ou sem container nenhum
+openssl rand -base64 32 | sed 's/^/base64:/'
+```
+
+Entregue o valor inteiro (com o prefixo `base64:`) como variável de ambiente
+`APP_KEY` para todos os serviços PHP, pelo `.env.prod` ou pelo secret do
+orquestrador — **nunca** num `.env` dentro do container. Guarde-a no mesmo cofre
+das senhas do banco: ela é tão crítica quanto o backup, porque **sem ela o
+backup não serve para nada**.
+
+#### Trocar a chave é irreversível sem a chave antiga
+
+A chave **é** o dado. No instante em que ela muda, tudo que foi gravado com a
+anterior deixa de ser legível, e não existe recuperação. Ao rotacionar, declare
+a chave anterior em `APP_PREVIOUS_KEYS` (lista separada por vírgula, da mais
+recente para a mais antiga): o Laravel tenta as antigas na **leitura** e grava
+sempre com a atual. Só remova a antiga depois de reescrever os registros.
+
+Duas coisas que o `APP_PREVIOUS_KEYS` **não** resgata:
+
+- **Chaves de API** — o hash da secreta é HMAC com pepper, e o pepper usa
+  apenas o valor **atual**. Como `API_KEYS_HASH_PEPPER` tem fallback para a
+  `APP_KEY`, rotacionar a chave sem um pepper próprio invalida **permanentemente**
+  toda chave de API já emitida (401, sem volta). Defina um
+  `API_KEYS_HASH_PEPPER` dedicado **antes de emitir a primeira chave** e a
+  rotação da `APP_KEY` deixa de afetá-las.
+- **Sessões e cookies** — não é perda de dado, é logout: todos refazem o login.
+
+#### Segredos com valor de fachada
+
+O mesmo princípio vale para as senhas: **senha padrão que funciona é o mesmo bug
+da flag que já vem ligada**. O `docker-compose.prod.yml` oferecia
+`troque-esta-senha` como fallback de Postgres e Redis; agora não oferece nada.
+
+Para instalações que não sobem pelo compose do kit, o boot em produção grava
+aviso no log quando `DB_PASSWORD`, `REDIS_PASSWORD`, `API_KEYS_HASH_PEPPER`,
+`BACKUP_ARCHIVE_PASSWORD` ou `AWS_SECRET_ACCESS_KEY` estão com valor de
+placeholder (vocabulário configurável em `SECURITY_SECRETS_PLACEHOLDERS`). Aqui
+a resposta é **avisar, não recusar**, e o critério é o mesmo do `APP_DEBUG`:
+para a chave não existe valor seguro a forçar, então a recusa é a única saída;
+para uma senha já provisionada no Postgres, derrubar a aplicação não troca a
+senha — só troca um problema de segurança por uma indisponibilidade, mantendo o
+problema. O remédio é a rotação, e o aviso recorrente é o que impede que ela
+seja esquecida.
+
+**Conferir o comportamento** (container descartável, sem tocar na stack em uso):
+
+```bash
+# 1) produção sem chave → aborta com 78
+docker compose run --rm --no-deps --entrypoint sh app \
+  -c 'APP_ENV=production APP_KEY= sh /var/www/html/docker/php/entrypoint-prod.sh echo SUBIU; echo "[exit=$?]"'
+
+# 2) produção com chave → segue (exit 0)
+docker compose run --rm --no-deps --entrypoint sh app \
+  -c 'APP_ENV=production APP_KEY=base64:$(openssl rand -base64 32 | tr -d "\n") sh /var/www/html/docker/php/entrypoint-prod.sh echo SUBIU; echo "[exit=$?]"'
+
+# 3) fora de produção sem chave → chave efêmera em memória, nada escrito em arquivo
+docker compose run --rm --no-deps --entrypoint sh app \
+  -c 'APP_ENV=local APP_KEY= sh /var/www/html/docker/php/entrypoint-prod.sh sh -c "echo \$APP_KEY"'
+
+# 4) compose de produção sem as senhas → não resolve
+docker compose -f docker-compose.prod.yml --env-file /dev/null config
+
+# 5) guard da aplicação
+docker compose exec -T app ./vendor/bin/pest tests/Feature/Security/ApplicationKeyProductionTest.php
+```
 
 ## Convenções (resumo dos ADRs — lei do projeto)
 
