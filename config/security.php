@@ -60,6 +60,24 @@ return [
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
 
+    // --- Redirecionamento "de volta" (open redirect) ---------------------------
+    // Toda rota que devolve o usuário ao endereço anterior (alternador de
+    // idioma, `back()`, parâmetros `?redirect=`) só pode redirecionar para
+    // DENTRO da aplicação — ver App\Core\Http\SafeRedirect.
+    'redirects' => [
+        // Destino usado quando o endereço pedido é externo, ausente ou
+        // malformado. Caminho relativo à raiz ou URL de mesma origem.
+        'fallback' => (string) env('SECURITY_REDIRECT_FALLBACK', '/'),
+
+        // Origens ACEITAS além da própria APP_URL (esquema://host[:porta]),
+        // separadas por vírgula. Use quando a aplicação atende por mais de um
+        // endereço legítimo — domínio com e sem `www`, domínio de staging,
+        // APP_URL em http enquanto a borda entrega em https. A origem é
+        // comparada de forma estruturada (esquema + host + porta) e NUNCA é
+        // lida do header `Host` da requisição, que é dado do cliente.
+        'allowed_origins' => array_filter(array_map('trim', explode(',', (string) env('SECURITY_REDIRECT_ALLOWED_ORIGINS', '')))),
+    ],
+
     // --- Rate limiting (item 10) — requisições por minuto ----------------------
     // Aplicado por usuário autenticado ou, na ausência, por IP.
     'rate_limit' => [

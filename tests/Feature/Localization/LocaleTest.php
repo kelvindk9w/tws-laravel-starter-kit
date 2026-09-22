@@ -64,6 +64,79 @@ it('rota de troca grava o cookie e redireciona de volta', function () {
         ->assertCookie(SetLocale::COOKIE, 'en');
 });
 
+// Open redirect (auditoria de segurança): a rota de troca devolve o usuário à
+// página anterior lendo o `Referer`, que é dado do CLIENTE. Sem validação de
+// origem o domínio do kit viraria redirecionador aberto — o link começa no
+// domínio legítimo e termina no do atacante. Contrato: só destino de mesma
+// origem é obedecido; todo o resto cai no fallback, e a troca de idioma em si
+// continua acontecendo nos dois casos.
+it('rota de troca devolve o usuário à página interna de onde ele veio', function (string $path) {
+    $origem = rtrim((string) config('app.url'), '/').$path;
+
+    $this->withHeader('Referer', $origem)
+        ->get('/locale/en')
+        ->assertRedirect($origem)
+        ->assertCookie(SetLocale::COOKIE, 'en');
+})->with([
+    'painel' => ['/dashboard'],
+    'com query string' => ['/ui?tab=forms'],
+    'raiz' => ['/'],
+]);
+
+it('rota de troca ignora Referer que aponta para fora da aplicação', function (string $referer) {
+    $this->withHeader('Referer', $referer)
+        ->get('/locale/en')
+        ->assertRedirect('/')
+        ->assertCookie(SetLocale::COOKIE, 'en');
+})->with([
+    'domínio externo' => ['https://evil.example.com/phish'],
+    'alvo legítimo no caminho' => ['https://evil.example.com/http://localhost:8180/dashboard'],
+    'relativa ao protocolo' => ['//evil.example.com/phish'],
+    'sufixo do domínio legítimo' => ['http://localhost.evil.example.com/phish'],
+    'barra invertida depois do esquema' => ['https:/\\evil.example.com/phish'],
+    'credenciais embutidas' => ['https://localhost:8180@evil.example.com/phish'],
+    'credenciais com host legítimo' => ['https://user:senha@localhost:8180/dashboard'],
+    'host percent-encoded' => ['http://%6c%6fcalhost:8180/dashboard'],
+    'porta diferente' => ['http://localhost:9999/dashboard'],
+    'esquema não http' => ['javascript:alert(1)'],
+    'esquema de dados' => ['data:text/html,<script>alert(1)</script>'],
+    'vazio' => [''],
+    'só espaços' => ['   '],
+    'lixo sem esquema' => ['evil.example.com'],
+]);
+
+it('rota de troca sem Referer nenhum cai no fallback', function () {
+    $this->get('/locale/es')
+        ->assertRedirect('/')
+        ->assertCookie(SetLocale::COOKIE, 'es');
+});
+
+it('fallback de redirecionamento é configurável', function () {
+    config(['security.redirects.fallback' => '/v2']);
+
+    $this->withHeader('Referer', 'https://evil.example.com/phish')
+        ->get('/locale/en')
+        ->assertRedirect('/v2');
+});
+
+it('origem extra declarada em configuração passa a ser aceita', function () {
+    config(['security.redirects.allowed_origins' => ['https://app.exemplo.test']]);
+
+    $this->withHeader('Referer', 'https://app.exemplo.test/dashboard')
+        ->get('/locale/en')
+        ->assertRedirect('https://app.exemplo.test/dashboard');
+});
+
+it('host forjado no header Host não libera redirecionamento externo', function () {
+    // A origem permitida vem de config('app.url'), nunca do host declarado
+    // pelo cliente — por isso a validação não afrouxa quando o TrustProxies
+    // entrar (X-Forwarded-Host é dado do cliente do mesmo jeito).
+    $this->withHeader('Host', 'evil.example.com')
+        ->withHeader('Referer', 'http://evil.example.com/phish')
+        ->get('/locale/en')
+        ->assertRedirect('/');
+});
+
 it('rota de troca rejeita locale fora da whitelist', function () {
     $this->get('/locale/fr')->assertNotFound();
 });
