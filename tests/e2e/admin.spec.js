@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // =============================================================================
 // E2E do super admin (/admin — Filament): login demo (credenciais pré-
-// preenchidas), request logs cobrindo navegação WEB (bug corrigido),
-// vitrine de segurança (submissões com ataques bloqueados no topo),
+// preenchidas), request logs cobrindo navegação WEB (bug corrigido) e a
+// tentativa de ataque OBSERVADA (filtro em modo observe), vitrine de segurança (submissões com ataques bloqueados no topo),
 // produtos com paginação/filtro na URL e seletor de idioma na topbar.
 //
 // UM teste com steps: o login do Filament tem throttle agressivo — uma
@@ -20,6 +20,14 @@ test('super admin demo: auditoria web, vitrine de ataques, produtos e i18n', asy
     await page.goto('/');
     await page.goto('/login');
 
+    // Filtro de ataques em modo OBSERVAR (padrão): a tentativa na query não
+    // derruba a página, nunca executa e vira linha marcada na trilha.
+    page.on('dialog', () => {
+        throw new Error('XSS EXECUTOU — payload deveria ser inerte');
+    });
+    const tentativa = await page.goto('/?e2e_observe=' + encodeURIComponent("<script>alert('e2e')</script>"));
+    expect(tentativa.status()).toBe(200);
+
     await test.step('login demo (credenciais pré-preenchidas)', async () => {
         await page.goto('/admin/login', { waitUntil: 'networkidle' });
         await page.getByRole('button', { name: /entrar|sign in|iniciar|^login$/i }).click();
@@ -34,6 +42,15 @@ test('super admin demo: auditoria web, vitrine de ataques, produtos e i18n', asy
         // Em paralelo, outros testes geram logs — buscar o endpoint /login.
         await page.getByPlaceholder(/pesquisar|search/i).fill('login');
         await expect(page.getByRole('cell', { name: 'login', exact: true }).first()).toBeVisible({ timeout: 15000 });
+    });
+
+    await test.step('request logs: tentativa observada aparece com selo e filtro próprio', async () => {
+        await page.goto('/admin/request-logs?filters[attacks][value]=1', { waitUntil: 'networkidle' });
+
+        // Selo do tipo na listagem (modo observe = "Observada"), nunca o
+        // payload — ele fica só no detalhe, neutralizado.
+        await expect(page.getByText(/Observada: XSS/).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(/<script>alert\('e2e'\)/)).toHaveCount(0);
     });
 
     await test.step('submissões: ataques bloqueados no topo + filtro na URL', async () => {

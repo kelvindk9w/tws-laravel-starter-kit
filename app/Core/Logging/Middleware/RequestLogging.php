@@ -11,6 +11,8 @@ use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\PersistFailure;
 use App\Core\Logging\Redactor;
 use App\Core\Logging\ScanTrafficSampler;
+use App\Core\Security\AttackEvidence;
+use App\Core\Security\Middleware\SecurityValidation;
 use App\Core\Security\RequestInputs;
 use Closure;
 use Illuminate\Http\Request;
@@ -53,12 +55,23 @@ use Throwable;
  * bloqueadas pelo SecurityValidation são gravadas por ele e nunca chegam
  * aqui. Ver App\Core\Logging\ScanTrafficSampler.
  *
+ * Tentativa de ataque que SEGUIU (modo observe do filtro, ou rota delegada à
+ * vitrine do /ui): a linha é gravada SEMPRE — sem exclusão de rota leve nem
+ * amostragem de varredura —, com `attack_type`, a nota da tentativa em
+ * `error_message` e a evidência neutralizada (App\Core\Security\
+ * AttackEvidence) no lugar do payload. O status segue o ciclo normal
+ * (INICIADA → CONCLUIDA/ERRO): "observada" = `attack_type` preenchido fora
+ * da BLOQUEADA.
+ *
  * Resiliência: se o banco falhar, a requisição NÃO é derrubada — a trilha
  * de arquivo (canal request_log, JSON estruturado) registra a falha.
  */
 final class RequestLogging
 {
-    public function __construct(private readonly Redactor $redactor) {}
+    public function __construct(
+        private readonly Redactor $redactor,
+        private readonly AttackEvidence $evidence,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -80,7 +93,7 @@ final class RequestLogging
         // Rota inexistente (404/405 de varredura — por construção anônima):
         // só a primeira de cada cliente por janela vai ao banco; as demais
         // ficam no log de arquivo. Ver ScanTrafficSampler.
-        if ($matchedUri === null && ! ScanTrafficSampler::shouldPersist(ScanTrafficSampler::UNMATCHED, $request)) {
+        if ($matchedUri === null && self::attackType($request) === null && ! ScanTrafficSampler::shouldPersist(ScanTrafficSampler::UNMATCHED, $request)) {
             Log::channel('request_log')->info('request.unmatched.sampled_out', [
                 'correlation_id' => $correlationId,
                 'ip' => $request->ip(),
@@ -123,7 +136,9 @@ final class RequestLogging
         $httpStatus = $response->getStatusCode();
         $status = $httpStatus >= 500 ? RequestLogStatus::Erro : RequestLogStatus::Concluida;
 
-        $errorMessage = null;
+        // A nota da tentativa observada (gravada na chegada) sobrevive à
+        // conclusão; o erro de servidor, quando houver, tem precedência.
+        $errorMessage = $log->error_message;
 
         if ($status === RequestLogStatus::Erro) {
             $captured = $request->attributes->get('request_log_error');
@@ -157,9 +172,16 @@ final class RequestLogging
      */
     private function persistStarted(Request $request, string $correlationId, string $endpoint): void
     {
-        $payload = $this->shouldSummarize($request)
-            ? $this->summarizePayload($request)
-            : $this->redactor->redactArray(RequestInputs::extract($request));
+        $attackType = self::attackType($request);
+
+        // Tentativa de ataque que SEGUIU (modo observe ou rota delegada): a
+        // linha guarda a evidência neutralizada — escapada e redigida, como a
+        // BLOQUEADA — em vez do payload comum ou do resumo do Livewire.
+        $payload = match (true) {
+            $attackType !== null => $this->evidence->payload($request),
+            $this->shouldSummarize($request) => $this->summarizePayload($request),
+            default => $this->redactor->redactArray(RequestInputs::extract($request)),
+        };
 
         // Correlação do cliente: já saneada (lista branca + limite), sem
         // unicidade, apenas informativa.
@@ -178,11 +200,17 @@ final class RequestLogging
                 'correlation_id' => $correlationId,
                 'client_correlation_id' => $clientCorrelationId,
                 'ip' => $request->ip(),
-                'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
+                'user_agent' => $attackType !== null
+                    ? $this->evidence->userAgent($request)
+                    : Str::limit((string) $request->userAgent(), 500, ''),
                 'method' => $request->method(),
                 'endpoint' => Str::limit($endpoint, 2000, ''),
                 'payload' => $payload,
                 'status' => RequestLogStatus::Iniciada,
+                'attack_type' => $attackType,
+                'error_message' => $attackType !== null
+                    ? __('security.observed_log', ['type' => $attackType])
+                    : null,
             ]);
 
             $request->attributes->set('request_log', $log);
@@ -209,6 +237,11 @@ final class RequestLogging
      */
     private function isExcluded(Request $request): bool
     {
+        // Tentativa de ataque nunca fica fora da trilha, nem em rota leve.
+        if (self::attackType($request) !== null) {
+            return false;
+        }
+
         if ($request->isMethod('OPTIONS')) {
             return true;
         }
@@ -217,6 +250,17 @@ final class RequestLogging
         $excluded = config('security.request_logging.excluded_paths', []);
 
         return $excluded !== [] && $request->is(...$excluded);
+    }
+
+    /**
+     * Tipo da tentativa de ataque que o SecurityValidation deixou seguir
+     * (modo observe ou rota delegada), ou null.
+     */
+    private static function attackType(Request $request): ?string
+    {
+        $type = $request->attributes->get(SecurityValidation::ATTACK_ATTRIBUTE);
+
+        return is_string($type) && $type !== '' ? $type : null;
     }
 
     /**

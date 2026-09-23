@@ -968,18 +968,23 @@ TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityVa
    rotas inexistentes. Ver *Limite de requisições (rate limit)*, abaixo. Roda antes de todo trabalho
    caro (validação de host, varredura de ataque sobre o corpo, escrita na trilha): acima do limite,
    o corpo nem é lido.
-2. **SecurityValidation** (`.../SecurityValidation.php`) — PRIMEIRA validação: detecta XSS
-   (`<script`, `javascript:`, `on*=`), SQLi comum, null bytes e path traversal em query + corpo +
-   nomes de arquivos (inclusive URL-encoded). Ao detectar:
-   - grava `request_logs` com status **BLOQUEADA**, payload **sanitizado/escapado** (nunca
-     executável — ADR-005) + redigido, com metadados (IP, endpoint, `attack_type`);
-   - responde **422** com mensagem genérica (não revela o que detectou) + `X-Correlation-Id`;
-   - **teto de inspeção** (`SECURITY_VALIDATION_MAX_INSPECTED_BYTES`, padrão 1 MiB): a detecção roda
-     antes da autenticação, então o volume de texto que ela varre (chaves + valores de query e
-     corpo; arquivo enviado conta só pelos metadados) é limitado. Acima do teto a requisição é
-     **recusada com 413** e gravada como **BLOQUEADA** (`attack_type` = `payload_too_large`, payload
-     só com o tamanho). O excedente não é aceito sem inspeção — inspecionar só o começo deixaria o
-     ataque escondido no fim do corpo.
+2. **SecurityValidation** (`.../SecurityValidation.php`) — o **filtro de ataques**: detecta XSS,
+   SQLi, null bytes e path traversal em **query e corpo separados** (formulário ou JSON, aninhado,
+   nomes de campo inclusive), metadados de arquivos enviados, corpo não estruturado, cabeçalhos
+   configurados e caminho decodificado. O que faz com a tentativa depende do **modo** — ver
+   *Filtro de ataques*, abaixo:
+   - **`observe` (padrão)**: a requisição **segue**; a linha da trilha sai com `attack_type`, a
+     evidência **neutralizada** (escapada + redigida) no lugar do payload e a nota da tentativa
+     em `error_message`; evento `security.observed` no log de arquivo;
+   - **`block`**: grava `request_logs` com status **BLOQUEADA**, payload **sanitizado/escapado**
+     (nunca executável — ADR-005) + redigido, com metadados (IP, endpoint, `attack_type`), e
+     responde **422** com mensagem genérica (não revela o que detectou) + `X-Correlation-Id`;
+   - **teto de inspeção** (`SECURITY_VALIDATION_MAX_INSPECTED_BYTES`, padrão 1 MiB), **nos dois
+     modos**: a detecção roda antes da autenticação, então o volume que ela varre (chaves + valores
+     de query e corpo, mais 8 bytes por item; arquivo enviado conta só pelos metadados) é limitado.
+     Acima do teto a requisição é **recusada com 413** e gravada como **BLOQUEADA** (`attack_type` =
+     `payload_too_large`, payload só com o tamanho). O excedente não é aceito sem inspeção —
+     inspecionar só o começo deixaria o ataque escondido no fim do corpo.
 3. **RequestLogging** (`app/Core/Logging/Middleware/RequestLogging.php`):
    - **No recebimento**: gera/propaga o `correlation_id` (UUID v7, **sempre gerado pelo
      servidor**; o `X-Correlation-Id` de entrada vai saneado para a coluna separada
@@ -1003,6 +1008,62 @@ TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityVa
    é autenticada (roda depois do `resolve.tenant`) e por IP em rota sem autenticação. Rotas
    sensíveis (login, códigos 2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores
    em `config/security.php`.
+
+### Filtro de ataques: modo `observe` (padrão) e modo `block`
+
+**A defesa primária contra injeção e XSS é o framework, não o filtro.** Eloquent e o Query
+Builder mandam valores por *binding* (o texto nunca vira SQL), o Blade escapa toda saída com
+`{{ }}` e cada formulário valida o que aceita. O filtro (`SecurityValidation` +
+`AttackDetector`) é **defesa em profundidade e telemetria**: ele mostra quem está tentando o
+quê, onde. Por isso o padrão é **observar**:
+
+| Modo | `SECURITY_VALIDATION_MODE` | O que acontece com a tentativa |
+|---|---|---|
+| Observar (padrão) | `observe` (ou vazio/ausente) | Segue. Linha da trilha com `attack_type`, evidência neutralizada e nota; evento `security.observed` |
+| Bloquear | `block` | Recusada com 422 genérico. Linha **BLOQUEADA** com evidência neutralizada; evento `security.blocked` |
+
+Por que não bloquear por padrão: nenhum conjunto de regex separa ataque de texto com certeza,
+e um filtro que recusa texto legítimo quebra o produto do cliente — o caso real que motivou a
+mudança foi "select a plan from the list" recusado com 422. As regras foram revistas para exigir
+**contexto de sintaxe** (um SELECT precisa de lista de colunas + FROM + fim de consulta; um
+handler `on*=` precisa estar dentro de uma tag ou logo depois de fechar um atributo;
+`javascript:` precisa estar em posição de URL e seguido de código), e um corpus de frases
+legítimas em pt-BR, en e es e de padrões canônicos de ataque trava cada regra
+(`tests/Unit/Security/AttackDetectorCorpusTest.php`). Mesmo assim, falso positivo continua
+possível — em `observe` ele custa uma linha marcada na trilha, não um cliente perdido.
+
+**Quando ligar `block`:** quando a aplicação tem superfície que **não** passa pelas defesas do
+framework (SQL montado por concatenação, saída com `{!! !!}`, integração com sistema legado que
+interpreta o texto), durante um incidente ativo, ou depois que a telemetria do `observe` mostrou,
+por um período representativo, **zero falso positivo** no seu tráfego real (filtro *Tentativas de
+ataque* em `/admin/request-logs`). Para ligar:
+
+```bash
+SECURITY_VALIDATION_MODE=block   # no .env; recrie os containers para o compose reler o .env
+```
+
+Valor desconhecido (erro de digitação) é tratado como `block` — quem escreveu algo diferente do
+padrão pediu mudança, e o lado estreito é o seguro. O teto de inspeção (413) vale nos dois modos.
+
+**O que é inspecionado** (`App\Core\Security\RequestInputs`): query e corpo **separados** — a
+visão mesclada de `input()` deixava o corpo esconder a query de mesmo nome —, JSON aninhado e
+nomes de campo, nome e MIME declarados de cada arquivo (o conteúdo nunca é lido; o texto que
+acompanha um arquivo no mesmo array também é inspecionado), corpo não estruturado (texto puro,
+XML, JSON com `Content-Type` errado — `$request->json()` o lê mesmo assim), os cabeçalhos de
+`SECURITY_VALIDATION_INSPECTED_HEADERS` (padrão `User-Agent,Referer`: o primeiro vai para a
+trilha, o segundo decide o destino do `back()`) e o caminho decodificado (parâmetros de rota). O
+caminho nunca é gravado na evidência — só a indicação `_detectado_em: caminho`. Cada valor é
+analisado como chegou, URL-decodificado e com entidades numéricas HTML resolvidas. Regex que falha
+(limite do PCRE) devolve `inspection_error`: o que não pôde ser analisado não é aprovado por
+omissão.
+
+**Onde a tentativa aparece:** em `/admin/request-logs`, a coluna **Tentativa de ataque** mostra o
+selo "Observada: XSS" ou "Bloqueada: XSS" e o filtro *Tentativas de ataque* isola as linhas; o
+payload neutralizado fica no detalhe. Os formulários do kit (contato da landing e demos do `/ui`)
+têm a **própria** camada de defesa (`FormSubmissionGuard`, mesmo detector), que não depende do
+modo: a tentativa vira submissão com selo e trecho neutralizado na vitrine de submissões, o texto
+cru fica só no detalhe como evidência e nada é enviado. Nas rotas delegadas à vitrine, a linha da
+trilha também sai marcada e neutralizada.
 
 ### Limite de requisições (rate limit) e contenção da trilha
 
@@ -1090,15 +1151,17 @@ anônimo virava escrita no banco na velocidade da rede. Agora:
   sempre foi (o ADR-010 manda registrar o início de uma varredura); as seguintes ficam só no
   arquivo (`request.unmatched.sampled_out`, com o marcador de endpoint, nunca o caminho bruto).
   Rota inexistente é anônima **por construção**: sem rota não há sessão nem chave de API.
-- **Nunca amostrado:** tentativa **BLOQUEADA** pelo `SecurityValidation` (gravada por ele,
-  sempre) e requisição a rota que **existe** — autenticada ou não, com qualquer desfecho, inclusive
+- **Nunca amostrado:** tentativa de ataque — **BLOQUEADA** pelo `SecurityValidation` (gravada
+  por ele, sempre) ou **observada** (gravada pelo `RequestLogging` mesmo em rota inexistente ou em
+  rota excluída da trilha, como `/up`) — e requisição a rota que **existe** — autenticada ou não, com qualquer desfecho, inclusive
   404 de recurso não encontrado. Essas continuam com INICIADA na chegada e o fecho no terminate.
 - Escolheu-se **amostrar** (e não descartar nem agregar numa contagem) porque a linha amostrada é
   uma linha normal da trilha — mesmo formato, mesmo ciclo, visível no `/admin` —, sem tabela nova
   nem job de consolidação. `REQUEST_LOG_SCAN_SAMPLE_WINDOW_SECONDS=0` volta ao comportamento
   antigo (toda 404 gera linha).
 - O que fica acima do limite **não passa pelo `SecurityValidation`**: um ataque mandado por um
-  cliente já estrangulado não é gravado como BLOQUEADA — ele também não foi processado. Dentro do
+  cliente já estrangulado não é gravado como tentativa — ele também não foi processado. É o
+  `EdgeRateLimit` que limita quantas linhas de tentativa um único cliente consegue gerar. Dentro do
   limite, todo ataque é detectado e gravado.
 
 Também: HTTPS forçado em produção (`URL::forceHttps()` no `AppServiceProvider`), CORS restritivo
@@ -1285,8 +1348,8 @@ são o dado do próprio contato, necessário para respondê-lo.
 
 | Camada | Onde | Conteúdo |
 |---|---|---|
-| Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload sanitizado/redigido, duração, IP, tenant |
-| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `request.throttled`, `request.unmatched.sampled_out`); número de cartão sai mascarado (ver *Redaction*) |
+| Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload redigido (neutralizado quando há `attack_type`), duração, IP, tenant |
+| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`); número de cartão sai mascarado (ver *Redaction*) |
 | Borda | access log do nginx | tudo, inclusive health checks |
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
@@ -1303,8 +1366,8 @@ investigar.** Consulta rápida:
 SELECT * FROM request_logs WHERE status = 'INICIADA' AND created_at < now() - interval '5 minutes';
 ```
 
-Da mesma forma, log **BLOQUEADA** = tentativa de ataque registrada (ver `attack_type`, `ip`,
-`endpoint`), e log **sem `tenant_uuid`** (credencial inválida/ausente — o tenant não foi
+Da mesma forma, log com **`attack_type`** = tentativa de ataque registrada — **BLOQUEADA** no
+modo `block`, CONCLUIDA/ERRO no modo `observe` (ver `attack_type`, `ip`, `endpoint`) —, e log **sem `tenant_uuid`** (credencial inválida/ausente — o tenant não foi
 resolvido, Fase 4) = possível tentativa de acesso sem credencial válida.
 
 ### Append-only

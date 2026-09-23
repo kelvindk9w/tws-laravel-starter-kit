@@ -6,11 +6,13 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Route;
 
-// Validação de segurança global (ADR-005): payload malicioso é bloqueado,
-// registrado SANITIZADO/escapado (nunca executável) + metadados, e a
-// resposta não revela o que foi detectado.
+// Validação de segurança global (ADR-005) no modo `block`: payload malicioso
+// é bloqueado, registrado SANITIZADO/escapado (nunca executável) +
+// metadados, e a resposta não revela o que foi detectado. O modo padrão
+// (`observe`) está em ObserveModeTest.
 
 beforeEach(function () {
+    config()->set('security.validation.mode', 'block');
     Route::post('/api/_test/echo', fn () => response()->json(['ok' => true]));
 });
 

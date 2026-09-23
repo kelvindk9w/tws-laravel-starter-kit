@@ -11,6 +11,10 @@ return [
     // Internal message recorded in the request log (attempt metadata).
     'blocked_log' => 'Malicious payload detected (:type).',
 
+    // Note for an attempt the filter let THROUGH (observe mode or delegated
+    // route) — written on the audit trail row.
+    'observed_log' => 'Attack pattern detected (:type) — recorded, request not refused (observe mode).',
+
     // Rejected by size: the submitted content exceeds what security validation
     // inspects (config security.validation.max_inspected_bytes).
     'payload_too_large' => 'The submitted content is too large to be accepted.',

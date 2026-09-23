@@ -12,6 +12,10 @@ return [
     // Mensagem interna gravada no request log (metadado da tentativa — ADR-005).
     'blocked_log' => 'Payload malicioso detectado (:type).',
 
+    // Nota da tentativa que o filtro deixou SEGUIR (modo observe ou rota
+    // delegada) — gravada na linha da trilha.
+    'observed_log' => 'Padrão de ataque detectado (:type) — registrado, requisição não recusada (modo observar).',
+
     // Recusa por tamanho: o conteúdo enviado passa do teto que a validação de
     // segurança inspeciona (config security.validation.max_inspected_bytes).
     'payload_too_large' => 'O conteúdo enviado é grande demais para ser aceito.',

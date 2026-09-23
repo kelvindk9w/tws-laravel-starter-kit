@@ -11,9 +11,10 @@ namespace App\Core\Security;
  * NUNCA em formato executável. Strings são escapadas em HTML
  * (htmlspecialchars), têm null bytes removidos e são truncadas.
  *
- * Uso: apenas para gravar a evidência da tentativa no request log.
- * O sanitizado NUNCA é usado para processamento de negócio (a requisição
- * já foi bloqueada neste ponto).
+ * Uso: apenas para gravar a evidência da tentativa no request log
+ * (AttackEvidence — linha BLOQUEADA ou tentativa observada). O sanitizado
+ * NUNCA é usado para processamento de negócio: no modo observe a aplicação
+ * segue recebendo o input original, e quem o neutraliza na saída é o Blade.
  */
 final class PayloadSanitizer
 {

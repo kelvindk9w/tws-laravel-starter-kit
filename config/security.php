@@ -316,14 +316,46 @@ return [
         'allow_any_ip' => (bool) env('ADMIN_ALLOW_ANY_IP', false),
     ],
 
-    // --- Delegação de detecção de ataques (vitrine de segurança do /ui) ------
-    // Caminhos/componentes cuja detecção é feita pela PRÓPRIA camada da
-    // aplicação, em vez do bloqueio 422 do middleware SecurityValidation.
+    // --- Filtro de ataques (SecurityValidation + AttackDetector) --------------
+    // A defesa PRIMÁRIA contra injeção e XSS é o framework: Eloquent/Query
+    // Builder com bindings, Blade escapando a saída ({{ }}), validação de cada
+    // formulário. O filtro é defesa em profundidade e TELEMETRIA — ele detecta
+    // padrões de ataque em query, corpo (formulário/JSON, chaves inclusive),
+    // metadados de upload, cabeçalhos e caminho. Ver App\Core\Security\
+    // ValidationMode e o README (seção "Filtro de ataques").
+    //
+    // Delegação (vitrine de segurança do /ui): caminhos/componentes cuja
+    // detecção é feita pela PRÓPRIA camada da aplicação, que segue em qualquer
+    // modo (a linha da trilha sai marcada e neutralizada).
     // A camada delegada roda o MESMO AttackDetector e registra a tentativa
     // (form_submissions com blocked_at + payload inerte — vitrine exibida
     // no super admin). NUNCA adicionar rotas de produção aqui sem
     // implementar a detecção local correspondente.
     'validation' => [
+        // MODO do filtro:
+        //   `observe` (PADRÃO) — detecta, grava a tentativa na trilha
+        //                (request_logs: `attack_type` + payload neutralizado;
+        //                evento `security.observed` no log de arquivo) e DEIXA
+        //                a requisição seguir. Um filtro por padrão de texto
+        //                sempre terá falso positivo; recusar texto legítimo
+        //                quebra o produto, e quem impede a injeção é o framework.
+        //   `block`    — recusa com 422 genérico e grava a linha BLOQUEADA.
+        //                Ligue quando houver superfície fora das defesas do
+        //                framework (SQL cru, saída {!! !!}, sistema legado),
+        //                durante incidente ativo, ou depois que a telemetria do
+        //                `observe` mostrou zero falso positivo no seu tráfego.
+        // Valor desconhecido é tratado como `block` (o lado estreito); vazio é
+        // `observe`. O teto de inspeção abaixo (413) vale nos DOIS modos.
+        'mode' => (string) env('SECURITY_VALIDATION_MODE', 'observe'),
+
+        // Cabeçalhos inspecionados além do corpo, separados por vírgula. O
+        // padrão cobre os que a aplicação GRAVA (User-Agent vai para a trilha
+        // e para a tabela de sessões) ou USA (Referer decide o destino do
+        // `back()`). Os demais cabeçalhos do kit já têm validação própria
+        // (Host → TrustHosts; X-Correlation-Id → lista branca; chaves de API →
+        // busca por hash). Vazio = só corpo, query e caminho.
+        'inspected_headers' => array_filter(array_map('trim', explode(',', (string) env('SECURITY_VALIDATION_INSPECTED_HEADERS', 'User-Agent,Referer')))),
+
         // POST clássico do form demo (Blade).
         'delegated_paths' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_PATHS', 'ui/form-demo'))),
 
@@ -333,8 +365,11 @@ return [
         'delegated_components' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_COMPONENTS', 'contact-form'))),
 
         // TETO de bytes que a detecção de ataque inspeciona por requisição
-        // (soma de chaves e valores de texto de query + corpo; arquivos
-        // enviados contam só pelos metadados — o conteúdo nunca é lido). A
+        // (soma de chaves e valores de texto de query + corpo, mais um custo
+        // fixo de 8 bytes por item — senão milhões de itens vazios passariam
+        // de graça; arquivos enviados contam só pelos metadados — o conteúdo
+        // nunca é lido; cabeçalhos e caminho não contam, o servidor web já os
+        // limita). A
         // detecção roda ANTES da autenticação, então sem teto qualquer anônimo
         // compraria regex sobre 25 MB de corpo a cada requisição.
         //

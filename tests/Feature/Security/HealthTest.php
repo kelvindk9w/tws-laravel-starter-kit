@@ -26,7 +26,9 @@ it('não gera request log em banco (exclusão configurada)', function () {
     expect(RequestLog::query()->count())->toBe(0);
 });
 
-it('mesmo excluído do log, continua protegido pela validação de segurança', function () {
+it('mesmo excluído do log, continua protegido pela validação de segurança (modo block)', function () {
+    // Modo `block` (o padrão é `observe` — ver ValidationMode).
+    config()->set('security.validation.mode', 'block');
     $response = $this->get('/api/health?redirect=javascript:alert(1)');
 
     $response->assertUnprocessable();

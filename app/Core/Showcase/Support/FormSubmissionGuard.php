@@ -14,13 +14,19 @@ use Illuminate\Support\Facades\Log;
  * segurança — defesa em profundidade: receber → validar → registrar).
  *
  * Os endpoints dos forms demo são DELEGADOS pelo middleware global
- * (config security.validation.delegated_paths/components): em vez do
- * bloqueio 422 genérico, ESTA camada roda o MESMO AttackDetector e prova
- * que a aplicação se defende sozinha — o payload é gravado INERTE em
+ * (config security.validation.delegated_paths/components): em vez da
+ * decisão do filtro global (observar ou bloquear — security.validation
+ * .mode), ESTA camada roda o MESMO AttackDetector e prova que a aplicação se
+ * defende sozinha — o payload é gravado INERTE em
  * form_submissions (blocked_at + attack_type) e exibido escapado no admin.
  *
  * Resposta ao atacante: SEMPRE sucesso falso (mesmo padrão do honeypot) —
  * não damos sinal de que a tentativa foi detectada.
+ *
+ * Esta camada NÃO segue o modo do filtro global: ela é a política do próprio
+ * formulário. No contato da landing (rota não delegada), o modo `observe`
+ * deixa a tentativa chegar até aqui, e ela vira submissão com selo e sem
+ * e-mail; no modo `block`, o middleware recusa antes.
  *
  * O texto é gravado CRU (decisão de auditoria: a evidência forense precisa
  * do payload como veio), com UMA exceção: número de cartão (PAN). O kit é

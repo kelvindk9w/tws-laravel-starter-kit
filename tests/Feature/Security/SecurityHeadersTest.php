@@ -20,6 +20,8 @@ it('respostas normais carregam os headers de segurança', function () {
 });
 
 it('resposta de bloqueio (422) também carrega os headers', function () {
+    // Modo `block` (o padrão é `observe` — ver ValidationMode).
+    config()->set('security.validation.mode', 'block');
     Route::post('/api/_test/echo', fn () => response()->json(['ok' => true]));
 
     $response = $this->postJson('/api/_test/echo', ['x' => '<script>alert(1)</script>']);

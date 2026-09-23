@@ -139,6 +139,8 @@ return [
         'attack_null_byte' => 'Null byte',
         'attack_path_traversal' => 'Path traversal',
         'attack_honeypot' => 'Honeypot',
+        'attack_payload_too_large' => 'Above inspection limit',
+        'attack_inspection_error' => 'Could not be analysed',
         'attack_unknown' => 'Unclassified',
     ],
 
@@ -186,6 +188,12 @@ return [
         'status_CONCLUIDA' => 'FINISHED',
         'status_ERRO' => 'ERROR',
         'status_BLOQUEADA' => 'BLOCKED',
+        'attack' => 'Attack attempt',
+        'attack_observed' => 'Observed: :type',
+        'attack_blocked' => 'Blocked: :type',
+        'filter_attacks' => 'Attack attempts',
+        'filter_attacks_only' => 'Attempts only',
+        'filter_attacks_none' => 'No attempt',
     ],
 
     'uploads' => [

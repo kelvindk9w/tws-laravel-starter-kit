@@ -61,17 +61,22 @@ it('o e-mail enfileirado do contato não carrega o cartão', function () {
     );
 });
 
-it('a tentativa BLOQUEADA também grava o cartão mascarado', function () {
+it('a tentativa de ataque grava o cartão mascarado na trilha, nos dois modos', function (string $mode, int $status) {
+    config()->set('security.validation.mode', $mode);
+
     $this->post(route('contact.store'), [
         ...contactWithCard(),
         'message' => '4111111111111111 <script>alert(1)</script>',
-    ])->assertUnprocessable();
+    ])->assertStatus($status);
 
     $log = RequestLog::query()->whereNotNull('attack_type')->sole();
 
     expect(json_encode($log->payload))->toContain('************1111')
         ->not->toContain('4111111111111111');
-});
+})->with([
+    'block (BLOQUEADA, 422)' => ['block', 422],
+    'observe (segue, redirect)' => ['observe', 302],
+]);
 
 it('a detecção de ataque do formulário vê o texto original (mascarar não esconde ataque)', function () {
     $submission = app(FormSubmissionGuard::class)->submit(

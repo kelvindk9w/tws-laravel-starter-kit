@@ -9,10 +9,10 @@ use App\Core\Logging\EndpointSignature;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\PersistFailure;
-use App\Core\Logging\Redactor;
 use App\Core\Security\AttackDetector;
-use App\Core\Security\PayloadSanitizer;
+use App\Core\Security\AttackEvidence;
 use App\Core\Security\RequestInputs;
+use App\Core\Security\ValidationMode;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,35 +21,50 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Validação de segurança de entrada — PRIMEIRO middleware da cadeia global
- * (web e api), conforme ADR-004/005.
+ * Validação de segurança de entrada — PRIMEIRO middleware de payload da
+ * cadeia global (web e api), conforme ADR-004/005.
  *
  * Pipeline: receber → validação de segurança → sanitização/redaction → persistir.
  *
- * Comportamento:
- * - Detecta padrões maliciosos (XSS, SQLi, null bytes, path traversal) em
- *   query + corpo + nomes de arquivos enviados.
- * - NUNCA bloqueia silenciosamente: grava request log com status BLOQUEADA,
- *   payload SANITIZADO/escapado (nunca executável) + metadados da tentativa
- *   (IP, endpoint, tipo de ataque), e registra no canal de log dedicado.
- * - Responde 422 padronizado com mensagem genérica (não revela o que foi
- *   detectado — item 32 do checklist) + X-Correlation-Id.
- * - É também quem resolve o correlation_id da requisição (primeira peça da
- *   cadeia), propagando para os demais middlewares e logs.
+ * O que é inspecionado (App\Core\Security\RequestInputs): query e corpo
+ * SEPARADOS (formulário ou JSON, aninhado, chaves inclusive), metadados de
+ * arquivos enviados (nome e MIME declarados — o conteúdo nunca é lido),
+ * corpo não estruturado, os cabeçalhos de security.validation
+ * .inspected_headers e o caminho decodificado (parâmetros de rota).
+ *
+ * O que acontece com uma tentativa detectada depende do MODO
+ * (config security.validation.mode — ver App\Core\Security\ValidationMode):
+ * - `observe` (padrão): a requisição SEGUE. A tentativa fica marcada no
+ *   atributo ATTACK_ATTRIBUTE da requisição; o RequestLogging grava a linha
+ *   da trilha com `attack_type` e o payload NEUTRALIZADO (escapado +
+ *   redigido), sem amostragem nem exclusão, e o evento `security.observed`
+ *   vai para o log de arquivo.
+ * - `block`: NUNCA bloqueia silenciosamente — grava request log com status
+ *   BLOQUEADA, payload sanitizado + metadados da tentativa (IP, endpoint,
+ *   tipo), registra `security.blocked` no log de arquivo e responde 422
+ *   genérico (não revela o que foi detectado — item 32 do checklist) com
+ *   X-Correlation-Id.
+ *
+ * É também quem resolve o correlation_id da requisição (primeira peça da
+ * cadeia de payload), propagando para os demais middlewares e logs.
  *
  * Teto de inspeção (config security.validation.max_inspected_bytes): a
  * detecção roda antes da autenticação, então o volume que ela varre é
- * limitado. Acima do teto a requisição é RECUSADA com 413 e gravada como
- * BLOQUEADA (`payload_too_large`) com o tamanho, nunca o conteúdo — aceitar
- * o excedente sem inspeção abriria o atalho de esconder o ataque no fim de
- * um corpo grande. Vale também para os caminhos delegados.
+ * limitado. Acima do teto a requisição é RECUSADA com 413, EM QUALQUER MODO,
+ * e gravada como BLOQUEADA (`payload_too_large`) com o tamanho, nunca o
+ * conteúdo — aceitar o excedente sem inspeção abriria o atalho de esconder o
+ * ataque no fim de um corpo grande. Vale também para os caminhos delegados.
+ * Antes deste middleware roda o EdgeRateLimit: acima do teto de requisições
+ * por cliente o corpo nem chega a ser lido.
  *
  * Delegação (config security.validation): os formulários demo do /ui são
  * uma vitrine de defesa EM CAMADAS — para eles, a detecção é feita pela
  * própria aplicação (o MESMO AttackDetector), que registra a tentativa em
  * form_submissions com payload inerte. Isso vale para o path do POST
  * clássico (delegated_paths) e para updates Livewire em que TODOS os
- * componentes envolvidos são autodefendidos (delegated_components).
+ * componentes envolvidos são autodefendidos (delegated_components). A
+ * requisição delegada segue em qualquer modo, mas a linha da trilha também
+ * sai marcada e neutralizada, como no modo observe.
  */
 final class SecurityValidation
 {
@@ -58,10 +73,22 @@ final class SecurityValidation
      */
     public const OVERSIZED = 'payload_too_large';
 
+    /**
+     * Atributo da requisição com o tipo da tentativa que SEGUIU (modo observe
+     * ou rota delegada). O RequestLogging lê daqui para gravar a linha da
+     * trilha marcada e neutralizada.
+     */
+    public const ATTACK_ATTRIBUTE = 'security_attack_type';
+
+    /**
+     * Atributo com a origem da detecção fora do corpo (`headers`/`path`), para
+     * a evidência dizer onde a tentativa estava sem copiar o caminho.
+     */
+    public const ATTACK_SOURCE_ATTRIBUTE = 'security_attack_source';
+
     public function __construct(
         private readonly AttackDetector $detector,
-        private readonly PayloadSanitizer $sanitizer,
-        private readonly Redactor $redactor,
+        private readonly AttackEvidence $evidence,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -70,7 +97,7 @@ final class SecurityValidation
         // aceito do cliente — ver CorrelationId) e o propaga adiante.
         $correlationId = CorrelationId::resolve($request);
 
-        $inputs = RequestInputs::extract($request);
+        $inputs = RequestInputs::forInspection($request);
 
         // Teto do que se inspeciona ANTES da autenticação: sem ele, qualquer
         // anônimo compra regex sobre o corpo inteiro a cada requisição. O
@@ -93,26 +120,73 @@ final class SecurityValidation
                 ->header(CorrelationId::HEADER, $correlationId);
         }
 
-        $attackType = $this->detector->detect($inputs);
+        [$attackType, $source] = $this->inspect($request, $inputs);
 
-        if ($attackType !== null) {
-            // Rotas/componentes delegados: a camada da aplicação roda o MESMO
-            // detector e registra a tentativa (vitrine de segurança do /ui).
-            if ($this->isDelegated($request)) {
-                return $next($request);
-            }
-
-            $this->registerBlockedAttempt($request, $correlationId, $attackType, 422);
-
-            return response()
-                ->json([
-                    'message' => __('security.blocked'),
-                    'correlation_id' => $correlationId,
-                ], 422)
-                ->header(CorrelationId::HEADER, $correlationId);
+        if ($attackType === null) {
+            return $next($request);
         }
 
-        return $next($request);
+        $request->attributes->set(self::ATTACK_ATTRIBUTE, $attackType);
+
+        if ($source !== null) {
+            $request->attributes->set(self::ATTACK_SOURCE_ATTRIBUTE, $source);
+        }
+
+        // Rotas/componentes delegados: a camada da aplicação roda o MESMO
+        // detector e registra a tentativa (vitrine de segurança do /ui).
+        if ($this->isDelegated($request)) {
+            return $next($request);
+        }
+
+        if (ValidationMode::current() === ValidationMode::Observe) {
+            Log::channel('request_log')->warning('security.observed', [
+                'correlation_id' => $correlationId,
+                'attack_type' => $attackType,
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'endpoint' => EndpointSignature::for($request),
+            ]);
+
+            return $next($request);
+        }
+
+        $this->registerBlockedAttempt($request, $correlationId, $attackType, 422);
+
+        return response()
+            ->json([
+                'message' => __('security.blocked'),
+                'correlation_id' => $correlationId,
+            ], 422)
+            ->header(CorrelationId::HEADER, $correlationId);
+    }
+
+    /**
+     * Roda a detecção sobre as fontes do corpo e, em seguida, sobre os
+     * cabeçalhos configurados e o caminho. Devolve o tipo e, quando a
+     * tentativa estava fora do corpo, de onde ela veio.
+     *
+     * @param  array<string, mixed>  $inputs
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function inspect(Request $request, array $inputs): array
+    {
+        $type = $this->detector->detect($inputs);
+
+        if ($type !== null) {
+            return [$type, null];
+        }
+
+        $envelope = RequestInputs::envelope($request);
+
+        if (($type = $this->detector->detect($envelope['headers'])) !== null) {
+            return [$type, 'headers'];
+        }
+
+        if (($type = $this->detector->detectInString($envelope['path'])) !== null) {
+            return [$type, 'path'];
+        }
+
+        return [null, null];
     }
 
     /**
@@ -168,17 +242,14 @@ final class SecurityValidation
     /**
      * Persiste a tentativa de ataque: payload sanitizado/escapado + redigido
      * (dupla camada — ADR-005), com os metadados da tentativa.
-     */
-    /**
+     *
      * @param  array<string, mixed>|null  $summary  payload já resumido (usado
      *                                              quando o corpo NÃO deve ser
      *                                              copiado — ex.: acima do teto)
      */
     private function registerBlockedAttempt(Request $request, string $correlationId, string $attackType, int $httpStatus, ?array $summary = null): void
     {
-        $payload = $summary ?? $this->redactor->redactArray(
-            $this->sanitizer->sanitize(RequestInputs::extract($request)),
-        );
+        $payload = $summary ?? $this->evidence->payload($request);
 
         // Padrão da rota, nunca o caminho real (ver EndpointSignature): a
         // tentativa de ataque também pode chegar por uma URL que carrega
@@ -201,7 +272,7 @@ final class SecurityValidation
                 'correlation_id' => $correlationId,
                 'client_correlation_id' => $clientCorrelationId,
                 'ip' => $request->ip(),
-                'user_agent' => Str::limit((string) $request->userAgent(), 500, ''),
+                'user_agent' => $this->evidence->userAgent($request),
                 'method' => $request->method(),
                 'endpoint' => Str::limit($endpoint, 2000, ''),
                 'payload' => $payload,

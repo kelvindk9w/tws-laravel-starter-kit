@@ -97,6 +97,8 @@ it('janela 0 desliga a amostragem: toda rota inexistente volta a gerar linha', f
 });
 
 it('tentativa de ataque BLOQUEADA é gravada SEMPRE — mesmo no meio de um flood de varredura', function () {
+    // Modo `block` (o padrão é `observe` — ver ValidationMode).
+    config()->set('security.validation.mode', 'block');
     for ($i = 0; $i < 10; $i++) {
         $this->get('/sonda-'.$i);
     }

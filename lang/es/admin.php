@@ -139,6 +139,8 @@ return [
         'attack_null_byte' => 'Null byte',
         'attack_path_traversal' => 'Path traversal',
         'attack_honeypot' => 'Honeypot',
+        'attack_payload_too_large' => 'Por encima del límite de inspección',
+        'attack_inspection_error' => 'No analizable',
         'attack_unknown' => 'Sin clasificar',
     ],
 
@@ -186,6 +188,12 @@ return [
         'status_CONCLUIDA' => 'CONCLUIDA',
         'status_ERRO' => 'ERROR',
         'status_BLOQUEADA' => 'BLOQUEADA',
+        'attack' => 'Intento de ataque',
+        'attack_observed' => 'Observado: :type',
+        'attack_blocked' => 'Bloqueado: :type',
+        'filter_attacks' => 'Intentos de ataque',
+        'filter_attacks_only' => 'Solo intentos',
+        'filter_attacks_none' => 'Sin intento',
     ],
 
     'uploads' => [

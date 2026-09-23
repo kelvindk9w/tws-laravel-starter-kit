@@ -6,6 +6,7 @@ namespace App\Filament\Resources\RequestLogs;
 
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
+use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
 use App\Filament\Support\AdminColumns;
@@ -32,8 +33,11 @@ use Illuminate\Database\Eloquent\Builder;
  * Request Logs — consulta de auditoria (super admin, Fase 6; ADR-004/010).
  *
  * ESTRITAMENTE read-only: a tabela é append-only por lei (o model bloqueia
- * update/delete fora do ciclo de vida). Filtros: status, tenant, endpoint e
- * período. Logs ÓRFÃOS (tenant_uuid null) são destacados em vermelho — log
+ * update/delete fora do ciclo de vida). Filtros: status, tentativa de
+ * ataque, tenant, endpoint e período. A coluna "Tentativa de ataque" mostra o
+ * selo do tipo — observada (o filtro em modo observe deixou seguir) ou
+ * bloqueada —; o payload neutralizado fica no detalhe. Logs ÓRFÃOS
+ * (tenant_uuid null) são destacados em vermelho — log
  * sem tenant = possível ataque/tentativa de burla; log preso em INICIADA =
  * requisição que não chegou ao fim (incidente a investigar).
  */
@@ -77,6 +81,7 @@ final class RequestLogResource extends BaseResource
         return [
             AdminColumns::dateTime('created_at', __('panel.common.created_at'), 'd/m/Y H:i:s'),
             self::statusColumn(),
+            self::attackColumn(),
             self::tenantColumn(),
             self::methodColumn(),
             self::endpointColumn(),
@@ -118,6 +123,7 @@ final class RequestLogResource extends BaseResource
                 ]),
                 Split::make([
                     self::statusColumn(),
+                    self::attackColumn()->grow(false),
                     TextColumn::make('http_status_response')
                         ->label(__('admin.request_logs.response_status'))
                         ->badge()
@@ -147,6 +153,34 @@ final class RequestLogResource extends BaseResource
             ->badge()
             ->formatStateUsing(fn (RequestLogStatus $state): string => self::statusLabel($state))
             ->color(fn (RequestLogStatus $state): string => self::statusColor($state));
+    }
+
+    /**
+     * Selo da tentativa de ataque: "Observada: XSS" (o filtro em modo observe
+     * deixou a requisição seguir) ou "Bloqueada: XSS". Linha sem tentativa
+     * fica vazia. Só o TIPO aparece na listagem — o payload neutralizado está
+     * no detalhe.
+     */
+    public static function attackLabel(RequestLog $record): ?string
+    {
+        if ($record->attack_type === null) {
+            return null;
+        }
+
+        $key = $record->status === RequestLogStatus::Bloqueada ? 'attack_blocked' : 'attack_observed';
+
+        return __('admin.request_logs.'.$key, ['type' => FormSubmissionResource::attackLabel($record->attack_type)]);
+    }
+
+    private static function attackColumn(): TextColumn
+    {
+        return TextColumn::make('attack_type')
+            ->label(__('admin.request_logs.attack'))
+            ->badge()
+            ->icon(Heroicon::OutlinedShieldExclamation)
+            ->formatStateUsing(fn (RequestLog $record): string => (string) self::attackLabel($record))
+            ->color(fn (RequestLog $record): string => $record->status === RequestLogStatus::Bloqueada ? 'danger' : 'warning')
+            ->placeholder('—');
     }
 
     private static function tenantColumn(): TextColumn
@@ -220,6 +254,15 @@ final class RequestLogResource extends BaseResource
                     ->query(fn (Builder $query, array $data): Builder => $query
                         ->when(filled($data['from'] ?? null), fn (Builder $q): Builder => $q->whereDate('created_at', '>=', (string) $data['from']))
                         ->when(filled($data['until'] ?? null), fn (Builder $q): Builder => $q->whereDate('created_at', '<=', (string) $data['until']))),
+                TernaryFilter::make('attacks')
+                    ->label(__('admin.request_logs.filter_attacks'))
+                    ->trueLabel(__('admin.request_logs.filter_attacks_only'))
+                    ->falseLabel(__('admin.request_logs.filter_attacks_none'))
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereNotNull('attack_type'),
+                        false: fn (Builder $query): Builder => $query->whereNull('attack_type'),
+                        blank: fn (Builder $query): Builder => $query,
+                    ),
                 TernaryFilter::make('orphans')
                     ->label(__('admin.request_logs.only_orphans'))
                     ->queries(
@@ -251,6 +294,12 @@ final class RequestLogResource extends BaseResource
                     ->badge()
                     ->formatStateUsing(fn (RequestLogStatus $state): string => self::statusLabel($state))
                     ->color(fn (RequestLogStatus $state): string => self::statusColor($state)),
+                TextEntry::make('attack_type')
+                    ->label(__('admin.request_logs.attack'))
+                    ->badge()
+                    ->formatStateUsing(fn (RequestLog $record): string => (string) self::attackLabel($record))
+                    ->color(fn (RequestLog $record): string => $record->status === RequestLogStatus::Bloqueada ? 'danger' : 'warning')
+                    ->placeholder('—'),
                 TextEntry::make('tenant_uuid')
                     ->label(__('admin.request_logs.tenant'))
                     ->formatStateUsing(fn (?string $state): string => $state ?? __('admin.request_logs.orphan'))

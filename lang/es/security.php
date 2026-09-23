@@ -11,6 +11,10 @@ return [
     // Mensaje interno grabado en el request log (metadato del intento).
     'blocked_log' => 'Payload malicioso detectado (:type).',
 
+    // Nota del intento que el filtro dejó PASAR (modo observar o ruta
+    // delegada) — registrada en la fila de la auditoría.
+    'observed_log' => 'Patrón de ataque detectado (:type) — registrado, solicitud no rechazada (modo observar).',
+
     // Rechazo por tamaño: el contenido enviado supera lo que la validación de
     // seguridad inspecciona (config security.validation.max_inspected_bytes).
     'payload_too_large' => 'El contenido enviado es demasiado grande para ser aceptado.',

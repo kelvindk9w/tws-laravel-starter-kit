@@ -163,7 +163,9 @@ it('middleware global NÃO bloqueia os endpoints delegados (a camada do form def
     expect(FormSubmission::query()->sole()->attack_type)->toBe('xss');
 });
 
-it('middleware global SEGUE bloqueando ataques em rotas não delegadas', function () {
+it('no modo block, o middleware global SEGUE bloqueando ataques em rotas não delegadas', function () {
+    // Modo `block` (o padrão é `observe` — ver ValidationMode).
+    config()->set('security.validation.mode', 'block');
     $this->postJson('/api/keys', ['name' => '<script>alert(1)</script>'])
         ->assertStatus(422);
 
@@ -301,6 +303,8 @@ it('o seeder da demo cadastra 40 submissões variadas com bloqueadas', function 
 });
 
 it('delegação Livewire vale no endpoint real ofuscado (livewire-<hash>/update)', function () {
+    // Modo `block` (o padrão é `observe` — ver ValidationMode).
+    config()->set('security.validation.mode', 'block');
     // Descobre o path real do update do Livewire 4 (ofuscado) via HTML do /ui.
     config()->set('ui.showcase_enabled', true);
     $html = $this->get('/ui')->assertOk()->getContent();
