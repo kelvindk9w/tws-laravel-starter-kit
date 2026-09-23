@@ -165,6 +165,19 @@ return [
         )))),
     ],
 
+    // --- Backup sem criptografia -------------------------------------------------
+    // Em produção, o `backup:run` (comando e agendamento) RECUSA rodar quando o
+    // zip sairia sem criptografia: BACKUP_ARCHIVE_PASSWORD vazia, com valor de
+    // placeholder (o vocabulário de `secrets.placeholders`, acima) ou cifra
+    // desligada. Fora de produção ele avisa e segue. A regra e a justificativa
+    // estão em App\Core\Backup\BackupEncryption.
+    'backup' => [
+        // Opt-out consciente: a instalação garante a confidencialidade do
+        // backup por outra camada (bucket com criptografia do lado do servidor
+        // E acesso restrito). Cada execução grava aviso no log.
+        'allow_unencrypted_in_production' => (bool) env('BACKUP_ALLOW_UNENCRYPTED_IN_PRODUCTION', false),
+    ],
+
     // --- Redirecionamento "de volta" (open redirect) ---------------------------
     // Toda rota que devolve o usuário ao endereço anterior (alternador de
     // idioma, `back()`, parâmetros `?redirect=`) só pode redirecionar para
@@ -186,8 +199,27 @@ return [
     // --- Rate limiting (item 10) — requisições por minuto ----------------------
     // Aplicado por usuário autenticado ou, na ausência, por IP.
     'rate_limit' => [
-        // Global da API (grupo api inteiro).
+        // Limite da API por minuto (grupo api inteiro). Requisição AUTENTICADA
+        // conta pela chave de API (ou pelo tenant — abaixo); rota da API sem
+        // autenticação (/api/health) conta por IP. Duas integrações atrás do
+        // mesmo NAT têm orçamentos independentes. Ver App\Core\Security\ApiRateLimit.
         'api' => (int) env('RATE_LIMIT_API', 60),
+
+        // Quem é contado no limite autenticado: `key` (cada chave de API tem o
+        // seu orçamento — padrão) ou `tenant` (todas as chaves do mesmo dono
+        // somam, e criar chaves novas deixa de multiplicar o limite).
+        'api_by' => (string) env('RATE_LIMIT_API_BY', 'key'),
+
+        // Falhas de autenticação da API (credencial ausente, inválida, chave
+        // revogada/expirada) toleradas por IP na janela abaixo. Acima disso o
+        // IP recebe 429 ANTES de a credencial ser verificada — inclusive para
+        // chaves válidas que saiam dele, até a janela passar (é o que impede
+        // intercalar uma chave boa para zerar o balde). Existe porque o limite
+        // por chave roda depois da autenticação e não vê o 401.
+        'api_auth_failures' => (int) env('RATE_LIMIT_API_AUTH_FAILURES', 20),
+
+        // Janela do limite de falhas acima, em segundos.
+        'api_auth_failures_decay_seconds' => (int) env('RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS', 60),
 
         // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
         // middleware throttle:sensitive.

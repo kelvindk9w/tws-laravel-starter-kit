@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Backup\Console\GuardedBackupCommand;
 use App\Core\Http\TrustedProxies;
 use App\Core\Security\AdminIpAllowlist;
+use App\Core\Security\ApiRateLimit;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Support\CriticalSecrets;
 use App\Core\Support\DemoSurface;
@@ -20,6 +22,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Backup\Commands\BackupCommand;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +38,13 @@ class AppServiceProvider extends ServiceProvider
         // middleware ResolveTenant. PHP-FPM garante o ciclo por requisição;
         // se Octane entrar um dia, resetar entre requisições (checklist 28).
         $this->app->singleton(TenantContext::class);
+
+        // `backup:run` com a regra da criptografia na frente: em produção,
+        // backup que sairia sem criptografia é RECUSADO (ver
+        // App\Core\Backup\BackupEncryption). O pacote resolve o comando pelo
+        // container, então trocar a classe aqui cobre o comando manual, o
+        // agendamento e o Artisan::call(). Nada disso roda no boot.
+        $this->app->bind(BackupCommand::class, GuardedBackupCommand::class);
     }
 
     /**
@@ -144,11 +154,11 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Rate limiting (checklist item 10) — valores via config/security.php.
-        // Chave: usuário autenticado quando houver; caso contrário, IP.
-        RateLimiter::for('api', function (Request $request): Limit {
-            return Limit::perMinute((int) config('security.rate_limit.api', 60))
-                ->by((string) ($request->user()?->getAuthIdentifier() ?: $request->ip()));
-        });
+        // API: conta pela CHAVE de API (ou pelo tenant, RATE_LIMIT_API_BY)
+        // quando a requisição foi autenticada, e por IP quando não foi. As
+        // falhas de autenticação têm balde próprio por IP. A regra inteira
+        // mora em App\Core\Security\ApiRateLimit.
+        RateLimiter::for('api', fn (Request $request): Limit => ApiRateLimit::limit($request));
 
         // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
         // Route::middleware('throttle:sensitive').

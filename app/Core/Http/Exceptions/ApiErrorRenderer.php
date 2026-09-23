@@ -141,6 +141,15 @@ final class ApiErrorRenderer
             return __('api.errors.validation_failed');
         }
 
+        // 429 sai sempre com a mensagem traduzida da API: o ThrottleRequests
+        // do framework lança "Too Many Attempts." em inglês, e a borda usa o
+        // título da página de erro da web. O cliente da API programa em cima
+        // do `code` e do Retry-After; a mensagem precisa ser a mesma venha o
+        // limite de onde vier.
+        if ($status === Response::HTTP_TOO_MANY_REQUESTS) {
+            return __('api.errors.too_many_requests');
+        }
+
         return $isOwnMessage ? $own : __("api.errors.{$code}");
     }
 }

@@ -7,6 +7,7 @@ namespace App\Core\Tenancy\Middleware;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Logging\Models\RequestLog;
+use App\Core\Security\ApiRateLimit;
 use App\Core\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -45,11 +46,18 @@ final class ResolveTenant
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Limite de FALHAS de autenticação por IP (ver ApiRateLimit): quem já
+        // errou a credencial vezes demais na janela recebe 429 antes de
+        // qualquer consulta ao banco ou verificação de hash. É o que impede
+        // um laço de chaves inválidas de escapar do limite da API — o
+        // `throttle:api` por chave roda DEPOIS desta camada e nunca vê o 401.
+        ApiRateLimit::ensureAuthenticationAllowed($request);
+
         $publicKey = $request->header(self::PUBLIC_KEY_HEADER);
         $plainSecret = $request->bearerToken();
 
         if (! is_string($publicKey) || $publicKey === '' || ! is_string($plainSecret) || $plainSecret === '') {
-            $this->deny();
+            $this->deny($request);
         }
 
         /** @var ApiKey|null $apiKey */
@@ -62,17 +70,17 @@ final class ResolveTenant
             ?? hash_hmac('sha256', 'chave-publica-inexistente', (string) config('api_keys.hash_pepper'));
 
         if (! $this->hasher->verify($plainSecret, $hashToVerify) || ! $apiKey instanceof ApiKey) {
-            $this->deny();
+            $this->deny($request);
         }
 
         if (! $apiKey->isUsable()) {
-            $this->deny();
+            $this->deny($request);
         }
 
         $tenant = $apiKey->owner;
 
         if ($tenant === null || ! $tenant->isActive()) {
-            $this->deny();
+            $this->deny($request);
         }
 
         $this->tenantContext->resolve($tenant, $apiKey);
@@ -90,10 +98,13 @@ final class ResolveTenant
 
     /**
      * 401 padronizado. O request log fica SEM tenant (sinal de ataque —
-     * ADR-010); nenhum detalhe do motivo é exposto (não oracular).
+     * ADR-010); nenhum detalhe do motivo é exposto (não oracular). Toda
+     * recusa alimenta o balde de falhas do IP (ApiRateLimit).
      */
-    private function deny(): never
+    private function deny(Request $request): never
     {
+        ApiRateLimit::recordAuthenticationFailure($request);
+
         abort(401, __('api_keys.auth.invalid'));
     }
 

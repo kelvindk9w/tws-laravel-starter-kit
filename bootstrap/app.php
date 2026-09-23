@@ -17,6 +17,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -80,8 +81,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // versão do framework rode também (ela está na lista global padrão).
         $middleware->replace(Illuminate\Http\Middleware\TrustProxies::class, TrustProxies::class);
 
-        // Cadeia da API: rate limiting global (valores em config/security.php).
+        // Cadeia da API: rate limiting (valores em config/security.php).
         $middleware->api(prepend: ['throttle:api']);
+
+        // O `throttle:api` conta pela CHAVE de API, então precisa rodar DEPOIS
+        // do `resolve.tenant`, que é quem descobre a chave. Pela posição ele
+        // rodaria antes (middleware de grupo vem antes do de rota) e contaria
+        // sempre por IP — era o defeito. A lista de PRIORIDADE do framework é
+        // o que reordena middleware entre grupo e rota, e o ThrottleRequests
+        // já está nela: pôr o ResolveTenant logo antes dele garante a ordem
+        // em toda rota que usar os dois, sem depender de como a rota foi
+        // declarada. Chave inválida não escapa por ficar antes: o próprio
+        // ResolveTenant limita as falhas por IP (App\Core\Security\ApiRateLimit).
+        $middleware->prependToPriorityList(
+            before: ThrottleRequests::class,
+            prepend: ResolveTenant::class,
+        );
 
         // Locale da interface web (ADR-007): usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).

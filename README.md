@@ -450,13 +450,30 @@ anterior:
 | --- | --- | --- |
 | 1. UI | `UserAdminGuard` (Filament) | o clique no painel — esconde a ação e recusa no servidor, com mensagem amigável |
 | 2. Model | eventos `updating`/`deleting` do `User` (`DemoAccountGuard`) | tinker, comando artisan, job, importação — tudo que passa por Eloquent; lança `DemoAccountProtectedException` |
-| 3. Banco | trigger no PostgreSQL (`DemoAccountTrigger`, migration) | o que **não** dispara evento: `User::where(...)->delete()`, `->update([...])`, SQL cru, cliente externo |
+| 3. Banco | triggers no PostgreSQL (`DemoAccountTrigger`, migrations) | o que **não** dispara evento: `User::where(...)->delete()`, `->update([...])`, `TRUNCATE users` (inclusive o `TRUNCATE ... CASCADE` de outra tabela que arrasta `users`), SQL cru, cliente externo |
 
 **Por que trigger e não scope global.** Um scope global resolveria o
 update/delete em massa — mas ao preço de **esconder** as contas demo de toda
 leitura, inclusive do login, que é justamente o que a demo precisa fazer.
 Seria trocar um buraco por outro. O único lugar de onde nada escapa é o
 próprio banco.
+
+**Por que dois triggers.** O trigger de linha (`BEFORE UPDATE OR DELETE ...
+FOR EACH ROW`) nunca é chamado por um `TRUNCATE`: o TRUNCATE descarta o
+armazenamento da tabela de uma vez, sem passar por linha, e o PostgreSQL só
+oferece trigger de TRUNCATE no nível da **sentença**. Por isso existe um
+segundo, `BEFORE TRUNCATE ... FOR EACH STATEMENT`, que recusa o TRUNCATE de
+`users` enquanto houver conta demo na tabela. Ele obedece à mesma flag de
+sessão e, portanto, à mesma porta de serviço (`withoutProtection()`). Não
+atrapalha o desenvolvimento: `migrate:fresh`/`db:wipe` (e o `RefreshDatabase`
+dos testes) apagam a tabela com `DROP`, não com TRUNCATE.
+
+**O que nenhum trigger cobre.** Quem é **dono** da tabela pode desligar
+trigger (`ALTER TABLE ... DISABLE TRIGGER`) ou apagá-la (`DROP`). A camada 3
+fecha o acidente e o atalho — o update/delete/truncate distraído de código,
+tinker ou psql —, não um atacante com acesso de dono ao banco; contra esse, a
+defesa é a aplicação conectar com uma role que não é dona do esquema, decisão
+de infraestrutura.
 
 **O que é bloqueado e o que continua livre.** Bloquear tudo transformaria a
 demo numa vitrine congelada: quem entra precisa conseguir trocar o nome,
@@ -861,7 +878,7 @@ docker compose run --rm --no-deps -v /dev/null:/var/www/html/.env --entrypoint s
 Toda requisição atravessa, nesta ordem:
 
 ```
-TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityValidation → RequestLogging → (api: throttle:api) → rota
+TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityValidation → RequestLogging → (api: resolve.tenant → throttle:api) → rota
 ```
 
 0. **TrustProxies** (`app/Core/Http/Middleware/`) — quem é o cliente. É a mais externa **de
@@ -911,8 +928,10 @@ TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityVa
      ao banco na **primeira ocorrência de cada cliente por janela**
      (`REQUEST_LOG_SCAN_SAMPLE_WINDOW_SECONDS`, padrão 60 s); as seguintes ficam no log de arquivo
      (`request.unmatched.sampled_out`). Ver *Limite de requisições*, abaixo.
-4. **throttle:api** — rate limit global da API (60/min padrão). Rotas sensíveis (login, códigos
-   2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores em `config/security.php`.
+4. **throttle:api** — rate limit da API (60/min padrão), **por chave de API** quando a requisição
+   é autenticada (roda depois do `resolve.tenant`) e por IP em rota sem autenticação. Rotas
+   sensíveis (login, códigos 2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores
+   em `config/security.php`.
 
 ### Limite de requisições (rate limit) e contenção da trilha
 
@@ -921,7 +940,8 @@ Três limites, do mais largo ao mais estreito, com orçamentos independentes:
 | Limite | Onde | Chave | Padrão | Variável |
 |---|---|---|---|---|
 | **Borda** (`EdgeRateLimit`) | global: páginas, Livewire, `/admin`, `/up`, API, rotas inexistentes | IP (IPv6 por prefixo /64) | 300/min | `RATE_LIMIT_WEB`, `RATE_LIMIT_WEB_DECAY_SECONDS`, `RATE_LIMIT_IPV6_PREFIX` |
-| `throttle:api` | grupo `api` | usuário ou IP | 60/min | `RATE_LIMIT_API` |
+| `throttle:api` | grupo `api` | **chave de API** (ou tenant); IP em rota sem autenticação | 60/min | `RATE_LIMIT_API`, `RATE_LIMIT_API_BY` |
+| Falhas de autenticação da API | `resolve.tenant` | IP (IPv6 por prefixo) | 20/min | `RATE_LIMIT_API_AUTH_FAILURES`, `RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS` |
 | `throttle:sensitive` | login, códigos, recuperação de senha | usuário ou IP | 5/min | `RATE_LIMIT_SENSITIVE` |
 
 **Por que a borda é global, e não `throttle:` no grupo `web`.** Middleware de grupo não roda em
@@ -938,6 +958,20 @@ contam. Como a borda roda antes da sessão, ela conta por IP, não por usuário:
 para NAT grande** (empresa, escola, CGNAT de operadora). Não há chave para desligar. Atrás de
 proxy/CDN, o limite só é por cliente com `TRUSTED_PROXIES` correto; sem ele, todo mundo cai no
 balde do proxy (ver *Proxies confiáveis*, abaixo).
+
+**API: por chave, não por IP.** O `throttle:api` rodava antes do `resolve.tenant` e por isso
+contava sempre por IP: duas integrações atrás do mesmo NAT dividiam o orçamento, e a mesma chave
+ganhava orçamento novo a cada IP. Agora ele roda **depois** da autenticação (a ordem é garantida
+pela lista de prioridade de middleware em `bootstrap/app.php`, não pela posição na rota) e conta
+pela chave — ou pelo dono, com `RATE_LIMIT_API_BY=tenant`, para que criar chaves novas não
+multiplique o limite. Mover o limite para depois da autenticação abriria uma porta: a chave
+inválida é recusada com 401 **antes** de chegar ao throttle. Por isso as **falhas** de
+autenticação têm balde próprio por IP, consultado pelo próprio `resolve.tenant` antes de ler a
+credencial: passado o teto, o IP recebe 429 até a janela acabar — **inclusive para chaves
+válidas que saiam dele**, a troca de sempre do throttle de login (sem ela, bastaria intercalar
+uma chave boa para zerar o balde). O padrão é folgado (20 falhas/min): erro de configuração de
+uma integração são poucas por minuto; um laço de adivinhação são centenas. A regra inteira está
+em `App\Core\Security\ApiRateLimit`.
 
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
 a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
@@ -1321,6 +1355,15 @@ request → **vincula o request log ao tenant** (`tenant_uuid` = uuid do dono)
 **Chave inválida = 401 padronizado** (mensagem única, não oracular) e o request
 log permanece **SEM tenant** — exatamente o sinal de ataque/tentativa de burla
 do ADR-010 (o log INICIADA é gravado antes, sem vínculo; a identificação falhou).
+
+**Limite de requisições por chave.** O `throttle:api` conta pela chave de API
+autenticada (`RATE_LIMIT_API`, 60/min; `RATE_LIMIT_API_BY=tenant` soma as chaves
+do mesmo dono), então integrações diferentes atrás do mesmo IP não disputam o
+mesmo orçamento. Falhas de autenticação contam por IP
+(`RATE_LIMIT_API_AUTH_FAILURES`, 20/min): passado o teto, o IP recebe 429 antes
+de a credencial ser verificada. Todo 429 sai no envelope de erro padrão
+(`too_many_requests`) com `Retry-After`. Detalhes em
+[Limite de requisições](#limite-de-requisições-rate-limit-e-contenção-da-trilha).
 
 ### Scopes (permissões granulares — ADR-006)
 
@@ -2160,13 +2203,34 @@ produção é responsabilidade de quem opera o servidor, não do app.
   (disco Flysystem S3 do `config/filesystems.php` que reutiliza as
   credenciais R2 `AWS_*`; bucket dedicado opcional via `BACKUP_R2_BUCKET`).
 - `BACKUP_ARCHIVE_PASSWORD` — senha da criptografia do zip (AES-256).
-  **Obrigatória em produção** (o dump contém o banco inteiro).
+  **Obrigatória em produção** (o dump contém o banco inteiro) — e a
+  aplicação cobra: ver *Backup sem criptografia é recusado em produção*,
+  abaixo.
 - `BACKUP_RUN_CRON` / `BACKUP_CLEAN_CRON` / `BACKUP_MONITOR_CRON` —
   frequências (UTC). Começar em 1h e reduzir quando o banco crescer (o PITR
   cobre o RPO).
 - `BACKUP_ALERT_EMAIL` — destino dos alertas de falha (padrão:
   `PLATFORM_SUPPORT_EMAIL`).
 - `BACKUP_WEBHOOK_URL` — URL do webhook da validação cruzada (abaixo).
+
+**Backup sem criptografia é recusado em produção.** O pacote não reclama
+de senha vazia: ele simplesmente monta o zip **em claro** — o dump do banco
+inteiro indo para o R2 a cada hora, com webhook de sucesso e monitor
+saudável. Por isso, com `APP_ENV=production`, o `backup:run` (o comando e o
+agendamento, que roda o mesmo comando) **recusa** quando o zip sairia
+desprotegido: `BACKUP_ARCHIVE_PASSWORD` vazia, com valor de placeholder
+(`troque-esta-senha` e o resto do vocabulário de
+`SECURITY_SECRETS_PLACEHOLDERS`) ou com a cifra desligada
+(`encryption = none`, ou PHP sem AES na libzip). A recusa termina o comando
+com erro, grava o motivo no log e dispara o evento de falha de backup — o
+mesmo que já manda e-mail + webhook quando o dump quebra; nenhum dump é
+gerado. **Em dev/local o backup roda** com um aviso no console: o dump é do
+banco de desenvolvimento e vai para o disco `local`. A regra mora no comando
+(`App\Core\Backup\BackupEncryption`), nunca no boot — `composer install`,
+`package:discover` e o php-fpm não fazem backup e não são afetados.
+Opt-out consciente (confidencialidade garantida por outra camada — bucket
+cifrado **e** de acesso restrito): `BACKUP_ALLOW_UNENCRYPTED_IN_PRODUCTION=true`,
+que grava aviso no log a cada execução.
 
 **Política de notificações** (decisão documentada): sucesso do dump → SÓ
 webhook (é o gatilho da validação cruzada; e-mail de sucesso é ruído);

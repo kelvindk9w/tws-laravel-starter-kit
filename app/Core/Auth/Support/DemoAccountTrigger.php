@@ -23,8 +23,33 @@ use Illuminate\Support\Facades\DB;
  * O gatilho recusa:
  *   - qualquer DELETE numa linha demo;
  *   - qualquer UPDATE que mexa nos campos sensíveis (DemoAccountGuard::
- *     SENSITIVE_ATTRIBUTES) de uma linha demo.
+ *     SENSITIVE_ATTRIBUTES) de uma linha demo;
+ *   - qualquer TRUNCATE da tabela `users` enquanto houver conta demo nela.
  * Trocar nome, foto, idioma ou tema continua passando.
+ *
+ * POR QUE O TRUNCATE PRECISA DE UM GATILHO PRÓPRIO: o gatilho de linha
+ * (`FOR EACH ROW ... BEFORE UPDATE OR DELETE`) nunca é chamado por um
+ * TRUNCATE — o TRUNCATE não apaga linha por linha, ele descarta o
+ * armazenamento da tabela de uma vez, e o PostgreSQL só oferece gatilho de
+ * TRUNCATE no nível da SENTENÇA. Sem este segundo gatilho, `TRUNCATE users`
+ * (ou `User::truncate()`, ou o TRUNCATE ... CASCADE de outra tabela que
+ * arraste `users` junto) apagava as contas demo sem esbarrar em nada. Ele
+ * obedece à MESMA flag de sessão e, portanto, à MESMA porta
+ * (DemoAccountGuard::withoutProtection()).
+ *
+ * Ele recusa só quando há conta demo na tabela: truncar uma tabela `users`
+ * sem demo não tem o que proteger. E ele não interfere no fluxo de
+ * desenvolvimento e de testes: `migrate:fresh`/`db:wipe` (e, portanto, o
+ * RefreshDatabase) apagam a tabela com DROP, não com TRUNCATE, e o DROP leva
+ * o gatilho junto.
+ *
+ * O QUE NENHUM GATILHO COBRE: quem é DONO da tabela pode desligar gatilho
+ * (`ALTER TABLE ... DISABLE TRIGGER`) ou apagar a tabela inteira (DROP).
+ * Isto aqui fecha o acidente e o atalho — o `update`/`delete`/`truncate`
+ * distraído de código, tinker ou psql —, não um atacante com acesso de dono
+ * ao banco. Contra esse, a defesa é a separação de papéis no PostgreSQL
+ * (a aplicação conectando com uma role que não é dona do esquema), que é
+ * decisão de infraestrutura.
  *
  * ESCAPE CONTROLADO: `SELECT set_config('tws.demo_guard','off',false)` na
  * sessão — é o que DemoAccountGuard::withoutProtection() faz para os
@@ -41,6 +66,10 @@ final class DemoAccountTrigger
     public const FUNCTION = 'tws_protect_demo_users';
 
     public const TRIGGER = 'users_demo_account_guard';
+
+    public const TRUNCATE_FUNCTION = 'tws_protect_demo_users_truncate';
+
+    public const TRUNCATE_TRIGGER = 'users_demo_account_truncate_guard';
 
     public static function supported(): bool
     {
@@ -119,6 +148,53 @@ final class DemoAccountTrigger
             'CREATE TRIGGER '.self::TRIGGER.' BEFORE UPDATE OR DELETE ON users '
             .'FOR EACH ROW EXECUTE FUNCTION '.self::FUNCTION.'()',
         );
+
+        self::installTruncateGuard($lista);
+    }
+
+    /**
+     * Gatilho de SENTENÇA contra `TRUNCATE users` (ver o docblock da classe).
+     *
+     * A consulta usa o esquema e o nome da tabela do próprio gatilho
+     * (TG_TABLE_SCHEMA/TG_TABLE_NAME) em vez de depender do search_path da
+     * sessão que disparou o TRUNCATE.
+     *
+     * @param  string  $lista  E-mails demo já escapados como literais SQL.
+     */
+    private static function installTruncateGuard(string $lista): void
+    {
+        $flag = DemoAccountGuard::DATABASE_FLAG;
+        $funcao = self::TRUNCATE_FUNCTION;
+
+        DB::unprepared(<<<SQL
+        CREATE OR REPLACE FUNCTION {$funcao}() RETURNS trigger AS \$\$
+        DECLARE
+            has_demo boolean;
+        BEGIN
+            IF coalesce(current_setting('{$flag}', true), 'on') = 'off' THEN
+                RETURN NULL;
+            END IF;
+
+            EXECUTE format(
+                'SELECT EXISTS (SELECT 1 FROM %I.%I WHERE email = ANY (\$1))',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME
+            ) INTO has_demo USING ARRAY[{$lista}]::text[];
+
+            IF has_demo THEN
+                RAISE EXCEPTION 'TWS_DEMO_ACCOUNT_PROTECTED: TRUNCATE de % recusado: a tabela contem contas demo', TG_TABLE_NAME
+                    USING ERRCODE = 'raise_exception';
+            END IF;
+
+            RETURN NULL;
+        END;
+        \$\$ LANGUAGE plpgsql;
+        SQL);
+
+        DB::unprepared('DROP TRIGGER IF EXISTS '.self::TRUNCATE_TRIGGER.' ON users');
+        DB::unprepared(
+            'CREATE TRIGGER '.self::TRUNCATE_TRIGGER.' BEFORE TRUNCATE ON users '
+            .'FOR EACH STATEMENT EXECUTE FUNCTION '.self::TRUNCATE_FUNCTION.'()',
+        );
     }
 
     public static function drop(): void
@@ -129,6 +205,22 @@ final class DemoAccountTrigger
 
         DB::unprepared('DROP TRIGGER IF EXISTS '.self::TRIGGER.' ON users');
         DB::unprepared('DROP FUNCTION IF EXISTS '.self::FUNCTION.'()');
+
+        self::dropTruncateGuard();
+    }
+
+    /**
+     * Remove só o gatilho de TRUNCATE (o `down` da migration que o
+     * acrescentou a bancos já instalados).
+     */
+    public static function dropTruncateGuard(): void
+    {
+        if (! self::supported()) {
+            return;
+        }
+
+        DB::unprepared('DROP TRIGGER IF EXISTS '.self::TRUNCATE_TRIGGER.' ON users');
+        DB::unprepared('DROP FUNCTION IF EXISTS '.self::TRUNCATE_FUNCTION.'()');
     }
 
     /**
@@ -141,5 +233,17 @@ final class DemoAccountTrigger
         }
 
         return DB::table('pg_trigger')->where('tgname', self::TRIGGER)->exists();
+    }
+
+    /**
+     * O gatilho de TRUNCATE está instalado neste banco?
+     */
+    public static function truncateGuardInstalled(): bool
+    {
+        if (! self::supported()) {
+            return false;
+        }
+
+        return DB::table('pg_trigger')->where('tgname', self::TRUNCATE_TRIGGER)->exists();
     }
 }

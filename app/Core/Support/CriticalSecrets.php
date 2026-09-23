@@ -385,7 +385,7 @@ final class CriticalSecrets
      *   placeholder que não tem nome para entrar em lista nenhuma, e a chance
      *   de uma chave aleatória de verdade cair aqui é desprezível.
      */
-    private static function isPlaceholder(string $value): bool
+    public static function isPlaceholder(string $value): bool
     {
         $bare = str_starts_with($value, 'base64:')
             ? substr($value, strlen('base64:'))

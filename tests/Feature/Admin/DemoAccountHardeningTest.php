@@ -10,6 +10,7 @@ use App\Core\Auth\Support\DemoAccountTrigger;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use Database\Seeders\DemoAdminSeeder;
 use Database\Seeders\DemoUserSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -31,6 +32,17 @@ use Livewire\Livewire;
 // E o corte entre CAMPO SENSÍVEL e CAMPO INOFENSIVO é testado nos dois
 // sentidos: a demo tem de continuar funcional para quem a está visitando.
 // =============================================================================
+
+/**
+ * Roda a operação num SAVEPOINT. No PostgreSQL, um erro dentro de transação
+ * aborta a transação inteira — e o RefreshDatabase roda cada teste dentro de
+ * uma. Sem o savepoint, a recusa do gatilho envenenaria as consultas
+ * seguintes do próprio teste ("current transaction is aborted").
+ */
+function recusadoPeloBanco(Closure $operacao): mixed
+{
+    return DB::transaction($operacao);
+}
 
 beforeEach(function () {
     // Nos testes o modo demo nasce desligado (APP_ENV=testing). A blindagem
@@ -230,8 +242,8 @@ describe('gatilho do PostgreSQL', function () {
     it('User::where(...)->delete() NÃO remove a conta demo', function () {
         DemoAccountTrigger::install();
 
-        expect(fn () => User::query()->where('email', config('ui.demo_login.email'))->delete())
-            ->toThrow(Throwable::class);
+        expect(fn () => recusadoPeloBanco(fn () => User::query()->where('email', config('ui.demo_login.email'))->delete()))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
 
         expect(User::query()->where('email', config('ui.demo_login.email'))->exists())->toBeTrue();
     });
@@ -239,8 +251,8 @@ describe('gatilho do PostgreSQL', function () {
     it('update em massa não muda campo sensível da conta demo', function () {
         DemoAccountTrigger::install();
 
-        expect(fn () => User::query()->whereKey($this->demo->getKey())->update(['status' => 'blocked']))
-            ->toThrow(Throwable::class);
+        expect(fn () => recusadoPeloBanco(fn () => User::query()->whereKey($this->demo->getKey())->update(['status' => 'blocked'])))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
 
         expect($this->demo->fresh()->status)->toBe(UserStatus::Active);
     });
@@ -258,9 +270,101 @@ describe('gatilho do PostgreSQL', function () {
 
         User::factory()->count(3)->create();
 
-        expect(fn () => User::query()->delete())->toThrow(Throwable::class);
+        expect(fn () => recusadoPeloBanco(fn () => User::query()->delete()))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
 
         expect(User::query()->where('email', config('ui.demo_login.email'))->exists())->toBeTrue();
+    });
+
+    // --- TRUNCATE: statement-level, nunca chama o gatilho de linha -----------
+
+    it('o gatilho de TRUNCATE está instalado junto com o de linha', function () {
+        DemoAccountTrigger::install();
+
+        expect(DemoAccountTrigger::truncateGuardInstalled())->toBeTrue();
+
+        $gatilho = DB::selectOne(
+            'SELECT tgtype FROM pg_trigger WHERE tgname = ?',
+            [DemoAccountTrigger::TRUNCATE_TRIGGER],
+        );
+
+        // tgtype: bit 1 = FOR EACH ROW (tem de estar DESLIGADO — TRUNCATE só
+        // existe no nível da sentença), bit 2 = BEFORE, bit 32 = TRUNCATE.
+        expect($gatilho->tgtype & 1)->toBe(0)
+            ->and($gatilho->tgtype & 2)->toBe(2)
+            ->and($gatilho->tgtype & 32)->toBe(32);
+    });
+
+    it('TRUNCATE users NÃO apaga as contas demo', function () {
+        DemoAccountTrigger::install();
+
+        User::factory()->count(2)->create();
+
+        expect(fn () => recusadoPeloBanco(fn () => DB::statement('TRUNCATE users CASCADE')))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+
+        expect(User::query()->whereIn('email', DemoAccountGuard::emails())->count())->toBe(2)
+            ->and(User::query()->count())->toBe(4);
+    });
+
+    it('User::truncate() (o atalho do Eloquent) também é recusado', function () {
+        DemoAccountTrigger::install();
+
+        expect(fn () => recusadoPeloBanco(fn () => DB::statement('TRUNCATE users RESTART IDENTITY CASCADE')))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+
+        expect(fn () => recusadoPeloBanco(fn () => User::query()->truncate()))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+
+        expect($this->demo->fresh())->not->toBeNull();
+    });
+
+    it('TRUNCATE ... CASCADE de outra tabela que arrasta users também é recusado', function () {
+        DemoAccountTrigger::install();
+
+        // users.avatar_upload_id → uploads: truncar uploads em cascata trunca users.
+        expect(fn () => recusadoPeloBanco(fn () => DB::statement('TRUNCATE uploads CASCADE')))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+
+        expect($this->demoAdmin->fresh())->not->toBeNull();
+    });
+
+    it('withoutProtection é a única porta: com ela o TRUNCATE passa', function () {
+        DemoAccountTrigger::install();
+
+        DemoAccountGuard::withoutProtection(fn () => DB::statement('TRUNCATE users CASCADE'));
+
+        expect(User::query()->count())->toBe(0);
+
+        // E a porta fecha ao sair: com demo de volta na tabela, recusa de novo.
+        User::factory()->create(['email' => config('ui.demo_login.email')]);
+
+        expect(fn () => recusadoPeloBanco(fn () => DB::statement('TRUNCATE users CASCADE')))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+    });
+
+    it('sem conta demo na tabela o TRUNCATE passa (não há o que proteger)', function () {
+        DemoAccountTrigger::install();
+
+        DemoAccountGuard::withoutProtection(function (): void {
+            User::query()->whereIn('email', DemoAccountGuard::emails())->delete();
+        });
+
+        User::factory()->count(2)->create();
+
+        DB::statement('TRUNCATE users CASCADE');
+
+        expect(User::query()->count())->toBe(0);
+    });
+
+    it('com o modo demo DESLIGADO o gatilho de TRUNCATE sai junto', function () {
+        DemoAccountTrigger::install();
+        config()->set('ui.demo_login.enabled', false);
+
+        DemoAccountTrigger::install();
+
+        expect(DemoAccountTrigger::truncateGuardInstalled())->toBeFalse()
+            ->and(DemoAccountTrigger::installed())->toBeFalse();
     });
 })->skip(
     fn (): bool => DB::connection()->getDriverName() !== 'pgsql',
