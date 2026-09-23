@@ -241,7 +241,8 @@ são anônimos). Tentativas bloqueadas (honeypot ou ataque detectado) também
 ficam registradas, com sucesso FALSO para quem enviou e **nenhum e-mail**
 disparado. A listagem em `/admin/form-submissions` mostra a origem e permite
 filtrar por ela. Sem isso, a única trilha de contato seria a caixa de
-entrada.
+entrada. Um número de cartão digitado na mensagem é gravado e enviado por
+e-mail já mascarado (`**** **** **** 1111` — ver *Redaction*).
 
 ### Showcase de componentes (`/ui`)
 
@@ -949,7 +950,7 @@ sem banco, sem sessão). API: o envelope de erro padrão (`too_many_requests`). 
 429 do `throttle:sensitive` nas rotas web.
 
 **Contenção da escrita em `request_logs` (a regra e o porquê).** Antes, toda requisição gerava
-INSERT + UPDATE na trilha — inclusive o 404 de um robô procurando `/wp-login.php` — e um flood
+INSERT + UPDATE na trilha — inclusive o 404 de um robô procurando `/phpmyadmin/` — e um flood
 anônimo virava escrita no banco na velocidade da rede. Agora:
 
 - **Recusa da borda (429):** a primeira de cada cliente por janela vira uma linha
@@ -974,6 +975,31 @@ anônimo virava escrita no banco na velocidade da rede. Agora:
 
 Também: HTTPS forçado em produção (`URL::forceHttps()` no `AppServiceProvider`), CORS restritivo
 (`config/cors.php` — nenhuma origem liberada por padrão; `CORS_ALLOWED_ORIGINS` no `.env`).
+
+### Na borda (nginx): só o `index.php` executa, e nenhuma versão é anunciada
+
+Antes da cadeia acima existe o nginx (`docker/nginx/dev.conf` e `prod.conf`), e duas regras dele
+fazem parte da segurança:
+
+- **Só o front controller executa PHP.** O bloco antigo `location ~ \.php$` mandava QUALQUER
+  `.php` ao php-fpm: `/wp-login.php`, `/xmlrpc.php` e afins nem passavam pelo Laravel — portanto
+  sem `EdgeRateLimit` e sem trilha —, e um flood deles ocupava direto o pool de workers do PHP.
+  Agora, como na documentação oficial do Laravel para nginx, só `location ~ ^/index\.php(/|$)`
+  chega ao php-fpm; qualquer outro `.php` recebe **404 do próprio nginx** (custo de um arquivo
+  estático, nenhum processo PHP, nenhuma linha em `request_logs`; fica só no access log do nginx).
+  Isso também impede que um `.php` que por acidente vá parar em `public/` (upload, pacote
+  publicado) seja executado. Não há `error_page 404 /index.php` de propósito: isso reenviaria cada
+  varredura para dentro da aplicação. Páginas, Livewire, Filament, `/horizon` e assets seguem
+  iguais — tudo o que não é arquivo cai no `try_files ... /index.php`, como antes.
+- **Nenhuma versão nos headers.** `server_tokens off` no nginx (header `Server: nginx`, sem número,
+  inclusive nas páginas de erro) e `expose_php = Off` no PHP de dev **e** de produção
+  (`docker/php/php-dev.ini`, `php-prod.ini`) — sem `X-Powered-By: PHP/8.4.x`. O nginx ainda
+  descarta o `X-Powered-By` que viesse do php-fpm (`fastcgi_hide_header`), para o caso de alguém
+  reverter o ini. Divulgar a versão exata só encurta, para quem varre, a busca pelo CVE certo.
+
+Estas regras vivem na imagem, não no volume: depois de mexer nos `.conf` ou nos `.ini`, recrie os
+containers (`export UID GID=$(id -g); docker compose up -d --build`) — um `restart` sozinho não
+relê arquivo copiado no build.
 
 ### Proxies confiáveis e host confiável (atrás de CDN/LB)
 
@@ -1095,14 +1121,44 @@ ligar `X-Forwarded-Host`.
   `card_number`, `cvv`...) ou sufixo (`_token`, `_secret`, `_password`, `_api_key`) → `[REDACTED]`;
 - CPF/CNPJ em qualquer string → `123.***.***-09` (3 primeiros + 2 últimos dígitos);
 - e-mails → `k***@dominio.com`;
+- **número de cartão (PAN) em qualquer string** → `**** **** **** 1111` (só os 4 últimos
+  dígitos, pontuação preservada) — detalhes abaixo;
+- os **nomes dos campos** passam pelas mesmas máscaras (um cartão mandado como nome de campo
+  não escapa por ser chave);
 - strings gigantes são truncadas (logs não são storage de payload).
+
+**Cartão em texto livre (PCI DSS).** Antes, o cartão só era mascarado quando vinha num campo
+com nome conhecido (`card_number`); digitado num `message`, ia em claro para `request_logs`.
+Agora qualquer sequência de **13 a 19 dígitos**, corrida ou com **um** espaço/hífen entre os
+dígitos, que passe no **algoritmo de Luhn** (o dígito verificador de todo cartão) é mascarada.
+O Luhn é o que deixa em paz telefone, protocolo e número de pedido comuns — mas ele não é
+infalível: cerca de 1 em cada 10 sequências arbitrárias nessa faixa passa, e aí o número é
+mascarado mesmo sem ser cartão. Foi escolhido errar para o lado seguro. Telefones brasileiros
+com DDD têm 10–11 dígitos e ficam fora da faixa; com `+55` chegam a 13 e dependem do Luhn.
+
+Onde a regra vale (`Redactor::maskCardNumbers`, usada por todos os pontos abaixo):
+
+| Destino | Como |
+|---|---|
+| `request_logs.payload` (INICIADA, BLOQUEADA) e `error_message` | `Redactor::redactArray`/`redactString`, como CPF/e-mail |
+| `storage/logs/*.log` (todos os canais) e agregadores (`stderr`, `syslog`, `papertrail`, `slack`) | tap `MaskCardNumbersInLogs` em `config/logging.php`: envolve o formatter de cada canal e mascara a **linha já formatada** — mensagem, contexto e a **exceção** (uma `QueryException` carrega os valores do INSERT). Canal novo precisa do mesmo tap (há teste que confere os existentes) |
+| `form_submissions` (contato e forms demo) | `FormSubmissionGuard`, só a regra de cartão — ver abaixo |
+| E-mail do formulário de contato (e o job na fila) | o controller envia o texto já gravado, portanto mascarado |
+
+**Por que `form_submissions` também mascara, sendo "gravado cru" por decisão de auditoria.**
+A gravação crua existe para preservar a evidência de ATAQUE — o payload de XSS/SQLi como veio.
+Um número de cartão não é evidência de ataque, e PCI DSS (requisito 3) proíbe armazenar PAN
+legível sem necessidade de negócio; uma mensagem de contato nunca tem essa necessidade. Então:
+a detecção de ataque roda **antes**, sobre o texto original (mascarar não esconde ataque — há
+teste), e só o texto persistido perde os dígitos do cartão. CPF e e-mail continuam crus ali:
+são o dado do próprio contato, necessário para respondê-lo.
 
 ### Onde ver os logs
 
 | Camada | Onde | Conteúdo |
 |---|---|---|
 | Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload sanitizado/redigido, duração, IP, tenant |
-| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `request.throttled`, `request.unmatched.sampled_out`) |
+| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `request.throttled`, `request.unmatched.sampled_out`); número de cartão sai mascarado (ver *Redaction*) |
 | Borda | access log do nginx | tudo, inclusive health checks |
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
@@ -1899,7 +1955,10 @@ Hoje:
   tentativa: origem, IP, remetente (quando houver), recebida em e bloqueada
   em;
 - **no banco**: nada muda. A gravação continua **crua** (auditoria —
-  ADR-004/005). Quem neutraliza é a exibição, nunca o registro.
+  ADR-004/005). Quem neutraliza é a exibição, nunca o registro. A única
+  exceção é **número de cartão**, gravado só com os 4 últimos dígitos (PCI
+  DSS — ver *Redaction*): não é evidência de ataque, e a detecção roda antes,
+  sobre o texto original.
 
 O IP passou a ser gravado junto da submissão (migration
 `add_ip_to_form_submissions_table`): sem ele a evidência responde "o quê" e

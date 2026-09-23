@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Logging\MaskCardNumbersInLogs;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -53,6 +54,10 @@ return [
 
     'channels' => [
 
+        // Todo canal que escreve texto recebe o tap MaskCardNumbersInLogs:
+        // número de cartão (PAN) nunca sai em claro em storage/logs nem no
+        // agregador externo (PCI DSS). Canal novo? Acrescente o mesmo tap.
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),
@@ -64,6 +69,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'daily' => [
@@ -72,6 +78,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'monthly' => [
@@ -80,6 +87,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => 3,
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'slack' => [
@@ -89,6 +97,7 @@ return [
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
             'level' => env('LOG_LEVEL', 'critical'),
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'papertrail' => [
@@ -101,6 +110,7 @@ return [
                 'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
             ],
             'processors' => [PsrLogMessageProcessor::class],
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'stderr' => [
@@ -112,6 +122,7 @@ return [
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
             'processors' => [PsrLogMessageProcessor::class],
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'syslog' => [
@@ -119,12 +130,14 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'errorlog' => [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'null' => [
@@ -148,6 +161,7 @@ return [
             'permission' => 0664,
             'formatter' => JsonFormatter::class,
             'replace_placeholders' => true,
+            'tap' => [MaskCardNumbersInLogs::class],
         ],
 
         'emergency' => [

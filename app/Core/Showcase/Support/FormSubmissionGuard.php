@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Showcase\Support;
 
+use App\Core\Logging\Redactor;
 use App\Core\Security\AttackDetector;
 use App\Core\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Log;
@@ -20,10 +21,21 @@ use Illuminate\Support\Facades\Log;
  *
  * Resposta ao atacante: SEMPRE sucesso falso (mesmo padrão do honeypot) —
  * não damos sinal de que a tentativa foi detectada.
+ *
+ * O texto é gravado CRU (decisão de auditoria: a evidência forense precisa
+ * do payload como veio), com UMA exceção: número de cartão (PAN). O kit é
+ * base de sistemas de pagamento, e PCI DSS (req. 3) proíbe armazenar PAN
+ * legível sem necessidade de negócio — e uma mensagem de contato ou um form
+ * demo nunca tem essa necessidade. A detecção de ataque roda ANTES, sobre o
+ * texto original; só o que é persistido perde os dígitos do cartão (ficam os
+ * 4 últimos). CPF e e-mail seguem crus aqui: são o próprio dado do contato.
  */
 final class FormSubmissionGuard
 {
-    public function __construct(private readonly AttackDetector $detector) {}
+    public function __construct(
+        private readonly AttackDetector $detector,
+        private readonly Redactor $redactor,
+    ) {}
 
     /**
      * Analisa e persiste a submissão. Retorna a submissão criada —
@@ -43,10 +55,10 @@ final class FormSubmissionGuard
             ]);
 
         $submission = FormSubmission::query()->create([
-            'nickname' => $nickname,
+            'nickname' => $this->redactor->maskCardNumbers($nickname),
             'sender_email' => $senderEmail,
-            'subject' => $subject,
-            'message' => $message,
+            'subject' => $this->redactor->maskCardNumbers($subject),
+            'message' => $this->redactor->maskCardNumbers($message),
             'origin' => $origin,
             // Evidência forense: sem a origem, a tela de detalhe do admin
             // conta o "o quê" e não conta o "de onde".

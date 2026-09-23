@@ -7,14 +7,13 @@
 // "seus dados são redigidos" é marketing; mostrar o CPF dela virando
 // `472.***.***-15` enquanto ela digita é prova.
 //
-// HONESTIDADE DAS REGRAS. As três primeiras são EXATAMENTE as do
-// App\Core\Logging\Redactor::redactString (mesmas expressões, mesma máscara):
-// CNPJ, CPF e e-mail. A quarta — `chave: valor` sensível — é a regra
-// isSensitiveKey() do mesmo Redactor, aplicada ao par que a pessoa digitar.
-// A quinta (número de cartão solto em texto livre) é a ÚNICA extensão da
-// demo: no kit, cartão é mascarado pelo NOME do campo (`card_number`), e num
-// texto livre não existe nome de campo — a demo aplica a mesma máscara ao
-// número reconhecido, e a legenda diz isso.
+// HONESTIDADE DAS REGRAS. CNPJ, CPF, e-mail e número de cartão são as regras
+// de App\Core\Logging\Redactor::redactString (mesmas expressões, mesma
+// máscara; o cartão, como no kit, só é mascarado se passar no Luhn). A regra
+// `chave: valor` sensível é a isSensitiveKey() do mesmo Redactor, aplicada ao
+// par que a pessoa digitar. Simplificação da demo: o kit também procura o
+// cartão DENTRO de uma sequência maior de grupos ("4111 1111 1111 1111 123");
+// aqui a sequência digitada é avaliada inteira.
 //
 // Nada é enviado a lugar nenhum: a redação roda inteira no navegador, o campo
 // não tem `name` e não existe formulário em volta.
@@ -33,6 +32,26 @@ const SENSITIVE_KEYS = [
 ];
 
 const SENSITIVE_SUFFIXES = ['_token', '_secret', '_password', '_api_key'];
+
+/** Algoritmo de Luhn — o mesmo filtro do Redactor contra falso positivo. */
+function passesLuhn(digits) {
+    let sum = 0;
+    let double = false;
+
+    for (let i = digits.length - 1; i >= 0; i--) {
+        let digit = Number(digits[i]);
+
+        if (double) {
+            digit *= 2;
+            if (digit > 9) digit -= 9;
+        }
+
+        sum += digit;
+        double = !double;
+    }
+
+    return sum % 10 === 0;
+}
 
 /** Mantém os 3 primeiros e 2 últimos dígitos, preservando a pontuação. */
 function maskDocument(value) {
@@ -84,9 +103,9 @@ export function redact(input) {
         return maskDocument(match);
     });
 
-    // Cartão: a extensão declarada da demo (ver o cabeçalho do arquivo).
-    text = text.replace(/\b(?:\d[ -]?){13,19}\b/g, (match) => {
-        if ((match.match(/\d/g) ?? []).length < 13) return match;
+    // Cartão: 13–19 dígitos (com espaço/hífen opcional) que passam no Luhn.
+    text = text.replace(/(?<!\d)\d(?:[ -]?\d){12,18}(?!\d)/g, (match) => {
+        if (!passesLuhn(match.replace(/\D/g, ''))) return match;
 
         rules.add('card');
 

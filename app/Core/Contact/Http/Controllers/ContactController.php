@@ -58,11 +58,14 @@ final class ContactController extends Controller
         $recipient = platform()->contactEmail;
 
         if ($recipient !== null) {
+            // Nome e mensagem saem da submissão GRAVADA, não do input: lá o
+            // número de cartão já foi mascarado (FormSubmissionGuard). PAN não
+            // pode viajar por e-mail nem ficar no payload do job na fila.
             Mail::to($recipient)->queue(new ContactMessageMail(
-                senderName: $data['name'],
+                senderName: $submission->nickname,
                 senderEmail: $data['email'],
                 subjectKey: $data['subject'],
-                messageText: $data['message'],
+                messageText: $submission->message,
             ));
         } else {
             // Sem destinatário configurado, a mensagem se perderia — registrar.

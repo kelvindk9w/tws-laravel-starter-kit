@@ -338,6 +338,10 @@ test.describe('landing /v2 — O Rastro', () => {
         await input.fill('cartao 4111 1111 1111 1111');
         await expect(output).toHaveText(/\*\*\*\* \*\*\*\* \*\*\*\* 1111/);
 
+        // Número que não passa no Luhn (pedido, protocolo): intacto, como no kit.
+        await input.fill('pedido 4111 1111 1111 1112');
+        await expect(output).toHaveText('pedido 4111 1111 1111 1112');
+
         // Nada sensível: o texto passa intacto — a página não inventa alarme.
         await input.fill('nada sensivel aqui');
         await expect(output).toHaveText('nada sensivel aqui');
