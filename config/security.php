@@ -192,6 +192,33 @@ return [
         // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
         // middleware throttle:sensitive.
         'sensitive' => (int) env('RATE_LIMIT_SENSITIVE', 5),
+
+        // TETO POR CLIENTE da borda (App\Core\Security\Middleware\EdgeRateLimit):
+        // vale para TODA requisição que chega ao PHP — páginas, updates do
+        // Livewire, /admin, /up, API e rotas inexistentes (o flood de 404 de
+        // varredura) —, ANTES da varredura de ataque e da trilha em banco, que
+        // são o trabalho caro que ele protege. Contado por IP (ou prefixo IPv6,
+        // abaixo), porque roda antes da sessão: ainda não se sabe quem é o
+        // usuário. Assets servidos pelo nginx (build/, css/, js/, vendor/) não
+        // chegam ao PHP e não contam.
+        //
+        // O padrão foi MEDIDO: a suíte E2E inteira (8 navegadores em paralelo,
+        // do mesmo IP, navegando landing, painel e /admin) faz ~140 requisições
+        // ao PHP em ~40 s; uma pessoa navegando o painel faz poucas dezenas por
+        // minuto. 300/min dá folga de sobra para isso e para algumas abas
+        // abertas atrás do mesmo NAT, e corta um flood em poucos segundos.
+        // Aumente para NAT grande (empresa, escola, CGNAT de operadora) — não há
+        // chave para desligar. Atrás de proxy/CDN, só é por cliente com
+        // TRUSTED_PROXIES correto; sem ele, todos caem no balde do proxy.
+        'web' => (int) env('RATE_LIMIT_WEB', 300),
+
+        // Janela do teto acima, em segundos.
+        'web_decay_seconds' => (int) env('RATE_LIMIT_WEB_DECAY_SECONDS', 60),
+
+        // IPv6: o limite conta por PREFIXO, não por endereço — um único host
+        // costuma receber um /64 inteiro e trocaria de endereço a cada
+        // requisição para ganhar orçamento novo. Ver App\Core\Security\ClientBucket.
+        'ipv6_prefix' => (int) env('RATE_LIMIT_IPV6_PREFIX', 64),
     ],
 
     // --- Superfícies administrativas (/admin — Filament, /horizon) -------------
@@ -243,6 +270,20 @@ return [
         // de um /livewire/update estão nesta lista, a detecção é delegada a
         // eles (o form demo Livewire roda o AttackDetector no send()).
         'delegated_components' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_COMPONENTS', 'contact-form'))),
+
+        // TETO de bytes que a detecção de ataque inspeciona por requisição
+        // (soma de chaves e valores de texto de query + corpo; arquivos
+        // enviados contam só pelos metadados — o conteúdo nunca é lido). A
+        // detecção roda ANTES da autenticação, então sem teto qualquer anônimo
+        // compraria regex sobre 25 MB de corpo a cada requisição.
+        //
+        // O excedente NÃO passa sem inspeção (inspecionar só o começo deixaria
+        // o ataque no fim do corpo): a requisição é RECUSADA com 413 e gravada
+        // como BLOQUEADA (`attack_type` = `payload_too_large`, payload com o
+        // tamanho, nunca o conteúdo). 1 MiB cobre com folga formulário, JSON de
+        // API e snapshot de Livewire; upload de arquivo não conta. Ver
+        // App\Core\Security\Middleware\SecurityValidation.
+        'max_inspected_bytes' => (int) env('SECURITY_VALIDATION_MAX_INSPECTED_BYTES', 1048576),
     ],
 
     // --- Pipeline de logs de requisição (ADR-004) ------------------------------
@@ -276,6 +317,18 @@ return [
         // App\Core\Logging\CorrelationId). O teto da coluna é 255 — valores
         // maiores na configuração são limitados a ele.
         'client_correlation_max_length' => (int) env('REQUEST_LOG_CLIENT_CORRELATION_MAX_LENGTH', 128),
+
+        // Contenção do tráfego de VARREDURA na trilha em banco (Lote 2): de
+        // cada cliente (IP ou prefixo IPv6), só a PRIMEIRA requisição a rota
+        // inexistente (404/405) e a PRIMEIRA recusa do limite da borda (429)
+        // por janela vão para `request_logs`; as demais 404/405 ficam só no
+        // log de arquivo (`request.unmatched.sampled_out`) e as demais 429 não
+        // escrevem nada (o contador do limiter e o access log têm o volume).
+        // Rota que EXISTE — autenticada ou não — e tentativa BLOQUEADA pelo
+        // SecurityValidation continuam gravadas SEMPRE: nada disso é amostrado.
+        // 0 = sem amostragem (toda 404 volta a gerar linha — só com a borda
+        // protegida por outro meio). Ver App\Core\Logging\ScanTrafficSampler.
+        'scan_sample_window_seconds' => (int) env('REQUEST_LOG_SCAN_SAMPLE_WINDOW_SECONDS', 60),
     ],
 
 ];

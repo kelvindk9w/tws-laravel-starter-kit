@@ -37,6 +37,13 @@ use Throwable;
  * - É também quem resolve o correlation_id da requisição (primeira peça da
  *   cadeia), propagando para os demais middlewares e logs.
  *
+ * Teto de inspeção (config security.validation.max_inspected_bytes): a
+ * detecção roda antes da autenticação, então o volume que ela varre é
+ * limitado. Acima do teto a requisição é RECUSADA com 413 e gravada como
+ * BLOQUEADA (`payload_too_large`) com o tamanho, nunca o conteúdo — aceitar
+ * o excedente sem inspeção abriria o atalho de esconder o ataque no fim de
+ * um corpo grande. Vale também para os caminhos delegados.
+ *
  * Delegação (config security.validation): os formulários demo do /ui são
  * uma vitrine de defesa EM CAMADAS — para eles, a detecção é feita pela
  * própria aplicação (o MESMO AttackDetector), que registra a tentativa em
@@ -46,6 +53,11 @@ use Throwable;
  */
 final class SecurityValidation
 {
+    /**
+     * `attack_type` da requisição recusada por passar do teto de inspeção.
+     */
+    public const OVERSIZED = 'payload_too_large';
+
     public function __construct(
         private readonly AttackDetector $detector,
         private readonly PayloadSanitizer $sanitizer,
@@ -58,7 +70,30 @@ final class SecurityValidation
         // aceito do cliente — ver CorrelationId) e o propaga adiante.
         $correlationId = CorrelationId::resolve($request);
 
-        $attackType = $this->detector->detect(RequestInputs::extract($request));
+        $inputs = RequestInputs::extract($request);
+
+        // Teto do que se inspeciona ANTES da autenticação: sem ele, qualquer
+        // anônimo compra regex sobre o corpo inteiro a cada requisição. O
+        // excedente é RECUSADO, não aceito sem inspeção — ver
+        // config security.validation.max_inspected_bytes.
+        $maxBytes = max(1, (int) config('security.validation.max_inspected_bytes', 1048576));
+
+        if ($this->detector->exceedsInspectionBudget($inputs, $maxBytes)) {
+            $this->registerBlockedAttempt($request, $correlationId, self::OVERSIZED, 413, [
+                '_resumo' => 'payload_acima_do_limite_de_inspecao',
+                'limite_bytes' => $maxBytes,
+                'content_length' => (int) $request->header('Content-Length', '0'),
+            ]);
+
+            return response()
+                ->json([
+                    'message' => __('security.payload_too_large'),
+                    'correlation_id' => $correlationId,
+                ], 413)
+                ->header(CorrelationId::HEADER, $correlationId);
+        }
+
+        $attackType = $this->detector->detect($inputs);
 
         if ($attackType !== null) {
             // Rotas/componentes delegados: a camada da aplicação roda o MESMO
@@ -67,7 +102,7 @@ final class SecurityValidation
                 return $next($request);
             }
 
-            $this->registerBlockedAttempt($request, $correlationId, $attackType);
+            $this->registerBlockedAttempt($request, $correlationId, $attackType, 422);
 
             return response()
                 ->json([
@@ -134,9 +169,14 @@ final class SecurityValidation
      * Persiste a tentativa de ataque: payload sanitizado/escapado + redigido
      * (dupla camada — ADR-005), com os metadados da tentativa.
      */
-    private function registerBlockedAttempt(Request $request, string $correlationId, string $attackType): void
+    /**
+     * @param  array<string, mixed>|null  $summary  payload já resumido (usado
+     *                                              quando o corpo NÃO deve ser
+     *                                              copiado — ex.: acima do teto)
+     */
+    private function registerBlockedAttempt(Request $request, string $correlationId, string $attackType, int $httpStatus, ?array $summary = null): void
     {
-        $payload = $this->redactor->redactArray(
+        $payload = $summary ?? $this->redactor->redactArray(
             $this->sanitizer->sanitize(RequestInputs::extract($request)),
         );
 
@@ -167,8 +207,10 @@ final class SecurityValidation
                 'payload' => $payload,
                 'status' => RequestLogStatus::Bloqueada,
                 'attack_type' => $attackType,
-                'http_status_response' => 422,
-                'error_message' => __('security.blocked_log', ['type' => $attackType]),
+                'http_status_response' => $httpStatus,
+                'error_message' => $attackType === self::OVERSIZED
+                    ? __('security.payload_too_large_log', ['bytes' => (int) config('security.validation.max_inspected_bytes')])
+                    : __('security.blocked_log', ['type' => $attackType]),
             ]);
         } catch (Throwable $exception) {
             // Falha de banco NÃO pode impedir o bloqueio nem apagar a evidência:

@@ -9,6 +9,7 @@ use App\Core\Http\Middleware\TrustHosts;
 use App\Core\Http\Middleware\TrustProxies;
 use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Logging\Middleware\RequestLogging;
+use App\Core\Security\Middleware\EdgeRateLimit;
 use App\Core\Security\Middleware\SecurityHeaders;
 use App\Core\Security\Middleware\SecurityValidation;
 use App\Core\Tenancy\Middleware\ResolveTenant;
@@ -29,7 +30,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // 0º TrustProxies (quem pode dizer QUEM É O CLIENTE — ver abaixo);
         // 1º SecurityHeaders (até respostas de bloqueio/erro carregam os
         //    headers de segurança — inclusive o 400 de host recusado);
-        // 1ºb TrustHosts (quais valores de `Host` são aceitos — ver abaixo);
+        // 1ºb EdgeRateLimit (TETO de requisições por cliente — IP ou prefixo
+        //    IPv6 — para TUDO que chega ao PHP: páginas, Livewire, /admin, /up,
+        //    API e rotas inexistentes). Vem depois do TrustProxies (precisa do
+        //    IP real) e do SecurityHeaders (o 429 sai com os headers), e ANTES
+        //    de todo trabalho caro: host, varredura de ataque sobre o corpo e
+        //    INSERT/UPDATE na trilha. Acima do limite o corpo nem é lido. Ver
+        //    App\Core\Security\Middleware\EdgeRateLimit;
+        // 1ºc TrustHosts (quais valores de `Host` são aceitos — ver abaixo);
         // 2º SecurityValidation (PRIMEIRA validação de payload: rejeita
         //    conteúdo malicioso antes de qualquer outro processamento,
         //    registrando a tentativa);
@@ -60,6 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(RequestLogging::class);
         $middleware->prepend(SecurityValidation::class);
         $middleware->prepend(TrustHosts::class);
+        $middleware->prepend(EdgeRateLimit::class);
         $middleware->prepend(SecurityHeaders::class);
         $middleware->prepend(TrustProxies::class);
 

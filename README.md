@@ -860,7 +860,7 @@ docker compose run --rm --no-deps -v /dev/null:/var/www/html/.env --entrypoint s
 Toda requisição atravessa, nesta ordem:
 
 ```
-TrustProxies → SecurityHeaders → TrustHosts → SecurityValidation → RequestLogging → (api: throttle:api) → rota
+TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityValidation → RequestLogging → (api: throttle:api) → rota
 ```
 
 0. **TrustProxies** (`app/Core/Http/Middleware/`) — quem é o cliente. É a mais externa **de
@@ -874,15 +874,27 @@ TrustProxies → SecurityHeaders → TrustHosts → SecurityValidation → Reque
    `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP básica
    e HSTS (só sob HTTPS com `SECURITY_HSTS_ENABLED=true`, padrão em produção). Como é o primeiro,
    até respostas de bloqueio/erro saem com os headers. Valores em `config/security.php`.
+1b. **EdgeRateLimit** (`app/Core/Security/Middleware/EdgeRateLimit.php`) — **teto de requisições
+   por cliente** para TUDO que chega ao PHP: páginas, updates do Livewire, `/admin`, `/up`, API e
+   rotas inexistentes. Ver *Limite de requisições (rate limit)*, abaixo. Roda antes de todo trabalho
+   caro (validação de host, varredura de ataque sobre o corpo, escrita na trilha): acima do limite,
+   o corpo nem é lido.
 2. **SecurityValidation** (`.../SecurityValidation.php`) — PRIMEIRA validação: detecta XSS
    (`<script`, `javascript:`, `on*=`), SQLi comum, null bytes e path traversal em query + corpo +
    nomes de arquivos (inclusive URL-encoded). Ao detectar:
    - grava `request_logs` com status **BLOQUEADA**, payload **sanitizado/escapado** (nunca
      executável — ADR-005) + redigido, com metadados (IP, endpoint, `attack_type`);
-   - responde **422** com mensagem genérica (não revela o que detectou) + `X-Correlation-Id`.
+   - responde **422** com mensagem genérica (não revela o que detectou) + `X-Correlation-Id`;
+   - **teto de inspeção** (`SECURITY_VALIDATION_MAX_INSPECTED_BYTES`, padrão 1 MiB): a detecção roda
+     antes da autenticação, então o volume de texto que ela varre (chaves + valores de query e
+     corpo; arquivo enviado conta só pelos metadados) é limitado. Acima do teto a requisição é
+     **recusada com 413** e gravada como **BLOQUEADA** (`attack_type` = `payload_too_large`, payload
+     só com o tamanho). O excedente não é aceito sem inspeção — inspecionar só o começo deixaria o
+     ataque escondido no fim do corpo.
 3. **RequestLogging** (`app/Core/Logging/Middleware/RequestLogging.php`):
-   - **No recebimento**: gera/propaga o `correlation_id` (UUID v7; aceita `X-Correlation-Id`
-     de entrada se for UUID válido) e grava o log **INICIADA imediatamente**, antes de qualquer
+   - **No recebimento**: gera/propaga o `correlation_id` (UUID v7, **sempre gerado pelo
+     servidor**; o `X-Correlation-Id` de entrada vai saneado para a coluna separada
+     `client_correlation_id`) e grava o log **INICIADA imediatamente**, antes de qualquer
      processamento de negócio, já com payload redigido.
    - **No terminate**: transição controlada para **CONCLUIDA** (HTTP < 500) ou **ERRO**
      (HTTP ≥ 500, com mensagem capturada e redigida), com `duration_ms` e `http_status_response`.
@@ -894,8 +906,71 @@ TrustProxies → SecurityHeaders → TrustHosts → SecurityValidation → Reque
      Os updates genéricos do Livewire (`livewire/*`, `admin/livewire/*`) são
      registrados com **payload resumido** — só os nomes dos componentes
      (`REQUEST_LOG_SUMMARIZED_PATHS`), porque o snapshot serializado é ruído.
+   - **Contenção do tráfego de varredura**: requisição para rota **inexistente** (404/405) só vai
+     ao banco na **primeira ocorrência de cada cliente por janela**
+     (`REQUEST_LOG_SCAN_SAMPLE_WINDOW_SECONDS`, padrão 60 s); as seguintes ficam no log de arquivo
+     (`request.unmatched.sampled_out`). Ver *Limite de requisições*, abaixo.
 4. **throttle:api** — rate limit global da API (60/min padrão). Rotas sensíveis (login, códigos
    2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores em `config/security.php`.
+
+### Limite de requisições (rate limit) e contenção da trilha
+
+Três limites, do mais largo ao mais estreito, com orçamentos independentes:
+
+| Limite | Onde | Chave | Padrão | Variável |
+|---|---|---|---|---|
+| **Borda** (`EdgeRateLimit`) | global: páginas, Livewire, `/admin`, `/up`, API, rotas inexistentes | IP (IPv6 por prefixo /64) | 300/min | `RATE_LIMIT_WEB`, `RATE_LIMIT_WEB_DECAY_SECONDS`, `RATE_LIMIT_IPV6_PREFIX` |
+| `throttle:api` | grupo `api` | usuário ou IP | 60/min | `RATE_LIMIT_API` |
+| `throttle:sensitive` | login, códigos, recuperação de senha | usuário ou IP | 5/min | `RATE_LIMIT_SENSITIVE` |
+
+**Por que a borda é global, e não `throttle:` no grupo `web`.** Middleware de grupo não roda em
+rota inexistente — e o flood de 404 de varredura era metade do problema — nem no `/up`, que é
+registrado fora dos grupos. Ela vem logo depois do `TrustProxies` (precisa do IP real) e do
+`SecurityHeaders` (o 429 sai com os headers), e **antes** da varredura de ataque e da trilha em
+banco, que são justamente o trabalho caro que ela protege.
+
+**Por que 300/min.** Medido: a suíte E2E inteira (8 navegadores em paralelo, do mesmo IP,
+navegando landing, painel e `/admin`, com todos os updates do Livewire) faz cerca de 140
+requisições ao PHP em ~40 s; uma pessoa navegando o painel faz poucas dezenas por minuto. Assets
+servidos pelo nginx (`build/`, `css/`, `js/`, `vendor/`, `fonts/`) não chegam ao PHP e não
+contam. Como a borda roda antes da sessão, ela conta por IP, não por usuário: **aumente o valor
+para NAT grande** (empresa, escola, CGNAT de operadora). Não há chave para desligar. Atrás de
+proxy/CDN, o limite só é por cliente com `TRUSTED_PROXIES` correto; sem ele, todo mundo cai no
+balde do proxy (ver *Proxies confiáveis*, abaixo).
+
+**IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
+a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
+(`App\Core\Security\ClientBucket`).
+
+**A resposta.** Web: página 429 **traduzida** (pt-BR/en/es — cookie de idioma do visitante,
+depois `Accept-Language`, depois o padrão da plataforma), autossuficiente (sem CSS/JS do build,
+sem banco, sem sessão). API: o envelope de erro padrão (`too_many_requests`). As duas com
+`Retry-After`, `X-RateLimit-Limit`/`-Remaining` e os headers de segurança. A mesma página serve o
+429 do `throttle:sensitive` nas rotas web.
+
+**Contenção da escrita em `request_logs` (a regra e o porquê).** Antes, toda requisição gerava
+INSERT + UPDATE na trilha — inclusive o 404 de um robô procurando `/wp-login.php` — e um flood
+anônimo virava escrita no banco na velocidade da rede. Agora:
+
+- **Recusa da borda (429):** a primeira de cada cliente por janela vira uma linha
+  (`http_status_response` 429, payload só com o resumo `rate_limited` — o corpo nunca é lido) e
+  um evento `request.throttled` no arquivo. As seguintes não escrevem nada: o volume exato do
+  flood está no contador do limiter e no access log do nginx. Escrever uma linha de arquivo por
+  recusa devolveria ao atacante a amplificação, agora em disco.
+- **Rota inexistente (404/405):** a primeira de cada cliente por janela vai ao banco como
+  sempre foi (o ADR-010 manda registrar o início de uma varredura); as seguintes ficam só no
+  arquivo (`request.unmatched.sampled_out`, com o marcador de endpoint, nunca o caminho bruto).
+  Rota inexistente é anônima **por construção**: sem rota não há sessão nem chave de API.
+- **Nunca amostrado:** tentativa **BLOQUEADA** pelo `SecurityValidation` (gravada por ele,
+  sempre) e requisição a rota que **existe** — autenticada ou não, com qualquer desfecho, inclusive
+  404 de recurso não encontrado. Essas continuam com INICIADA na chegada e o fecho no terminate.
+- Escolheu-se **amostrar** (e não descartar nem agregar numa contagem) porque a linha amostrada é
+  uma linha normal da trilha — mesmo formato, mesmo ciclo, visível no `/admin` —, sem tabela nova
+  nem job de consolidação. `REQUEST_LOG_SCAN_SAMPLE_WINDOW_SECONDS=0` volta ao comportamento
+  antigo (toda 404 gera linha).
+- O que fica acima do limite **não passa pelo `SecurityValidation`**: um ataque mandado por um
+  cliente já estrangulado não é gravado como BLOQUEADA — ele também não foi processado. Dentro do
+  limite, todo ataque é detectado e gravado.
 
 Também: HTTPS forçado em produção (`URL::forceHttps()` no `AppServiceProvider`), CORS restritivo
 (`config/cors.php` — nenhuma origem liberada por padrão; `CORS_ALLOWED_ORIGINS` no `.env`).
@@ -1027,7 +1102,7 @@ ligar `X-Forwarded-Host`.
 | Camada | Onde | Conteúdo |
 |---|---|---|
 | Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload sanitizado/redigido, duração, IP, tenant |
-| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`) |
+| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `request.throttled`, `request.unmatched.sampled_out`) |
 | Borda | access log do nginx | tudo, inclusive health checks |
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
@@ -1062,7 +1137,8 @@ Em produção, complementar com
 `GET /api/health` → `{data: {status, version, correlation_id}}` (via `BaseResource`).
 **Decisão**: excluído do request log em banco para não poluir a trilha (health checks são
 barulhentos) — configurável em `REQUEST_LOG_EXCLUDED_PATHS`. Continua protegido por validação
-de segurança, headers e rate limit, e fica no access log do nginx.
+de segurança, headers e rate limit (o `/up` também passa pelo teto da borda — uma sonda a cada
+poucos segundos fica muito abaixo dele), e fica no access log do nginx.
 
 ## Autenticação (Fase 3 — ADR-006/010)
 

@@ -10,6 +10,7 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Logging\PersistFailure;
 use App\Core\Logging\Redactor;
+use App\Core\Logging\ScanTrafficSampler;
 use App\Core\Security\RequestInputs;
 use Closure;
 use Illuminate\Http\Request;
@@ -43,6 +44,15 @@ use Throwable;
  *   payload RESUMIDO (só os nomes dos componentes) — o snapshot serializado
  *   é enorme, repetitivo e sem valor de auditoria.
  *
+ * Contenção do tráfego de varredura (Lote 2): requisição para rota
+ * INEXISTENTE (404/405 — por construção anônima, porque sem rota não há
+ * sessão nem chave de API) só vai ao banco na primeira ocorrência de cada
+ * cliente por janela; as seguintes ficam no log de arquivo
+ * (`request.unmatched.sampled_out`). Rotas casadas — que podem ser
+ * autenticadas — seguem gravando INICIADA na chegada, sempre. Tentativas
+ * bloqueadas pelo SecurityValidation são gravadas por ele e nunca chegam
+ * aqui. Ver App\Core\Logging\ScanTrafficSampler.
+ *
  * Resiliência: se o banco falhar, a requisição NÃO é derrubada — a trilha
  * de arquivo (canal request_log, JSON estruturado) registra a falha.
  */
@@ -62,7 +72,29 @@ final class RequestLogging
 
         $request->attributes->set('request_log_started_at', microtime(true));
 
-        $this->persistStarted($request, $correlationId);
+        // Padrão da rota, nunca o caminho real: o path é dado do usuário e
+        // pode carregar segredo posicional (ver EndpointSignature).
+        $matchedUri = EndpointSignature::matchedUri($request);
+        $endpoint = $matchedUri ?? EndpointSignature::unmatchedMarker($request);
+
+        // Rota inexistente (404/405 de varredura — por construção anônima):
+        // só a primeira de cada cliente por janela vai ao banco; as demais
+        // ficam no log de arquivo. Ver ScanTrafficSampler.
+        if ($matchedUri === null && ! ScanTrafficSampler::shouldPersist(ScanTrafficSampler::UNMATCHED, $request)) {
+            Log::channel('request_log')->info('request.unmatched.sampled_out', [
+                'correlation_id' => $correlationId,
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'endpoint' => $endpoint,
+            ]);
+
+            $response = $next($request);
+            $response->headers->set(CorrelationId::HEADER, $correlationId);
+
+            return $response;
+        }
+
+        $this->persistStarted($request, $correlationId, $endpoint);
 
         $response = $next($request);
 
@@ -123,15 +155,11 @@ final class RequestLogging
      * Grava o log INICIADA imediatamente, com payload redigido (ou resumido
      * nas rotas configuradas — ex.: updates genéricos do Livewire).
      */
-    private function persistStarted(Request $request, string $correlationId): void
+    private function persistStarted(Request $request, string $correlationId, string $endpoint): void
     {
         $payload = $this->shouldSummarize($request)
             ? $this->summarizePayload($request)
             : $this->redactor->redactArray(RequestInputs::extract($request));
-
-        // Padrão da rota, nunca o caminho real: o path é dado do usuário e
-        // pode carregar segredo posicional (ver EndpointSignature).
-        $endpoint = EndpointSignature::for($request);
 
         // Correlação do cliente: já saneada (lista branca + limite), sem
         // unicidade, apenas informativa.

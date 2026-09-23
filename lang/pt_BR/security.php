@@ -12,4 +12,21 @@ return [
     // Mensagem interna gravada no request log (metadado da tentativa — ADR-005).
     'blocked_log' => 'Payload malicioso detectado (:type).',
 
+    // Recusa por tamanho: o conteúdo enviado passa do teto que a validação de
+    // segurança inspeciona (config security.validation.max_inspected_bytes).
+    'payload_too_large' => 'O conteúdo enviado é grande demais para ser aceito.',
+
+    'payload_too_large_log' => 'Conteúdo acima do teto de inspeção de segurança (:bytes bytes) — recusado sem inspeção.',
+
+    // Página/resposta 429 — limite de requisições por cliente (borda e rotas
+    // sensíveis). Tom de orientação, não de acusação: quem mais vê esta página
+    // é gente de verdade atrás de uma rede compartilhada.
+    'throttled' => [
+        'title' => 'Muitas requisições',
+        'heading' => 'Calma, vamos com mais devagar',
+        'body' => 'Recebemos requisições demais vindas da sua conexão em pouco tempo. Aguarde um instante e tente de novo.',
+        'retry' => 'Você pode tentar novamente em cerca de :seconds segundos.',
+        'action' => 'Tentar novamente',
+    ],
+
 ];

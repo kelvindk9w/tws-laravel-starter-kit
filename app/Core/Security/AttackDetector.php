@@ -74,6 +74,48 @@ final class AttackDetector
     }
 
     /**
+     * Os dados passam do teto de bytes inspecionáveis? Soma chaves e valores
+     * de texto (o que `detect()` varreria) e para de contar assim que passa
+     * do teto — a verificação custa, no máximo, o próprio teto, nunca o corpo
+     * inteiro. Números e booleanos não contam (não passam por regex).
+     *
+     * Quem chama decide o que fazer com o excedente; o SecurityValidation
+     * RECUSA (inspecionar só o começo deixaria o ataque escondido no fim).
+     *
+     * @param  array<array-key, mixed>  $input
+     */
+    public function exceedsInspectionBudget(array $input, int $maxBytes): bool
+    {
+        $remaining = $maxBytes;
+
+        return $this->consume($input, $remaining);
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $input
+     */
+    private function consume(array $input, int &$remaining): bool
+    {
+        foreach ($input as $key => $value) {
+            if (is_string($key)) {
+                $remaining -= strlen($key);
+            }
+
+            if (is_string($value)) {
+                $remaining -= strlen($value);
+            } elseif (is_array($value) && $this->consume($value, $remaining)) {
+                return true;
+            }
+
+            if ($remaining < 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Analisa uma string individual (após URL-decode, para ofuscação).
      */
     public function detectInString(string $value): ?string

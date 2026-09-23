@@ -48,19 +48,23 @@ final class EndpointSignature
      */
     public static function for(Request $request): string
     {
+        return self::matchedUri($request) ?? self::unmatchedMarker($request);
+    }
+
+    /**
+     * Padrão da rota que casa com a requisição, ou nulo quando nenhuma casa
+     * (rota inexistente ou método não permitido). É o que separa o tráfego de
+     * varredura do resto — ver App\Core\Logging\ScanTrafficSampler.
+     */
+    public static function matchedUri(Request $request): ?string
+    {
         $route = $request->route();
 
         if ($route instanceof Route && $route->uri() !== '') {
             return $route->uri();
         }
 
-        $matched = self::matchWithoutDispatching($request);
-
-        if ($matched !== null) {
-            return $matched;
-        }
-
-        return self::unmatchedMarker($request);
+        return self::matchWithoutDispatching($request);
     }
 
     /**
@@ -82,7 +86,7 @@ final class EndpointSignature
     /**
      * Marcador de rota não casada + profundidade do caminho pedido.
      */
-    private static function unmatchedMarker(Request $request): string
+    public static function unmatchedMarker(Request $request): string
     {
         /** @var string $marker */
         $marker = config('security.request_logging.unmatched_endpoint', '[unmatched]');
