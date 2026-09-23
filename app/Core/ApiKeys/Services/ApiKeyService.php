@@ -56,11 +56,7 @@ final class ApiKeyService
                 'status' => ApiKeyStatus::Active,
             ]);
 
-            $projectIds = $this->resolveProjectIds($user, $data['project_uuids'] ?? null);
-
-            if ($projectIds !== []) {
-                $apiKey->projects()->sync($projectIds);
-            }
+            $this->syncProjects($apiKey, $this->resolveProjectIds($user, $data['project_uuids'] ?? null));
 
             return $apiKey;
         });
@@ -96,6 +92,9 @@ final class ApiKeyService
                 'public_key' => $pair['public_key'],
                 'secret_hash' => $this->hasher->hash($pair['secret_key']),
                 'scopes' => $current->scopes,
+                // Herda a RESTRIÇÃO, não só a lista: a chave restrita cujos
+                // projetos foram todos excluídos continua sem acesso algum.
+                'restricted_to_projects' => $current->isRestrictedToProjects(),
                 'expires_at' => $current->expires_at,
                 'rotated_from_id' => $current->id,
                 'status' => ApiKeyStatus::Active,
@@ -128,6 +127,27 @@ final class ApiKeyService
         }
 
         $apiKey->forceFill(['status' => ApiKeyStatus::Revoked])->save();
+    }
+
+    /**
+     * Define o vínculo chave ↔ projetos — o ÚNICO ponto que muda a restrição.
+     *
+     * Lista com projetos = chave restrita a eles. Lista vazia = chave de conta
+     * toda (ADR-005): é a ação explícita de quem gerencia a conta. Os ids já
+     * devem ter passado por resolveProjectIds() (projetos do dono).
+     *
+     * A restrição NÃO é recalculada quando um projeto é excluído — a cascata
+     * remove o vínculo e a chave segue restrita, agora a menos projetos (ou a
+     * nenhum). É isso que impede que excluir projeto amplie o acesso.
+     *
+     * @param  list<int>  $projectIds
+     */
+    public function syncProjects(ApiKey $apiKey, array $projectIds): void
+    {
+        DB::transaction(function () use ($apiKey, $projectIds): void {
+            $apiKey->forceFill(['restricted_to_projects' => $projectIds !== []])->save();
+            $apiKey->projects()->sync($projectIds);
+        });
     }
 
     /**

@@ -227,7 +227,8 @@ final class Index extends Component
             ]);
         }
 
-        $key->projects()->sync($projectIds);
+        // Lista vazia = conta toda; com projetos = restrita (ApiKeyService).
+        $apiKeys->syncProjects($key, $projectIds);
 
         $this->cancelEditProjects();
         session()->flash('keys_status', __('panel.api_keys.projects_saved'));

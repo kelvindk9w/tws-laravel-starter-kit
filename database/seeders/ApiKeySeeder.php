@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
+use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
 use App\Core\Support\DemoSurface;
 use App\Core\Tenancy\Models\Project;
@@ -106,7 +107,7 @@ final class ApiKeySeeder extends Seeder
             $projetos = $projetosPorDono->get($dono);
 
             if ($projetos !== null && $indice % 3 !== 0) {
-                $chave->projects()->sync([$projetos->first()->id]);
+                app(ApiKeyService::class)->syncProjects($chave, [$projetos->first()->id]);
             }
         }
     }

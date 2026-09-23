@@ -33,6 +33,9 @@ final class ApiKeyResource extends BaseResource
             'expires_at' => $this->isoTimestamp($this->expires_at),
             'last_used_at' => $this->isoTimestamp($this->last_used_at),
             'grace_ends_at' => $this->isoTimestamp($this->grace_ends_at),
+            // Alcance da chave: `account` (conta toda) ou `projects` (só os
+            // listados em `projects` — que pode estar vazio: sem acesso).
+            'project_access' => $this->isRestrictedToProjects() ? 'projects' : 'account',
             'projects' => $this->whenLoaded('projects', fn (): array => $this->projects
                 ->map(fn ($project): array => [
                     'uuid' => $project->uuid,

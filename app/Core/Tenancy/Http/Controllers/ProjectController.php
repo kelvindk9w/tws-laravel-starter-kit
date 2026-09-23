@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy\Http\Controllers;
 
+use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Http\Requests\StoreProjectRequest;
 use App\Core\Tenancy\Http\Requests\UpdateProjectRequest;
@@ -16,8 +17,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * CRUD de projetos da API v1 (ADR-005 — camada organizacional).
  *
- * Isolamento de tenant: TODA consulta filtra pelo dono autenticado; projeto
- * de outro tenant = 404 uniforme (checklist itens 11/31).
+ * Isolamento: TODA consulta passa por Project::visibleToApiKey() — os projetos
+ * do dono da chave e, se a chave é vinculada a projetos, só os vinculados.
+ * Projeto de outro tenant, ou do mesmo dono fora do vínculo da chave = 404
+ * uniforme (checklist itens 11/31). Criar projeto é operação de conta: a rota
+ * exige chave sem vínculo (middleware account.key).
  */
 final class ProjectController extends Controller
 {
@@ -27,7 +31,7 @@ final class ProjectController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $projects = Project::query()
-            ->where('user_id', $this->tenantUser()->id)
+            ->visibleToApiKey($this->apiKey())
             ->latest()
             ->paginate((int) config('api_keys.pagination.per_page', 15));
 
@@ -93,16 +97,22 @@ final class ProjectController extends Controller
     }
 
     /**
-     * Localiza o projeto do tenant pelo UUID — 404 uniforme para projeto de
-     * outro tenant ou inexistente (anti-IDOR/BOLA, checklist item 11).
+     * Localiza o projeto pelo UUID entre os que a chave enxerga — 404
+     * uniforme para projeto de outro tenant, fora do vínculo da chave ou
+     * inexistente (anti-IDOR/BOLA, checklist item 11).
      */
     private function findOwned(string $uuid): Project
     {
         /** @var Project */
         return Project::query()
             ->where('uuid', $uuid)
-            ->where('user_id', $this->tenantUser()->id)
+            ->visibleToApiKey($this->apiKey())
             ->firstOrFail();
+    }
+
+    private function apiKey(): ApiKey
+    {
+        return tenantKey() ?? throw new \LogicException('Rota sem resolve.tenant.');
     }
 
     private function tenantUser(): User

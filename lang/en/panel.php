@@ -116,7 +116,7 @@ return [
         'edit' => 'Edit project',
         'empty' => 'You have no projects yet. Create the first one on this screen.',
         'delete_title' => 'Delete project',
-        'delete_warning' => 'Delete the project ":name"? API keys linked to it will see the whole account.',
+        'delete_warning' => 'Delete the project ":name"? API keys linked to it lose access to this project (they stay restricted to the remaining projects and never gain the whole account).',
         'created' => 'Project created successfully.',
         'updated' => 'Project updated successfully.',
         'deleted' => 'Project deleted successfully.',
@@ -151,6 +151,7 @@ return [
         'projects_hint' => 'No link = the key sees the whole account. Linked = restricted to the checked projects.',
         'projects_empty' => 'No projects yet — the key will see the whole account.',
         'whole_account' => 'Whole account',
+        'no_projects' => 'No projects (no access)',
         'edit_projects' => 'Projects',
 
         'create_heading' => 'Create API key',

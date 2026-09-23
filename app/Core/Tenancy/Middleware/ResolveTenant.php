@@ -46,11 +46,12 @@ final class ResolveTenant
 
     public function handle(Request $request, Closure $next): Response
     {
-        // Limite de FALHAS de autenticação por IP (ver ApiRateLimit): quem já
-        // errou a credencial vezes demais na janela recebe 429 antes de
-        // qualquer consulta ao banco ou verificação de hash. É o que impede
-        // um laço de chaves inválidas de escapar do limite da API — o
-        // `throttle:api` por chave roda DEPOIS desta camada e nunca vê o 401.
+        // Limite de FALHAS de autenticação (ver ApiRateLimit): por IP +
+        // credencial, e um teto por IP que não barra chave já autenticada
+        // daquele IP. Quem passou do limite recebe 429 antes de qualquer
+        // consulta ao banco ou verificação de hash. É o que impede um laço de
+        // chaves inválidas de escapar do limite da API — o `throttle:api` por
+        // chave roda DEPOIS desta camada e nunca vê o 401.
         ApiRateLimit::ensureAuthenticationAllowed($request);
 
         $publicKey = $request->header(self::PUBLIC_KEY_HEADER);
@@ -85,6 +86,8 @@ final class ResolveTenant
 
         $this->tenantContext->resolve($tenant, $apiKey);
 
+        ApiRateLimit::recordAuthenticationSuccess($request);
+
         // $request->user() e Auth::user() passam a ser o tenant nesta rota
         // (rate limiter por usuário, middleware sensitive.token, controllers).
         $request->setUserResolver(static fn () => $tenant);
@@ -99,7 +102,7 @@ final class ResolveTenant
     /**
      * 401 padronizado. O request log fica SEM tenant (sinal de ataque —
      * ADR-010); nenhum detalhe do motivo é exposto (não oracular). Toda
-     * recusa alimenta o balde de falhas do IP (ApiRateLimit).
+     * recusa alimenta os baldes de falhas (ApiRateLimit).
      */
     private function deny(Request $request): never
     {

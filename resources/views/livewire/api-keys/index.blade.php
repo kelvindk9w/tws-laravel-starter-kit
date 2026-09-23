@@ -201,7 +201,7 @@
                         </span>
                         <span class="mt-1 block text-caption text-text-muted sm:mt-0.5">
                             {{ __('panel.api_keys.projects_heading') }}:
-                            {{ $key->projects->isEmpty() ? __('panel.api_keys.whole_account') : $key->projects->pluck('name')->implode(', ') }}
+                            {{ ! $key->isRestrictedToProjects() ? __('panel.api_keys.whole_account') : ($key->projects->isEmpty() ? __('panel.api_keys.no_projects') : $key->projects->pluck('name')->implode(', ')) }}
                         </span>
                     </x-table-cell>
 

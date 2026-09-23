@@ -116,7 +116,7 @@ return [
         'edit' => 'Editar proyecto',
         'empty' => 'Aún no tienes proyectos. Crea el primero en esta pantalla.',
         'delete_title' => 'Eliminar proyecto',
-        'delete_warning' => '¿Eliminar el proyecto ":name"? Las claves de API vinculadas a él pasan a ver toda la cuenta.',
+        'delete_warning' => '¿Eliminar el proyecto ":name"? Las claves de API vinculadas a él pierden el acceso a este proyecto (siguen restringidas a los proyectos restantes y nunca pasan a ver toda la cuenta).',
         'created' => 'Proyecto creado con éxito.',
         'updated' => 'Proyecto actualizado con éxito.',
         'deleted' => 'Proyecto eliminado con éxito.',
@@ -151,6 +151,7 @@ return [
         'projects_hint' => 'Sin vínculo = la clave ve toda la cuenta. Con vínculo = restringida a los proyectos marcados.',
         'projects_empty' => 'Ningún proyecto aún — la clave verá toda la cuenta.',
         'whole_account' => 'Toda la cuenta',
+        'no_projects' => 'Ningún proyecto (sin acceso)',
         'edit_projects' => 'Proyectos',
 
         'create_heading' => 'Crear clave de API',

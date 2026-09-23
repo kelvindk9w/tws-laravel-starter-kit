@@ -228,7 +228,9 @@ it('rotação herda scopes e projetos da chave antiga', function () {
         'name' => 'Loja A',
     ]);
 
-    // A chave restrita precisa do scope api-keys:rotate para se autorrotacionar.
+    // A chave restrita precisa do scope api-keys:rotate para se autorrotacionar
+    // (rotacionar a SI MESMA é permitido à chave vinculada; rotacionar outra
+    // chave, não — ApiKeyProjectBindingTest).
     ['api_key' => $antiga, 'secret_key' => $segredoAntigo] = criarChave($user, [
         'scopes' => ['pix:create', 'api-keys:rotate'],
         'project_uuids' => [$projeto->uuid],
@@ -244,11 +246,15 @@ it('rotação herda scopes e projetos da chave antiga', function () {
 
     $nova = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
 
-    expect($nova->projects()->pluck('projects.id')->all())->toBe([$projeto->id]);
+    expect($nova->projects()->pluck('projects.id')->all())->toBe([$projeto->id])
+        ->and($nova->isRestrictedToProjects())->toBeTrue();
 });
 
 it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', function () {
-    ['user' => $user, 'api_key' => $key, 'secret_key' => $secret] = tenantBootstrap();
+    // Quem vincula é a chave de CONTA ($gestora); a vinculada é outra ($key).
+    // (Uma chave vinculada não gerencia chaves — ApiKeyProjectBindingTest.)
+    ['user' => $user, 'api_key' => $gestora, 'secret_key' => $secret] = tenantBootstrap();
+    $key = criarChave($user)['api_key'];
 
     $projetoA = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
     $projetoB = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja B']);
@@ -257,7 +263,7 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
     // Vincula dois projetos do tenant.
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
         'project_uuids' => [$projetoA->uuid, $projetoB->uuid],
-    ], headersApi($key, $secret))
+    ], headersApi($gestora, $secret))
         ->assertOk()
         ->assertJsonPath('message', __('api_keys.keys.projects_synced'));
 
@@ -268,16 +274,17 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
     assertErroDeValidacaoApi(
         $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
             'project_uuids' => [$projetoAlheio->uuid],
-        ], headersApi($key, $secret)),
+        ], headersApi($gestora, $secret)),
         'project_uuids',
     );
 
     // Lista vazia = sem vínculo (a chave volta a enxergar a conta toda — ADR-005).
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
         'project_uuids' => [],
-    ], headersApi($key, $secret))->assertOk();
+    ], headersApi($gestora, $secret))->assertOk();
 
-    expect($key->refresh()->projects()->count())->toBe(0);
+    expect($key->refresh()->projects()->count())->toBe(0)
+        ->and($key->isRestrictedToProjects())->toBeFalse();
 });
 
 it('não encontra chave de outro tenant para revogar/rotacionar (404 uniforme)', function () {

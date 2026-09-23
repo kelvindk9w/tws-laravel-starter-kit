@@ -21,6 +21,10 @@ use Illuminate\Validation\ValidationException;
  * (+ scope por rota); criação e rotação exigem ainda o token de ação
  * sensível (senha de transação + 2FA por e-mail — Fase 3).
  *
+ * As rotas exigem chave de CONTA (middleware account.key): chave vinculada a
+ * projetos não gerencia chaves, exceto rotacionar ou revogar a si mesma
+ * (account.key:self) — ver EnsureAccountWideApiKey.
+ *
  * Isolamento de tenant (checklist itens 11/31): TODA consulta é filtrada
  * pelo dono autenticado; chave de outro tenant = 404 uniforme (nunca 403,
  * para não revelar existência).
@@ -116,7 +120,8 @@ final class ApiKeyController extends Controller
 
     /**
      * PUT /api/v1/api-keys/{uuid}/projects — vínculo N:N chave ↔ projetos
-     * (scope api-keys:assign). Lista vazia = sem vínculo (conta toda — ADR-005).
+     * (scope api-keys:assign; só por chave de conta — account.key). Lista com
+     * projetos = chave restrita a eles; lista vazia = conta toda (ADR-005).
      */
     public function syncProjects(SyncApiKeyProjectsRequest $request, string $uuid): JsonResponse
     {
@@ -133,7 +138,7 @@ final class ApiKeyController extends Controller
             ]);
         }
 
-        $apiKey->projects()->sync($projectIds);
+        $this->apiKeys->syncProjects($apiKey, $projectIds);
 
         return response()->json([
             'message' => __('api_keys.keys.projects_synced'),

@@ -935,13 +935,14 @@ TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityVa
 
 ### Limite de requisições (rate limit) e contenção da trilha
 
-Três limites, do mais largo ao mais estreito, com orçamentos independentes:
+Os limites, do mais largo ao mais estreito, com orçamentos independentes:
 
 | Limite | Onde | Chave | Padrão | Variável |
 |---|---|---|---|---|
 | **Borda** (`EdgeRateLimit`) | global: páginas, Livewire, `/admin`, `/up`, API, rotas inexistentes | IP (IPv6 por prefixo /64) | 300/min | `RATE_LIMIT_WEB`, `RATE_LIMIT_WEB_DECAY_SECONDS`, `RATE_LIMIT_IPV6_PREFIX` |
 | `throttle:api` | grupo `api` | **chave de API** (ou tenant); IP em rota sem autenticação | 60/min | `RATE_LIMIT_API`, `RATE_LIMIT_API_BY` |
-| Falhas de autenticação da API | `resolve.tenant` | IP (IPv6 por prefixo) | 20/min | `RATE_LIMIT_API_AUTH_FAILURES`, `RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS` |
+| Falhas de autenticação da API — por credencial | `resolve.tenant` | IP (IPv6 por prefixo) + chave pública apresentada | 20/min | `RATE_LIMIT_API_AUTH_FAILURES`, `RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS` |
+| Falhas de autenticação da API — teto do IP | `resolve.tenant` | IP (IPv6 por prefixo); não barra chave já autenticada daquele IP | 100/min | `RATE_LIMIT_API_AUTH_FAILURES_PER_IP`, `RATE_LIMIT_API_AUTH_KNOWN_CLIENT_TTL_SECONDS` |
 | `throttle:sensitive` | login, códigos, recuperação de senha | usuário ou IP | 5/min | `RATE_LIMIT_SENSITIVE` |
 
 **Por que a borda é global, e não `throttle:` no grupo `web`.** Middleware de grupo não roda em
@@ -964,13 +965,35 @@ contava sempre por IP: duas integrações atrás do mesmo NAT dividiam o orçame
 ganhava orçamento novo a cada IP. Agora ele roda **depois** da autenticação (a ordem é garantida
 pela lista de prioridade de middleware em `bootstrap/app.php`, não pela posição na rota) e conta
 pela chave — ou pelo dono, com `RATE_LIMIT_API_BY=tenant`, para que criar chaves novas não
-multiplique o limite. Mover o limite para depois da autenticação abriria uma porta: a chave
-inválida é recusada com 401 **antes** de chegar ao throttle. Por isso as **falhas** de
-autenticação têm balde próprio por IP, consultado pelo próprio `resolve.tenant` antes de ler a
-credencial: passado o teto, o IP recebe 429 até a janela acabar — **inclusive para chaves
-válidas que saiam dele**, a troca de sempre do throttle de login (sem ela, bastaria intercalar
-uma chave boa para zerar o balde). O padrão é folgado (20 falhas/min): erro de configuração de
-uma integração são poucas por minuto; um laço de adivinhação são centenas. A regra inteira está
+multiplique o limite. Mover o limite para depois da autenticação abriria uma porta:
+a chave inválida é recusada com 401 **antes** de chegar ao throttle. Por isso as **falhas** de
+autenticação têm baldes próprios, consultados pelo próprio `resolve.tenant` antes de ler a
+credencial no banco:
+
+- **Por IP + chave pública apresentada** (20/min). Passado o teto, aquela credencial, daquele IP,
+  recebe 429 até a janela acabar — **inclusive com a secreta certa**, a troca de sempre do
+  throttle de login por conta + IP (sem ela, bastaria intercalar a secreta certa para zerar o
+  balde). As outras chaves que saem do mesmo IP não são afetadas.
+- **Teto por IP** (100/min, somando todas as chaves públicas). Sem ele, inventar uma chave
+  pública por tentativa daria um balde novo a cada requisição. Passado o teto, o IP só autentica
+  com chave que **já autenticou com sucesso a partir dele** nos últimos 7 dias; as demais recebem
+  429 sem verificação.
+
+**Por que dois baldes.** A primeira versão tinha um balde só, por IP, que valia para todas as
+chaves: num NAT de empresa, escola ou CGNAT de operadora, qualquer um atrás do mesmo endereço,
+com 20 chaves inválidas por minuto, derrubava as integrações legítimas dos vizinhos. Agora o
+erro de terceiros não bloqueia a chave válida de ninguém. O que sobra, e é aceito: uma integração
+**nova** (que nunca autenticou daquele IP) atrás de um NAT sob ataque espera a janela do teto; e
+quem conhece a chave pública de outro cliente **e sai do mesmo IP que ele** pode esgotar o balde
+daquela credencial naquele IP — o limite inerente a todo throttle por conta + IP (a chave
+pública é identificador, não segredo; a secreta tem ~285 bits e não se adivinha).
+
+**Os contadores não crescem sem limite.** Todos vivem no cache (Redis em produção) com TTL: os
+de falha, a janela (`RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS`); a marca de cliente conhecido,
+`RATE_LIMIT_API_AUTH_KNOWN_CLIENT_TTL_SECONDS` (gravada com `add`, uma vez por período, não por
+requisição). A chave pública entra na chave do cache como impressão curta (hash), nunca o valor
+que o cliente mandou. **`/api/health`**, a rota da API sem autenticação, conta por IP no
+`throttle:api` (60/min), além da borda. A regra inteira está
 em `App\Core\Security\ApiRateLimit`.
 
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
@@ -1374,10 +1397,11 @@ do ADR-010 (o log INICIADA é gravado antes, sem vínculo; a identificação fal
 **Limite de requisições por chave.** O `throttle:api` conta pela chave de API
 autenticada (`RATE_LIMIT_API`, 60/min; `RATE_LIMIT_API_BY=tenant` soma as chaves
 do mesmo dono), então integrações diferentes atrás do mesmo IP não disputam o
-mesmo orçamento. Falhas de autenticação contam por IP
-(`RATE_LIMIT_API_AUTH_FAILURES`, 20/min): passado o teto, o IP recebe 429 antes
-de a credencial ser verificada. Todo 429 sai no envelope de erro padrão
-(`too_many_requests`) com `Retry-After`. Detalhes em
+mesmo orçamento. Falhas de autenticação contam por IP + chave pública
+(`RATE_LIMIT_API_AUTH_FAILURES`, 20/min — só aquela credencial, naquele IP, recebe 429) e têm
+um teto por IP (`RATE_LIMIT_API_AUTH_FAILURES_PER_IP`, 100/min) que não barra chave já
+autenticada daquele IP: o erro de um vizinho de NAT não derruba integração legítima. Todo 429
+sai no envelope de erro padrão (`too_many_requests`) com `Retry-After`. Detalhes em
 [Limite de requisições](#limite-de-requisições-rate-limit-e-contenção-da-trilha).
 
 ### Scopes (permissões granulares — ADR-006)
@@ -1472,6 +1496,11 @@ Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
 | `PUT /api/v1/api-keys/{uuid}/projects` | `api-keys:assign` | vínculo N:N (lista vazia = conta toda — ADR-005) |
 | `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome (ADR-005) |
 
+Além do scope, o **vínculo da chave com projetos** limita o que ela alcança (ver
+[Projetos](#projetos-multi-empresa-organizacional--adr-005)): toda rota de `api-keys` e o
+`POST /projects` exigem chave **sem vínculo** — a chave vinculada recebe 403 mesmo com `*:*`,
+salvo para rotacionar ou revogar **a si mesma**.
+
 **Ação sensível** (criação e rotação de chave — ADR-010): exigem o token de
 curta duração da Fase 3 (senha de transação + 2FA por e-mail) no header
 `X-Sensitive-Action-Token`, obtido via `POST /sensitive-actions/code` +
@@ -1510,9 +1539,34 @@ Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
 ### Projetos (multi-empresa organizacional — ADR-005)
 
 `projects` (PRJ-xxxxxx): 1 login gerencia N projetos; nascem só com nome. O
-vínculo chave↔projeto é **N:N** e **opcional**: chave sem vínculo enxerga a
-conta toda; vinculada restringe àqueles projetos. No MVP são metadados
+vínculo chave↔projeto é **N:N** e **opcional**. No MVP são metadados
 organizacionais — a custódia segue uma por conta.
+
+**A regra do vínculo (vale para toda a API v1):**
+
+| | Chave **sem vínculo** (conta toda) | Chave **vinculada** a projetos |
+|---|---|---|
+| Listar / ver / alterar / excluir projeto | todos os do dono | só os vinculados; os demais, **mesmo do mesmo dono**, são 404 uniforme |
+| Criar projeto | sim (`projects:create`) | **403** — é operação de conta |
+| Listar, criar, vincular chaves | sim (scopes `api-keys:*`) | **403** — uma chave vinculada que pudesse se vincular a "nada" viraria conta toda |
+| Revogar / rotacionar chave | qualquer chave do dono | **só a si mesma** (nenhuma das duas amplia acesso; a rotação herda scopes **e** restrição) |
+
+O vínculo **limita** o scope, nunca o contrário: a chave vinculada criada com o padrão `*:*`
+continua sem poder fazer operação de conta.
+
+**Restrição é estado da chave, não da lista** (`api_keys.restricted_to_projects`). Excluir um
+projeto remove o vínculo em cascata (sem linha órfã) e a chave segue restrita aos projetos que
+sobraram — **ou a nenhum**, se era o último: ela passa a não enxergar projeto algum, e não
+"promovida" à conta toda, como acontecia quando a regra era deduzida da lista vazia. Voltar à
+conta toda é sempre uma ação explícita de quem gerencia as chaves: salvar a seleção vazia no
+painel ou mandar `project_uuids: []` com uma chave de conta. O campo `project_access` do
+recurso da chave (`account` | `projects`) mostra o estado.
+
+No painel e na API, só se vincula projeto **do próprio dono** — uuid de outro usuário é erro de
+validação e nada muda (`ApiKeyService::resolveProjectIds`). Uploads (`POST /uploads`) não se
+ligam a projeto: gravam no nível da conta e não leem dado de nenhum projeto.
+
+Testes: `tests/Feature/Tenancy/ApiKeyProjectBindingTest.php`.
 
 ### Testes
 

@@ -34,6 +34,7 @@ return [
         'updated' => 'Proyecto actualizado con éxito.',
         'deleted' => 'Proyecto eliminado con éxito.',
         'invalid' => 'Uno o más proyectos informados no existen en tu cuenta.',
+        'account_key_required' => 'Esta clave está vinculada a proyectos y solo actúa sobre ellos. Usa una clave sin vínculo (toda la cuenta) para crear proyectos y gestionar claves.',
     ],
 
 ];

@@ -35,6 +35,7 @@ return [
         'updated' => 'Project updated successfully.',
         'deleted' => 'Project removed successfully.',
         'invalid' => 'One or more of the given projects do not exist in your account.',
+        'account_key_required' => 'This key is linked to projects and only acts on them. Use an unlinked (whole account) key to create projects and manage keys.',
     ],
 
 ];

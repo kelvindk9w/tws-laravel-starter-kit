@@ -27,34 +27,45 @@ Route::get('/health', HealthController::class)->name('api.health');
 // =============================================================================
 Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(function (): void {
     // --- Chaves de API -------------------------------------------------------
-    Route::get('api-keys', [ApiKeyController::class, 'index'])
-        ->middleware('scope:api-keys:read')
-        ->name('api-keys.index');
+    // Gerenciar chaves é operação de CONTA: exige chave sem vínculo a projetos
+    // (account.key). Uma chave vinculada que pudesse gerenciar chaves se
+    // desvincularia sozinha — o vínculo limita o scope, nunca o contrário.
+    // Exceção: a chave vinculada pode rotacionar ou revogar a SI MESMA
+    // (account.key:self) — nenhuma das duas amplia acesso.
+    Route::middleware('account.key')->group(function (): void {
+        Route::get('api-keys', [ApiKeyController::class, 'index'])
+            ->middleware('scope:api-keys:read')
+            ->name('api-keys.index');
 
-    Route::post('api-keys', [ApiKeyController::class, 'store'])
-        ->middleware(['scope:api-keys:create', 'sensitive.token'])
-        ->name('api-keys.store');
+        Route::post('api-keys', [ApiKeyController::class, 'store'])
+            ->middleware(['scope:api-keys:create', 'sensitive.token'])
+            ->name('api-keys.store');
 
-    Route::delete('api-keys/{uuid}', [ApiKeyController::class, 'destroy'])
-        ->middleware('scope:api-keys:revoke')
-        ->name('api-keys.destroy');
+        // Vínculo N:N chave ↔ projetos (lista vazia = chave enxerga a conta toda).
+        Route::put('api-keys/{uuid}/projects', [ApiKeyController::class, 'syncProjects'])
+            ->middleware('scope:api-keys:assign')
+            ->name('api-keys.projects.sync');
+    });
 
-    Route::post('api-keys/{uuid}/rotate', [ApiKeyController::class, 'rotate'])
-        ->middleware(['scope:api-keys:rotate', 'sensitive.token'])
-        ->name('api-keys.rotate');
+    Route::middleware('account.key:self')->group(function (): void {
+        Route::delete('api-keys/{uuid}', [ApiKeyController::class, 'destroy'])
+            ->middleware('scope:api-keys:revoke')
+            ->name('api-keys.destroy');
 
-    // Vínculo N:N chave ↔ projetos (lista vazia = chave enxerga a conta toda).
-    Route::put('api-keys/{uuid}/projects', [ApiKeyController::class, 'syncProjects'])
-        ->middleware('scope:api-keys:assign')
-        ->name('api-keys.projects.sync');
+        Route::post('api-keys/{uuid}/rotate', [ApiKeyController::class, 'rotate'])
+            ->middleware(['scope:api-keys:rotate', 'sensitive.token'])
+            ->name('api-keys.rotate');
+    });
 
     // --- Projetos (camada organizacional — ADR-005) ---------------------------
+    // Chave vinculada a projetos só enxerga os vinculados (404 nos demais) e
+    // não cria projeto (operação de conta — account.key).
     Route::get('projects', [ProjectController::class, 'index'])
         ->middleware('scope:projects:read')
         ->name('projects.index');
 
     Route::post('projects', [ProjectController::class, 'store'])
-        ->middleware('scope:projects:create')
+        ->middleware(['account.key', 'scope:projects:create'])
         ->name('projects.store');
 
     Route::get('projects/{uuid}', [ProjectController::class, 'show'])

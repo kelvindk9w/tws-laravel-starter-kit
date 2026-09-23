@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Core\ApiKeys\Http\Middleware\EnsureAccountWideApiKey;
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\EnsureAccountIsActive;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
@@ -121,6 +122,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'resolve.tenant' => ResolveTenant::class,
             // Autorização por scope da chave (ADR-006): 'scope:recurso:acao'.
             'scope' => EnsureApiKeyScope::class,
+            // Operação de conta (gerenciar chaves, criar projeto): recusa a
+            // chave vinculada a projetos (ADR-005/006).
+            'account.key' => EnsureAccountWideApiKey::class,
         ]);
 
         // Deny-by-default (checklist 13): convidado em rota `auth` vai para

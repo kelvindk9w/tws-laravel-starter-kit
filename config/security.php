@@ -211,15 +211,31 @@ return [
         'api_by' => (string) env('RATE_LIMIT_API_BY', 'key'),
 
         // Falhas de autenticação da API (credencial ausente, inválida, chave
-        // revogada/expirada) toleradas por IP na janela abaixo. Acima disso o
-        // IP recebe 429 ANTES de a credencial ser verificada — inclusive para
-        // chaves válidas que saiam dele, até a janela passar (é o que impede
-        // intercalar uma chave boa para zerar o balde). Existe porque o limite
-        // por chave roda depois da autenticação e não vê o 401.
+        // revogada/expirada) — dois baldes, ver App\Core\Security\ApiRateLimit.
+        //
+        // Por IP + CHAVE PÚBLICA apresentada: acima disso, aquela credencial,
+        // daquele IP, recebe 429 ANTES de ser verificada — mesmo que a secreta
+        // venha certa depois, até a janela passar (é o que impede intercalar a
+        // secreta certa para zerar o balde). As outras chaves que saem do
+        // mesmo IP não são afetadas: o erro de um vizinho de NAT não derruba
+        // a integração de ninguém.
         'api_auth_failures' => (int) env('RATE_LIMIT_API_AUTH_FAILURES', 20),
 
-        // Janela do limite de falhas acima, em segundos.
+        // TETO por IP (IPv6 por prefixo), somando todas as chaves públicas —
+        // sem ele, inventar uma chave pública por tentativa daria um balde
+        // novo a cada requisição. Acima dele, o IP só autentica com chave que
+        // JÁ autenticou com sucesso a partir dele (marca abaixo); as demais
+        // recebem 429. Bem mais alto que o balde por credencial, e abaixo do
+        // teto da borda (RATE_LIMIT_WEB).
+        'api_auth_failures_per_ip' => (int) env('RATE_LIMIT_API_AUTH_FAILURES_PER_IP', 100),
+
+        // Janela dos dois limites acima, em segundos.
         'api_auth_failures_decay_seconds' => (int) env('RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS', 60),
+
+        // Por quanto tempo uma chave que autenticou com sucesso a partir de um
+        // IP continua "conhecida" dele (passa pelo teto por IP). Renovada na
+        // primeira autenticação depois de expirar. Padrão: 7 dias.
+        'api_auth_known_client_ttl_seconds' => (int) env('RATE_LIMIT_API_AUTH_KNOWN_CLIENT_TTL_SECONDS', 604800),
 
         // Rotas sensíveis (login, códigos 2FA/verificação, recuperação de senha):
         // middleware throttle:sensitive.

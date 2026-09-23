@@ -10,6 +10,7 @@ use App\Core\Identifiers\HasPublicCode;
 use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,6 +74,24 @@ class Project extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Projetos que a CHAVE DE API enxerga (ADR-005/006): sempre só os do dono
+     * da chave; se a chave é restrita, só os vinculados a ela — inclusive
+     * nenhum, quando todos os vinculados foram excluídos (fail-closed).
+     *
+     * Toda consulta de projeto feita em nome de uma chave passa por aqui.
+     *
+     * @param  Builder<Project>  $query
+     */
+    public function scopeVisibleToApiKey(Builder $query, ApiKey $apiKey): void
+    {
+        $query->where('user_id', $apiKey->user_id);
+
+        if ($apiKey->isRestrictedToProjects()) {
+            $query->whereHas('apiKeys', fn (Builder $keys) => $keys->whereKey($apiKey->getKey()));
+        }
     }
 
     /**

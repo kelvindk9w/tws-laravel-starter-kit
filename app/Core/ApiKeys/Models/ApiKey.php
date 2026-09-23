@@ -35,7 +35,7 @@ use Illuminate\Support\Carbon;
  * inatividade (job diário — ver config/api_keys.php).
  */
 #[Fillable([
-    'user_id', 'name', 'public_key', 'secret_hash', 'scopes',
+    'user_id', 'name', 'public_key', 'secret_hash', 'scopes', 'restricted_to_projects',
     'expires_at', 'last_used_at', 'inactivity_warning_sent_at',
     'rotated_from_id', 'rotated_to_id', 'grace_ends_at', 'status',
 ])]
@@ -56,6 +56,7 @@ class ApiKey extends Model
      */
     protected $attributes = [
         'status' => 'active',
+        'restricted_to_projects' => false,
     ];
 
     /**
@@ -75,6 +76,7 @@ class ApiKey extends Model
     {
         return [
             'scopes' => 'array',
+            'restricted_to_projects' => 'boolean',
             'expires_at' => 'datetime',
             'last_used_at' => 'datetime',
             'inactivity_warning_sent_at' => 'datetime',
@@ -94,13 +96,29 @@ class ApiKey extends Model
     }
 
     /**
-     * Projetos vinculados (N:N — ADR-005/006). Sem vínculo = conta toda.
+     * Projetos vinculados (N:N — ADR-005/006). Quem decide se a chave é
+     * restrita é `restricted_to_projects`, não esta lista — ver
+     * isRestrictedToProjects().
      *
      * @return BelongsToMany<Project, $this>
      */
     public function projects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'api_key_project')->withTimestamps();
+    }
+
+    /**
+     * A chave está RESTRITA aos projetos vinculados?
+     *
+     * Restrita: só enxerga os projetos da lista (que pode ficar vazia quando
+     * os projetos são excluídos — aí não enxerga nenhum, fail-closed) e não
+     * faz operação de conta (criar projeto, gerenciar chaves). Não restrita:
+     * conta toda. É um estado da chave, gravado quando o vínculo é definido
+     * (ApiKeyService), para que excluir projeto nunca amplie o acesso.
+     */
+    public function isRestrictedToProjects(): bool
+    {
+        return (bool) $this->restricted_to_projects;
     }
 
     /**

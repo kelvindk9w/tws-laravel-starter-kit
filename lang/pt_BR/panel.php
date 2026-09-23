@@ -116,7 +116,7 @@ return [
         'edit' => 'Editar projeto',
         'empty' => 'Você ainda não tem projetos. Crie o primeiro nesta tela.',
         'delete_title' => 'Excluir projeto',
-        'delete_warning' => 'Excluir o projeto ":name"? As chaves de API vinculadas a ele passam a enxergar a conta toda.',
+        'delete_warning' => 'Excluir o projeto ":name"? As chaves de API vinculadas a ele perdem o acesso a este projeto (continuam restritas aos projetos que sobrarem, nunca passam a enxergar a conta toda).',
         'created' => 'Projeto criado com sucesso.',
         'updated' => 'Projeto atualizado com sucesso.',
         'deleted' => 'Projeto excluído com sucesso.',
@@ -151,6 +151,7 @@ return [
         'projects_hint' => 'Sem vínculo = a chave enxerga a conta toda. Com vínculo = restrita aos projetos marcados.',
         'projects_empty' => 'Nenhum projeto ainda — a chave enxergará a conta toda.',
         'whole_account' => 'Conta toda',
+        'no_projects' => 'Nenhum projeto (sem acesso)',
         'edit_projects' => 'Projetos',
 
         'create_heading' => 'Criar chave de API',
