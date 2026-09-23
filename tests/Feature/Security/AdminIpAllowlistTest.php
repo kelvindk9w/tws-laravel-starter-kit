@@ -281,7 +281,13 @@ it('admin desativado com sessão viva perde o /horizon, não só o /admin', func
     $admin = User::factory()->create(['is_admin' => true, 'status' => $status]);
 
     $this->actingAs($admin)->get('/admin')->assertForbidden();
-    $this->actingAs($admin)->get('/horizon')->assertForbidden();
+
+    // O /horizon está no grupo `web`, onde o EnsureAccountIsActive encerra a
+    // sessão de conta não ativa antes até do gate: o admin desativado sai
+    // deslogado e vai ao login. O gate (exige conta ativa) continua sendo a
+    // segunda camada — coberto isoladamente no teste seguinte.
+    $this->actingAs($admin)->get('/horizon')->assertRedirect(route('login'));
+    $this->assertGuest();
 })->with([
     'bloqueado' => UserStatus::Blocked,
     'pendente' => UserStatus::Pending,

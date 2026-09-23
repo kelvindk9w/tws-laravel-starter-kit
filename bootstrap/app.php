@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
+use App\Core\Auth\Http\Middleware\EnsureAccountIsActive;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use App\Core\Http\Exceptions\ApiErrorRenderer;
 use App\Core\Http\Middleware\TrustHosts;
@@ -100,7 +101,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Locale da interface web (ADR-007): usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
-        $middleware->web(append: [SetLocale::class]);
+        //
+        // Status da conta a cada requisição web (depois do SetLocale, para a
+        // mensagem sair no idioma da conta): conta bloqueada/pendente com
+        // sessão aberta perde a sessão na próxima requisição — página,
+        // formulário ou ação Livewire (o endpoint do Livewire está no grupo
+        // `web`). Ver EnsureAccountIsActive.
+        $middleware->web(append: [SetLocale::class, EnsureAccountIsActive::class]);
 
         // Aliases para uso explícito em rotas/grupos.
         $middleware->alias([

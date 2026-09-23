@@ -150,15 +150,31 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => url('/'))
                     ->icon(Heroicon::OutlinedArrowLeftOnRectangle),
             ])
+            // Barreira de ORIGEM (ADR-011) — PRIMEIRA da pilha de propósito:
+            // requisição de origem não permitida é recusada antes de a sessão
+            // ser aberta, o CSRF processado ou o painel montado. Ela estava no
+            // FIM da lista, o que fazia um IP barrado ainda ganhar cookie de
+            // sessão e passar por todo o pipeline do painel para só então
+            // receber 403. Barreira externa tem de ser externa. Ver
+            // AdminIpAllowlist.
+            //
+            // PERSISTENTE (segundo argumento): as AÇÕES dos componentes do
+            // painel não chegam pelas rotas /admin/..., e sim pelo endpoint
+            // de atualização do Livewire — uma rota única, fora deste prefixo,
+            // que também atende o painel do usuário e NÃO carrega esta pilha.
+            // Ali o Livewire só reaplica os middlewares marcados como
+            // persistentes, e só para componentes cuja rota de origem (gravada
+            // no snapshot assinado) os declarava. Sem isto, a allowlist valia
+            // para abrir a página, mas não para executar a ação dela: de fora
+            // da lista, um snapshot obtido de dentro continuava operando o
+            // painel (inclusive a tela de login). O Authenticate do Filament
+            // (is_admin + conta ativa) já é persistente por padrão do pacote.
+            //
+            // Declarada em chamada PRÓPRIA porque o flag vale para a lista
+            // inteira passada — os middlewares de sessão/cookie abaixo não
+            // podem ser reexecutados no endpoint do Livewire.
+            ->middleware([EnsureAdminIpAllowed::class], isPersistent: true)
             ->middleware([
-                // Barreira de ORIGEM (ADR-011) — PRIMEIRA da pilha de
-                // propósito: requisição de origem não permitida é recusada
-                // antes de a sessão ser aberta, o CSRF processado ou o painel
-                // montado. Ela estava no FIM da lista, o que fazia um IP
-                // barrado ainda ganhar cookie de sessão e passar por todo o
-                // pipeline do painel para só então receber 403. Barreira
-                // externa tem de ser externa. Ver AdminIpAllowlist.
-                EnsureAdminIpAllowed::class,
                 // Bundle JS normal do Livewire (com eval) só no /admin — o
                 // Filament 5 não funciona com o build CSP-safe do Alpine.
                 UseEvalBundleForAdmin::class,

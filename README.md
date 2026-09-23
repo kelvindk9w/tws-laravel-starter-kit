@@ -1248,7 +1248,22 @@ o par de chaves pk_/sk_ no header — ver *API Keys & Tenancy*).
   `encrypted` (AES-256-GCM da `APP_KEY`). `email` fica em texto (é a chave de lookup
   do login; UNIQUE no banco). Classificação de dados do ADR-006: o que pode ser texto
   é texto; o que exige criptografia é criptografado; segredos ficam só como hash.
-- `status` (`UserStatus`): login é **deny-by-default** — só conta `active` autentica.
+- `status` (`UserStatus`): **deny-by-default** — só conta `active` opera, e isso vale
+  **a cada requisição**, não só no login:
+  - **Web** (`EnsureAccountIsActive`, no grupo `web`): conta bloqueada ou pendente com
+    sessão aberta tem a sessão encerrada na requisição seguinte (página, formulário ou
+    ação Livewire — o endpoint de atualização do Livewire também está no grupo `web`) e
+    vai ao login com a mensagem traduzida `auth.account_inactive`. Chamada que espera
+    JSON recebe 401 com a mesma mensagem.
+  - **API**: o `ResolveTenant` confere o dono da chave a cada chamada; conta não ativa
+    → 401 no envelope padrão, sem dizer o motivo. A chave não é revogada — volta a
+    funcionar se a conta for reativada.
+  - **/admin**: `canAccessPanel` exige `is_admin` + conta ativa (também nas ações
+    Livewire do painel — o `Authenticate` do Filament é middleware persistente).
+  - **`pending` é tratado como `blocked`**: é conta ainda não liberada, e o kit não tem
+    fluxo que dependa de ela operar parcialmente. Se o seu projeto precisar de conta
+    pendente com acesso restrito (ex.: completar cadastro), crie a exceção explícita
+    no `EnsureAccountIsActive` — não afrouxe o `isActive()`.
 
 ### Fluxos web (rotas em `routes/web.php`, Form Requests em `Http/Requests`)
 
@@ -1773,7 +1788,14 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   exato, faixa CIDR IPv4 e IPv6 com ou sem prefixo, separados por vírgula
   (espaços são aparados). É o PRIMEIRO middleware da pilha do painel —
   origem não permitida é recusada antes de a sessão ser aberta. Vale também
-  para o `/horizon` e para os downloads de export/import do Filament.
+  para o `/horizon`, para os downloads de export/import do Filament e para
+  as **ações dos componentes do painel**: essas não chegam pelas rotas
+  `/admin/...`, e sim pelo endpoint de atualização do Livewire (uma rota
+  única, compartilhada com o painel do usuário). Por isso a barreira é
+  registrada como **middleware persistente do Livewire**
+  (`->middleware([...], isPersistent: true)` no `AdminPanelProvider`): o
+  Livewire a reaplica só para componentes cuja rota de origem, gravada no
+  snapshot assinado, é do `/admin` — o painel do usuário não é afetado.
   - **Fora de produção, vazio libera** (o IP de quem desenvolve é o que o
     Docker der, e não há segredo atrás do `/admin` de dev).
   - **Em produção, vazio RECUSA** (403). Antes, vazio liberava qualquer

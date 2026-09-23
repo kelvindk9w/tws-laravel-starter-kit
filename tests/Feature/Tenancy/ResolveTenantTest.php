@@ -78,7 +78,7 @@ it('rejeita credenciais ausentes, secreta errada ou pk_ inexistente com 401 e lo
     'pk_ inexistente' => [['X-Api-Key' => 'pk_test_inexistente', 'Authorization' => 'Bearer sk_test_qualquer']],
 ]);
 
-it('rejeita chave revogada, expirada por data ou com usuário bloqueado', function (string $cenario) {
+it('rejeita chave revogada, expirada por data ou com usuário bloqueado/pendente', function (string $cenario) {
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
 
@@ -86,12 +86,15 @@ it('rejeita chave revogada, expirada por data ou com usuário bloqueado', functi
         'revogada' => $key->forceFill(['status' => ApiKeyStatus::Revoked])->save(),
         'expirada' => $key->forceFill(['expires_at' => now()->subMinute()])->save(),
         'usuario bloqueado' => $user->forceFill(['status' => UserStatus::Blocked])->save(),
+        // Pendente = bloqueada (deny-by-default: só Active opera, igual ao
+        // login e ao painel web — ver EnsureAccountIsActive).
+        'usuario pendente' => $user->forceFill(['status' => UserStatus::Pending])->save(),
     };
 
     $this->getJson('/api/v1/_test/tenant', headersApi($key, $secret))
         ->assertUnauthorized()
         ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
-})->with(['revogada', 'expirada', 'usuario bloqueado']);
+})->with(['revogada', 'expirada', 'usuario bloqueado', 'usuario pendente']);
 
 it('rejeita chave inativa além do limite configurado (middleware checa inatividade)', function () {
     config()->set('api_keys.inactivity.months', 3);
