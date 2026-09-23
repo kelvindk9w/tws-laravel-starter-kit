@@ -106,7 +106,12 @@ MSG
     export APP_KEY
 fi
 
-php artisan storage:link --no-interaction 2>/dev/null || true
+# O link public/storage já vem pronto na imagem (o public/ não é gravável pelo
+# processo). Só se cria aqui quando falta — rodar sempre imprimia um "ERROR ...
+# link already exists" a cada subida, que ensina a ignorar a palavra ERROR.
+if [ ! -e public/storage ]; then
+    php artisan storage:link --no-interaction >/dev/null 2>&1 || true
+fi
 
 # Publica os arquivos estáticos no volume compartilhado com o nginx
 # (o nginx de produção não tem o código — recebe só o public/ read-only).

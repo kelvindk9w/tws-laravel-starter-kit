@@ -105,6 +105,12 @@ x-app-env: &app-env
   REDIS_HOST: redis
   REDIS_PASSWORD: ${PROD_REDIS_PASSWORD:?defina PROD_REDIS_PASSWORD (sem valor padrao - ver .env.prod.example)}
   REDIS_PORT: 6379
+  # E-mail: SEM PROD_MAIL_MAILER o mailer fica `log`, e em produção a
+  # aplicação RECUSA enviar por ele — o `log` gravaria cada e-mail inteiro
+  # (código 2FA, link de redefinição de senha, dados pessoais) no arquivo de
+  # log. A stack sobe normalmente; o que falha, com a instrução do conserto, é
+  # cada job de e-mail no Horizon. Configure PROD_MAIL_* (e MAIL_USERNAME /
+  # MAIL_PASSWORD no .env.prod). Ver App\Core\Mail\NonDeliveringMailers.
   MAIL_MAILER: ${PROD_MAIL_MAILER:-log}
   MAIL_HOST: ${PROD_MAIL_HOST:-}
   MAIL_PORT: ${PROD_MAIL_PORT:-2525}

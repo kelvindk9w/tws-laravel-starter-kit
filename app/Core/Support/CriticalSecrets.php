@@ -325,8 +325,12 @@ final class CriticalSecrets
      * resolvido ainda: o container só descobre qual comando roda depois que
      * todos os providers subiram. `argv[1]` é a posição do nome do comando em
      * `php artisan <comando> ...`.
+     *
+     * Público porque outras regras de boot usam o mesmo sinal para saber se o
+     * processo atual é um dos que processam trabalho (ver o aviso do mailer que
+     * não entrega, no AppServiceProvider).
      */
-    private static function currentCommand(): ?string
+    public static function currentCommand(): ?string
     {
         /** @var list<string> $arguments */
         $arguments = (array) ($_SERVER['argv'] ?? []);

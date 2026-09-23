@@ -28,6 +28,14 @@ Schedule::command('api-keys:process-inactivity')
 // health check de idade/tamanho. onOneServer/withoutOverlapping evitam
 // execução dupla em deploys com múltiplos schedulers.
 // =============================================================================
+// Poda da tabela `failed_jobs`: job falho guarda o payload e o texto da
+// exceção, e sem poda isso fica para sempre. Janela em
+// queue.failed.retention_hours (QUEUE_FAILED_RETENTION_HOURS, padrão 7 dias).
+Schedule::command('queue:prune-failed', ['--hours' => (int) config('queue.failed.retention_hours', 168)])
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('backup:run --only-db')
     ->cron((string) env('BACKUP_RUN_CRON', '0 * * * *'))
     ->withoutOverlapping()

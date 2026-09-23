@@ -124,6 +124,14 @@ return [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'sqlite'),
         'table' => 'failed_jobs',
+
+        // Janela de retenção da tabela `failed_jobs`, em horas. Sem poda, a
+        // tabela guarda para sempre o payload de todo job que falhou e o texto
+        // da exceção — que costuma trazer o endereço do destinatário de um
+        // e-mail recusado pelo servidor SMTP. O `queue:prune-failed` roda
+        // diariamente (routes/console.php) e apaga o que passou desta janela.
+        // Padrão: 168 h (7 dias), a mesma retenção de job falho do Horizon.
+        'retention_hours' => (int) env('QUEUE_FAILED_RETENTION_HOURS', 168),
     ],
 
 ];

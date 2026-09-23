@@ -178,6 +178,19 @@ return [
         'allow_unencrypted_in_production' => (bool) env('BACKUP_ALLOW_UNENCRYPTED_IN_PRODUCTION', false),
     ],
 
+    // --- E-mail que não é entregue -----------------------------------------------
+    // Em produção, os transportes `log` (grava a mensagem inteira — código 2FA,
+    // link de redefinição de senha, dados pessoais — no arquivo de log) e
+    // `array` (descarta em silêncio) RECUSAM o envio: o job de e-mail falha com
+    // a instrução do que configurar. O boot e a instalação não são afetados.
+    // A regra e a justificativa estão em App\Core\Mail\NonDeliveringMailers.
+    'mail' => [
+        // Opt-out consciente, para instalação descartável com APP_ENV=production
+        // e sem servidor de e-mail (demo hospedada, ensaio de deploy). Cada boot
+        // grava aviso no log enquanto estiver ligado.
+        'allow_non_delivering_in_production' => (bool) env('MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION', false),
+    ],
+
     // --- Redirecionamento "de volta" (open redirect) ---------------------------
     // Toda rota que devolve o usuário ao endereço anterior (alternador de
     // idioma, `back()`, parâmetros `?redirect=`) só pode redirecionar para

@@ -64,3 +64,58 @@ jobs:
 
       - name: Testes (Pest)
         run: ./vendor/bin/pest --ci
+
+  # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
+  # cada push e PR — sem enviar para registry nenhum.
+  #
+  # POR QUE ESTE JOB EXISTE: a imagem de produção ficou sem construir desde que
+  # o Horizon entrou (o estágio do composer não tinha ext-pcntl), e nada
+  # percebeu, porque o CI testava o código mas nunca construía a imagem que vai
+  # para o servidor. Um kit cuja imagem de produção não constrói não pode ser
+  # divulgado. Build que falha aqui = CI vermelho.
+  images:
+    name: Imagens de produção (app · nginx)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: app
+            dockerfile: docker/php/Dockerfile
+          - image: nginx
+            dockerfile: docker/nginx/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.image }} (target prod)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: prod
+          push: false
+          load: ${{ matrix.image == 'app' }}
+          tags: tws-starter-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=prod-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=prod-${{ matrix.image }}
+
+      # Prova mínima de que a imagem do app é utilizável, e de que nada que não
+      # deveria viajar foi junto: arquivo de ambiente, testes, storage local.
+      - name: Conferência da imagem do app
+        if: matrix.image == 'app'
+        run: |
+          docker run --rm --entrypoint php tws-starter-app:ci -m | grep -qx pcntl
+          docker run --rm --entrypoint sh tws-starter-app:ci -c '
+            set -e
+            test "$(id -u)" != 0
+            for proibido in .env .env.example .env.prod.example tests phpunit.xml node_modules; do
+              if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
+            done
+            test -z "$(find /var/www/html/storage -type f)"
+            php artisan --version
+          '

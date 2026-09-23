@@ -8,6 +8,7 @@ use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
 use App\Core\Backup\Console\GuardedBackupCommand;
 use App\Core\Http\TrustedProxies;
+use App\Core\Mail\NonDeliveringMailers;
 use App\Core\Security\AdminIpAllowlist;
 use App\Core\Security\ApiRateLimit;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
@@ -133,6 +134,36 @@ class AppServiceProvider extends ServiceProvider
                 Log::warning(sprintf(
                     'A allowlist do /admin contém endereços que são proxies confiáveis (%s): como TODA requisição chega com o endereço do proxy, a barreira de origem aceita qualquer visitante — configurada na aparência, inexistente na prática. Remova esses endereços de ADMIN_ALLOWED_IPS e liste os IPs de quem ADMINISTRA. Ver App\Core\Security\AdminIpAllowlist.',
                     implode(', ', AdminIpAllowlist::proxyEntries()),
+                ));
+            }
+
+            // E-mail que não é entregue (ver NonDeliveringMailers). Em produção,
+            // `log` e `array` RECUSAM o envio — o job de e-mail falha com a
+            // instrução do conserto. Aqui ficam os dois avisos de boot:
+            //
+            //   OPT-OUT declarado → aviso a cada boot, como todo opt-out de
+            //   segurança deste bloco.
+            //
+            //   Mailer padrão que não entrega, SEM opt-out → aviso só na subida
+            //   dos processos que processam trabalho (horizon, queue:work,
+            //   schedule:run), porque são eles que enviam o e-mail e a subida
+            //   deles é o sinal mais precoce que a operação lê. Não em todo
+            //   processo: sem `.env` o mailer padrão é `log` e o Laravel se
+            //   considera em produção, então um aviso geral sairia em todo
+            //   `composer install` do CI e de todo build de imagem — ruído que
+            //   ensina a ignorar avisos. E não no php-fpm, onde viraria uma
+            //   linha por requisição; ali quem relata é a própria recusa, no
+            //   job que falhou.
+            if (NonDeliveringMailers::allowedInProductionByOptOut()) {
+                Log::warning('MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION está ligado: em produção, os transportes de e-mail `log` e `array` estão LIBERADOS. Com `log`, cada e-mail — código de verificação, link de redefinição de senha, dados pessoais — é gravado inteiro no arquivo de log; com `array`, é descartado. Só use isto numa instalação descartável. Ver App\Core\Mail\NonDeliveringMailers.');
+            } elseif (
+                NonDeliveringMailers::defaultIsNonDelivering()
+                && $this->app->runningInConsole()
+                && CriticalSecrets::isProcessingCommand(CriticalSecrets::currentCommand())
+            ) {
+                Log::warning(sprintf(
+                    'O mailer padrão (MAIL_MAILER=%s) não entrega e-mail, e em APP_ENV=production todo envio por ele será RECUSADO — cada e-mail da plataforma (código de verificação, redefinição de senha, contato) vai falhar no Horizon. Configure um mailer de verdade (smtp, ses, postmark, resend). Ver App\Core\Mail\NonDeliveringMailers e README, seção Produção.',
+                    (string) config('mail.default'),
                 ));
             }
         }

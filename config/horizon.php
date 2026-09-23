@@ -144,13 +144,29 @@ return [
     |
     */
 
+    // Por quanto tempo (minutos) o Horizon guarda cada job no Redis — COM o
+    // payload, que é o que o dashboard /horizon exibe.
+    //
+    // O payload dos jobs de e-mail e notificação do kit sai CRIPTOGRAFADO com a
+    // APP_KEY (ShouldBeEncrypted em App\Core\Mail\KitMailable e na
+    // ResetPasswordNotification): código de verificação, token de redefinição
+    // de senha, destinatário e mensagem do formulário de contato ficam
+    // ilegíveis aqui. Job NOVO que carregue dado pessoal ou segredo deve fazer o
+    // mesmo — o teste de arquitetura em tests/Feature/Horizon cobra isso de todo
+    // Mailable e Notification enfileirável.
+    //
+    // A retenção continua sendo a segunda linha: o que não precisa ficar, não
+    // fica. Concluídos saem em 1 hora; falhos ficam 7 dias por padrão — o tempo
+    // de alguém ver o alerta, investigar e dar retry. A tabela `failed_jobs`
+    // (o registro do framework, fora do Redis) segue a mesma janela pela poda
+    // agendada em routes/console.php (QUEUE_FAILED_RETENTION_HOURS).
     'trim' => [
-        'recent' => 60,
-        'pending' => 60,
-        'completed' => 60,
-        'recent_failed' => 10080,
-        'failed' => 10080,
-        'monitored' => 10080,
+        'recent' => (int) env('HORIZON_TRIM_RECENT_MINUTES', 60),
+        'pending' => (int) env('HORIZON_TRIM_RECENT_MINUTES', 60),
+        'completed' => (int) env('HORIZON_TRIM_RECENT_MINUTES', 60),
+        'recent_failed' => (int) env('HORIZON_TRIM_FAILED_MINUTES', 10080),
+        'failed' => (int) env('HORIZON_TRIM_FAILED_MINUTES', 10080),
+        'monitored' => (int) env('HORIZON_TRIM_FAILED_MINUTES', 10080),
     ],
 
     /*

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Mail\Providers;
 
+use App\Core\Mail\NonDeliveringMailers;
+use Illuminate\Mail\MailManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,9 +30,23 @@ use Illuminate\Support\ServiceProvider;
  *   *.blade.php na raiz → os componentes (<x-email::heading>, ::button…)
  *   messages/ → o CORPO de cada e-mail (views normais: view('mail.messages.x'))
  *   text/     → a versão em texto puro (gerada, ver App\Core\Mail\PlainText)
+ *
+ * Também instala, em produção, a recusa dos transportes que não entregam
+ * (`log`, `array`) — ver App\Core\Mail\NonDeliveringMailers.
  */
 final class MailServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        // No momento em que o gerenciador de e-mail é RESOLVIDO (primeiro
+        // envio do processo), não no boot: assim nada disso roda no
+        // `composer install`/`package:discover`, que bootam a aplicação sem
+        // `.env` e, portanto, "em produção" com o mailer `log`.
+        $this->app->afterResolving('mail.manager', function (MailManager $manager): void {
+            NonDeliveringMailers::guard($manager);
+        });
+    }
+
     public function boot(): void
     {
         Blade::anonymousComponentPath(resource_path('views/mail'), 'email');

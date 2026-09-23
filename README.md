@@ -713,6 +713,77 @@ Para produção real:
 > **Dados NUNCA se perdem ao reiniciar/recriar containers** (ADR-010): banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
 
+### A imagem de produção: como ela é construída e o que vai dentro
+
+`docker/php/Dockerfile` (target `prod`) e `docker/nginx/Dockerfile` (target
+`prod`) são construídos pelo CI a cada push e PR (job **Imagens de produção**
+em `.github/workflows/ci.yml`, sem push para registry): imagem que não constrói
+deixa o CI vermelho. A imagem do app ficou sem construir desde que o Horizon
+entrou — o estágio que roda o `composer install` partia da imagem `composer`,
+com outro PHP e sem `ext-pcntl` — e nada percebia, porque o CI nunca construía a
+imagem.
+
+**As dependências PHP são instaladas sobre o mesmo PHP da imagem final.** O
+estágio `composer-prod` parte do estágio `base` (PHP 8.4 com todas as extensões
+do projeto) e só copia o binário do Composer (versão pinada) da imagem oficial.
+A checagem de plataforma do `composer install` vale, portanto, para o PHP que
+roda em produção: faltou extensão, o build falha. Não há, nem deve haver,
+`--ignore-platform-reqs`.
+
+**Quem pode escrever o quê:** o processo (php-fpm, horizon, scheduler, migrate)
+roda como `www-data`, e o código é de `root`. O processo lê o código mas não o
+reescreve; só `storage/`, `bootstrap/cache` e o volume compartilhado com o nginx
+são graváveis.
+
+**O que NÃO vai para dentro da imagem** (`.dockerignore`): nenhum arquivo de
+ambiente — nem o `.env.example`, que tem as flags de demo ligadas e as senhas
+demo, e que a aplicação não lê em tempo de execução —; chaves e certificados;
+`vendor` e `node_modules` locais (reinstalados no build, sem pacotes de dev); o
+`storage/` inteiro e o banco SQLite local da máquina de quem constrói (uploads, **dumps de backup**,
+sessões, cache, logs — a estrutura vazia é recriada no Dockerfile); testes,
+`phpunit.xml`, config do Playwright e artefatos de desenvolvimento.
+
+Conferir numa imagem construída:
+
+```bash
+docker build -f docker/php/Dockerfile --target prod -t tws-app:prod .
+docker run --rm --entrypoint sh tws-app:prod -c \
+  'id; ls -A /var/www/html; find /var/www/html/storage -type f | wc -l; ls -A /var/www/html/.env* 2>&1'
+```
+
+Esperado: `uid=82(www-data)`; na raiz só `app artisan bootstrap composer.json
+composer.lock config database lang package*.json public resources routes
+storage vendor vite.config.js` e os `.md`/`LICENSE`/`.npmrc`/`.dockerignore`; zero arquivo em
+`storage/`; nenhum `.env*`.
+
+### E-mail em produção: sem mailer de verdade, nenhum e-mail sai
+
+O padrão de `MAIL_MAILER` é `log` (no `config/mail.php` e no
+`docker-compose.prod.yml`). Em desenvolvimento isso é útil; em produção,
+significava que **cada e-mail era gravado inteiro no arquivo de log** — o código
+de verificação da ação sensível, o link de redefinição de senha com o token, a
+mensagem de contato com nome e e-mail — sem nenhum erro. O `array` é o irmão
+silencioso: descarta tudo.
+
+Com `APP_ENV=production`, os transportes `log` e `array` **recusam o envio**
+(`App\Core\Mail\NonDeliveringMailers`): o job de e-mail falha com uma mensagem
+que diz o que configurar e aparece como falho no `/horizon`, e nada da mensagem
+chega ao log. Vale também para o último recurso do mailer `failover`, que é o
+`log`. A subida do `horizon`/`queue:work`/`schedule:run` avisa no log quando o
+mailer padrão não entrega.
+
+O que **não** é afetado, de propósito (critério do `CriticalSecrets`: recusa
+onde há dano, aviso onde não há): o boot, o php-fpm, o `composer install`, o
+`package:discover` e o `key:generate`. Sem `.env` o Laravel se considera em
+produção com mailer `log`; a recusa mora no envio, então instalar e construir
+continuam passando.
+
+Configurar: `PROD_MAIL_MAILER`, `PROD_MAIL_HOST`, `PROD_MAIL_PORT`,
+`PROD_MAIL_FROM_ADDRESS` (interpolados pelo compose) e `MAIL_USERNAME` /
+`MAIL_PASSWORD` no `.env.prod` — ver `.env.prod.example`. Instalação
+descartável sem servidor de e-mail: `MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION=true`
+(aviso a cada boot).
+
 ### A chave da aplicação em produção
 
 A `APP_KEY` protege os atributos com cast `encrypted` (hoje: o nome do
@@ -2376,6 +2447,25 @@ evento, o app faz `POST BACKUP_WEBHOOK_URL` com JSON:
   cego em job financeiro (checklist §7.9).
 - Assets: o Horizon serve CSS/JS inline (não exige publicação em
   `public/vendor`).
+- **O que a fila guarda, e por quanto tempo.** O job de e-mail carrega o que o
+  e-mail vai dizer: destinatário, código de verificação, token de redefinição
+  de senha, mensagem de contato. O Horizon guarda o payload de job concluído e
+  falho no Redis e o exibe no dashboard; a tabela `failed_jobs` também o guarda.
+  Por isso todo e-mail do kit (`KitMailable`) e a `ResetPasswordNotification`
+  implementam `ShouldBeEncrypted`: o payload sai **criptografado com a
+  `APP_KEY`**, ilegível no Redis, na `failed_jobs` e no `/horizon` — só o
+  worker o abre. Um teste de arquitetura exige isso de todo `Mailable` e
+  `Notification` enfileirável novo. Retenção: job concluído sai do Redis em
+  1 h (`HORIZON_TRIM_RECENT_MINUTES`), job falho em 7 dias
+  (`HORIZON_TRIM_FAILED_MINUTES`), e a `failed_jobs` — que antes guardava para
+  sempre, com o texto da exceção — é podada diariamente na mesma janela
+  (`queue:prune-failed`, `QUEUE_FAILED_RETENTION_HOURS`, padrão 168).
+- **API do Horizon** (`/horizon/api/*`, de onde o dashboard lê os payloads):
+  está no mesmo grupo de middleware do dashboard — allowlist de IP + gate de
+  admin ativo — e os testes cobrem guest, usuário comum, admin
+  bloqueado/pendente e admin fora da allowlist.
+- **Sem root:** `horizon` e `scheduler` usam a imagem de produção, que roda como
+  `www-data`.
 
 ### Testes
 
@@ -2384,8 +2474,11 @@ compressão/criptografia, política de notificações, health check,
 agendamentos com `onOneServer`+`withoutOverlapping`) e o contrato do
 webhook com `Http::fake` (payload de sucesso + nenhuma chamada com URL
 vazia) — sem chamadas reais ao R2. Horizon: gating (guest/usuário comum =
-403, admin = 200), IP allowlist aplicada às rotas, CSP dedicada e
-supervisores por ambiente.
+403, admin = 200), IP allowlist aplicada às rotas (dashboard e API), CSP
+dedicada, supervisores por ambiente, payload criptografado dos jobs de e-mail,
+retenção e poda da `failed_jobs`
+(`tests/Feature/Horizon/QueuePayloadConfidentialityTest.php`). E-mail em
+produção: `tests/Feature/Mail/NonDeliveringMailerProductionTest.php`.
 
 ## Pendências conhecidas (conscientes — não são bugs)
 

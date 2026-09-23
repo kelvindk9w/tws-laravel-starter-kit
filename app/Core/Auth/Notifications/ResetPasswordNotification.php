@@ -6,6 +6,7 @@ namespace App\Core\Auth\Notifications;
 
 use App\Core\Mail\KitMailMessage;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -27,9 +28,13 @@ use Illuminate\Notifications\Notification;
  * o mesmo dos Mailables — o padrão ->line()/->action() do framework fazia
  * esta mensagem chegar com outra identidade visual que as demais.
  *
- * SEMPRE enfileirada (mesma política do VerificationCodeMail).
+ * SEMPRE enfileirada (mesma política do VerificationCodeMail), com o payload
+ * do job CRIPTOGRAFADO (ShouldBeEncrypted): o token de redefinição viaja
+ * dentro dele, e o Horizon guarda payload de job concluído e falho no Redis (e
+ * o exibe no /horizon), além da tabela `failed_jobs`. Um token em claro ali é
+ * uma conta tomável por quem ler a fila. Ver App\Core\Mail\KitMailable.
  */
-final class ResetPasswordNotification extends Notification implements ShouldQueue
+final class ResetPasswordNotification extends Notification implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 

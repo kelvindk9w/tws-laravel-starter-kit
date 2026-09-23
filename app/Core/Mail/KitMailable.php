@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Mail;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -20,11 +21,20 @@ use Illuminate\Mail\Mailables\Envelope;
  *   3. Versão em TEXTO PURO automática, gerada do próprio HTML
  *      (App\Core\Mail\PlainText): multipart/alternative sem manter duas
  *      cópias do mesmo texto.
+ *   4. Payload do job CRIPTOGRAFADO (ShouldBeEncrypted). O job de e-mail
+ *      carrega, serializado, tudo que o e-mail vai dizer: destinatário, código
+ *      de verificação, mensagem do formulário de contato. Sem criptografia isso
+ *      fica em claro no Redis enquanto o job espera, e depois dele — o Horizon
+ *      guarda o payload de job concluído e de job falho (ver `trim` em
+ *      config/horizon.php), a tabela `failed_jobs` também, e o dashboard
+ *      /horizon exibe esse payload. Criptografado com a APP_KEY, o que fica
+ *      guardado e o que o dashboard mostra é ilegível; só o worker, que tem a
+ *      chave, abre o conteúdo na hora de enviar.
  *
  * Um e-mail novo implementa dois métodos — o assunto e a view do corpo — e
  * herda o resto. Ver README, seção "E-mails transacionais".
  */
-abstract class KitMailable extends Mailable implements ShouldQueue
+abstract class KitMailable extends Mailable implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 
