@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use App\Core\Http\Exceptions\ApiErrorRenderer;
+use App\Core\Http\Middleware\TrustHosts;
+use App\Core\Http\Middleware\TrustProxies;
 use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Logging\Middleware\RequestLogging;
 use App\Core\Security\Middleware\SecurityHeaders;
@@ -24,19 +26,50 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Pipeline global — ADR-004/005, nesta ordem:
-        // 1º SecurityHeaders (o mais externo: até respostas de bloqueio/erro
-        //    carregam os headers de segurança);
-        // 2º SecurityValidation (PRIMEIRA validação: rejeita payload malicioso
-        //    antes de qualquer outro processamento, registrando a tentativa);
+        // 0º TrustProxies (quem pode dizer QUEM É O CLIENTE — ver abaixo);
+        // 1º SecurityHeaders (até respostas de bloqueio/erro carregam os
+        //    headers de segurança — inclusive o 400 de host recusado);
+        // 1ºb TrustHosts (quais valores de `Host` são aceitos — ver abaixo);
+        // 2º SecurityValidation (PRIMEIRA validação de payload: rejeita
+        //    conteúdo malicioso antes de qualquer outro processamento,
+        //    registrando a tentativa);
         // 3º RequestLogging (INICIADA imediato → CONCLUIDA/ERRO no terminate).
         //    Global de propósito: middleware de grupo NÃO executa em rota não
         //    encontrada, e requisições para endpoints inexistentes são exatamente
         //    o sinal de varredura/ataque que o ADR-010 manda registrar. Cobre
         //    API + web autenticada + /admin; exclusões e resumos (assets,
         //    health checks, updates Livewire) em config/security.php.
+        //
+        // TrustProxies e TrustHosts entram JUNTAS de propósito: declarar proxy
+        // confiável é o que faz o `X-Forwarded-Host` (e, atrás de CDN, o próprio
+        // `Host`) virar open redirect real — a validação de host é o que tranca
+        // o que passava por ali. Toda a regra e a justificativa moram em
+        // App\Core\Http\TrustedProxies e App\Core\Http\TrustedHosts.
+        //
+        // TrustProxies É A MAIS EXTERNA DE TODAS. Na posição padrão do
+        // framework ela rodaria DEPOIS dos middlewares do kit, e aí o `ip()` que
+        // o RequestLogging grava na trilha de auditoria e o que o
+        // SecurityValidation registra numa tentativa de ataque ainda seriam o
+        // endereço do PROXY. Ela também precisa vir antes do TrustHosts, porque
+        // é ela que decide se um `X-Forwarded-Host` entra no host validado, e
+        // antes do SecurityHeaders, que só envia HSTS sob HTTPS detectado.
+        //
+        // TrustHosts vem logo depois do SecurityHeaders (para o 400 sair com os
+        // headers) e ANTES de tudo que lê o host — SecurityValidation,
+        // RequestLogging, sessão, rotas: a requisição com host forjado para ali.
         $middleware->prepend(RequestLogging::class);
         $middleware->prepend(SecurityValidation::class);
+        $middleware->prepend(TrustHosts::class);
         $middleware->prepend(SecurityHeaders::class);
+        $middleware->prepend(TrustProxies::class);
+
+        // As duas são subclasses do middleware do framework porque a
+        // declaração precisa ser LIDA DE CONFIGURAÇÃO, e este closure roda antes
+        // de a configuração existir (`config()` aqui estoura) — por isso não se
+        // usa `trustProxies(at:)`/`trustHosts(at:)`. Ver o docblock de
+        // App\Core\Http\Middleware\TrustProxies. O `replace` impede que a
+        // versão do framework rode também (ela está na lista global padrão).
+        $middleware->replace(Illuminate\Http\Middleware\TrustProxies::class, TrustProxies::class);
 
         // Cadeia da API: rate limiting global (valores em config/security.php).
         $middleware->api(prepend: ['throttle:api']);

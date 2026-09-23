@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Http\TrustedProxies;
 use App\Core\Security\AdminIpAllowlist;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Support\CriticalSecrets;
@@ -99,6 +100,30 @@ class AppServiceProvider extends ServiceProvider
             // sempre verdadeira e sempre acionável.
             if (AdminIpAllowlist::anyIpAllowedInProductionByOptOut()) {
                 Log::warning('A allowlist de IP do /admin e do /horizon está DESLIGADA por decisão explícita (ADMIN_ALLOW_ANY_IP, ou faixa universal na própria lista): as superfícies administrativas aceitam qualquer origem e contam apenas com is_admin + conta ativa. Isto só é seguro se a restrição de origem estiver na borda (VPN, Cloudflare Access, WAF, regra de firewall). Ver App\Core\Security\AdminIpAllowlist.');
+            }
+
+            // Opt-out de QUEM PODE DIZER QUEM É O CLIENTE (TRUSTED_PROXIES=*).
+            // Mesmo princípio: confiar em qualquer origem para reescrever o IP
+            // deixa a allowlist do admin, o rate limiting e a trilha de
+            // auditoria à mercê de um header que o cliente escolhe. Existe
+            // instalação em que é a resposta honesta (origem fechada por
+            // firewall no ASN da CDN), e é por isso que é opt-out e não recusa —
+            // mas ele tem de ser reencontrável no log.
+            if (TrustedProxies::trustsEverythingInProduction()) {
+                Log::warning('TRUSTED_PROXIES=* está declarado: a aplicação obedece X-Forwarded-For de QUALQUER origem, então o IP que a allowlist do /admin compara, o que agrupa o rate limiting e o que a trilha de auditoria grava são o que o cliente disser. Isto só é seguro se nada além do proxy alcançar a aplicação (firewall na origem). Estreite a lista para as faixas do seu proxy. Ver App\Core\Http\TrustedProxies.');
+            }
+
+            // O CONSERTO INTUITIVO ERRADO, reconhecido pela própria aplicação:
+            // IP de proxy confiável escrito na allowlist do admin. Quem faz isso
+            // está reagindo ao 403 que aparece atrás de um load balancer, e o
+            // resultado é uma barreira que aceita a internet inteira com cara de
+            // configurada — o único jeito de descobrir sozinho seria notar que
+            // TODA requisição casa. Por isso o aviso nomeia os endereços.
+            if (AdminIpAllowlist::proxyEntriesInProduction()) {
+                Log::warning(sprintf(
+                    'A allowlist do /admin contém endereços que são proxies confiáveis (%s): como TODA requisição chega com o endereço do proxy, a barreira de origem aceita qualquer visitante — configurada na aparência, inexistente na prática. Remova esses endereços de ADMIN_ALLOWED_IPS e liste os IPs de quem ADMINISTRA. Ver App\Core\Security\AdminIpAllowlist.',
+                    implode(', ', AdminIpAllowlist::proxyEntries()),
+                ));
             }
         }
 

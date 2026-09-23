@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
+use App\Core\Http\TrustedProxies;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\IpUtils;
 
@@ -76,31 +77,34 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * -----------------------------------------------------------------------------
  * COMO O IP DO CLIENTE É OBTIDO — LEIA ANTES DE PÔR ISTO ATRÁS DE UMA CDN
  * -----------------------------------------------------------------------------
- * O kit NÃO configura proxies confiáveis (não há `trustProxies` no
- * `bootstrap/app.php`). Consequências exatas, hoje:
+ * Esta classe compara `$request->ip()`, e quem decide o que esse valor significa
+ * é a declaração de proxies confiáveis (`TRUSTED_PROXIES`, regra em
+ * App\Core\Http\TrustedProxies). São dois mundos:
  *
- *   NÃO HÁ BYPASS POR HEADER FORJADO. Sem proxy confiável, o Laravel IGNORA
- *   `X-Forwarded-For` e `Forwarded`: `$request->ip()` é o `REMOTE_ADDR` da
- *   conexão TCP. Um cliente que invente o header não move a comparação.
+ *   SEM PROXY DECLARADO (padrão do kit) o Laravel IGNORA `X-Forwarded-For` e
+ *   `Forwarded`: `ip()` é o `REMOTE_ADDR` da conexão TCP. Não há bypass por
+ *   header forjado — um cliente que invente o header não move a comparação. Mas
+ *   ATRÁS DE CDN/LOAD BALANCER a comparação é com o endereço ERRADO: o
+ *   `REMOTE_ADDR` é o do proxy, e a allowlist tranca todo mundo fora. É o estado
+ *   que `proxyBlind()` denuncia no log quando uma recusa acontece com header de
+ *   proxy presente.
  *
- *   MAS ATRÁS DE CDN/LOAD BALANCER A COMPARAÇÃO É COM O ENDEREÇO ERRADO. O
- *   `REMOTE_ADDR` passa a ser o do proxy, e a allowlist tranca todo mundo fora.
- *   O PIOR CENÁRIO É O CONSERTO INTUITIVO: quem reage a isso pondo o IP do load
- *   balancer na lista deixa a barreira ABERTA PARA A INTERNET INTEIRA, porque
- *   todas as requisições chegam com aquele endereço — configurada na aparência,
- *   inexistente na prática. NUNCA coloque o IP do proxy na allowlist.
+ *   COM PROXY DECLARADO `ip()` volta a ser o endereço de quem administra, e a
+ *   allowlist volta a fazer exatamente o que promete. ENTÃO A LISTA TEM DE
+ *   CONTER OS IPs DE QUEM ADMINISTRA — os endereços das pessoas, do escritório,
+ *   da VPN. Nunca os do proxy.
  *
- * Por isso a recusa por IP grava aviso quando a requisição TRAZ header de proxy
- * e nenhum proxy é confiável: é o sintoma exato dessa configuração, e é nesse
- * momento que alguém está olhando o log para entender o 403.
+ * O PIOR CENÁRIO É O CONSERTO INTUITIVO: quem vê o 403 atrás do load balancer e
+ * reage pondo o IP DO LOAD BALANCER na lista deixa a barreira ABERTA PARA A
+ * INTERNET INTEIRA, porque todas as requisições chegam com aquele endereço —
+ * configurada na aparência, inexistente na prática. NUNCA coloque o IP do proxy
+ * na allowlist; declare o proxy em `TRUSTED_PROXIES` e liste as pessoas aqui.
  *
- * QUANDO O TrustProxies ENTRAR (Lote 2): esta classe não muda. Ela já compara
- * `$request->ip()`, que é o ponto em que o Laravel passa a devolver o IP real
- * do cliente assim que os proxies forem declarados — e `proxyBlind()` para de
- * apontar sozinho, porque `getTrustedProxies()` deixa de estar vazio. O que
- * muda é a documentação: com proxy confiável declarado, a allowlist volta a
- * comparar o cliente, e aí ela precisa conter os IPs de quem administra (nunca
- * os do proxy).
+ * E ISSO NÃO FICOU SÓ NA DOCUMENTAÇÃO: `proxyEntries()` cruza as duas listas, e
+ * quando um endereço da allowlist é coberto pela declaração de proxies o
+ * AppServiceProvider grava aviso a cada boot em produção. É a única forma de
+ * "configurada mas aberta" que a aplicação consegue reconhecer sozinha, e ela é
+ * justamente a que uma pessoa escreve sem perceber.
  *
  * FAIXAS E IPv6: a comparação é o `IpUtils` do Symfony, que aceita IP exato,
  * CIDR IPv4 (`203.0.113.0/24`) e IPv6 com e sem prefixo (`2001:db8::/32`).
@@ -213,6 +217,33 @@ final class AdminIpAllowlist
         }
 
         return IpUtils::checkIp($ip, $entries);
+    }
+
+    /**
+     * Endereços da allowlist que são, eles próprios, proxies confiáveis.
+     *
+     * É o conserto intuitivo errado descrito no topo desta classe: com o IP do
+     * load balancer na lista, TODA requisição casa e a barreira deixa de existir
+     * parecendo configurada. Só endereços únicos são comparáveis — faixa escrita
+     * na allowlist não é um endereço a testar.
+     *
+     * @return list<string>
+     */
+    public static function proxyEntries(): array
+    {
+        return array_values(array_filter(
+            self::entries(),
+            fn (string $entry): bool => TrustedProxies::covers($entry),
+        ));
+    }
+
+    /**
+     * Produção com IP de proxy escrito na allowlist — barreira aberta com cara
+     * de configurada, e o estado que merece aviso no log a cada boot.
+     */
+    public static function proxyEntriesInProduction(): bool
+    {
+        return app()->isProduction() && self::proxyEntries() !== [];
     }
 
     /**

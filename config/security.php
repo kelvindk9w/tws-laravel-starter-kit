@@ -60,6 +60,70 @@ return [
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
 
+    // --- Quem pode dizer QUEM É O CLIENTE (proxies confiáveis) -----------------
+    // Atrás de CDN/load balancer, o endereço da conexão é o do proxy: sem esta
+    // declaração a allowlist do /admin compara o IP errado, o rate limiting
+    // agrupa o mundo num balde só, a trilha de auditoria grava sempre o mesmo
+    // `ip` e o HTTPS deixa de ser detectado. A regra inteira e a justificativa
+    // das decisões estão em App\Core\Http\TrustedProxies.
+    'proxies' => [
+        // Proxies em que a aplicação confia para reescrever origem e esquema.
+        // Lista separada por vírgula em TRUSTED_PROXIES, aceitando IP exato,
+        // faixa CIDR IPv4/IPv6 e três palavras:
+        //   `private`     → faixas privadas (RFC 1918/4193) + loopback. É o caso
+        //                   do compose do kit: o nginx conversa com o php-fpm
+        //                   pela rede interna, com IP que o Docker atribui.
+        //   `REMOTE_ADDR` → confia em quem estiver conectando (mais estreito que
+        //                   `private` quando o único caminho é o proxy).
+        //   `*`           → confia em QUALQUER origem. Opt-out declarado: sem
+        //                   valor padrão, ausente de todo arquivo de exemplo, e
+        //                   com aviso no log a cada boot em produção.
+        //
+        // VAZIO (padrão) = nenhum proxy confiável: os headers de encaminhamento
+        // são IGNORADOS e `ip()` é o endereço da conexão TCP. Pode estar errado
+        // atrás de proxy, mas não é inseguro — ninguém consegue se declarar
+        // outra pessoa. Por isso aqui o silêncio NÃO recusa o boot: ao contrário
+        // da allowlist do admin, ele já cai para o lado estreito.
+        //
+        // ATENÇÃO: declarar proxy confiável exige que a BORDA acrescente o
+        // endereço real ao X-Forwarded-For (no nginx,
+        // `$proxy_add_x_forwarded_for` — já é o que os dois arquivos de nginx do
+        // kit fazem). Proxy que só repassa o header do cliente, declarado
+        // confiável, permite forjar IP.
+        'trusted' => array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '')))),
+
+        // Obedecer também `X-Forwarded-Host`? Padrão NÃO, ao contrário do padrão
+        // do Laravel: esse header reescreve o host da aplicação, e o host monta
+        // toda URL absoluta gerada (redirect, link de e-mail, URL assinada).
+        // Ligue só quando a aplicação é servida num host interno e publicada em
+        // outro — e nesse caso a lista de `hosts` abaixo é a barreira que
+        // continua valendo.
+        'trust_forwarded_host' => (bool) env('TRUSTED_PROXY_TRUST_FORWARDED_HOST', false),
+    ],
+
+    // --- Quais valores de `Host` a aplicação aceita ----------------------------
+    // O Laravel monta toda URL absoluta a partir do header `Host`, que é dado do
+    // cliente: sem esta validação, `Host: evil.example.com` sai refletido no
+    // `Location` de qualquer redirect. A regra inteira está em
+    // App\Core\Http\TrustedHosts.
+    'hosts' => [
+        // Hosts aceitos ALÉM do host da APP_URL (que já entra sozinho, com seus
+        // subdomínios). Lista separada por vírgula, host exato
+        // (`app.exemplo.com`) ou `*.exemplo.com` para o domínio e seus
+        // subdomínios. Sem porta: a comparação é só do host. `localhost`,
+        // `127.0.0.1` e `[::1]` são sempre aceitos (sondas e healthchecks
+        // internos batem no /up por dentro).
+        //
+        // VAZIO (padrão) NÃO significa "qualquer host": significa o host da
+        // APP_URL. Use esta lista para domínio com e sem `www`, domínio de
+        // staging na mesma instalação, host interno do load balancer — ou, em
+        // desenvolvimento, o IP do WSL / um `*.test` pelo qual se acesse.
+        //
+        // A validação vale em TODO ambiente, sem chave para desligar: ver o
+        // bloco "vale em todo ambiente" em App\Core\Http\TrustedHosts.
+        'trusted' => array_filter(array_map('trim', explode(',', (string) env('TRUSTED_HOSTS', '')))),
+    ],
+
     // --- Segredos que não podem ser inventados nem ter padrão ------------------
     // Em produção, a aplicação RECUSA subir sem uma chave de aplicação
     // utilizável e AVISA no log quando um segredo de infraestrutura está com

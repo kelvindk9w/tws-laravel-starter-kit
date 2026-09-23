@@ -167,3 +167,19 @@ it('honra o redirect intended após o login', function () {
         'password' => 'LoginForte123',
     ])->assertRedirect('/dashboard');
 });
+
+it('destino intended FORA da APP_URL não é seguido: o pós-login cai no dashboard', function (string $destino) {
+    // O `url.intended` é o `fullUrl()` da requisição barrada, montado com o host
+    // dela. O pós-login passa pelo SafeRedirect, ancorado na APP_URL: mesmo que
+    // um host forjado chegasse a ser gravado, ele não vira destino.
+    $user = User::factory()->create(['password' => 'LoginForte123']);
+
+    $this->withSession(['url.intended' => $destino])
+        ->post('/login', [
+            'email' => $user->email,
+            'password' => 'LoginForte123',
+        ])->assertRedirect(route('dashboard'));
+})->with([
+    'outro host' => ['https://evil.example.com/dashboard'],
+    'protocolo relativo' => ['//evil.example.com/dashboard'],
+]);

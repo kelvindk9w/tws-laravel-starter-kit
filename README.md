@@ -860,10 +860,17 @@ docker compose run --rm --no-deps -v /dev/null:/var/www/html/.env --entrypoint s
 Toda requisição atravessa, nesta ordem:
 
 ```
-SecurityHeaders → SecurityValidation → RequestLogging → (api: throttle:api) → rota
+TrustProxies → SecurityHeaders → TrustHosts → SecurityValidation → RequestLogging → (api: throttle:api) → rota
 ```
 
-1. **SecurityHeaders** (`app/Core/Security/Middleware/SecurityHeaders.php`) — o mais externo:
+0. **TrustProxies** (`app/Core/Http/Middleware/`) — quem é o cliente. É a mais externa **de
+   propósito**: o `ip()` que o `RequestLogging` grava na trilha de auditoria e o que o
+   `SecurityValidation` registra numa tentativa de ataque têm de ser o do cliente, não o do proxy.
+   Logo depois do `SecurityHeaders` vem o **TrustHosts**, que recusa com 400 um `Host` fora da lista
+   antes de qualquer coisa ler o host (e o 400 já sai com os headers de segurança). Ver *Proxies
+   confiáveis e host confiável*, abaixo.
+
+1. **SecurityHeaders** (`app/Core/Security/Middleware/SecurityHeaders.php`) — o mais externo dos middlewares de segurança:
    `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP básica
    e HSTS (só sob HTTPS com `SECURITY_HSTS_ENABLED=true`, padrão em produção). Como é o primeiro,
    até respostas de bloqueio/erro saem com os headers. Valores em `config/security.php`.
@@ -892,6 +899,118 @@ SecurityHeaders → SecurityValidation → RequestLogging → (api: throttle:api
 
 Também: HTTPS forçado em produção (`URL::forceHttps()` no `AppServiceProvider`), CORS restritivo
 (`config/cors.php` — nenhuma origem liberada por padrão; `CORS_ALLOWED_ORIGINS` no `.env`).
+
+### Proxies confiáveis e host confiável (atrás de CDN/LB)
+
+Atrás de qualquer borda — o nginx do próprio compose, um load balancer, uma CDN — o php-fpm só
+vê a conexão do **proxy**. Sem declarar proxies confiáveis, `$request->ip()` é o endereço do
+proxy, e quatro coisas quebram de uma vez, em silêncio:
+
+| Quebra | Sintoma |
+| --- | --- |
+| Allowlist de IP do `/admin` | Compara o IP do proxy: **tranca todo mundo fora** |
+| Rate limiting | Todos os visitantes num balde só; o visitante 61 leva 429 pelos 60 anteriores |
+| Trilha de auditoria (`request_logs.ip`) | O mesmo endereço em todas as linhas |
+| Detecção de HTTPS | Cookie de sessão sem `Secure`, HSTS não enviado, URL gerada em `http` |
+
+**A declaração é uma lista, e o silêncio cai para o lado estreito.** `TRUSTED_PROXIES` vazio
+significa *ninguém é confiável*: os headers de encaminhamento são ignorados e `ip()` é o endereço
+da conexão TCP. Pode estar **errado** atrás de proxy, mas não é **inseguro** — ninguém consegue se
+declarar outra pessoa. Por isso, ao contrário da allowlist do `/admin`, aqui a ausência **não**
+recusa o boot. A regra e o porquê de cada decisão estão em `app/Core/Http/TrustedProxies.php`.
+
+Vocabulário aceito: IP exato, faixa CIDR IPv4/IPv6, `private` (faixas privadas + loopback),
+`REMOTE_ADDR` (confia em quem conectar) e `*` (confia em qualquer origem — é **opt-out declarado**,
+e grava aviso no log a cada boot em produção).
+
+**O padrão é `TRUSTED_PROXIES` vazio** (em `config/security.php`, no `.env.example` e no
+`docker-compose.prod.yml`). Declarar é decisão sua, com faixas explícitas — os quatro cenários reais:
+
+| Topologia | Valor |
+| --- | --- |
+| Sem proxy (php-fpm direto) | `TRUSTED_PROXIES=` (vazio) |
+| **nginx deste compose** (dev e prod) | `TRUSTED_PROXIES=private` |
+| Load balancer na frente do nginx | `private` + as faixas do LB (`private,10.20.0.0/16`) |
+| Cloudflare/CDN na borda | `private` + as faixas publicadas da CDN ([cloudflare.com/ips](https://www.cloudflare.com/ips/)), **e a origem fechada por firewall**. Se manter as faixas atualizadas não for viável, `*` é a decisão honesta — mas só com a origem inalcançável fora da CDN |
+
+**Como DESCOBRIR o valor certo em vez de chutar** (uma requisição real, não adivinhação):
+
+```bash
+# 1. Suba com o valor que você acredita ser o certo.
+# 2. Acesse qualquer página DE FORA (navegador/celular), não do servidor.
+# 3. Veja o que a aplicação entendeu da SUA requisição:
+docker compose exec app php artisan tinker
+>>> \App\Core\Logging\Models\RequestLog::latest()->first()->only(['ip', 'endpoint'])
+```
+
+O `ip` tem de ser o **seu IP público**. Se vier um endereço privado (`172.x`, `10.x`) ou o mesmo
+endereço para todos os visitantes, a declaração está curta: falta a faixa de alguma borda. A mesma
+coluna aparece na listagem de logs de requisição do `/admin`.
+
+> **NUNCA conserte um 403 do `/admin` pondo o IP do load balancer na allowlist.** Todas as
+> requisições chegam com aquele endereço, e a barreira fica aberta para a internet inteira
+> *parecendo configurada*. A aplicação reconhece esse erro: quando um endereço de
+> `ADMIN_ALLOWED_IPS` é também um proxy confiável, o log traz aviso nomeando o endereço a cada
+> boot em produção. Declare o proxy em `TRUSTED_PROXIES` e liste em `ADMIN_ALLOWED_IPS` os IPs de
+> **quem administra**.
+
+**A borda precisa colaborar.** `X-Forwarded-For` é uma lista, e o Laravel toma como cliente a
+última entrada que **não** é de proxy confiável. É isso que impede o forjamento — desde que o proxy
+**acrescente** o endereço real da conexão em vez de repassar o valor do cliente. Os dois arquivos de
+nginx do kit (`docker/nginx/dev.conf` e `prod.conf`) fazem isso com
+`fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for`. **Declarar como confiável um proxy
+que só repassa o header do cliente é pior que não declarar nada.**
+
+**`X-Forwarded-Host` fica FORA por padrão** (ao contrário do padrão do Laravel): esse header
+reescreve o host da aplicação, e o host monta toda URL absoluta gerada. Quem precisa liga
+`TRUSTED_PROXY_TRUST_FORWARDED_HOST=true`.
+
+#### Host confiável (`TRUSTED_HOSTS`)
+
+O Laravel monta toda URL absoluta a partir do header `Host`, que é **dado do cliente**. Antes desta
+barreira, o PoC abaixo respondia `Location: http://evil.example.com/login`:
+
+```bash
+curl -si -H "Host: evil.example.com" http://localhost:8180/dashboard | grep -i location
+```
+
+Hoje um `Host` desconhecido recebe **400** na entrada do pipeline, antes de virar URL, redirect ou
+link de e-mail (é o `TrustHosts` do Laravel, recusando — não se tentou "ancorar" as URLs na
+`APP_URL` aceitando qualquer host, porque isso consertaria só o que passa pelo gerador de URL e
+deixaria o host forjado valendo para todo o resto que lê a requisição). `TRUSTED_HOSTS` vazio
+**não** significa "qualquer host": significa **o host da `APP_URL`** e os subdomínios dele — a
+`APP_URL` é obrigatória, já ancora o `SafeRedirect` e já é a base das URLs geradas em fila e e-mail.
+Use a variável para os hosts legítimos **adicionais** (domínio com e sem `www`, staging na mesma
+instalação), com host exato ou `*.dominio`, sem porta.
+
+`localhost`, `127.0.0.1` e `[::1]` são **sempre** aceitos: sondas e healthchecks batem no `/up` por
+dentro, e um `Host: localhost` refletido aponta para a máquina da própria vítima — inútil para
+phishing. (O **IP de origem** da sonda é irrelevante aqui: a validação olha o `Host`, não quem
+conecta. Só declare o host se a sua sonda usar um IP *como Host*, ex. `http://10.0.3.7/up` — o
+caminho simples é apontar a sonda para `localhost`.)
+
+**A validação vale em todo ambiente, desenvolvimento e testes incluídos** (o `TrustHosts` do
+framework desliga em `local` e em teste; o do kit não). Desligada em teste, ela não poderia ser
+provada; desligada em dev, o PoC acima continuaria reproduzível exatamente onde as pessoas testam o
+kit. No caso padrão o custo é zero: a `APP_URL` de exemplo é `http://localhost:8180` e os testes do
+Laravel montam as requisições sobre a própria `APP_URL`. Se você acessa o ambiente de dev por outro
+nome (IP do WSL, `kit.test`), declare-o em `TRUSTED_HOSTS`.
+
+**Produção com `APP_URL` ainda de exemplo** (`localhost`) e `TRUSTED_HOSTS` vazio aceita só
+loopback: todo visitante leva 400, e a primeira recusa grava no log a causa e o conserto. É
+fail-closed de propósito — a instalação já está quebrada (todo link de e-mail aponta para
+localhost), e aceitar o host que o cliente mandar é justamente a vulnerabilidade fechada aqui. A
+regra está em `app/Core/Http/TrustedHosts.php`.
+
+*Se todo mundo levar 400 depois de um deploy*: a `APP_URL` não bate com o endereço que os visitantes
+usam. Corrija-a (ou declare `TRUSTED_HOSTS`) e reinicie os serviços PHP; o `/up` continua
+respondendo por `localhost` enquanto isso.
+
+**Pós-login (`url.intended`)**: o destino gravado quando um convidado bate numa rota protegida é o
+`fullUrl()` daquela requisição — montado com o host. O login não usa `redirect()->intended()`
+direto: o destino passa pelo `SafeRedirect`, ancorado na `APP_URL`, e o que estiver fora dela cai no
+dashboard. É a segunda barreira, que continua valendo mesmo se uma instalação alargar proxies ou
+ligar `X-Forwarded-Host`.
 
 ### Redaction (LGPD — ADR-004)
 
@@ -1494,10 +1613,12 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
     painel do usuário, filas e `/up` seguem atendendo. Corrija a variável no
     ambiente dos serviços PHP e reinicie-os — o log diz o que falta. A
     recuperação nunca depende de entrar no painel.
-  - **Atrás de CDN/load balancer**: o kit ainda não declara proxies
-    confiáveis, então o endereço comparado é o do PROXY. **Nunca** ponha o
-    IP do load balancer na lista: todas as requisições chegam com ele e a
-    barreira fica aberta para a internet inteira, parecendo configurada.
+  - **Atrás de CDN/load balancer**: o endereço comparado depende de
+    `TRUSTED_PROXIES` (ver *Proxies confiáveis e host confiável*). Com o proxy
+    declarado, a lista compara **quem administra** — é isso que você escreve
+    aqui. **Nunca** ponha o IP do load balancer na lista: todas as requisições
+    chegam com ele e a barreira fica aberta para a internet inteira, parecendo
+    configurada. A aplicação reconhece esse erro e avisa no log a cada boot.
   - Regra, decisões e justificativas: `App\Core\Security\AdminIpAllowlist`.
     Middleware: `EnsureAdminIpAllowed`.
 

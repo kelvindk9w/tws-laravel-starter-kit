@@ -42,6 +42,31 @@ x-app-env: &app-env
   PLATFORM_NAME: ${PROD_PLATFORM_NAME:-TWS Starter Kit}
   PLATFORM_LOGO_URL: ${PROD_PLATFORM_LOGO_URL:-}
   PLATFORM_PRIMARY_COLOR: ${PROD_PLATFORM_PRIMARY_COLOR:-#0284C7}
+  # Quem pode dizer QUEM É O CLIENTE (ver App\Core\Http\TrustedProxies).
+  #
+  # O PADRÃO É VAZIO — nenhum proxy confiável, `X-Forwarded-*` ignorado. Não há
+  # valor que o kit possa assumir pela topologia de quem instala, e o silêncio
+  # cai para o lado estreito: `ip()` fica sendo o endereço da conexão (o do
+  # nginx), errado mas não forjável.
+  #
+  # NA TOPOLOGIA DESTE ARQUIVO você QUER declarar: o nginx fala com o php-fpm
+  # pela rede interna, com endereço que o Docker atribui e que muda a cada
+  # recriação, e a porta 9000 não é publicada — então PROD_TRUSTED_PROXIES=private
+  # é a declaração certa. Sem ela, a allowlist do /admin compara o IP do nginx
+  # (trancando todo mundo fora), o rate limiting agrupa todos os visitantes num
+  # balde só e a trilha de auditoria grava sempre o mesmo `ip`. Com CDN/LB na
+  # frente, acrescente as faixas EXPLÍCITAS dela. Ver .env.prod.example.
+  #
+  # ESTREITE se a rede interna do host for COMPARTILHADA com terceiros (nó de
+  # cluster multi-inquilino, VPS com rede plana de provedor): ali o vizinho
+  # também tem endereço privado. `*` confia em qualquer origem e grava aviso no
+  # log a cada boot.
+  TRUSTED_PROXIES: ${PROD_TRUSTED_PROXIES:-}
+  # Hosts aceitos ALÉM do host da APP_URL (que já entra sozinho, com os
+  # subdomínios dele). Vazio NÃO significa "qualquer host": significa a APP_URL.
+  # Use para domínio com e sem www, ou domínio de staging na mesma instalação.
+  # Ver App\Core\Http\TrustedHosts.
+  TRUSTED_HOSTS: ${PROD_TRUSTED_HOSTS:-}
   # Origens permitidas no /admin e no /horizon (ADR-011).
   #
   # O fallback VAZIO aqui é deliberado e não é mais fail-open: quem recusa é a
