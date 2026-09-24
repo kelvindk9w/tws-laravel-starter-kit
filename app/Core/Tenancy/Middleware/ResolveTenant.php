@@ -6,6 +6,7 @@ namespace App\Core\Tenancy\Middleware;
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
+use App\Core\ApiKeys\Support\PepperMatch;
 use App\Core\Auth\Support\EmailVerification;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Security\ApiRateLimit;
@@ -24,10 +25,12 @@ use Throwable;
  * - `Authorization: Bearer sk_live_...` → chave SECRETA (verificação).
  *
  * Pipeline: existência da pk_ → verificação timing-safe da sk_ (hash_equals,
- * nunca comparação comum) → status/validade/grace/inatividade → usuário ativo →
+ * nunca comparação comum; pepper atual, anteriores e — só com a flag — o
+ * vazio legado) → status/validade/grace/inatividade → usuário ativo →
  * registra o tenant no container (tenant()/tenantKey()) e no user resolver
  * da request → vincula o request log ao tenant (tenant_uuid = uuid do dono)
- * → last_used_at throttled.
+ * → regrava o hash com o pepper atual se conferiu com um anterior →
+ * last_used_at throttled.
  *
  * Credencial inválida: 401 padronizado e o request log permanece SEM tenant
  * — exatamente o sinal de ataque/tentativa de burla que a trilha precisa mostrar
@@ -39,6 +42,14 @@ final class ResolveTenant
      * Header da chave pública (a secreta vai no Authorization: Bearer).
      */
     public const PUBLIC_KEY_HEADER = 'X-Api-Key';
+
+    /**
+     * Evento da trilha de arquivo (canal request_log) quando o hash de uma
+     * chave é regravado com o pepper atual.
+     */
+    public const HASH_MIGRATED_EVENT = 'api_keys.secret_hash.migrated';
+
+    public const HASH_MIGRATION_FAILED_EVENT = 'api_keys.secret_hash.migration_failed';
 
     public function __construct(
         private readonly ApiKeyHasher $hasher,
@@ -67,11 +78,16 @@ final class ResolveTenant
 
         // Timing-safe SEMPRE: verifica o hash mesmo quando a pk_ não existe
         // (segredo inválido contra hash fictício), para não vazar por tempo
-        // de resposta se a chave pública é válida.
+        // de resposta se a chave pública é válida. O hash fictício usa o
+        // mesmo pepper normalizado do hasher (nunca vazio), e o check() tenta
+        // TODOS os peppers aceitos nos dois caminhos — o custo dos peppers
+        // anteriores não vira sinal de "esta pk_ existe".
         $hashToVerify = $apiKey?->secret_hash
-            ?? hash_hmac('sha256', 'chave-publica-inexistente', (string) config('api_keys.hash_pepper'));
+            ?? hash_hmac('sha256', 'chave-publica-inexistente', $this->hasher->currentPepper());
 
-        if (! $this->hasher->verify($plainSecret, $hashToVerify) || ! $apiKey instanceof ApiKey) {
+        $match = $this->hasher->check($plainSecret, (string) $hashToVerify);
+
+        if (! $match->matched() || ! $apiKey instanceof ApiKey) {
             $this->deny($request);
         }
 
@@ -99,6 +115,10 @@ final class ResolveTenant
 
         $this->bindRequestLog($request, (string) $tenant->uuid);
 
+        if ($match->needsRehash()) {
+            $this->migrateSecretHash($apiKey, $plainSecret, (string) $hashToVerify, $match, (string) $tenant->uuid);
+        }
+
         $apiKey->touchLastUsedThrottled();
 
         return $next($request);
@@ -114,6 +134,47 @@ final class ResolveTenant
         ApiRateLimit::recordAuthenticationFailure($request);
 
         abort(401, __('api_keys.auth.invalid'));
+    }
+
+    /**
+     * Migração transparente no primeiro uso: a secreta conferiu com um pepper
+     * anterior (ou com o vazio legado, com a flag ligada) e a autenticação
+     * passou inteira — o hash é regravado com o pepper ATUAL, e o próximo uso
+     * já confere direto.
+     *
+     * A escrita é condicional ao hash antigo (duas requisições simultâneas
+     * não regravam duas vezes) e registra `api_keys.secret_hash.migrated` na
+     * trilha de arquivo, sem segredo nem hash: só a chave, o dono e a origem.
+     * Falha aqui NÃO derruba a requisição já autenticada — a migração é
+     * tentada de novo no próximo uso.
+     */
+    private function migrateSecretHash(ApiKey $apiKey, string $plainSecret, string $oldHash, PepperMatch $match, string $tenantUuid): void
+    {
+        try {
+            $newHash = $this->hasher->hash($plainSecret);
+
+            $updated = ApiKey::query()
+                ->whereKey($apiKey->getKey())
+                ->where('secret_hash', $oldHash)
+                ->update(['secret_hash' => $newHash]);
+
+            if ($updated > 0) {
+                $apiKey->setRawAttributes(['secret_hash' => $newHash] + $apiKey->getAttributes(), true);
+
+                Log::channel('request_log')->notice(self::HASH_MIGRATED_EVENT, [
+                    'api_key_uuid' => $apiKey->uuid,
+                    'tenant_uuid' => $tenantUuid,
+                    'from' => $match->value,
+                ]);
+            }
+        } catch (Throwable $exception) {
+            Log::channel('request_log')->warning(self::HASH_MIGRATION_FAILED_EVENT, [
+                'api_key_uuid' => $apiKey->uuid,
+                'tenant_uuid' => $tenantUuid,
+                'from' => $match->value,
+                'exception' => $exception::class,
+            ]);
+        }
     }
 
     /**

@@ -16,7 +16,7 @@ return [
     'name' => env('PLATFORM_NAME', 'TWS Starter Kit'),
 
     // Versão da plataforma (endpoint /api/health, rodapés, suporte).
-    'version' => env('PLATFORM_VERSION', '1.1.0'),
+    'version' => env('PLATFORM_VERSION', '1.1.1'),
 
     // URL do logotipo oficial (nunca caminho hardcoded em views).
     'logo_url' => env('PLATFORM_LOGO_URL'),

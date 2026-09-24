@@ -22,7 +22,30 @@ return [
     // do banco) garante que um vazamento SÓ do banco não permita computar nem
     // verificar hashes. A comparação é SEMPRE timing-safe via hash_equals().
     // Pepper próprio recomendado (API_KEYS_HASH_PEPPER); fallback: APP_KEY.
-    'hash_pepper' => env('API_KEYS_HASH_PEPPER', env('APP_KEY')),
+    // VAZIO (ou só espaços) conta como AUSENTE e também cai na APP_KEY: a
+    // linha `API_KEYS_HASH_PEPPER=` sem valor não aciona o fallback do env(),
+    // e o HMAC rodaria com pepper de 0 caracteres. O ApiKeyHasher repete a
+    // regra (vale mesmo com uma cópia antiga deste arquivo).
+    'hash_pepper' => filled(env('API_KEYS_HASH_PEPPER')) ? env('API_KEYS_HASH_PEPPER') : env('APP_KEY'),
+
+    // Peppers ANTERIORES, no estilo do APP_PREVIOUS_KEYS (lista separada por
+    // vírgula): a secreta que não confere com o pepper atual é tentada contra
+    // cada um e, se conferir, tem o hash regravado com o atual no primeiro uso
+    // (evento api_keys.secret_hash.migrated no request_log). É o que permite
+    // trocar o pepper — ou sair do fallback da APP_KEY para um pepper
+    // dedicado, declarando a APP_KEY aqui — sem invalidar as chaves emitidas.
+    'previous_peppers' => array_values(array_filter(
+        array_map('trim', explode(',', (string) env('API_KEYS_PREVIOUS_HASH_PEPPERS', ''))),
+        static fn (string $pepper): bool => $pepper !== '',
+    )),
+
+    // LEGADO: aceita (e migra no primeiro uso) chaves emitidas quando o
+    // pepper era VAZIO — antes desta correção, `API_KEYS_HASH_PEPPER=` sem
+    // valor gerava hash sem segredo. Desligado por padrão; vazio nunca é
+    // aceito de forma implícita. Ligue só durante a transição e desligue
+    // quando todas as chaves tiverem sido usadas ou rotacionadas: com ela
+    // ligada, produção grava aviso no log a cada boot.
+    'accept_empty_pepper_legacy' => (bool) env('API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY', false),
 
     // Atualização do last_used_at é throttled: no máximo 1 escrita a cada N
     // segundos por chave (a request nunca paga um UPDATE a cada chamada).

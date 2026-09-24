@@ -184,12 +184,19 @@ sempre com a atual. Só remova a antiga depois de reescrever os registros.
 
 Duas coisas que o `APP_PREVIOUS_KEYS` **não** resgata:
 
-- **Chaves de API** — o hash da secreta é HMAC com pepper, e o pepper usa
-  apenas o valor **atual**. Como `API_KEYS_HASH_PEPPER` tem fallback para a
-  `APP_KEY`, rotacionar a chave sem um pepper próprio invalida **permanentemente**
-  toda chave de API já emitida (401, sem volta). Defina um
-  `API_KEYS_HASH_PEPPER` dedicado **antes de emitir a primeira chave** e a
-  rotação da `APP_KEY` deixa de afetá-las.
+- **Chaves de API** — o hash da secreta é HMAC com pepper, e o
+  `APP_PREVIOUS_KEYS` não participa dele. Como `API_KEYS_HASH_PEPPER` tem
+  fallback para a `APP_KEY` (e **vazio conta como ausente** — a linha
+  `API_KEYS_HASH_PEPPER=` sem valor também cai na `APP_KEY`), rotacionar a
+  chave sem um pepper próprio invalida toda chave de API já emitida (401) —
+  a menos que a `APP_KEY` antiga seja declarada em
+  `API_KEYS_PREVIOUS_HASH_PEPPERS`, que faz a chave migrar para o pepper atual
+  no primeiro uso. Defina um `API_KEYS_HASH_PEPPER` dedicado **antes de emitir
+  a primeira chave** e a rotação da `APP_KEY` deixa de afetá-las. Em
+  `APP_ENV=production` o boot avisa no log enquanto não houver pepper
+  dedicado e enquanto `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY` estiver ligada.
+  Transição de uma instalação que já emitiu chaves com pepper vazio:
+  [docs/api.md](api.md#roteiro-de-transição).
 - **Sessões e cookies** — não é perda de dado, é logout: todos refazem o login.
 
 ### Segredos com valor de fachada

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
+use App\Core\ApiKeys\Support\PepperWarnings;
 use App\Core\Auth\Console\MakeAdminUser;
 use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
 use App\Core\Auth\Support\DemoAccountSession;
@@ -77,6 +78,12 @@ class AppServiceProvider extends ServiceProvider
             // fachada sempre avisa, nunca recusa. Toda essa decisão mora no
             // guard, não aqui.
             CriticalSecrets::guard();
+
+            // Pepper do hash das chaves de API: sem pepper dedicado (ausente
+            // ou VAZIO, que vale como ausente) ou com a flag do pepper vazio
+            // legado ligada → aviso no log a cada boot. Aviso, não recusa:
+            // ver App\Core\ApiKeys\Support\PepperWarnings.
+            PepperWarnings::announce();
 
             URL::forceHttps();
 
