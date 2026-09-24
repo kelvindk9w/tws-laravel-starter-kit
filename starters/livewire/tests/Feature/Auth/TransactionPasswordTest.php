@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 // Senha de transação: hash SEPARADO da senha de login,

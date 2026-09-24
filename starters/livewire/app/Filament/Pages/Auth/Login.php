@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages\Auth;
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\TwoFactorLogin;
-use App\Core\Auth\Support\LoginPrefill;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Livewire\Attributes\Locked;
+use Twstec\Kit\Auth\Services\TwoFactorLogin;
+use Twstec\Kit\Auth\Support\LoginPrefill;
 
 /**
  * Login do super admin (/admin). Quando uma extensão sugere credenciais
- * (ponto de extensão App\Core\Auth\Contracts\LoginPrefillProvider, superfície
+ * (ponto de extensão Twstec\Kit\Auth\Contracts\LoginPrefillProvider, superfície
  * `admin`), o formulário nasce preenchido: basta clicar em entrar. Sem
  * extensão, nasce vazio.
  *

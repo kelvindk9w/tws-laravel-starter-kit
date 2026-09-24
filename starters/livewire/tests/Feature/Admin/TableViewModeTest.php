@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
@@ -15,6 +14,7 @@ use App\Filament\Support\BaseResource;
 use App\Filament\Support\CardActions;
 use App\Filament\Support\ViewMode;
 use App\Filament\Support\ViewModeToggle;
+use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Livewire;

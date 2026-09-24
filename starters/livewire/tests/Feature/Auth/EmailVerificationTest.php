@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Notifications\ResetPasswordNotification;
-use App\Core\Auth\Notifications\VerifyEmailNotification;
-use App\Core\Auth\Support\EmailVerification;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +11,9 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
+use Twstec\Kit\Auth\Notifications\VerifyEmailNotification;
+use Twstec\Kit\Auth\Support\EmailVerification;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // =============================================================================
@@ -24,7 +24,7 @@ use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 // depois de clicar nele. Até lá, vê só a tela de aviso, com "reenviar" e
 // "sair". A exigência é LIGADA por padrão e desligável por
 // AUTH_EMAIL_VERIFICATION_REQUIRED. A regra mora em
-// App\Core\Auth\Support\EmailVerification.
+// Twstec\Kit\Auth\Support\EmailVerification.
 // =============================================================================
 
 /**
@@ -508,7 +508,7 @@ it('a migration marca como confirmadas as contas que já existiam', function ():
     $confirmada = User::factory()->create(['email_verified_at' => now()->subYear()]);
     $original = $confirmada->email_verified_at->getTimestamp();
 
-    $migration = require database_path('migrations/2026_09_24_000001_mark_existing_users_email_as_verified.php');
+    $migration = require base_path('vendor/twstec/kit-auth/database/migrations/2026_09_24_000001_mark_existing_users_email_as_verified.php');
     $migration->up();
 
     expect($antiga->fresh()->hasVerifiedEmail())->toBeTrue()

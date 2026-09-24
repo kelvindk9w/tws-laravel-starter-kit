@@ -1,10 +1,22 @@
 # Autenticação
 
-Implementação própria e enxuta em `app/Core/Auth/` — **sem** Breeze/Jetstream/Fortify.
+Implementação própria e enxuta — **sem** Breeze/Jetstream/Fortify. A regra mora no
+pacote **`twstec/kit-auth`** ([`packages/auth`](../packages/auth), sem telas); as
+telas, as rotas e o model de usuário são do starter (ver
+[O pacote e os pontos de extensão](#o-pacote-twsteckit-auth-e-os-pontos-de-extensão)).
 Autenticação web por **sessão** (os painéis usam sessão/cookie; a API pública usa
 o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenancy](tenancy.md)).
 
-## Model User (`app/Core/Auth/Models/User.php`)
+## Model User (`app/Models/User.php`)
+
+O model é do **aplicativo**, e compõe o que cada pacote traz: a trait
+`KitAuthenticatable` e o contrato `AuthUser` do pacote de autenticação (status
+da conta, senha de transação, segundo fator, contas protegidas, verificação de
+e-mail e recuperação com os e-mails do kit, idioma preferido), a trait de avatar
+de uploads e o acesso ao `/admin` (Filament). O pacote nunca nomeia a classe:
+trabalha com o model configurado em `auth.providers.users.model`. Até a 1.x ele
+era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
+(payload de fila antigo o carrega — ver `app/Support/legacy-aliases.php`).
 
 - Identificadores em 3 camadas (anti-enumeração): `id` interno nunca exposto, `uuid` (HasUuids)
   e `codigo_publico` `USR-xxxxxx` (HasPublicCode).
@@ -33,7 +45,7 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
     pendente com acesso restrito (ex.: completar cadastro), crie a exceção explícita
     no `EnsureAccountIsActive` — não afrouxe o `isActive()`.
 
-## Fluxos web (rotas em `routes/web.php`, Form Requests em `Http/Requests`)
+## Fluxos web (rotas em `routes/web.php`, Form Requests no pacote)
 
 | Fluxo | Rotas | Observações |
 |---|---|---|
@@ -46,16 +58,21 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
 | Ação sensível | `POST /sensitive-actions/code` + `POST /sensitive-actions/confirm` | ver abaixo |
 
-Todas as rotas sensíveis passam por `throttle:sensitive` (5/min padrão,
-`config/security.php`) além dos limites de negócio próprios.
+Todos os envios sensíveis passam por `throttle:sensitive` (5/min padrão,
+`config/security.php`) além dos limites de negócio próprios. O limite vem com o
+**controller do pacote** (`HasMiddleware`), não com a declaração da rota: uma
+rota que aponte para ele já nasce limitada.
 
 ## Regra em Actions, resposta em contratos (trocar o front sem tocar na regra)
 
-Os controllers de `app/Core/Auth/Http/Controllers` só fazem HTTP. A regra de
-cada fluxo mora numa **Action** (`app/Core/Auth/Actions`), chamável de
-qualquer front, e o que volta ao navegador sai de um **contrato de resposta**
-(`app/Core/Auth/Contracts/Responses`) com implementação padrão registrada no
-container pelo `App\Core\Auth\Providers\AuthServiceProvider`.
+Os controllers só fazem HTTP. Os que **recebem os formulários** são do pacote
+(`Twstec\Kit\Auth\Http\Controllers`); as **telas** (GET) são do starter
+(`App\Http\Controllers\Auth\AuthPageController` + views em
+`resources/views/auth`). A regra de cada fluxo mora numa **Action**
+(`Twstec\Kit\Auth\Actions`), chamável de qualquer front, e o que volta ao
+navegador sai de um **contrato de resposta** (`Twstec\Kit\Auth\Contracts\Responses`)
+com implementação padrão registrada no container pelo
+`Twstec\Kit\Auth\Providers\AuthServiceProvider`.
 
 | Fluxo | Action | Contratos de resposta |
 |---|---|---|
@@ -72,7 +89,7 @@ As Actions devolvem um **resultado** (`LoginOutcome`, `TwoFactorChallengeResult`
 `ValidationException` quando a recusa é de formulário (senha errada, conta
 inativa, bloqueio) — o Laravel já a devolve como redirect com erro no Blade e
 como 422 em JSON. O controller escolhe o contrato pelo resultado; o contrato
-decide só a resposta. As respostas padrão (`app/Core/Auth/Http/Responses`)
+decide só a resposta. As respostas padrão (`Twstec\Kit\Auth\Http\Responses`)
 reproduzem exatamente o redirect, a mensagem e o destino das telas Blade.
 
 **Para trocar uma resposta** (outro front, uma API JSON, Inertia), registre a
@@ -80,7 +97,7 @@ sua implementação do contrato num provider do app:
 
 ```php
 $this->app->bind(
-    \App\Core\Auth\Contracts\Responses\LoginResponse::class,
+    \Twstec\Kit\Auth\Contracts\Responses\LoginResponse::class,
     \App\Http\Responses\MyLoginResponse::class,
 );
 ```
@@ -89,9 +106,9 @@ O padrão é registrado com `bindIf`, então o registro do app prevalece em
 qualquer ordem de providers. O que **não** muda ao trocar a resposta: o
 limite de tentativas, a regeneração e a invalidação da sessão, os eventos
 (`Login`, `Logout`, `PasswordReset`, `Verified`) e os
-logs — eles acontecem na Action, antes da resposta. O `throttle:sensitive` das
-rotas e o `SafeRedirect` do pós-login continuam onde estão (rota e resposta
-padrão, respectivamente): uma resposta própria que leve a um destino vindo do
+logs — eles acontecem na Action, antes da resposta. O `throttle:sensitive`
+(no controller do pacote) e o `SafeRedirect` do pós-login (na resposta padrão)
+continuam onde estão: uma resposta própria que leve a um destino vindo do
 cliente precisa passar por `SafeRedirect::url()` também.
 
 Senha de transação e ação sensível já tinham a regra em serviços
@@ -113,7 +130,7 @@ oferece **reenviar** e **sair**.
 
 O que fica fechado para conta sem e-mail confirmado:
 
-- **Painel** (middleware `verified` → `App\Core\Auth\Http\Middleware\EnsureEmailIsVerified`):
+- **Painel** (middleware `verified` → `Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified`):
   dashboard, chaves de API, projetos, perfil, notificações, senha de
   transação, ação sensível e avatar. Página vai ao aviso; chamada que espera
   JSON recebe 403 com a mensagem traduzida.
@@ -131,7 +148,7 @@ de tema, e o `/admin` (o painel do Filament não usa verificação de e-mail:
 admin é criado por outro admin ou pelo `user:make-admin`, e nos dois casos a
 conta já nasce/fica confirmada).
 
-**O link** (`App\Core\Auth\Support\EmailVerification`, que concentra a regra):
+**O link** (`Twstec\Kit\Auth\Support\EmailVerification`, que concentra a regra):
 
 - assinado e com expiração (`AUTH_EMAIL_VERIFICATION_LINK_TTL_MINUTES`,
   padrão 60), identifica a conta pelo `uuid` e carrega o hash do e-mail —
@@ -199,7 +216,7 @@ código de 6 dígitos por e-mail → sessão.
 **Ligar e desligar são ações sensíveis.** O botão abre a mesma confirmação
 das chaves de API: senha de transação → código por e-mail → token de ação
 sensível de uso único. O token é conferido pelo próprio
-`App\Core\Auth\Services\TwoFactorLogin` (não só pela tela), então nenhum
+`Twstec\Kit\Auth\Services\TwoFactorLogin` (não só pela tela), então nenhum
 caminho troca a preferência sem ele. Conta **sem senha de transação** vê o
 motivo no cartão ("defina sua senha de transação antes") e o botão
 desabilitado — a senha de transação fica no mesmo perfil, logo acima.
@@ -209,7 +226,7 @@ desabilitado — a senha de transação fica no mesmo perfil, logo acima.
 
 1. Senha certa numa conta ativa com o segundo fator ligado **não autentica**.
    A sessão ganha só o **estado intermediário**
-   (`App\Core\Auth\Support\PendingTwoFactorLogin`: qual conta, se "manter
+   (`Twstec\Kit\Auth\Support\PendingTwoFactorLogin`: qual conta, se "manter
    conectado" foi marcado, validade e uma impressão digital da senha), com ID
    de sessão novo. O guard continua vazio: painel, formulários e ações
    Livewire tratam a sessão como visitante.
@@ -230,7 +247,7 @@ O estado intermediário **deixa de valer** quando passa da validade
 muda no meio do caminho (redefinição por e-mail, troca em outra sessão) ou
 quando a conta some. A pessoa volta ao login com a explicação.
 
-**O código** é o do motor comum `App\Core\Auth\Services\VerificationCodes`
+**O código** é o do motor comum `Twstec\Kit\Auth\Services\VerificationCodes`
 (o mesmo da ação sensível), com finalidade própria
 (`VerificationPurpose::LoginChallenge` — um código de ação sensível não
 conclui login, e vice-versa):
@@ -345,7 +362,7 @@ segundo fator do login; o token de ação sensível também é consumido com
 `UPDATE` condicional.
 
 **Canais de verificação plugáveis** (TOTP/WhatsApp futuros): contrato
-`App\Core\Auth\Contracts\VerificationChannelDriver` + `VerificationChannelManager`.
+`Twstec\Kit\Auth\Contracts\VerificationChannelDriver` + `VerificationChannelManager`.
 Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no enum
 `VerificationChannel`, sem tocar no fluxo.
 
@@ -358,6 +375,80 @@ Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no e
   validação de origem `Sec-Fetch-Site`/`Origin`), testado com e sem token.
 - Credenciais nunca aparecem em logs: `password`, `transaction_password`, `code`
   e afins são `[REDACTED]` pelo Redactor (testado na pipeline de request log).
+
+## O pacote `twstec/kit-auth` e os pontos de extensão
+
+A autenticação é um pacote Laravel **sem telas** ([`packages/auth`](../packages/auth),
+namespace `Twstec\Kit\Auth`), que depende só do `twstec/kit-foundation`. O
+starter Livewire é um dos fronts que o usam; um starter React usa o mesmo
+pacote, com as próprias telas e respostas.
+
+**O que o pacote liga sozinho** (nenhuma proteção depende de o front lembrar):
+
+- o status da conta a cada requisição do grupo `web` (`EnsureAccountIsActive`,
+  anexado ao fim do grupo — no starter, logo depois do `SetLocale`);
+- os aliases `verified` (a regra do kit, que substitui o do framework) e
+  `sensitive.token` (um alias de mesmo nome declarado pelo aplicativo
+  prevalece);
+- o `throttle:sensitive` de cada envio, declarado nos próprios controllers;
+- os limites que moram nas regras: bloqueio de login por e-mail+IP
+  (`AttemptLogin`), limites do código do segundo fator por código, conta e IP
+  (`TwoFactorLogin`), intervalos de reenvio;
+- as migrations (com os nomes de sempre), a configuração padrão das chaves do
+  kit em `config('auth')` e as traduções do domínio.
+
+Opt-out só explícito: `AUTH_WEB_PROTECTIONS=false` desliga o middleware de
+status e os dois aliases, e o pacote grava um aviso no log a cada boot.
+
+**O que um front novo faz para ligar o pacote:**
+
+1. **Model de usuário:** o seu `App\Models\User` estende o `User` do framework,
+   implementa `Twstec\Kit\Auth\Contracts\AuthUser` (e `HasLocalePreference`)
+   e usa a trait `Twstec\Kit\Auth\Models\Concerns\KitAuthenticatable` (ou as
+   partes dela: `HasAccountStatus`, `HasTransactionPassword`, `HasTwoFactor`,
+   `ProtectsAccounts`, `VerifiesEmail`, `SendsPasswordResetNotification`,
+   `HasPreferredLocale`). Configure-o em `auth.providers.users.model`. A tabela
+   `users` é a do esqueleto Laravel; as colunas do kit vêm das migrations do
+   pacote.
+2. **Rotas de envio:** aponte os POSTs para os controllers do pacote
+   (`AuthenticatedSessionController@store/destroy`, `RegisteredUserController@store`,
+   `TwoFactorChallengeController@store/resend/destroy`,
+   `PasswordResetLinkController@store`, `NewPasswordController@store`,
+   `EmailVerificationController@resend/verify`,
+   `TransactionPasswordController@update`, `SensitiveActionController@store/confirm`).
+   Os endereços são seus; o limite vem junto.
+3. **Telas:** são suas (no starter Livewire, `AuthPageController` + views Blade;
+   num starter React, as páginas dele). A tela do código do segundo fator pergunta
+   `CompleteTwoFactorLogin::pendingUser()` e, sem estado, responde com
+   `TwoFactorChallengeController::respond()`.
+4. **Respostas:** as padrão redirecionam para as rotas nomeadas `login`,
+   `dashboard`, `two-factor.challenge` e `verification.notice` (e os e-mails
+   usam `password.reset` e `verification.verify`). Para JSON ou Inertia,
+   registre a sua implementação de cada contrato de
+   `Twstec\Kit\Auth\Contracts\Responses` num provider do app — o padrão é
+   `bindIf` e cede.
+5. **E-mails:** as classes (código, recuperação de senha, verificação) e os
+   assuntos são do pacote; os corpos são views do front
+   (`mail.messages.verification-code`, `mail.messages.password-reset`,
+   `mail.messages.email-verification`), no layout `<x-email::…>` do foundation.
+6. **Front com Livewire:** registre o `EnsureEmailIsVerified` como middleware
+   persistente do Livewire (`Livewire::addPersistentMiddleware`, no starter em
+   `AppServiceProvider`), para que as ações dos componentes também exijam o
+   e-mail confirmado. O pacote não conhece o Livewire, então esse passo é do
+   front.
+7. **Extensões opcionais:** `AccountProtection` (contas protegidas contra
+   alteração) e `LoginPrefillProvider` (credenciais sugeridas no login) — sem
+   implementação registrada, nada é protegido nem preenchido.
+
+**Textos:** as mensagens do domínio (recusas, avisos, política de senha,
+assuntos dos e-mails) vêm do pacote, e o `lang/` do aplicativo vence na mesma
+chave — para trocar `auth.failed`, basta pô-la no `lang/pt_BR/auth.php` do
+aplicativo. Os textos das telas são do front.
+
+**Nomes antigos:** `App\Core\Auth\…` continua resolvendo para
+`Twstec\Kit\Auth\…` até a 3.0 (payload de fila e extensões antigas); o model e o
+comando `user:make-admin`, que ficaram no starter, têm o apelido deles no
+starter.
 
 ## Testes
 
@@ -383,7 +474,7 @@ do `/admin`; `VerificationCodesTest`: o motor).
 ## Política de senha (configurável, sem tocar em código)
 
 Um lugar só decide o que uma senha de login precisa ter:
-`App\Core\Auth\PasswordPolicy`, lido por registro, reset por e-mail, troca
+`Twstec\Kit\Auth\PasswordPolicy`, lido por registro, reset por e-mail, troca
 no perfil e criação/edição de usuário no `/admin`. O kit nasce com o mínimo
 (6 caracteres) e as demais exigências prontas para ligar no `.env`:
 

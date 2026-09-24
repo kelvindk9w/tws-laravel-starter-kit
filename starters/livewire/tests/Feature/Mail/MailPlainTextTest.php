@@ -12,8 +12,8 @@ declare(strict_types=1);
 // um botão sem URL é um beco sem saída.
 // =============================================================================
 
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Foundation\Mail\MailPreview;
 use Twstec\Kit\Foundation\Mail\PlainText;
 

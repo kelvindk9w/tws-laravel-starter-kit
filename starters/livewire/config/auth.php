@@ -1,6 +1,6 @@
 <?php
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 return [
 
@@ -124,7 +124,17 @@ return [
     |
     */
 
-    // Política da senha de LOGIN — consumida por App\Core\Auth\PasswordPolicy
+    // Proteções do grupo `web` e aliases de middleware que o pacote
+    // twstec/kit-auth instala sozinho: status da conta a cada requisição web
+    // (EnsureAccountIsActive), `verified` (e-mail confirmado, com a regra do
+    // kit) e `sensitive.token` (token de ação sensível). Desligar
+    // (AUTH_WEB_PROTECTIONS=false) só faz sentido se a aplicação instalar as
+    // mesmas proteções por conta própria — o pacote avisa no log a cada boot.
+    'web_protections' => [
+        'enabled' => (bool) env('AUTH_WEB_PROTECTIONS', true),
+    ],
+
+    // Política da senha de LOGIN — consumida por Twstec\Kit\Auth\PasswordPolicy
     // em TODOS os pontos (registro, reset, perfil, /admin). O kit nasce com o
     // mínimo (só o tamanho); cada exigência extra é um toggle no .env:
     //   AUTH_PASSWORD_LETTERS=true        pelo menos uma letra
@@ -171,7 +181,7 @@ return [
         'resend_cooldown_seconds' => (int) env('AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS', 60),
     ],
 
-    // Verificação de e-mail no cadastro (App\Core\Auth\Support\EmailVerification).
+    // Verificação de e-mail no cadastro (Twstec\Kit\Auth\Support\EmailVerification).
     // LIGADA por padrão: conta que não confirmou o e-mail não entra no painel
     // (páginas, formulários e ações Livewire) nem usa a API — só vê o aviso com
     // "reenviar" e "sair". Desligar (AUTH_EMAIL_VERIFICATION_REQUIRED=false) é
@@ -192,7 +202,7 @@ return [
         'token_ttl_minutes' => (int) env('AUTH_SENSITIVE_TOKEN_TTL_MINUTES', 10),
     ],
 
-    // Verificação em duas etapas no LOGIN (App\Core\Auth\Services\TwoFactorLogin).
+    // Verificação em duas etapas no LOGIN (Twstec\Kit\Auth\Services\TwoFactorLogin).
     // Opcional, por conta: quem liga no próprio perfil (/profile ou
     // /admin/profile) passa a receber um código por e-mail depois da senha. O
     // código é o do motor comum (seção `verification` acima: validade,

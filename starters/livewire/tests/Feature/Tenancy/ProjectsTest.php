@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 
 // CRUD de projetos da API v1: camada organizacional, nasce só com
 // nome. Isolamento de tenant em TODAS as operações (o tenant A nunca

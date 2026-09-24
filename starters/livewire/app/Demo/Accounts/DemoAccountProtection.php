@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Demo\Accounts;
 
-use App\Core\Auth\Contracts\AccountProtection;
-use App\Core\Auth\Models\User;
 use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
+use Twstec\Kit\Auth\Contracts\AccountProtection;
+use Twstec\Kit\Auth\Contracts\AuthUser;
 
 /**
  * A demonstração implementa o ponto de extensão do produto "contas protegidas
- * contra alteração" (App\Core\Auth\Contracts\AccountProtection) com as CONTAS
+ * contra alteração" (Twstec\Kit\Auth\Contracts\AccountProtection) com as CONTAS
  * DEMO — as regras e o porquê estão em DemoAccountGuard.
  *
  * Registrada pelo DemoServiceProvider. Sem a demo, o produto não protege
@@ -23,7 +23,7 @@ final class DemoAccountProtection implements AccountProtection
      * não: a interface do super admin mantém as contas demo fora das ações
      * mesmo quando as outras camadas estão desligadas.
      */
-    public function reserves(User $user): bool
+    public function reserves(AuthUser $user): bool
     {
         return in_array($user->email, array_filter([
             config('ui.demo_login.email'),
@@ -31,12 +31,12 @@ final class DemoAccountProtection implements AccountProtection
         ]), true);
     }
 
-    public function protects(User $user): bool
+    public function protects(AuthUser $user): bool
     {
         return DemoAccountGuard::protects($user);
     }
 
-    public function guardUpdate(User $user): void
+    public function guardUpdate(AuthUser $user): void
     {
         if (! DemoAccountGuard::protects($user)) {
             return;
@@ -49,7 +49,7 @@ final class DemoAccountProtection implements AccountProtection
         }
     }
 
-    public function guardDelete(User $user): void
+    public function guardDelete(AuthUser $user): void
     {
         if (DemoAccountGuard::protects($user)) {
             throw DemoAccountProtectedException::delete($user->getOriginal('email') ?? $user->email);

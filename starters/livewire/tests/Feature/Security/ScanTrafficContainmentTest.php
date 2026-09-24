@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;

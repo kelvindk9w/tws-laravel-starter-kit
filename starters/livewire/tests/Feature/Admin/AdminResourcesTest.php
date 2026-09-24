@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
@@ -13,7 +11,9 @@ use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\Uploads\Pages\ListUploads;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 

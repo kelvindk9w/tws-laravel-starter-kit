@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Enums\VerificationResult;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Models\VerificationCode;
-use App\Core\Auth\Services\VerificationCodes;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Enums\VerificationResult;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\VerificationCode;
+use Twstec\Kit\Auth\Services\VerificationCodes;
 
 // Motor comum dos códigos de 6 dígitos (ação sensível e segundo fator do
 // login): só hash no banco, uso único com consumo condicional, tentativa

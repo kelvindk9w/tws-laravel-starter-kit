@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Tenancy;
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 /**
  * Contexto do tenant da requisição corrente.

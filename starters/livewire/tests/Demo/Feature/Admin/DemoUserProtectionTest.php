@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Demo\Accounts\DemoAccountGuard;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 // Proteção das contas demo (login demo + super admin demo): NÃO podem ser
 // bloqueadas/desbloqueadas por ações do super admin — senão um visitante

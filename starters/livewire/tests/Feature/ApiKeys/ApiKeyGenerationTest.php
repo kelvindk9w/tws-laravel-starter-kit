@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyGenerator;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 // Geração do par pk_/sk_ e hash da secreta:
 // aleatoriedade criptográfica, prefixo por ambiente, só hash no banco.

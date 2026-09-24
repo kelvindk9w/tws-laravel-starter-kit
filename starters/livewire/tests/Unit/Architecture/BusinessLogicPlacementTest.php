@@ -15,21 +15,26 @@ declare(strict_types=1);
 //    abrir/ler o estado intermediário do segundo fator, gravar model ou mexer
 //    na sessão (regenerar, invalidar, renovar token);
 // 2. uma tela ou controller que já passou para um serviço volta a consultar
-//    ou gravar model direto (chamada estática em App\Core\*\Models\*).
+//    ou gravar model direto (chamada estática em App\Core\*\Models\*,
+//    App\Models\* ou Twstec\Kit\*\Models\*).
 //
 // A leitura é por tokens do PHP: comentários e strings não contam.
 // =============================================================================
 
 /**
- * Controllers que só fazem HTTP: a regra está nas Actions de App\Core\Auth\Actions.
+ * Controllers que só fazem HTTP: a regra está nas Actions de Twstec\Kit\Auth\Actions.
+ * Os que recebem os formulários são do pacote twstec/kit-auth (lidos pelo
+ * vendor/, que no desenvolvimento é um link para packages/auth); as telas são
+ * do starter (AuthPageController).
  */
 const THIN_AUTH_CONTROLLERS = [
-    'app/Core/Auth/Http/Controllers/AuthenticatedSessionController.php',
-    'app/Core/Auth/Http/Controllers/EmailVerificationController.php',
-    'app/Core/Auth/Http/Controllers/NewPasswordController.php',
-    'app/Core/Auth/Http/Controllers/PasswordResetLinkController.php',
-    'app/Core/Auth/Http/Controllers/RegisteredUserController.php',
-    'app/Core/Auth/Http/Controllers/TwoFactorChallengeController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/AuthenticatedSessionController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/EmailVerificationController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/NewPasswordController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/PasswordResetLinkController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/RegisteredUserController.php',
+    'vendor/twstec/kit-auth/src/Http/Controllers/TwoFactorChallengeController.php',
+    'app/Http/Controllers/Auth/AuthPageController.php',
 ];
 
 /**
@@ -42,7 +47,7 @@ const THIN_AUTH_FORBIDDEN_CLASSES = [
     'Illuminate\Support\Facades\Hash',
     'Illuminate\Support\Facades\DB',
     'Illuminate\Auth\Events\\',
-    'App\Core\Auth\Support\PendingTwoFactorLogin',
+    'Twstec\Kit\Auth\Support\PendingTwoFactorLogin',
 ];
 
 /**
@@ -141,7 +146,9 @@ function placementModelStaticCalls(string $contents): array
 
         $resolved = $imports[$class] ?? $class;
 
-        if (preg_match('/^App\\\\Core\\\\[^\\\\]+\\\\Models\\\\/', $resolved) === 1) {
+        // Models do app (App\Core\<Módulo>\Models, App\Models) e dos pacotes
+        // do kit (Twstec\Kit\<Pacote>\Models).
+        if (preg_match('/^(App\\\\Core\\\\[^\\\\]+\\\\|App\\\\|Twstec\\\\Kit\\\\[^\\\\]+\\\\)Models\\\\/', $resolved) === 1) {
             $calls[] = "{$resolved}::{$member}";
         }
     }

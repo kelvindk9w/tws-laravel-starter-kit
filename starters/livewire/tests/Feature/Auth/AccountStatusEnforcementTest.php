@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 // =============================================================================
 // STATUS DA CONTA VALE A CADA REQUISIÇÃO, NÃO SÓ NO LOGIN
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 // (O /admin já barrava pelo canAccessPanel; a API já barrava pelo
 // ResolveTenant, que confere o dono da chave a cada chamada.)
 //
-// A regra agora (App\Core\Auth\Http\Middleware\EnsureAccountIsActive, no
+// A regra agora (Twstec\Kit\Auth\Http\Middleware\EnsureAccountIsActive, no
 // grupo `web`): conta autenticada que não está ATIVA tem a sessão encerrada na
 // próxima requisição e vai ao login com a mesma mensagem traduzida que o login
 // daria. Vale para página, formulário e ação Livewire (o endpoint de

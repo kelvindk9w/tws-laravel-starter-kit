@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Mail\ApiKeyInactivityWarningMail;
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
 // Expiração por inatividade: job diário desativa chaves sem uso

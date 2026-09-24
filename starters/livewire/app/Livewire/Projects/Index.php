@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Projects;
 
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Tenancy\Services\ProjectService;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Component;

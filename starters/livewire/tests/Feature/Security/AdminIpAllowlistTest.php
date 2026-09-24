@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Http\Middleware\Authenticate;
+use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Security\AdminIpAllowlist;
 use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 

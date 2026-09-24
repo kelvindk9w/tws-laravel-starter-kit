@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Support\MarkEmailVerifiedAction;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Support\CardActions;
 use App\Filament\Support\ViewModeToggle;
+use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;

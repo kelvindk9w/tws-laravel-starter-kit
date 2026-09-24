@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3aee7d1f322a466c6db90f695f1d41a5",
+    "content-hash": "fb9712fff5b264f56c398d53d73a602f",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8467,6 +8467,69 @@
             "time": "2025-12-02T11:56:42+00:00"
         },
         {
+            "name": "twstec/kit-auth",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/auth",
+                "reference": "6b50e90622e3cd29522439b6df1581912fd39ec0"
+            },
+            "require": {
+                "laravel/framework": "^13.17",
+                "php": "^8.4",
+                "twstec/kit-foundation": "2.x-dev"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Auth\\Providers\\AuthServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Auth\\": "src/"
+                },
+                "files": [
+                    "src/Compat/legacy-aliases.php",
+                    "src/Mail/previews.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Auth\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Autenticação do TWS Laravel Starter Kit, sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, verificação em duas etapas por e-mail, senha de transação, ação sensível com token de uso único, política de senha, status da conta e contratos de resposta para qualquer front.",
+            "keywords": [
+                "authentication",
+                "laravel",
+                "security",
+                "starter-kit",
+                "two-factor"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "twstec/kit-foundation",
             "version": "2.x-dev",
             "dist": {
@@ -12272,6 +12335,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "twstec/kit-auth": 20,
         "twstec/kit-foundation": 20
     },
     "prefer-stable": true,

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 // Lacuna apontada pelo QA: o banco nascia com 2 contas e a paginação/filtros
 // do /admin não tinham o que exercitar.

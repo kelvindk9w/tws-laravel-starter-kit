@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Growth;
 
-use App\Core\Auth\Models\User;
 use App\Filament\Widgets\Support\BaseTimeSeriesWidget;
 use App\Filament\Widgets\Support\ChartSeries;
 use App\Filament\Widgets\Support\Metric;
 use App\Filament\Widgets\Support\Period;
 use App\Filament\Widgets\Support\StatusPalette;
+use App\Models\User;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
 

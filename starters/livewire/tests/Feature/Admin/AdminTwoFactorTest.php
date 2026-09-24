@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Models\VerificationCode;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Profile;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\VerificationCode;
 
 // Segundo fator no /admin (Filament 5): o provedor EmailCodeAuthentication
 // pluga o MOTOR do kit no MFA do Filament — mesma preferência do painel do

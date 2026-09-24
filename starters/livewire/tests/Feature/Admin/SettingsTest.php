@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Filament\Pages\Settings;
+use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Foundation\Settings\Models\Setting;
 use Twstec\Kit\Foundation\Settings\SettingsManager;

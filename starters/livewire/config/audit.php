@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\SensitiveActionToken;
-use App\Core\Auth\Models\VerificationCode;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
+use Twstec\Kit\Auth\Models\VerificationCode;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Foundation\Settings\Models\Setting;
 

@@ -2,10 +2,10 @@
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\Auth\Models\User;
 use App\Demo\Accounts\DemoAccountGuard;
 use App\Demo\Accounts\DemoAccountTrigger;
 use App\Demo\Support\DemoSurface;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 

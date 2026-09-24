@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Concerns;
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\SensitiveActionService;
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Twstec\Kit\Auth\Services\SensitiveActionService;
 
 /**
  * Confirmação de AÇÃO SENSÍVEL nas telas Livewire do painel:

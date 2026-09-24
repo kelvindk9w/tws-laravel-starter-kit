@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Database\Seeders\DemoAdminSeeder;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 // Super admin demo (/admin): seeder + pré-preenchimento do login do Filament,

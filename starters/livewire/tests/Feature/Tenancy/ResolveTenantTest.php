@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 

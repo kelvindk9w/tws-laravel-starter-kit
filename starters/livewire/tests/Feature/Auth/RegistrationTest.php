@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 // Registro de usuário: senha forte, validação no servidor, dados
 // pessoais criptografados em repouso e cookie de sessão seguro.

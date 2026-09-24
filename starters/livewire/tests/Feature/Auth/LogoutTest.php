@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
 // Logout e proteção CSRF (painel web usa sessão/cookie).

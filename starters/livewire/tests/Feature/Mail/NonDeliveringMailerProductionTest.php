@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Process;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Foundation\FoundationServiceProvider;
 use Twstec\Kit\Foundation\Mail\Exceptions\NonDeliveringMailerInProductionException;
 use Twstec\Kit\Foundation\Mail\NonDeliveringMailers;

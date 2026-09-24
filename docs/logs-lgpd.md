@@ -28,7 +28,7 @@ Onde a regra vale (`Redactor::maskCardNumbers`, usada por todos os pontos abaixo
 | Destino | Como |
 |---|---|
 | `request_logs.payload` (INICIADA, BLOQUEADA) e `error_message` | `Redactor::redactArray`/`redactString`, como CPF/e-mail |
-| `storage/logs/*.log` (todos os canais) e agregadores (`stderr`, `syslog`, `papertrail`, `slack`) | tap `MaskCardNumbersInLogs` em `config/logging.php`: envolve o formatter de cada canal e mascara a **linha já formatada** — mensagem, contexto e a **exceção** (uma `QueryException` carrega os valores do INSERT). Canal novo precisa do mesmo tap (há teste que confere os existentes) |
+| `storage/logs/*.log` (todos os canais) e agregadores (`stderr`, `syslog`, `papertrail`, `slack`) | tap `MaskCardNumbersInLogs` em `config/logging.php` (e no canal `request_log`, que vem do pacote foundation — ver `Logging\RequestLogChannel`): envolve o formatter de cada canal e mascara a **linha já formatada** — mensagem, contexto e a **exceção** (uma `QueryException` carrega os valores do INSERT). Canal novo precisa do mesmo tap (há teste que confere os existentes) |
 | `form_submissions` (contato e forms demo) | `FormSubmissionGuard`, só a regra de cartão — ver abaixo |
 | E-mail do formulário de contato (e o job na fila) | o controller envia o texto já gravado, portanto mascarado |
 

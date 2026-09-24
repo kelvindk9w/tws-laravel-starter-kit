@@ -9,7 +9,7 @@
          extensão registrada, os campos nascem vazios e não há aviso. Quem
          sugere decide também QUANDO — a demonstração do kit, por exemplo,
          nunca sugere em APP_ENV=production sem opt-out declarado. --}}
-    @php($prefill = \App\Core\Auth\Support\LoginPrefill::for('web'))
+    @php($prefill = \Twstec\Kit\Auth\Support\LoginPrefill::for('web'))
 
     @if ($prefill?->notice !== null)
         <x-alert type="info" class="mb-4">

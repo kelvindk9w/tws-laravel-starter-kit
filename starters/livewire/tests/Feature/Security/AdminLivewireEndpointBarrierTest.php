@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware;
+use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 // =============================================================================

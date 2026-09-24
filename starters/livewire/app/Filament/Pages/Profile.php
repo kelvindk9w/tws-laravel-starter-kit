@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\SensitiveActionService;
-use App\Core\Auth\Services\TwoFactorLogin;
 use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AvatarUpload;
+use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\OneTimeCodeInput;
@@ -23,6 +21,8 @@ use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Twstec\Kit\Auth\Services\SensitiveActionService;
+use Twstec\Kit\Auth\Services\TwoFactorLogin;
 
 /**
  * Perfil do super admin (/admin — demo-safe).

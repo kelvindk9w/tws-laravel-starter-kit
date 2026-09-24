@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\Auth\Models\User;
 use App\Demo\Support\DemoSurface;
+use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;

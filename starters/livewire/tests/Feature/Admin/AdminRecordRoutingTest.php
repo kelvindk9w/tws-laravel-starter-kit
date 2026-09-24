@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\ProductResource;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\User;
 
 // =============================================================================
 // Bug de QA #2 — links de Visualizar/Editar do /admin davam 404.

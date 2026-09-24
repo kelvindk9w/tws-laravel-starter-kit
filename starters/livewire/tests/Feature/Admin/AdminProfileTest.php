@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Filament\Pages\Profile;
+use App\Models\User;
 use Livewire\Livewire;
 
 // Perfil do super admin (demo-safe): nome editável funciona; e-mail é

@@ -2,25 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Actions\AttemptLogin;
-use App\Core\Auth\Actions\CompleteTwoFactorLogin;
-use App\Core\Auth\Actions\Logout;
-use App\Core\Auth\Actions\RegisterUser;
-use App\Core\Auth\Actions\ResendEmailVerification;
-use App\Core\Auth\Actions\ResetPassword;
-use App\Core\Auth\Actions\SendPasswordResetLink;
-use App\Core\Auth\Actions\VerifyEmail;
-use App\Core\Auth\Enums\EmailVerificationOutcome;
-use App\Core\Auth\Enums\LoginOutcome;
-use App\Core\Auth\Enums\TwoFactorChallengeOutcome;
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Notifications\ResetPasswordNotification;
-use App\Core\Auth\Notifications\VerifyEmailNotification;
-use App\Core\Auth\Support\EmailVerification;
-use App\Core\Auth\Support\PendingTwoFactorLogin;
+use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
@@ -31,6 +13,24 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Twstec\Kit\Auth\Actions\AttemptLogin;
+use Twstec\Kit\Auth\Actions\CompleteTwoFactorLogin;
+use Twstec\Kit\Auth\Actions\Logout;
+use Twstec\Kit\Auth\Actions\RegisterUser;
+use Twstec\Kit\Auth\Actions\ResendEmailVerification;
+use Twstec\Kit\Auth\Actions\ResetPassword;
+use Twstec\Kit\Auth\Actions\SendPasswordResetLink;
+use Twstec\Kit\Auth\Actions\VerifyEmail;
+use Twstec\Kit\Auth\Enums\EmailVerificationOutcome;
+use Twstec\Kit\Auth\Enums\LoginOutcome;
+use Twstec\Kit\Auth\Enums\TwoFactorChallengeOutcome;
+use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
+use Twstec\Kit\Auth\Notifications\VerifyEmailNotification;
+use Twstec\Kit\Auth\Support\EmailVerification;
+use Twstec\Kit\Auth\Support\PendingTwoFactorLogin;
 
 // =============================================================================
 // ACTIONS DA AUTENTICAÇÃO — a regra, chamada sem controller e sem resposta.

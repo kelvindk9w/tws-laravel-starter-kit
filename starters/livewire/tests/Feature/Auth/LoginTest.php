@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
+use App\Models\User;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 // Login (sessão web): bloqueio por tentativas,
 // deny-by-default, sessão regenerada e cookie seguro.

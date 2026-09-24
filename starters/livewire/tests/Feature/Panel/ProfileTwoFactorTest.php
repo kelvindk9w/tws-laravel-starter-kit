@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\SensitiveActionToken;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\SensitiveActionService;
-use App\Core\Auth\Services\TwoFactorLogin;
 use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
 use App\Livewire\Profile;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
+use Twstec\Kit\Auth\Services\SensitiveActionService;
+use Twstec\Kit\Auth\Services\TwoFactorLogin;
 
 // Ligar/desligar a verificação em duas etapas no /profile: ação sensível
 // (senha de transação + código por e-mail), com o token consumido pelo

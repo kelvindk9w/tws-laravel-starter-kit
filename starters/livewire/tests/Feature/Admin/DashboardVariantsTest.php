@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Database\Seeders\DashboardHistorySeeder;
 use App\Demo\Database\Seeders\RequestLogSeeder;
 use App\Demo\Filament\Dashboards\ContentDashboard;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Dashboards\GrowthDashboard;
 use App\Filament\Dashboards\OverviewDashboard;
+use App\Models\User;
 use Filament\Pages\Dashboard;
 use Illuminate\Support\Facades\Route;
 

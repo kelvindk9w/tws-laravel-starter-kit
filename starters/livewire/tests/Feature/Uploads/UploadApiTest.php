@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Uploads\Enums\UploadStatus;
 use App\Core\Uploads\Models\Upload;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;

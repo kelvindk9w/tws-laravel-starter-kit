@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Core\Tenancy\Http\Controllers;
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Http\Requests\StoreProjectRequest;
 use App\Core\Tenancy\Http\Requests\UpdateProjectRequest;
 use App\Core\Tenancy\Http\Resources\ProjectResource;
 use App\Core\Tenancy\Services\ProjectService;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 

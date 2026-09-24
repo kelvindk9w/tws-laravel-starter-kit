@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users;
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\PasswordPolicy;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -17,6 +14,7 @@ use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\AvatarUpload;
 use App\Filament\Support\BaseResource;
+use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -43,6 +41,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Auth\PasswordPolicy;
 
 /**
  * Usuários (super admin): CRUD completo — listar, ver, criar,

@@ -6,12 +6,12 @@ use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\ApiKeys\Index;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================
 // Chaves de API pela UI (Livewire): a tela mais importante.

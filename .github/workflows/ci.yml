@@ -115,6 +115,21 @@ jobs:
         working-directory: packages/foundation
         run: ./vendor/bin/pest --ci
 
+      # Pacote twstec/kit-auth: idem; acha o foundation irmão pelo path
+      # repository do próprio composer.json. A suíte sobe uma aplicação
+      # Laravel limpa e prova que as proteções de autenticação vêm do pacote.
+      - name: Pacote auth · dependências
+        working-directory: packages/auth
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote auth · estilo (Pint)
+        working-directory: packages/auth
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote auth · testes (Pest)
+        working-directory: packages/auth
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -188,6 +203,14 @@ jobs:
         working-directory: packages/foundation
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote auth · dependências
+        working-directory: packages/auth
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote auth · testes (Pest)
+        working-directory: packages/auth
+        run: ./vendor/bin/pest --ci
+
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
   #
@@ -245,12 +268,14 @@ jobs:
               if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
             done
             test -z "$(find /var/www/html/storage -type f)"
-            # Pacote do kit COPIADO para o vendor (nunca link para fora da
-            # imagem) e sem o que é de desenvolvimento dele.
-            test -d vendor/twstec/kit-foundation/src
-            test ! -L vendor/twstec/kit-foundation
-            for proibido in tests vendor composer.lock phpunit.xml; do
-              if [ -e "vendor/twstec/kit-foundation/$proibido" ]; then echo "no pacote: $proibido"; exit 1; fi
+            # Pacotes do kit COPIADOS para o vendor (nunca link para fora da
+            # imagem) e sem o que é de desenvolvimento deles.
+            for pacote in kit-foundation kit-auth; do
+              test -d "vendor/twstec/$pacote/src"
+              test ! -L "vendor/twstec/$pacote"
+              for proibido in tests vendor composer.lock phpunit.xml; do
+                if [ -e "vendor/twstec/$pacote/$proibido" ]; then echo "no pacote $pacote: $proibido"; exit 1; fi
+              done
             done
             php artisan --version
           '

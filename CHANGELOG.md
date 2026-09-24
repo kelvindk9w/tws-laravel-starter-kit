@@ -19,6 +19,22 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `App\Core\<Módulo>\…` continuam resolvendo até a 3.0 (tabela em
   `packages/foundation/README.md`). Mensagens de log e de erro que citam uma
   classe da base passam a citar o nome novo.
+- **Segundo pacote: `twstec/kit-auth`** (`packages/auth`), sem telas: a regra
+  de login, cadastro, verificação de e-mail, segundo fator, senha de
+  transação, ação sensível e status da conta. Mesmo comportamento, sem
+  migration pendente. O pacote liga sozinho o status da conta no grupo `web`,
+  os aliases `verified` e `sensitive.token` e o `throttle:sensitive` dos
+  envios (opt-out: `AUTH_WEB_PROTECTIONS=false`, com aviso no log). Telas,
+  rotas e `user:make-admin` ficam no starter.
+- O canal de log `request_log` (a segunda camada das trilhas de requisição,
+  segurança e auditoria) passa a vir do `twstec/kit-foundation`, com a mesma
+  definição; uma aplicação sem o canal não perde mais essas linhas para o log
+  de emergência, e um `request_log` próprio no `config/logging.php` vence.
+- O model de usuário é do aplicativo: **`App\Models\User`** (era
+  `App\Core\Auth\Models\User`). Os nomes antigos `App\Core\Auth\…`
+  resolvem até a 3.0, inclusive em job na fila durante o deploy. Quem
+  implementa `AccountProtection`, `VerificationChannelDriver` ou
+  `RegisterResponse` passa a tipar o usuário como `AuthUser`.
 - As guardas de produção (recusa sem `APP_KEY`, HTTPS, `APP_DEBUG` desligado,
   avisos dos opt-outs) e os limitadores `api` e `sensitive` passam a ser
   aplicados pelo pacote sozinho, em qualquer aplicação que o instale; saíram
@@ -55,7 +71,9 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
    repository — ver o README) e subir com `docker compose up -d --build` (os
    containers PHP passam a montar `packages/` em `/var/packages`). Quem tinha
    código próprio usando `App\Core\<Módulo da base>\…` continua funcionando
-   pelos apelidos; troque os `use` antes da 3.0.
+   pelos apelidos; troque os `use` antes da 3.0. O mesmo vale para
+   `App\Core\Auth\…` (agora `Twstec\Kit\Auth\…`, e `App\Models\User` para o
+   model); um `AUTH_MODEL` antigo no `.env` também continua valendo.
 
 ## [1.1.0] — 2026-09-25
 

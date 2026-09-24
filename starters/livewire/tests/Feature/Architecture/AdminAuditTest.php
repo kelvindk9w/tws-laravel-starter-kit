@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Filament\AuditFixture\NewAdminScreen;
 use App\Filament\Pages\Profile;
@@ -10,6 +9,7 @@ use App\Filament\Pages\Settings;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Support\AdminAudit;
+use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Pages\SimplePage;
 use Filament\Resources\Resource;

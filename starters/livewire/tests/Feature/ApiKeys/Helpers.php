@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================
 // Helpers compartilhados da suíte de API Keys/Tenancy.

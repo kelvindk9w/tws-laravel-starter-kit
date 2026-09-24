@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\AuditEvents;
 
-use App\Core\Auth\Models\User;
 use App\Filament\Resources\AuditEvents\Pages\ListAuditEvents;
 use App\Filament\Resources\AuditEvents\Pages\ViewAuditEvent;
 use App\Filament\Resources\RequestLogs\RequestLogResource;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\BaseResource;
+use App\Models\User;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;

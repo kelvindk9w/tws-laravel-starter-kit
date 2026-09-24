@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Database\Seeders\ProductSeeder;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
 use App\Demo\Filament\Resources\Products\Pages\ListProducts;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;

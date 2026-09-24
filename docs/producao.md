@@ -80,7 +80,7 @@ docker run --rm --entrypoint sh tws-app:prod -c \
 ```
 
 O `--build-context packages=../../packages` entrega à imagem a pasta `packages/` da raiz do
-repositório: o estágio do Composer instala dali os pacotes do kit (`twstec/kit-foundation`),
+repositório: o estágio do Composer instala dali os pacotes do kit (`twstec/kit-foundation`, `twstec/kit-auth`),
 **copiando** cada um para `vendor/` (`COMPOSER_MIRROR_PATH_REPOS=1`) — a imagem final não tem link
 para fora dela nem a pasta `/packages`. O `packages/.dockerignore` deixa de fora o que é de
 desenvolvimento do pacote (`vendor/`, `tests/`, `composer.lock`, `phpunit.xml`). O

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Models\VerificationCode;
-use App\Core\Auth\Support\PendingTwoFactorLogin;
 use App\Livewire\Profile;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\VerificationCode;
+use Twstec\Kit\Auth\Support\PendingTwoFactorLogin;
 
 // Verificação em duas etapas no LOGIN do painel do cliente (TwoFactorLogin +
 // TwoFactorChallengeController): senha certa NÃO autentica; o código por

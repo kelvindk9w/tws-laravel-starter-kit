@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\PasswordPolicy;
 use App\Demo\Database\Seeders\DemoAdminSeeder;
 use App\Demo\Database\Seeders\DemoUserSeeder;
 use Illuminate\Support\Facades\Validator;
+use Twstec\Kit\Auth\PasswordPolicy;
 
 // =============================================================================
-// Política de senha de login (App\Core\Auth\PasswordPolicy): configurável por
+// Política de senha de login (Twstec\Kit\Auth\PasswordPolicy): configurável por
 // .env, padrão = só tamanho mínimo, demais regras prontas para ligar. Também
 // cobre o bug de QA #6 — a senha demo precisa passar na política do próprio
 // app, e a mensagem de erro precisa sair no idioma ativo.

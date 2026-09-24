@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 // Tema claro/escuro/sistema: script sem flash, toggle de 3 estados e
 // persistência na conta (users.theme).

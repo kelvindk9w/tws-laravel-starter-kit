@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Queries\AccountOverview;
 use App\Core\Tenancy\Queries\AccountOverviewQuery;
 use App\Core\Tenancy\Services\ProjectService;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;

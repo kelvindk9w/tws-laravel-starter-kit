@@ -1,7 +1,8 @@
 # Atualizações automáticas de dependências, agrupadas por ecossistema, uma
 # vez por semana, abrindo PR contra a branch de trabalho.
-# Composer e npm apontam para o starter Livewire (starters/livewire); o
-# pacote twstec/kit-foundation (packages/foundation) tem entrada própria.
+# Composer e npm apontam para o starter Livewire (starters/livewire); os
+# pacotes twstec/kit-foundation (packages/foundation) e twstec/kit-auth
+# (packages/auth) têm entrada própria.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -31,6 +32,19 @@ updates:
     groups:
       laravel:
         patterns: ['laravel/*', 'spatie/*']
+      dev:
+        dependency-type: development
+  - package-ecosystem: composer
+    directory: /packages/auth
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    versioning-strategy: widen
+    groups:
+      laravel:
+        patterns: ['laravel/*']
       dev:
         dependency-type: development
   - package-ecosystem: npm

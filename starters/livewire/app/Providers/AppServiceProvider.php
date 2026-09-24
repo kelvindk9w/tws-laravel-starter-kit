@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Console\Commands\MakeAdminUser;
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
-use App\Core\Auth\Console\MakeAdminUser;
-use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
 use App\Livewire\Support\SiteLinks;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
 use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 class AppServiceProvider extends ServiceProvider

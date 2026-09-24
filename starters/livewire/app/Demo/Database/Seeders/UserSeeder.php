@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Demo\Support\DemoSurface;
+use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 /**
  * Massa realista de usuários para o /admin (paginação e filtros visíveis em

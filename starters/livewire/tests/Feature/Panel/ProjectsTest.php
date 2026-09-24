@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\Projects\Index;
+use App\Models\User;
 use Livewire\Livewire;
 
 // =============================================================================

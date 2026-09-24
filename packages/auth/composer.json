@@ -1,0 +1,66 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "twstec/kit-auth",
+    "description": "Autenticação do TWS Laravel Starter Kit, sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, verificação em duas etapas por e-mail, senha de transação, ação sensível com token de uso único, política de senha, status da conta e contratos de resposta para qualquer front.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["laravel", "authentication", "two-factor", "security", "starter-kit"],
+    "require": {
+        "php": "^8.4",
+        "laravel/framework": "^13.17",
+        "twstec/kit-foundation": "2.x-dev"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Twstec\\Kit\\Auth\\": "src/"
+        },
+        "files": [
+            "src/Compat/legacy-aliases.php",
+            "src/Mail/previews.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Twstec\\Kit\\Auth\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Twstec\\Kit\\Auth\\Providers\\AuthServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "lint": "pint --test"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../foundation",
+            "options": {
+                "versions": {
+                    "twstec/kit-foundation": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        }
+    ],
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "platform": {
+            "php": "8.4.24"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -2,26 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Contracts\Responses\EmailVerificationResponse;
-use App\Core\Auth\Contracts\Responses\FailedPasswordResetResponse;
-use App\Core\Auth\Contracts\Responses\LoginResponse;
-use App\Core\Auth\Contracts\Responses\LogoutResponse;
-use App\Core\Auth\Contracts\Responses\PasswordResetLinkSentResponse;
-use App\Core\Auth\Contracts\Responses\PasswordResetResponse;
-use App\Core\Auth\Contracts\Responses\RegisterResponse;
-use App\Core\Auth\Contracts\Responses\TwoFactorChallengeResponse;
-use App\Core\Auth\Contracts\Responses\TwoFactorLoginResponse;
-use App\Core\Auth\Contracts\Responses\TwoFactorRequiredResponse;
-use App\Core\Auth\Contracts\Responses\VerifyEmailResponse;
-use App\Core\Auth\Enums\EmailVerificationOutcome;
-use App\Core\Auth\Enums\TwoFactorChallengeOutcome;
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Providers\AuthServiceProvider;
-use App\Core\Auth\Support\EmailVerification;
-use App\Core\Auth\Support\EmailVerificationResult;
-use App\Core\Auth\Support\TwoFactorChallengeResult;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +11,26 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Symfony\Component\HttpFoundation\Response;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+use Twstec\Kit\Auth\Contracts\Responses\EmailVerificationResponse;
+use Twstec\Kit\Auth\Contracts\Responses\FailedPasswordResetResponse;
+use Twstec\Kit\Auth\Contracts\Responses\LoginResponse;
+use Twstec\Kit\Auth\Contracts\Responses\LogoutResponse;
+use Twstec\Kit\Auth\Contracts\Responses\PasswordResetLinkSentResponse;
+use Twstec\Kit\Auth\Contracts\Responses\PasswordResetResponse;
+use Twstec\Kit\Auth\Contracts\Responses\RegisterResponse;
+use Twstec\Kit\Auth\Contracts\Responses\TwoFactorChallengeResponse;
+use Twstec\Kit\Auth\Contracts\Responses\TwoFactorLoginResponse;
+use Twstec\Kit\Auth\Contracts\Responses\TwoFactorRequiredResponse;
+use Twstec\Kit\Auth\Contracts\Responses\VerifyEmailResponse;
+use Twstec\Kit\Auth\Enums\EmailVerificationOutcome;
+use Twstec\Kit\Auth\Enums\TwoFactorChallengeOutcome;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Providers\AuthServiceProvider;
+use Twstec\Kit\Auth\Support\EmailVerification;
+use Twstec\Kit\Auth\Support\EmailVerificationResult;
+use Twstec\Kit\Auth\Support\TwoFactorChallengeResult;
 
 // =============================================================================
 // CONTRATOS DE RESPOSTA DA AUTENTICAÇÃO — o ponto de troca de um front.
@@ -185,7 +186,7 @@ it('cadastro: usa o RegisterResponse com a conta criada', function () {
 
     app()->instance(RegisterResponse::class, new class implements RegisterResponse
     {
-        public function toResponse(Request $request, User $user): Response
+        public function toResponse(Request $request, AuthUser $user): Response
         {
             return respostaDeTeste('cadastro', $user->email);
         }

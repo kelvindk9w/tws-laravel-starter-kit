@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\TenantContext;
+use App\Models\User;
 
 // =============================================================================
 // Helpers globais do módulo de Tenancy.

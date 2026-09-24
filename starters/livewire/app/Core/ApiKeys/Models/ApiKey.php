@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Core\ApiKeys\Models;
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

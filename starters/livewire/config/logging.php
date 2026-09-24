@@ -1,6 +1,5 @@
 <?php
 
-use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -145,24 +144,13 @@ return [
             'handler' => NullHandler::class,
         ],
 
-        // Trilha técnica das requisições — JSON estruturado,
-        // uma linha por evento (request.started / request.finished /
-        // security.blocked). Sobrevive a falha do banco: é a segunda
-        // camada do pipeline (a primeira é a tabela request_logs).
-        'request_log' => [
-            'name' => 'request_log',
-            'driver' => 'daily',
-            'path' => storage_path('logs/request.log'),
-            'level' => env('LOG_LEVEL', 'info'),
-            'days' => (int) env('REQUEST_LOG_DAYS', 30),
-            // Arquivo diário nasce com escrita para o grupo: se outro
-            // processo do mesmo grupo (scheduler, queue, artisan) o criar
-            // primeiro, o php-fpm continua conseguindo escrever.
-            'permission' => 0664,
-            'formatter' => JsonFormatter::class,
-            'replace_placeholders' => true,
-            'tap' => [MaskCardNumbersInLogs::class],
-        ],
+        // O canal `request_log` (trilha técnica das requisições e segunda
+        // camada das trilhas de segurança e de auditoria — JSON estruturado,
+        // uma linha por evento, números de cartão mascarados) vem do pacote
+        // twstec/kit-foundation, com a MESMA definição que morava aqui
+        // (storage/logs/request-AAAA-MM-DD.log, LOG_LEVEL, REQUEST_LOG_DAYS —
+        // ver Twstec\Kit\Foundation\Logging\RequestLogChannel). Para mudar
+        // algo, declare aqui um `request_log` próprio: o da aplicação vence.
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),

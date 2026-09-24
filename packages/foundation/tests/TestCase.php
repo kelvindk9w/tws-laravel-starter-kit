@@ -28,6 +28,38 @@ abstract class TestCase extends Testbench
         SettingsServiceProvider::class,
     ];
 
+    /**
+     * Configuração da APLICAÇÃO aplicada antes de os providers subirem (como
+     * se estivesse no config/ dela) — ver bootWithAppConfig().
+     *
+     * @var array<string, mixed>
+     */
+    public static array $appConfig = [];
+
+    protected function defineEnvironment($app): void
+    {
+        foreach (static::$appConfig as $key => $value) {
+            $app['config']->set($key, $value);
+        }
+    }
+
+    /**
+     * Sobe uma aplicação nova com esta configuração já no lugar quando os
+     * providers do pacote registram.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    protected function bootWithAppConfig(array $config): void
+    {
+        static::$appConfig = $config;
+
+        try {
+            $this->refreshApplication();
+        } finally {
+            static::$appConfig = [];
+        }
+    }
+
     protected function getPackageProviders($app): array
     {
         // O spatie/laravel-backup é dependência do pacote e, num aplicativo,

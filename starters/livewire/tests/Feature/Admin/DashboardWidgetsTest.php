@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Filament\Widgets\Content\ContentStats;
 use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
@@ -15,6 +14,7 @@ use App\Filament\Widgets\Support\Metric;
 use App\Filament\Widgets\Support\MetricFormat;
 use App\Filament\Widgets\Support\MetricStat;
 use App\Filament\Widgets\Support\Period;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;

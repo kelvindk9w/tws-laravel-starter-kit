@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Auth;
 
-use App\Core\Auth\Enums\VerificationResult;
-use App\Core\Auth\Exceptions\TwoFactorLockedException;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\TwoFactorLogin;
+use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\Contracts\HasBeforeChallengeHook;
@@ -16,6 +13,9 @@ use Filament\Forms\Components\OneTimeCodeInput;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use SensitiveParameter;
+use Twstec\Kit\Auth\Enums\VerificationResult;
+use Twstec\Kit\Auth\Exceptions\TwoFactorLockedException;
+use Twstec\Kit\Auth\Services\TwoFactorLogin;
 
 /**
  * Segundo fator do login do /admin, plugado no mecanismo de MFA do Filament 5

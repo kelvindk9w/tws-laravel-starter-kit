@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Notifications\ResetPasswordNotification;
+use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
 
 // Recuperação de senha por e-mail (broker nativo do Laravel: token com hash
 // + expiração). Anti-enumeração: mesma resposta para e-mail inexistente.

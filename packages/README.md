@@ -7,9 +7,10 @@ própria, com a suíte de testes verde antes e depois.
 | Pacote | Nome no Composer | O que traz | Depende de |
 | --- | --- | --- | --- |
 | [`foundation`](foundation) | `twstec/kit-foundation` | Segurança (filtro de ataques, limites, cabeçalhos, hosts e proxies), trilha de requisições e trilha de auditoria com redação LGPD, identificadores, dinheiro, idioma, configurações editáveis no banco, infraestrutura de e-mail e template, guarda de segredos e de backup | Laravel |
+| [`auth`](auth) | `twstec/kit-auth` | Autenticação sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, segundo fator por e-mail, senha de transação, ação sensível, política de senha, status da conta e contratos de resposta para qualquer front | foundation |
 
-Os próximos (autenticação, contas e API, uploads e o painel de administração)
-ainda vivem em `starters/livewire/app/Core` e entram aqui nas próximas fases.
+Os próximos (contas e API, uploads e o painel de administração) ainda vivem em
+`starters/livewire/app/Core` e entram aqui nas próximas fases.
 
 ## Como o starter usa os pacotes
 
@@ -35,10 +36,14 @@ desenvolvimento:
 ```bash
 docker compose exec -w /var/packages/foundation app ./vendor/bin/pest
 docker compose exec -w /var/packages/foundation app ./vendor/bin/pint --test
+docker compose exec -w /var/packages/auth app ./vendor/bin/pest
+docker compose exec -w /var/packages/auth app ./vendor/bin/pint --test
 ```
 
 As dependências de desenvolvimento do pacote (`packages/<pacote>/vendor`, fora
-do git) são instaladas com o Composer em container, da raiz do repositório:
+do git) são instaladas com o Composer em container, da raiz do repositório
+(troque `foundation` pelo pacote; o `auth` acha o `foundation` irmão pelo path
+repository do próprio `composer.json`):
 
 ```bash
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/repo \

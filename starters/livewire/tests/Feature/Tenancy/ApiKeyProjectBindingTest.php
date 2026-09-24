@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 

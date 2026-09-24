@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Filament\Resources\Users\Pages\EditUser;
+use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;

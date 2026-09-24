@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 //   1. Stack de dev no ar (`docker compose up -d`), nginx na 8180 do host.
 //   2. Usuário E2E criado no banco de dev:
 //        docker compose exec app php artisan tinker --execute='
-//          \App\Core\Auth\Models\User::factory()->create([
+//          \App\Models\User::factory()->create([
 //            "email" => "e2e@example.com",
 //            "password" => "E2eSenhaForte123",
 //          ]);'

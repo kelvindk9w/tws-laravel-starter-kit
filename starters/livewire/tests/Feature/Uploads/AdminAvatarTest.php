@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Uploads\Models\Upload;
 use App\Core\Uploads\Services\SecureUploadService;
 use App\Filament\Pages\Profile as AdminProfile;
@@ -11,6 +10,7 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Support\AvatarUpload;
+use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;

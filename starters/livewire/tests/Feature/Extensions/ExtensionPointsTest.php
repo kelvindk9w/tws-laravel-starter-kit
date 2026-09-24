@@ -2,12 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Contracts\AccountProtection;
-use App\Core\Auth\Contracts\LoginPrefillProvider;
-use App\Core\Auth\Exceptions\AccountProtectedException;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Support\LoginPrefill;
-use App\Core\Auth\Support\ProtectedAccounts;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AttackLabel;
@@ -18,7 +12,14 @@ use App\Filament\Widgets\Overview\RequestsStatusChart;
 use App\Filament\Widgets\Overview\RequestsTrendChart;
 use App\Livewire\Support\Navigation;
 use App\Livewire\Support\SiteLinks;
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Twstec\Kit\Auth\Contracts\AccountProtection;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+use Twstec\Kit\Auth\Contracts\LoginPrefillProvider;
+use Twstec\Kit\Auth\Exceptions\AccountProtectedException;
+use Twstec\Kit\Auth\Support\LoginPrefill;
+use Twstec\Kit\Auth\Support\ProtectedAccounts;
 use Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate;
 use Twstec\Kit\Foundation\Mail\Support\ConfiguredMailPreviewGate;
 
@@ -57,24 +58,24 @@ it('com uma extensão registrada, o model e as guardas perguntam a ela', functio
     {
         public function __construct(private readonly int $id) {}
 
-        public function reserves(User $user): bool
+        public function reserves(AuthUser $user): bool
         {
             return $user->getKey() === $this->id;
         }
 
-        public function protects(User $user): bool
+        public function protects(AuthUser $user): bool
         {
             return $this->reserves($user);
         }
 
-        public function guardUpdate(User $user): void
+        public function guardUpdate(AuthUser $user): void
         {
             if ($this->protects($user) && $user->isDirty('is_admin')) {
                 throw new AccountProtectedException('protegida');
             }
         }
 
-        public function guardDelete(User $user): void
+        public function guardDelete(AuthUser $user): void
         {
             if ($this->protects($user)) {
                 throw new AccountProtectedException('protegida');

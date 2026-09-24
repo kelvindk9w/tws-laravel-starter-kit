@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 // =============================================================================
 // Layout unificado: o painel do usuário usa o MESMO cabeçalho e o MESMO rodapé

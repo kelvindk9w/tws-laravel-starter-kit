@@ -7,15 +7,15 @@ namespace App\Livewire\ApiKeys;
 use App\Core\ApiKeys\Http\Requests\StoreApiKeyRequest;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Services\SensitiveActionService;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\Concerns\ConfirmsSensitiveAction;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Twstec\Kit\Auth\Services\SensitiveActionService;
 
 /**
  * Chaves de API — a tela mais importante do painel.

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Pages;
 
-use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Resources\Users\UserResource;
 use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AvatarUpload;
+use App\Models\User;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Exceptions\Halt;

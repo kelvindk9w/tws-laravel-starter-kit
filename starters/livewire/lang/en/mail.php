@@ -26,7 +26,6 @@ return [
 
     // Verification code (email 2FA).
     'verification_code' => [
-        'subject' => ':platform — Your verification code',
         'preheader' => 'Your code expires in :minutes minutes.',
         'heading' => 'Your verification code',
         'intro' => 'Use the code below to confirm the requested action. It is single-use.',
@@ -36,7 +35,6 @@ return [
 
     // Second-factor code for LOGIN (same code email, different purpose).
     'login_code' => [
-        'subject' => ':platform — Your sign-in code',
         'preheader' => 'Your sign-in code expires in :minutes minutes.',
         'heading' => 'Your sign-in code',
         'intro' => 'Your account password was entered correctly and one step is left to finish signing in. If it was you, use the code below. It is single-use.',
@@ -46,7 +44,6 @@ return [
 
     // Password reset (QA bug #9 — used to arrive in the framework's English).
     'email_verification' => [
-        'subject' => ':platform — Confirm your email',
         'preheader' => 'One more step: confirm your email to unlock your account.',
         'heading' => 'Confirm your email',
         'intro' => 'Your account has been created. To unlock the dashboard, confirm that this address is yours.',
@@ -57,7 +54,6 @@ return [
     ],
 
     'password_reset' => [
-        'subject' => ':platform — Password reset',
         'preheader' => 'Reset link valid for :minutes minutes.',
         'heading' => 'Reset your password',
         'intro' => 'You are receiving this email because we received a password reset request for your account.',

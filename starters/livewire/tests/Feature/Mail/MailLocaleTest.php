@@ -11,9 +11,9 @@ declare(strict_types=1);
 // idiomas do kit, para todo e-mail do catálogo.
 // =============================================================================
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Notifications\ResetPasswordNotification;
+use App\Models\User;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
 use Twstec\Kit\Foundation\Mail\MailPreview;
 
 it('traduz o assunto de todo e-mail nos três idiomas', function (string $slug): void {

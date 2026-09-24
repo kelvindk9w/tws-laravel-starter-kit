@@ -6,8 +6,8 @@ namespace App\Core\Tenancy\Queries;
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;

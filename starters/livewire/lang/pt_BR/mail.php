@@ -26,7 +26,6 @@ return [
 
     // Código de verificação (2FA por e-mail).
     'verification_code' => [
-        'subject' => ':platform — Seu código de verificação',
         'preheader' => 'Seu código expira em :minutes minutos.',
         'heading' => 'Seu código de verificação',
         'intro' => 'Use o código abaixo para confirmar a ação solicitada. Ele é de uso único.',
@@ -36,7 +35,6 @@ return [
 
     // Código do segundo fator do LOGIN (mesmo e-mail do código, outra finalidade).
     'login_code' => [
-        'subject' => ':platform — Seu código de acesso',
         'preheader' => 'Seu código de acesso expira em :minutes minutos.',
         'heading' => 'Seu código de acesso',
         'intro' => 'A senha da sua conta foi digitada corretamente e falta um passo para concluir a entrada. Se foi você, use o código abaixo. Ele é de uso único.',
@@ -46,7 +44,6 @@ return [
 
     // Recuperação de senha (bug de QA #9 — antes vinha em inglês do pacote).
     'email_verification' => [
-        'subject' => ':platform — Confirme seu e-mail',
         'preheader' => 'Falta um passo: confirme o e-mail para liberar sua conta.',
         'heading' => 'Confirme seu e-mail',
         'intro' => 'Sua conta foi criada. Para liberar o acesso ao painel, confirme que este endereço é seu.',
@@ -57,7 +54,6 @@ return [
     ],
 
     'password_reset' => [
-        'subject' => ':platform — Redefinição de senha',
         'preheader' => 'Link de redefinição válido por :minutes minutos.',
         'heading' => 'Redefinir sua senha',
         'intro' => 'Você está recebendo este e-mail porque recebemos um pedido de redefinição de senha para a sua conta.',

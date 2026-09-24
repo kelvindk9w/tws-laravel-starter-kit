@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Demo\Providers;
 
-use App\Core\Auth\Contracts\AccountProtection;
-use App\Core\Auth\Contracts\LoginPrefillProvider;
 use App\Demo\Accounts\DemoAccountProtection;
 use App\Demo\Accounts\DemoAccountSession;
 use App\Demo\Accounts\DemoLoginPrefill;
@@ -25,6 +23,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Factory as ViewFactory;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Contracts\AccountProtection;
+use Twstec\Kit\Auth\Contracts\LoginPrefillProvider;
 use Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate;
 
 /**

@@ -12,14 +12,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Translation\FileLoader;
 use Illuminate\View\Factory as ViewFactory;
 use LogicException;
 use Spatie\Backup\Commands\BackupCommand;
 use Twstec\Kit\Foundation\Backup\Console\GuardedBackupCommand;
 use Twstec\Kit\Foundation\Http\Middleware\TrustHosts;
 use Twstec\Kit\Foundation\Http\Middleware\TrustProxies;
+use Twstec\Kit\Foundation\Localization\PackageTranslations;
 use Twstec\Kit\Foundation\Logging\Middleware\RequestLogging;
+use Twstec\Kit\Foundation\Logging\RequestLogChannel;
 use Twstec\Kit\Foundation\Security\ApiRateLimit;
 use Twstec\Kit\Foundation\Security\Middleware\EdgeRateLimit;
 use Twstec\Kit\Foundation\Security\Middleware\SecurityHeaders;
@@ -29,6 +30,7 @@ use Twstec\Kit\Foundation\Support\ProductionHardening;
 
 /**
  * O que a base do kit instala numa aplicação Laravel: configuração padrão,
+ * o canal de log `request_log` (se a aplicação não tiver o dela),
  * migrations, views e traduções do e-mail, o singleton da plataforma, a troca
  * do `backup:run`, os limitadores `api` e `sensitive`, as guardas de produção
  * e — o principal — a pilha GLOBAL de middlewares de segurança, na ordem
@@ -119,6 +121,11 @@ final class FoundationServiceProvider extends ServiceProvider
         foreach (self::CONFIG_FILES as $name) {
             $this->mergeConfigFrom($this->path("config/{$name}.php"), $name);
         }
+
+        // Canal de log `request_log` (a segunda camada das trilhas), só quando
+        // a aplicação não definiu o dela — o da aplicação vence. Ver
+        // Logging\RequestLogChannel.
+        RequestLogChannel::registerDefault($this->app->make('config'));
 
         // Configuração centralizada da plataforma (nada hardcoded) — singleton tipado.
         $this->app->singleton(Platform::class, fn (): Platform => Platform::fromConfig());
@@ -216,36 +223,13 @@ final class FoundationServiceProvider extends ServiceProvider
      * Traduções do pacote, sem namespace (`__('security.blocked')`,
      * `__('api.errors.…')`, `__('mail.footer.…')`, `__('audit.…')`).
      *
-     * O APLICATIVO VENCE: a pasta de traduções do pacote entra na lista do
-     * carregador ANTES da pasta lang/ do aplicativo. O carregador junta os
-     * arquivos de mesmo grupo na ordem da lista, e o último ganha; então, numa
-     * mesma chave, vale o texto do aplicativo, e o pacote só preenche o que o
-     * aplicativo não definiu — em todo grupo, em todo idioma, inclusive no
-     * idioma de reserva (fallback). (O `loadTranslationsFrom` sem namespace do
-     * framework põe a pasta DEPOIS da do aplicativo, e aí o pacote venceria.)
+     * O APLICATIVO VENCE: a regra (a pasta do pacote entra no carregador logo
+     * antes da lang/ do aplicativo) mora em Localization\PackageTranslations,
+     * a mesma que os outros pacotes do kit usam.
      */
     private function registerTranslations(): void
     {
-        $this->callAfterResolving('translation.loader', function (mixed $loader, $app): void {
-            $package = $this->path('lang');
-
-            if (! $loader instanceof FileLoader) {
-                // Carregador próprio da aplicação: o único gancho garantido é
-                // acrescentar a pasta (o pacote só preenche se o carregador
-                // dela não achar a chave antes).
-                if (method_exists($loader, 'addPath')) {
-                    $loader->addPath($package);
-                }
-
-                return;
-            }
-
-            $paths = self::packageBeforeApplication($loader->paths(), $package, $app->langPath());
-
-            (function (array $paths): void {
-                $this->paths = $paths;
-            })->call($loader, $paths);
-        });
+        PackageTranslations::register($this->app, $this->path('lang'));
     }
 
     /**
@@ -257,12 +241,7 @@ final class FoundationServiceProvider extends ServiceProvider
      */
     public static function packageBeforeApplication(array $paths, string $package, string $application): array
     {
-        $paths = array_values(array_filter($paths, fn (string $path): bool => $path !== $package));
-        $position = array_search($application, $paths, true);
-
-        array_splice($paths, $position === false ? count($paths) : $position, 0, [$package]);
-
-        return $paths;
+        return PackageTranslations::packageBeforeApplication($paths, $package, $application);
     }
 
     /**

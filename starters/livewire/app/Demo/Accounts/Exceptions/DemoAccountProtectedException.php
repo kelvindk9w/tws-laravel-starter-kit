@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Demo\Accounts\Exceptions;
 
-use App\Core\Auth\Exceptions\AccountProtectedException;
+use Twstec\Kit\Auth\Exceptions\AccountProtectedException;
 
 /**
  * Tentativa de mexer numa CONTA DEMO por um caminho que não é a interface
@@ -19,7 +19,7 @@ use App\Core\Auth\Exceptions\AccountProtectedException;
  * Quem trata: a UI do Filament nem chega aqui (UserAdminGuard recusa antes,
  * com mensagem amigável) e os comandos do kit convertem a exceção em erro
  * de console legível — eles capturam a base do produto,
- * App\Core\Auth\Exceptions\AccountProtectedException, sem conhecer a demo.
+ * Twstec\Kit\Auth\Exceptions\AccountProtectedException, sem conhecer a demo.
  * Ver docs/demo.md, "Contas demo são intocáveis".
  */
 final class DemoAccountProtectedException extends AccountProtectedException

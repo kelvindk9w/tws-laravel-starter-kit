@@ -26,7 +26,6 @@ return [
 
     // Código de verificación (2FA por correo).
     'verification_code' => [
-        'subject' => ':platform — Tu código de verificación',
         'preheader' => 'Tu código expira en :minutes minutos.',
         'heading' => 'Tu código de verificación',
         'intro' => 'Usa el código de abajo para confirmar la acción solicitada. Es de un solo uso.',
@@ -36,7 +35,6 @@ return [
 
     // Código del segundo factor del INICIO DE SESIÓN (mismo correo de código, otra finalidad).
     'login_code' => [
-        'subject' => ':platform — Tu código de acceso',
         'preheader' => 'Tu código de acceso expira en :minutes minutos.',
         'heading' => 'Tu código de acceso',
         'intro' => 'La contraseña de tu cuenta se escribió correctamente y falta un paso para completar el inicio de sesión. Si fuiste tú, usa el código de abajo. Es de un solo uso.',
@@ -46,7 +44,6 @@ return [
 
     // Recuperación de contraseña (bug de QA #9 — antes llegaba en inglés).
     'email_verification' => [
-        'subject' => ':platform — Confirma tu correo',
         'preheader' => 'Falta un paso: confirma tu correo para habilitar tu cuenta.',
         'heading' => 'Confirma tu correo',
         'intro' => 'Tu cuenta fue creada. Para habilitar el acceso al panel, confirma que esta dirección es tuya.',
@@ -57,7 +54,6 @@ return [
     ],
 
     'password_reset' => [
-        'subject' => ':platform — Restablecer contraseña',
         'preheader' => 'Enlace de restablecimiento válido por :minutes minutos.',
         'heading' => 'Restablecer tu contraseña',
         'intro' => 'Recibes este correo porque recibimos una solicitud de restablecimiento de contraseña para tu cuenta.',

@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
@@ -17,6 +16,7 @@ use App\Filament\Resources\Uploads\Pages\ListUploads;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
+use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;

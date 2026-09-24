@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Database\Seeders\FormSubmissionSeeder;
 use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Demo\Livewire\ContactForm;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Demo\Showcase\Support\SubmissionExcerpt;
+use App\Models\User;
 use Livewire\Livewire;
 
 // Formulários demo do /ui gravando de verdade em form_submissions + vitrine

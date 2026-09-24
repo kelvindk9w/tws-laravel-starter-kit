@@ -65,7 +65,7 @@ pré-header e o bloco VML do Outlook.
    e os dados; fila e texto puro vêm de graça (numa **notificação**, use
    `KitMailMessage::make($assunto, $view, $dados)`).
 4. **Catálogo**: registre o e-mail na galeria com `MailPreview::register($slug, $fabrica)`,
-   no arquivo de previews do PRÓPRIO módulo (ex.: `app/Core/Auth/Mail/previews.php` no starter,
+   no arquivo de previews do PRÓPRIO módulo (ex.: `src/Mail/previews.php` do pacote twstec/kit-auth,
    carregado pelo `autoload.files` do `composer.json`), com dados de exemplo. O
    módulo de e-mail não conhece os e-mails dos outros — cada um se registra. Os
    testes de `tests/Feature/Mail` iteram o catálogo — o e-mail novo já entra

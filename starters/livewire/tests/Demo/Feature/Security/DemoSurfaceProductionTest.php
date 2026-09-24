@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Demo\Accounts\DemoAccountGuard;
 use App\Demo\Database\Seeders\ApiKeySeeder;
 use App\Demo\Database\Seeders\DashboardHistorySeeder;
@@ -14,6 +13,7 @@ use App\Demo\Database\Seeders\RequestLogSeeder;
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Demo\Support\DemoSurface;
 use App\Demo\Support\Exceptions\DemoSurfaceInProductionException;
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Twstec\Kit\Foundation\FoundationServiceProvider;
 

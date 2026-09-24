@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\SensitiveActionToken;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Models\VerificationCode;
+use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
+use Twstec\Kit\Auth\Models\VerificationCode;
 
 // Fluxo completo de AÇÃO SENSÍVEL (senha de transação + código por e-mail):
 // senha de transação + código de 6 dígitos por e-mail → token de ação

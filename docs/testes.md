@@ -13,12 +13,14 @@ Orchestra Testbench:
 
 ```bash
 docker compose exec -w /var/packages/foundation app ./vendor/bin/pest   # pacote twstec/kit-foundation
+docker compose exec -w /var/packages/auth app ./vendor/bin/pest         # pacote twstec/kit-auth
 ```
 
 Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
 ataques, redação LGPD, balde de cliente, dinheiro, sanitização), a ordem da
 pilha global de segurança, os apelidos de compatibilidade, a fiação do provider
-e a arquitetura do pacote. Os testes de ponta a ponta dessas peças (rotas,
+e a arquitetura do pacote; a do auth prova, numa aplicação Laravel limpa, que
+as proteções de login, conta bloqueada e segundo fator vêm do pacote. Os testes de ponta a ponta dessas peças (rotas,
 painel, banco) continuam na suíte do starter. Como instalar as dependências do
 pacote está em [`packages/README.md`](../packages/README.md).
 
@@ -82,7 +84,7 @@ tela de aviso. Se o usuário já existia com o e-mail pendente, a migration
 
 ```bash
 docker compose exec app php artisan tinker --execute='
-  \App\Core\Auth\Models\User::factory()->create([
+  \App\Models\User::factory()->create([
     "email" => "e2e@example.com",
     "password" => "E2eSenhaForte123",
   ]);'
@@ -119,7 +121,7 @@ rodada:
 
 ```bash
 docker compose exec app php artisan tinker --execute='
-  echo \App\Core\Auth\Models\User::where("email", "like", "e2e-%@example.com")
+  echo \App\Models\User::where("email", "like", "e2e-%@example.com")
     ->where("email", "!=", "e2e@example.com")->count();'
 ```
 

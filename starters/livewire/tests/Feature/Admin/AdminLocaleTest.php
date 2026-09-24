@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 
 // i18n do super admin (/admin — Filament): o painel segue a MESMA resolução
 // de locale do app (SetLocale: preferência da conta → cookie → padrão) e

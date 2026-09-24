@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Core\Auth\Models\User;
-use App\Core\Auth\PasswordPolicy;
-use App\Core\Auth\Services\TransactionPasswordService;
-use App\Core\Auth\Services\TwoFactorLogin;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Rules\SafeFile;
 use App\Core\Uploads\Services\SecureUploadService;
 use App\Livewire\Concerns\ConfirmsSensitiveAction;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -20,6 +17,9 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Twstec\Kit\Auth\PasswordPolicy;
+use Twstec\Kit\Auth\Services\TransactionPasswordService;
+use Twstec\Kit\Auth\Services\TwoFactorLogin;
 
 /**
  * Perfil do usuário: dados, senha de login, senha de transação, avatar e a

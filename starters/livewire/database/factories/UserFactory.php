@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Core\Auth\Models\User;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,8 +16,7 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * O model vive em app/Core/Auth/Models (fora de App\Models) — declarar
-     * explicitamente evita a resolução por convenção de namespace.
+     * O model do aplicativo (App\Models\User), declarado explicitamente.
      *
      * @var class-string<User>
      */

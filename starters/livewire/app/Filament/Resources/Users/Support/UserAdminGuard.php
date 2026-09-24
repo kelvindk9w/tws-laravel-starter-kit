@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Support;
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
+use App\Models\User;
+use Twstec\Kit\Auth\Enums\UserStatus;
 
 /**
  * Guardas do CRUD de usuários do /admin.

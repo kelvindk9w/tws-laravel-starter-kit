@@ -100,6 +100,12 @@ php artisan migrate
 - **Recusas que já moram nos módulos:** `backup:run` sem criptografia em
   produção é recusado, e os transportes de e-mail `log`/`array` recusam enviar
   em produção.
+- **Canal de log `request_log`** — a segunda camada das trilhas (JSON
+  diário em `storage/logs/request-*.log`, com os cartões mascarados, nível em
+  `LOG_LEVEL` e retenção em `REQUEST_LOG_DAYS`), onde vão `request.*`,
+  `security.*`, `request.throttled` e `audit.*`. É registrado **só se o
+  aplicativo não tiver** um `request_log` no `config/logging.php`: o do
+  aplicativo vence. Sem isso, essas linhas cairiam no logger de emergência.
 - **Singleton da plataforma** (`platform()`) e o helper `setting()`.
 - **Comando** `audit:prune`.
 

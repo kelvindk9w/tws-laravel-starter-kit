@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Http\Middleware\EnsureAccountWideApiKey;
 use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
-use App\Core\Auth\Http\Middleware\EnsureAccountIsActive;
-use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
-use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use App\Core\Tenancy\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -53,20 +50,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // Locale da interface web: usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
         //
-        // Status da conta a cada requisição web (depois do SetLocale, para a
-        // mensagem sair no idioma da conta): conta bloqueada/pendente com
-        // sessão aberta perde a sessão na próxima requisição — página,
-        // formulário ou ação Livewire (o endpoint do Livewire está no grupo
-        // `web`). Ver EnsureAccountIsActive.
-        $middleware->web(append: [SetLocale::class, EnsureAccountIsActive::class]);
+        // O status da conta a cada requisição web (EnsureAccountIsActive) é
+        // anexado ao FIM do grupo pelo pacote twstec/kit-auth — logo depois
+        // deste SetLocale, para a mensagem de recusa sair no idioma da conta.
+        // Conta bloqueada/pendente com sessão aberta perde a sessão na próxima
+        // requisição — página, formulário ou ação Livewire (o endpoint do
+        // Livewire está no grupo `web`).
+        $middleware->web(append: [SetLocale::class]);
 
-        // Aliases para uso explícito em rotas/grupos.
+        // Aliases para uso explícito em rotas/grupos. Os de autenticação —
+        // `sensitive.token` (token de ação sensível, uso único) e `verified`
+        // (painel só com e-mail confirmado, AUTH_EMAIL_VERIFICATION_REQUIRED;
+        // substitui o do framework) — são instalados pelo pacote
+        // twstec/kit-auth.
         $middleware->alias([
-            // Exige token de ação sensível válido — uso único.
-            'sensitive.token' => RequiresSensitiveActionToken::class,
-            // Painel só com e-mail confirmado (AUTH_EMAIL_VERIFICATION_REQUIRED).
-            // Substitui o `verified` do framework — ver EnsureEmailIsVerified.
-            'verified' => EnsureEmailIsVerified::class,
             // Tenancy da API: resolve o tenant pela pk_/sk_ no
             // header, vincula o request log e atualiza o last_used_at.
             'resolve.tenant' => ResolveTenant::class,

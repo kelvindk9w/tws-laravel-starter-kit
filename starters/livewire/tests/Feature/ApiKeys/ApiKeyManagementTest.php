@@ -5,8 +5,8 @@ declare(strict_types=1);
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
 // Endpoints do motor de chaves da API v1: criar (ação

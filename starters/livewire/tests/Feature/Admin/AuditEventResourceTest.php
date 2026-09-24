@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Models\User;
 use App\Filament\Resources\AuditEvents\AuditEventResource;
 use App\Filament\Resources\AuditEvents\Pages\ListAuditEvents;
 use App\Filament\Resources\AuditEvents\Pages\ViewAuditEvent;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Support\ViewModeToggle;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Audit\AuditScope;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
 use Twstec\Kit\Foundation\Audit\Enums\AuditContext;

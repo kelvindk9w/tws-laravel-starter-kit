@@ -1,7 +1,7 @@
 {{-- Verificação de e-mail do cadastro. Mesmo desenho da redefinição de senha:
      UM CTA e a URL repetida em texto logo abaixo (cliente corporativo reescreve
      href e leitor de texto puro não clica). O link é ancorado em APP_URL —
-     ver App\Core\Auth\Support\EmailVerification. --}}
+     ver Twstec\Kit\Auth\Support\EmailVerification. --}}
 <x-email::layouts.kit
     :title="__('mail.email_verification.subject', ['platform' => platform()->name])"
     :preheader="__('mail.email_verification.preheader')"

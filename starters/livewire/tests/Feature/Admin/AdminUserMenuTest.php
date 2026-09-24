@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Auth\Models\User;
 use App\Core\Uploads\Models\Upload;
 use App\Filament\Pages\Profile;
 use App\Filament\Support\InitialsAvatarProvider;
+use App\Models\User;
 use Filament\Facades\Filament;
 
 // =============================================================================

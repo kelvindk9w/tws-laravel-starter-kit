@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Core\Tenancy\Services;
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
