@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Core\Auth\Models;
 
 use App\Core\Auth\Enums\UserStatus;
-use App\Core\Auth\Exceptions\DemoAccountProtectedException;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
 use App\Core\Auth\Notifications\VerifyEmailNotification;
-use App\Core\Auth\Support\DemoAccountGuard;
+use App\Core\Auth\Support\ProtectedAccounts;
 use App\Core\Identifiers\HasPublicCode;
 use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Concerns\HasAvatar;
@@ -72,46 +71,30 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     ];
 
     /**
-     * BLINDAGEM DAS CONTAS DEMO no nível do model.
+     * CONTAS PROTEGIDAS no nível do model (ponto de extensão
+     * App\Core\Auth\Contracts\AccountProtection).
      *
-     * A UI do Filament já recusava (UserAdminGuard), mas ela só protege a
-     * demo de quem clica. Estes dois eventos protegem também de quem
-     * digita: tinker, comando artisan, job, rotina de importação — tudo que
-     * passa por Eloquent. O que NÃO passa por evento (update/delete em
-     * massa, SQL cru) é barrado pelo gatilho do PostgreSQL
-     * (DemoAccountTrigger).
-     *
-     * Só os campos que decidem QUEM entra e COM QUAL poder são bloqueados;
-     * nome, foto, idioma e tema continuam livres, senão a demo vira uma
-     * vitrine congelada. A lista e o porquê estão em DemoAccountGuard.
+     * A interface do super admin já recusa (UserAdminGuard), mas ela só
+     * protege de quem clica. Estes eventos protegem também de quem digita:
+     * tinker, comando artisan, job, rotina de importação — tudo que passa por
+     * Eloquent. Quais contas, quais campos e com que mensagem é decisão da
+     * extensão registrada; sem nenhuma, os eventos não recusam nada.
      */
     protected static function booted(): void
     {
         static::updating(function (self $user): void {
-            if (! DemoAccountGuard::protects($user)) {
-                return;
-            }
-
-            $proibidos = DemoAccountGuard::sensitiveChanges($user->getDirty());
-
-            if ($proibidos !== []) {
-                throw DemoAccountProtectedException::update($user->getOriginal('email'), $proibidos);
-            }
+            ProtectedAccounts::guardUpdate($user);
         });
 
         static::deleting(function (self $user): void {
-            if (DemoAccountGuard::protects($user)) {
-                throw DemoAccountProtectedException::delete($user->getOriginal('email') ?? $user->email);
-            }
+            ProtectedAccounts::guardDelete($user);
         });
 
         // `forceDeleting` só existe com SoftDeletes; registrado aqui para
         // que a proteção continue de pé no dia em que o kit adotar exclusão
         // lógica em usuários (o evento é ignorado enquanto não houver).
         static::registerModelEvent('forceDeleting', function (self $user): void {
-            if (DemoAccountGuard::protects($user)) {
-                throw DemoAccountProtectedException::delete($user->getOriginal('email') ?? $user->email);
-            }
+            ProtectedAccounts::guardDelete($user);
         });
     }
 
@@ -164,20 +147,30 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     }
 
     /**
-     * Usuário de demonstração (login demo / super admin demo — config/ui.php)?
+     * Conta reservada por uma extensão de proteção (ver
+     * App\Core\Auth\Contracts\AccountProtection)?
      *
-     * Contas demo NÃO podem ser bloqueadas, editadas ou excluídas por ações
-     * do super admin: um visitante quebraria a demo para os demais. As ações
-     * do UserResource verificam esta guarda e avisam com uma notification —
-     * e, desde a blindagem, os eventos do model e o gatilho do PostgreSQL
-     * recusam o mesmo por qualquer outro caminho (ver DemoAccountGuard).
+     * Conta reservada NÃO pode ser bloqueada, editada, excluída nem ter o
+     * e-mail verificado por ações do super admin — as ações do UserResource
+     * verificam esta guarda e avisam com uma notification. Os eventos do
+     * model recusam o mesmo por qualquer outro caminho enquanto a proteção
+     * vale. Sem extensão registrada, nenhuma conta é reservada.
+     */
+    public function isReservedAccount(): bool
+    {
+        return ProtectedAccounts::reserves($this);
+    }
+
+    /**
+     * Nome antigo de isReservedAccount(), mantido enquanto o teste das contas
+     * demo o usa. O produto chama isReservedAccount(); este sai junto com a
+     * demonstração.
+     *
+     * @deprecated Use isReservedAccount().
      */
     public function isDemo(): bool
     {
-        return in_array($this->email, array_filter([
-            config('ui.demo_login.email'),
-            config('ui.demo_admin.email'),
-        ]), true);
+        return $this->isReservedAccount();
     }
 
     /**
@@ -242,16 +235,16 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     /**
      * O e-mail está confirmado?
      *
-     * CONTA DEMO PROTEGIDA CONTA COMO VERIFICADA. O e-mail dela é fictício e a
-     * senha é pública: se a verificação dependesse da coluna, bastaria alguém
-     * zerar `email_verified_at` (campo que a blindagem deixa livre) para o
-     * próximo visitante cair na tela de aviso esperando um e-mail que ninguém
-     * recebe. Vale só enquanto a blindagem vale (modo demo ligado — ver
-     * DemoAccountGuard); fora dele a conta demo é uma conta comum.
+     * CONTA PROTEGIDA CONTA COMO VERIFICADA (ver ProtectedAccounts). Uma conta
+     * protegida contra alteração pode ter e-mail fictício e senha pública —
+     * se a verificação dependesse só da coluna, bastaria alguém zerar
+     * `email_verified_at` (campo que a proteção deixa livre) para o próximo
+     * acesso cair na tela de aviso esperando um e-mail que ninguém recebe.
+     * Vale só enquanto a proteção vale; fora dela a conta é uma conta comum.
      */
     public function hasVerifiedEmail(): bool
     {
-        return $this->email_verified_at !== null || DemoAccountGuard::protects($this);
+        return $this->email_verified_at !== null || ProtectedAccounts::protects($this);
     }
 
     /**

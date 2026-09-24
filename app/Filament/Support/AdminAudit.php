@@ -106,6 +106,10 @@ final class AdminAudit
     /**
      * O componente pertence ao /admin (e não à autenticação dele)?
      *
+     * Telas do produto (App\Filament\), do próprio Filament (Filament\) e
+     * das extensões que registraram o seu namespace em
+     * `audit.admin_extension_namespaces` (a demonstração do kit registra o dela).
+     *
      * @param  Component|class-string  $component
      */
     public static function covers(Component|string $component): bool
@@ -116,7 +120,15 @@ final class AdminAudit
             return false;
         }
 
-        return str_starts_with($class, 'App\\Filament\\') || str_starts_with($class, 'Filament\\');
+        $namespaces = ['App\\Filament\\', 'Filament\\', ...(array) config('audit.admin_extension_namespaces', [])];
+
+        foreach ($namespaces as $namespace) {
+            if (is_string($namespace) && $namespace !== '' && str_starts_with($class, $namespace)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

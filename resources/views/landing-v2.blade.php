@@ -14,12 +14,12 @@
 
     Cabeçalho e rodapé são os MESMOS do site (<x-site-header>/<x-site-footer>,
     via <x-layouts.site>): esta página muda a direção de arte, não o produto.
-    A "variante escura" não virou um cabeçalho novo — resources/css/landing-v2.css
+    A "variante escura" não virou um cabeçalho novo — demo/resources/css/landing-v2.css
     retona os tokens do kit (superfícies, fios e a rampa de cinzas) dentro
     desta rota, e o chrome inteiro adota o mundo sozinho, nos dois temas.
 --}}
 {{-- `theme-default="dark"`: o mundo padrão desta tela é a TINTA (ver
-     resources/js/landing-v2/theme-world.js para a regra completa). Quem
+     demo/resources/js/landing-v2/theme-world.js para a regra completa). Quem
      escolheu "claro" explicitamente continua no papel — a página declara um
      padrão, não sequestra a preferência de ninguém. --}}
 <x-layouts.site
@@ -30,7 +30,7 @@
     <x-slot:head>
         {{-- Bundle EXCLUSIVO da /v2 (GSAP + Lenis + Instrument Serif). A
              landing atual e o painel não carregam nada disto. --}}
-        @vite(['resources/css/landing-v2.css', 'resources/js/landing-v2.js'])
+        @vite(['demo/resources/css/landing-v2.css', 'demo/resources/js/landing-v2.js'])
 
         {{-- Anti-flash do mundo da /v2, ANTES do primeiro paint. O script do
              kit (partials/theme-script) já resolve o caso "sem escolha", via

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
-use App\Core\Showcase\Models\FormSubmission;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
+use App\Demo\Catalog\Models\Product;
+use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use App\Demo\Filament\Resources\Products\Pages\ListProducts;
+use App\Demo\Showcase\Models\FormSubmission;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
-use App\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\Uploads\Pages\ListUploads;
@@ -211,7 +211,7 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->searchTable('CURIOSO')
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
-    });
+    })->group('demo');
 
     it('produtos', function () {
         $alvo = Product::factory()->create(['title' => 'cadeira ergonômica']);
@@ -221,5 +221,5 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->searchTable('CADEIRA')
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
-    });
+    })->group('demo');
 });

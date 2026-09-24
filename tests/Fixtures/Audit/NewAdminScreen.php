@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace App\Filament\AuditFixture;
 
-use App\Core\Catalog\Models\Product;
+use App\Demo\Catalog\Models\Product;
 use Livewire\Component;
 
 final class NewAdminScreen extends Component

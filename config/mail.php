@@ -115,4 +115,20 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Galeria de e-mails (/mail-preview)
+    |--------------------------------------------------------------------------
+    |
+    | Ferramenta de DESENVOLVIMENTO: mostra cada e-mail transacional nos três
+    | idiomas, claro/escuro, em HTML e texto. Padrão ligado só em
+    | APP_ENV=local; em produção a galeria responde 404 mesmo com a flag
+    | ligada (App\Core\Mail\Support\ConfiguredMailPreviewGate).
+    |
+    */
+
+    'preview' => [
+        'enabled' => (bool) env('MAIL_PREVIEW_ENABLED', env('APP_ENV') === 'local'),
+    ],
+
 ];

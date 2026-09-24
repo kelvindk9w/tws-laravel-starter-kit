@@ -72,6 +72,11 @@ final class UserResource extends BaseResource
 
     protected static ?string $navigationGroupKey = 'admin.nav.group_management';
 
+    // Posição no grupo "Gestão", de 10 em 10: a ordem do menu não pode
+    // depender da ordem em que os resources são registrados (extensões, como
+    // a demonstração do kit, registram os seus por outro caminho).
+    protected static ?int $navigationSort = 40;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
     /**
@@ -299,7 +304,7 @@ final class UserResource extends BaseResource
                     ->requiresConfirmation()
                     ->modalHeading(__('admin.users.unblock_heading'))
                     ->action(function (User $record): void {
-                        if ($record->isDemo()) {
+                        if ($record->isReservedAccount()) {
                             AdminAudit::denied(__('admin.users.demo_protected'), $record, 'unblocked');
 
                             return;

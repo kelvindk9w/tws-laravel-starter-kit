@@ -10,14 +10,14 @@ use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
 use App\Core\Logging\Models\RequestLog;
+use App\Demo\Catalog\Models\Product;
+use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
+use App\Demo\Filament\Resources\Products\Pages\EditProduct;
+use App\Demo\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Pages\Profile;
 use App\Filament\Pages\Settings;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
-use App\Filament\Resources\Products\Pages\CreateProduct;
-use App\Filament\Resources\Products\Pages\EditProduct;
-use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -149,7 +149,7 @@ it('tentativa RECUSADA de bloquear conta demo fica registrada como denied, sem m
         ->and($evento->reason)->toBe(__('admin.users.demo_protected'))
         ->and($evento->changes)->toBeNull()
         ->and($evento->actor_uuid)->toBe($this->admin->uuid);
-});
+})->group('demo');
 
 it('tentativa RECUSADA de bloquear a si mesmo fica registrada como denied', function () {
     Livewire::test(ListUsers::class)->callTableAction('block', $this->admin);
@@ -230,7 +230,7 @@ it('produto: criar, editar e excluir gravam product.created/updated/deleted', fu
             'price' => ['before' => 10000, 'after' => 15000],
         ])
         ->and(auditRow('product.deleted', $produto->uuid)->changes['title']['before'])->toBe('Teclado Mecânico');
-});
+})->group('demo');
 
 it('configurações: cada chave alterada vira setting.changed com o de/para; chave intocada não gera linha', function () {
     Livewire::test(Settings::class)

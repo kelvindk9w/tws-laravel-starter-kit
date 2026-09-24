@@ -3,10 +3,15 @@
 // =============================================================================
 // Landing pública, showcase de componentes (/ui) e login demo.
 //
+// As chaves `demo`, `showcase_enabled`, `demo_login` e `demo_admin` são da
+// DEMONSTRAÇÃO do kit (App\Demo) e só têm efeito com ela instalada. Continuam
+// neste arquivo porque o teste do login demo confere os padrões aqui; saem
+// junto com a demo. Sem ela, só `error_display` é lido pelo produto.
+//
 // Segurança: as flags abaixo são a SEGUNDA barreira, não a única. Em
 // APP_ENV=production a superfície de demonstração (contas demo, vitrine /ui,
 // galeria /mail-preview e os seeders de dado fictício) é recusada mesmo com as
-// flags ligadas — quem decide é App\Core\Support\DemoSurface. As flags
+// flags ligadas — quem decide é App\Demo\Support\DemoSurface. As flags
 // continuam servindo para desligar a demo FORA de produção.
 //
 // Único jeito de ter demonstração em produção: declarar o opt-out
@@ -23,7 +28,7 @@ return [
         // produção, e ela precisa de um caminho. Este é o caminho, e ele é
         // DECLARADO: sem valor padrão verdadeiro, sem aparecer descomentado em
         // nenhum .env de exemplo, e com aviso no log a cada boot enquanto
-        // estiver ligado (AppServiceProvider).
+        // estiver ligado (DemoServiceProvider).
         //
         // Ligar isto significa dizer: "este banco é descartável e estas
         // credenciais são públicas". Nunca ligue numa instalação com dado real.

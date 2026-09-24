@@ -24,7 +24,7 @@ it('lista os e-mails quando a flag de dev está ligada', function (): void {
         ->assertSee(__('mail.preview.emails.password-reset'))
         ->assertSee(__('mail.preview.emails.api-key-inactivity'))
         ->assertSee(__('mail.preview.emails.contact-message'));
-});
+})->group('demo');
 
 it('responde 404 fora do desenvolvimento', function (): void {
     config()->set('ui.demo_login.enabled', false);
@@ -37,7 +37,7 @@ it('abre cada e-mail do catálogo', function (string $slug): void {
     config()->set('ui.demo_login.enabled', true);
 
     $this->get("/mail-preview/{$slug}")->assertOk();
-})->with(MailPreview::slugs());
+})->group('demo')->with(MailPreview::slugs());
 
 it('serve o HTML cru e o texto puro na mesma rota', function (): void {
     config()->set('ui.demo_login.enabled', true);
@@ -51,7 +51,7 @@ it('serve o HTML cru e o texto puro na mesma rota', function (): void {
         ->assertOk()
         ->assertHeader('Content-Type', 'text/plain; charset=utf-8')
         ->assertDontSee('<table', escape: false);
-});
+})->group('demo');
 
 it('troca idioma e tema pela URL', function (): void {
     config()->set('ui.demo_login.enabled', true);
@@ -64,7 +64,7 @@ it('troca idioma e tema pela URL', function (): void {
     $this->get('/mail-preview/verification-code?scheme=dark&format=html')
         ->assertOk()
         ->assertSee('#111827', escape: false);
-});
+})->group('demo');
 
 it('recusa um e-mail que não existe no catálogo', function (): void {
     config()->set('ui.demo_login.enabled', true);

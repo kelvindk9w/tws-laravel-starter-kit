@@ -222,7 +222,7 @@ it('perfil do /admin: sem senha de transação ou conta demo, a ação fica desa
         ->assertActionDisabled('toggleTwoFactor');
 
     expect($demo->fresh()->two_factor_enabled_at)->toBeNull();
-});
+})->group('demo');
 
 it('uma preferência só: quem ligou no /profile é desafiado também no /admin', function () {
     $user = adminTfaUser();

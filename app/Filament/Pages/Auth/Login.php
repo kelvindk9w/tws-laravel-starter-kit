@@ -6,7 +6,7 @@ namespace App\Filament\Pages\Auth;
 
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Services\TwoFactorLogin;
-use App\Core\Support\DemoSurface;
+use App\Core\Auth\Support\LoginPrefill;
 use Filament\Actions\Action;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login as BaseLogin;
@@ -15,14 +15,15 @@ use Filament\Notifications\Notification;
 use Livewire\Attributes\Locked;
 
 /**
- * Login do super admin (/admin). Quando o login demo está habilitado
- * (DemoSurface::loginEnabled — flag DEMO_LOGIN_ENABLED, padrão só em
- * APP_ENV=local, E nunca em produção sem opt-out declarado), as credenciais do
- * admin demo vêm pré-preenchidas: basta clicar em entrar.
+ * Login do super admin (/admin). Quando uma extensão sugere credenciais
+ * (ponto de extensão App\Core\Auth\Contracts\LoginPrefillProvider, superfície
+ * `admin`), o formulário nasce preenchido: basta clicar em entrar. Sem
+ * extensão, nasce vazio.
  *
- * Em produção o pré-preenchimento não acontece nem por engano: entregar
- * `admin@tws.dev` com a senha pública do .env.example já digitada no login do
- * super admin é a forma mais curta de perder a instalação.
+ * Quem sugere decide também QUANDO. A demonstração do kit, que sugere as
+ * credenciais do admin demo, nunca o faz em produção sem opt-out declarado:
+ * entregar `admin@tws.dev` com a senha pública do .env.example já digitada no
+ * login do super admin é a forma mais curta de perder a instalação.
  *
  * SEGUNDO FATOR: com a verificação em duas etapas ligada na conta, o Filament
  * troca o formulário pelo do código (provedor App\Filament\Auth\
@@ -43,10 +44,12 @@ class Login extends BaseLogin
     {
         parent::mount();
 
-        if (DemoSurface::loginEnabled()) {
+        $prefill = LoginPrefill::for('admin');
+
+        if ($prefill !== null) {
             $this->form->fill([
-                'email' => config('ui.demo_admin.email'),
-                'password' => config('ui.demo_admin.password'),
+                'email' => $prefill->email,
+                'password' => $prefill->password,
                 'remember' => true,
             ]);
         }

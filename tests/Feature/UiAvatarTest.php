@@ -76,7 +76,7 @@ it('o showcase documenta o avatar e o menu lateral', function () {
         ->assertSee(__('showcase.navigation.side_nav_heading'))
         ->assertSee('<x-avatar')
         ->assertSee('<x-side-nav');
-});
+})->group('demo');
 
 it('o painel só usa componentes do kit: o avatar do perfil é o do cabeçalho', function () {
     // O perfil desenhava a própria bolinha (bg-brand + 1 letra) enquanto o

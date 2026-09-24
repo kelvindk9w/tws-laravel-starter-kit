@@ -393,7 +393,7 @@ Hoje:
   tags, sem entidades que possam virar tags, espaços colapsados, ~60
   caracteres —, com a legenda "conteúdo neutralizado". Vale para a mensagem
   **e para o apelido**: o payload entra por qualquer campo. Quem neutraliza é
-  `App\Core\Showcase\Support\SubmissionExcerpt`, e o teste prova que o
+  `App\Demo\Showcase\Support\SubmissionExcerpt`, e o teste prova que o
   trecho não tem como voltar a ser marcação;
 - **no detalhe** (`/admin/form-submissions/{uuid}`): o payload **íntegro**,
   escapado, dentro de um bloco monoespaçado rotulado "evidência forense",

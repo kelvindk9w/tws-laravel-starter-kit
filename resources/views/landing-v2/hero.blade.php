@@ -9,7 +9,7 @@
      por cerca de duas telas de rolagem e é o SCROLL que dirige a cena (as
      linhas de log descem, freiam, se alinham e viram o título). O dedo do
      visitante é o cursor da linha do tempo — que é a tese da página inteira.
-     A coreografia mora em resources/js/landing-v2/hero-scene.js.
+     A coreografia mora em demo/resources/js/landing-v2/hero-scene.js.
 
      Os quatro planos, do fundo para a frente (paralaxe crescente):
 

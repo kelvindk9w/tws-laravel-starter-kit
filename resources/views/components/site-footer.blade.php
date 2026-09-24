@@ -27,10 +27,11 @@
 
         <nav aria-label="{{ __('landing.footer.links_heading') }}" class="flex flex-col gap-2">
             <p class="text-caption font-semibold uppercase tracking-widest text-text-muted">{{ __('landing.footer.links_heading') }}</p>
-            <a href="{{ route('ui.showcase') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.showcase') }}</a>
-            <a href="{{ route('login') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.demo') }}</a>
-            <a href="{{ url('/#contato') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.contact') }}</a>
-            <a href="{{ url('/api/health') }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ __('landing.footer.api_status') }}</a>
+            {{-- Status da API (do produto) + os links que as extensões instaladas
+                 acrescentam (App\Livewire\Support\SiteLinks, área `footer`). --}}
+            @foreach (\App\Livewire\Support\Navigation::footer() as $link)
+                <a href="{{ $link['href'] }}" class="transition-colors duration-150 ease-(--ease-out) hover:text-gray-900 dark:hover:text-gray-200">{{ $link['label'] }}</a>
+            @endforeach
         </nav>
 
         <div class="flex flex-col items-start gap-1 sm:items-end">

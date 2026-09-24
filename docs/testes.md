@@ -14,6 +14,16 @@ documento: [autenticação](autenticacao.md#testes), [API e chaves](api.md#teste
 [uploads](uploads.md#testes), [painéis e /admin](admin-e-dashboards.md#testes),
 [backup](backup.md#testes) e [filas](filas.md#testes).
 
+Os testes da **demonstração** do kit (landings, vitrine, contato, catálogo,
+contas demo) ficam em `tests/Demo` e no grupo `demo` — assim como os casos de
+teste do produto que exercitam uma peça da demo, marcados com
+`->group('demo')`. A suíte do produto sem a demo (por exemplo, com o
+`DemoServiceProvider` fora de `bootstrap/providers.php`) é:
+
+```bash
+docker compose exec app ./vendor/bin/pest --testsuite=Unit,Feature --exclude-group=demo
+```
+
 ## Testes contra o PostgreSQL
 
 O `pest` puro roda em **SQLite em memória** (`phpunit.xml`): rápido e sem

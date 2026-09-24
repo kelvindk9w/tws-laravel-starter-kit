@@ -151,7 +151,7 @@ it('não oferece editar nem excluir para conta demo', function () {
     Livewire::test(ListUsers::class)
         ->assertTableActionHidden('edit', $demo)
         ->assertTableActionHidden('delete', $demo);
-});
+})->group('demo');
 
 it('recusa gravar edição de conta demo mesmo com a rota forçada', function () {
     config()->set('ui.demo_login.email', 'demo@tws.dev');
@@ -163,7 +163,7 @@ it('recusa gravar edição de conta demo mesmo com a rota forçada', function ()
 
     expect($demo->fresh()->name)->toBe('Demo Original')
         ->and($demo->fresh()->status)->toBe(UserStatus::Active);
-});
+})->group('demo');
 
 it('o admin não exclui a própria conta', function () {
     Livewire::test(ListUsers::class)

@@ -29,16 +29,28 @@ final class Navigation
     /**
      * Links institucionais do site (cabeçalho público e drawer).
      *
+     * O produto não tem páginas institucionais: os itens vêm das extensões
+     * instaladas (SiteLinks, área `header`). Sem extensão, a lista é vazia.
+     *
      * @return list<array{label: string, href: string}>
      */
     public static function site(): array
     {
-        return [
-            ['label' => __('landing.nav.features'), 'href' => url('/#recursos')],
-            ['label' => __('landing.nav.hours'), 'href' => url('/#horas')],
-            ['label' => __('landing.nav.stack'), 'href' => url('/#stack')],
-            ['label' => __('landing.nav.components'), 'href' => route('ui.showcase')],
-        ];
+        return app(SiteLinks::class)->links(SiteLinks::HEADER);
+    }
+
+    /**
+     * Links do rodapé do site: o status da API (do produto) e os que as
+     * extensões instaladas acrescentam (SiteLinks, área `footer`). O status
+     * fica por último (sort 100); extensões entram antes dele.
+     *
+     * @return list<array{label: string, href: string}>
+     */
+    public static function footer(): array
+    {
+        return app(SiteLinks::class)->links(SiteLinks::FOOTER, [
+            ['sort' => 100, 'link' => static fn (): array => ['label' => __('landing.footer.api_status'), 'href' => url('/api/health')]],
+        ]);
     }
 
     /**
@@ -81,40 +93,5 @@ final class Navigation
                 'active' => request()->routeIs($item['route']),
             ], $group['items']),
         ], $groups);
-    }
-
-    /**
-     * Índice do showcase (/ui): âncoras agrupadas, na ORDEM do documento —
-     * um índice que não segue a página é um mapa de outra cidade.
-     *
-     * @return list<array{label: string, items: list<array{label: string, href: string, anchor: string, active: bool}>}>
-     */
-    public static function showcase(): array
-    {
-        /** @var array<string, string> $categories */
-        $categories = __('showcase.categories');
-
-        $groups = [
-            'foundations' => ['theme'],
-            'components' => ['buttons', 'alerts', 'badges', 'forms', 'cards', 'modal', 'toast'],
-            'states' => ['empty_state', 'loading'],
-            'data' => ['data_display', 'navigation', 'form_patterns'],
-        ];
-
-        $result = [];
-
-        foreach ($groups as $group => $anchors) {
-            $result[] = [
-                'label' => __('showcase.groups.'.$group),
-                'items' => array_values(array_map(static fn (string $anchor): array => [
-                    'label' => $categories[$anchor],
-                    'href' => '#'.$anchor,
-                    'anchor' => $anchor,
-                    'active' => false,
-                ], array_filter($anchors, static fn (string $anchor): bool => isset($categories[$anchor])))),
-            ];
-        }
-
-        return $result;
     }
 }

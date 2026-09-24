@@ -42,7 +42,7 @@ it('painel, landing, showcase e auth compartilham o MESMO cabeçalho e rodapé',
             ->assertSee(__('landing.footer.links_heading'))
             ->assertSee(__('ui.footer.operated_by', ['platform' => platform()->name]));
     }
-});
+})->group('demo');
 
 it('painel mostra o menu lateral "Minha conta" com o item atual marcado', function () {
     $response = $this->actingAs(User::factory()->create())->get('/projects')->assertOk();
@@ -85,7 +85,7 @@ it('a gaveta do mobile leva o site E o "Minha conta" quando há sessão', functi
         ->assertSee(__('ui.nav.account'))
         ->assertSee(__('landing.nav.features'))
         ->assertSee($user->email);
-});
+})->group('demo');
 
 it('cada item da conta aparece nos DOIS markups: coluna do desktop e gaveta', function () {
     $response = $this->actingAs(User::factory()->create())->get('/dashboard')->assertOk();
@@ -114,7 +114,7 @@ it('showcase e painel usam o MESMO componente de menu lateral', function () {
         ->assertOk()
         ->assertSee('side-nav-item', false)
         ->assertDontSee('data-side-nav-current', false);
-});
+})->group('demo');
 
 it('alvos de toque do painel têm no mínimo 44px no mobile', function () {
     // min-h-11 = 2.75rem = 44px (WCAG 2.5.8 / iOS HIG). O <x-button> aplica em

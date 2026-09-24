@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
-use App\Filament\Resources\Products\ProductResource;
+use App\Demo\Catalog\Models\Product;
+use App\Demo\Filament\Resources\Products\ProductResource;
 use App\Filament\Resources\Users\UserResource;
 
 // =============================================================================
@@ -45,7 +45,7 @@ it('gera a URL de edição de produto com o uuid, nunca com o id', function () {
 
     expect($url)->toContain($product->uuid)
         ->and($url)->not->toContain('/products/'.$product->id.'/edit');
-});
+})->group('demo');
 
 it('abre a edição de produto pela URL com uuid', function () {
     $product = Product::factory()->create(['title' => 'Produto Roteado']);
@@ -53,4 +53,4 @@ it('abre a edição de produto pela URL com uuid', function () {
     $this->get(ProductResource::getUrl('edit', ['record' => $product]))
         ->assertOk()
         ->assertSee('Produto Roteado');
-});
+})->group('demo');

@@ -10,8 +10,14 @@ use Symfony\Component\Finder\Finder;
 // O kit vai virar pacotes instaláveis (foundation, auth, accounts, uploads;
 // o admin fica fora de app/Core). Um pacote só pode depender dos que estão
 // ABAIXO dele: foundation não conhece ninguém; auth conhece foundation;
-// accounts conhece auth e foundation; uploads conhece os três. A parte de
-// demonstração (demo) fica no topo e sai do produto depois.
+// accounts conhece auth e foundation; uploads conhece os três.
+//
+// A DEMONSTRAÇÃO do kit (App\Demo, em app/Demo e demo/) fica no topo, FORA de
+// app/Core: ela pode usar qualquer peça do produto, e NENHUMA peça do produto
+// pode usar a demo — nem app/Core, nem as telas (app/Filament, app/Livewire),
+// nem providers, rotas, config, migrations, seeders e views. O único ponto de
+// ligação permitido é o registro do provider da demo em bootstrap/providers.php
+// (PRODUCT_DEMO_JUNCTIONS).
 //
 // Este arquivo reprova o build quando:
 //
@@ -19,14 +25,16 @@ use Symfony\Component\Finder\Finder;
 // 2. um módulo usa classe de uma camada ACIMA da dele (import que "sobe");
 // 3. surge um CICLO entre módulos que não seja um dos grupos coesos
 //    declarados (módulos que andam juntos e vão para o MESMO pacote);
-// 4. o backend passa a depender das telas (Livewire/Filament do app).
+// 4. o backend passa a depender das telas (Livewire/Filament do app);
+// 5. qualquer arquivo do produto passa a usar App\Demo.
 //
 // O que ainda não pôde ser corrigido é EXCEÇÃO EXPLÍCITA, listada abaixo com
 // a fase em que sai. Exceção que deixou de existir também reprova — a lista
 // não pode envelhecer em silêncio.
 //
 // A leitura é por tokens do PHP: comentários e strings não contam, só nomes
-// de classe de verdade (`use`, `new`, `::class`, tipos, `instanceof`…).
+// de classe de verdade (`use`, `new`, `::class`, tipos, `instanceof`…). Nas
+// views Blade, que não são PHP puro, vale o nome escrito em qualquer lugar.
 // =============================================================================
 
 /**
@@ -41,7 +49,6 @@ const CORE_LAYERS = [
     'auth' => ['Auth'],
     'accounts' => ['Tenancy', 'ApiKeys'],
     'uploads' => ['Uploads'],
-    'demo' => ['Catalog', 'Showcase', 'Contact'],
 ];
 
 /**
@@ -74,6 +81,47 @@ const CORE_UPWARD_EXCEPTIONS = [
 const CORE_FORBIDDEN_UI_PREFIXES = ['App\Livewire\\', 'App\Filament\\'];
 
 /**
+ * Diretórios do PRODUTO — tudo o que não é a demonstração — e os arquivos
+ * dentro deles que podem nomear a demo (o ponto de ligação).
+ */
+const PRODUCT_DIRECTORIES = ['app', 'bootstrap', 'config', 'database', 'routes', 'resources/views'];
+
+/**
+ * PONTO DE LIGAÇÃO da demo: o único lugar do produto que pode nomeá-la.
+ *
+ * Não é dívida (como CORE_UPWARD_EXCEPTIONS): é a tomada, por desenho. Por
+ * isso é PERMITIDO, não obrigatório — tirar o registro desliga a demo, e o
+ * produto sem ele continua passando aqui.
+ */
+const PRODUCT_DEMO_JUNCTIONS = [
+    'bootstrap/providers.php' => ['App\Demo\Providers\DemoServiceProvider'],
+];
+
+/**
+ * Nomes de classe do próprio app (App\…) em código PHP, lidos dos tokens.
+ *
+ * @return list<string>
+ */
+function appReferencesIn(string $contents): array
+{
+    $names = [];
+
+    foreach (PhpToken::tokenize($contents) as $token) {
+        if (! $token->is([T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) {
+            continue;
+        }
+
+        $name = ltrim($token->text, '\\');
+
+        if (str_starts_with($name, 'App\\')) {
+            $names[$name] = true;
+        }
+    }
+
+    return array_keys($names);
+}
+
+/**
  * Nomes de classe do próprio app (App\…) referenciados por cada arquivo de
  * app/Core, lidos dos tokens do PHP.
  *
@@ -90,21 +138,54 @@ function coreAppReferences(): array
     $references = [];
 
     foreach ((new Finder)->files()->in(base_path('app/Core'))->name('*.php') as $file) {
-        $names = [];
+        $references[str_replace(base_path().'/', '', $file->getRealPath())] = appReferencesIn($file->getContents());
+    }
 
-        foreach (PhpToken::tokenize($file->getContents()) as $token) {
-            if (! $token->is([T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) {
-                continue;
-            }
+    ksort($references);
 
-            $name = ltrim($token->text, '\\');
+    return $references;
+}
 
-            if (str_starts_with($name, 'App\\')) {
-                $names[$name] = true;
-            }
+/**
+ * Referências à demonstração (App\Demo\…) em cada arquivo do produto.
+ *
+ * PHP é lido por tokens. Blade não é PHP puro (o `@php(...)` e o `{{ }}` não
+ * tokenizam como código): ali vale o nome escrito em qualquer lugar, inclusive
+ * em comentário — a view do produto não deve nem citar a demo.
+ *
+ * @return array<string, list<string>> caminho relativo => nomes
+ */
+function productDemoReferences(): array
+{
+    $references = [];
+
+    foreach (PRODUCT_DIRECTORIES as $directory) {
+        $finder = (new Finder)->files()->in(base_path($directory))->name('*.php');
+
+        if ($directory === 'app') {
+            $finder->exclude('Demo');
         }
 
-        $references[str_replace(base_path().'/', '', $file->getRealPath())] = array_keys($names);
+        foreach ($finder as $file) {
+            $path = str_replace(base_path().'/', '', $file->getRealPath());
+
+            if (str_ends_with($path, '.blade.php')) {
+                preg_match_all('/App\\\\+Demo(?:\\\\+[A-Za-z0-9_]+)*/', $file->getContents(), $matches);
+                $names = array_values(array_unique(array_map(
+                    fn (string $name): string => (string) preg_replace('/\\\\+/', '\\', $name),
+                    $matches[0],
+                )));
+            } else {
+                $names = array_values(array_filter(
+                    appReferencesIn($file->getContents()),
+                    fn (string $name): bool => str_starts_with($name, 'App\\Demo\\'),
+                ));
+            }
+
+            if ($names !== []) {
+                $references[$path] = $names;
+            }
+        }
     }
 
     ksort($references);
@@ -320,4 +401,33 @@ it('mantém o backend sem dependência das telas (Livewire/Filament do app)', fu
     }
 
     expect($violations)->toBe([]);
+});
+
+it('mantém o produto sem dependência da demonstração (App\\Demo)', function (): void {
+    $violations = [];
+
+    foreach (productDemoReferences() as $path => $names) {
+        foreach ($names as $name) {
+            if (! in_array($name, PRODUCT_DEMO_JUNCTIONS[$path] ?? [], true)) {
+                $violations[] = "{$path} usa {$name}";
+            }
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
+it('mantém a demonstração fora de app/Core', function (): void {
+    // A demo mora em App\Demo; módulo de app/Core com classe da demo seria a
+    // fronteira voltando por dentro do produto.
+    $demoInCore = [];
+
+    foreach ((new Finder)->files()->in(base_path('app/Core'))->name('*.php') as $file) {
+        if (preg_match('/^namespace\s+App\\\\Demo\b/m', $file->getContents()) === 1) {
+            $demoInCore[] = str_replace(base_path().'/', '', $file->getRealPath());
+        }
+    }
+
+    // A pasta app/Demo pode nem existir: o produto não exige a demo.
+    expect($demoInCore)->toBe([]);
 });

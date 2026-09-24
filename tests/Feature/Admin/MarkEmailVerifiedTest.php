@@ -105,7 +105,7 @@ it('não aparece para conta demo, nem com a coluna vazia e o modo demo desligado
         ->assertActionHidden(MarkEmailVerifiedAction::NAME);
 
     expect($demo->fresh()->email_verified_at)->toBeNull();
-});
+})->group('demo');
 
 it('só o super admin chega à ação: conta sem a flag recebe 403 no detalhe', function () {
     $pendente = User::factory()->unverified()->create();
@@ -129,7 +129,7 @@ it('a guarda recusa conta demo e libera conta comum', function () {
         ->and(UserAdminGuard::verifyEmailDenial($comum))->toBeNull()
         ->and(MarkEmailVerifiedAction::isAvailableFor($demo))->toBeFalse()
         ->and(MarkEmailVerifiedAction::isAvailableFor($comum))->toBeTrue();
-});
+})->group('demo');
 
 it('pede confirmação antes de marcar', function () {
     $pendente = User::factory()->unverified()->create();
@@ -256,7 +256,7 @@ it('a execução reconfere a guarda no servidor, mesmo chamada fora da tela — 
         ->and($recusa->outcome)->toBe(AuditOutcome::Denied)
         ->and($recusa->reason)->toBe(__('admin.users.demo_protected'))
         ->and($recusa->changes)->toBeNull();
-});
+})->group('demo');
 
 it('a execução não regrava a data de quem já está verificado, mesmo chamada fora da tela', function () {
     $verificadoEm = now()->subMonth()->startOfSecond();

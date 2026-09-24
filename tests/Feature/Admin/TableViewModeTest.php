@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
-use App\Core\Showcase\Models\FormSubmission;
-use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
-use App\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Filament\Resources\Products\Pages\ListProducts;
-use App\Filament\Resources\Products\ProductResource;
+use App\Demo\Catalog\Models\Product;
+use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
+use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use App\Demo\Filament\Resources\Products\Pages\ListProducts;
+use App\Demo\Filament\Resources\Products\ProductResource;
+use App\Demo\Showcase\Models\FormSubmission;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Support\BaseListRecords;
 use App\Filament\Support\BaseResource;
@@ -46,7 +46,7 @@ it('começa em tabela: sem grade de cards e sem layout de card', function () {
 
     expect(ViewMode::for(FormSubmissionResource::class))->toBe(ViewMode::Table)
         ->and($table->getContentGrid())->toBeNull();
-});
+})->group('demo');
 
 it('o botão da barra da tabela troca para cards e a listagem renderiza em grade', function () {
     $submission = FormSubmission::factory()->create(['nickname' => 'visivel-em-cards']);
@@ -67,7 +67,7 @@ it('o botão da barra da tabela troca para cards e a listagem renderiza em grade
         ->getContentGrid();
 
     expect($grid)->toBeArray()->toHaveKey('md');
-});
+})->group('demo');
 
 it('o alternador volta para a tabela no clique seguinte', function () {
     FormSubmission::factory()->create();
@@ -80,7 +80,7 @@ it('o alternador volta para a tabela no clique seguinte', function () {
 
     expect(Livewire::test(ListFormSubmissions::class)->instance()->getTable()->getContentGrid())
         ->toBeNull();
-});
+})->group('demo');
 
 it('a preferência é POR RECURSO: cards em submissões não vira cards em produtos', function () {
     Livewire::test(ListFormSubmissions::class)->callTableAction('toggleViewMode');
@@ -90,7 +90,7 @@ it('a preferência é POR RECURSO: cards em submissões não vira cards em produ
 
     expect(Livewire::test(ListProducts::class)->instance()->getTable()->getContentGrid())
         ->toBeNull();
-});
+})->group('demo');
 
 it('a preferência é POR USUÁRIO: a sessão de outro admin nasce em tabela', function () {
     Livewire::test(ListFormSubmissions::class)->callTableAction('toggleViewMode');
@@ -100,7 +100,7 @@ it('a preferência é POR USUÁRIO: a sessão de outro admin nasce em tabela', f
     session()->flush();
 
     expect(ViewMode::for(FormSubmissionResource::class))->toBe(ViewMode::Table);
-});
+})->group('demo');
 
 it('produtos também alternam e mostram o conteúdo nos dois modos', function () {
     $product = Product::factory()->create([
@@ -121,7 +121,7 @@ it('produtos também alternam e mostram o conteúdo nos dois modos', function ()
         ->assertSee('Cafeteira de Prova');
 
     expect(ViewMode::for(ProductResource::class))->toBe(ViewMode::Grid);
-});
+})->group('demo');
 
 // -----------------------------------------------------------------------------
 // Arquitetura: a base é lei, não convenção

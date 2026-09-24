@@ -129,7 +129,7 @@ it('recusas aparecem com o resultado "Recusada" e filtram à parte', function ()
         ->filterTable('outcome', 'denied')
         ->assertCanSeeTableRecords([$recusa])
         ->assertSee(__('admin.audit.outcome_denied'));
-});
+})->group('demo');
 
 it('o detalhe mostra o resumo já mascarado e aponta para a requisição pelo correlation_id', function () {
     $correlacao = (string) Str::uuid7();

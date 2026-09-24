@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Mail\Providers;
 
+use App\Core\Mail\Contracts\MailPreviewGate;
 use App\Core\Mail\NonDeliveringMailers;
+use App\Core\Mail\Support\ConfiguredMailPreviewGate;
 use Illuminate\Mail\MailManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -32,12 +34,18 @@ use Illuminate\Support\ServiceProvider;
  *   text/     → a versão em texto puro (gerada, ver App\Core\Mail\PlainText)
  *
  * Também instala, em produção, a recusa dos transportes que não entregam
- * (`log`, `array`) — ver App\Core\Mail\NonDeliveringMailers.
+ * (`log`, `array`) — ver App\Core\Mail\NonDeliveringMailers — e a regra
+ * padrão da galeria `/mail-preview` (App\Core\Mail\Contracts\MailPreviewGate).
  */
 final class MailServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Regra padrão da galeria de e-mails. `bindIf`: uma extensão que
+        // registre a própria regra (a demonstração do kit registra) vale,
+        // qualquer que seja a ordem dos providers.
+        $this->app->bindIf(MailPreviewGate::class, ConfiguredMailPreviewGate::class);
+
         // No momento em que o gerenciador de e-mail é RESOLVIDO (primeiro
         // envio do processo), não no boot: assim nada disso roda no
         // `composer install`/`package:discover`, que bootam a aplicação sem

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Mail\Http\Controllers;
 
+use App\Core\Mail\Contracts\MailPreviewGate;
 use App\Core\Mail\MailPreview;
-use App\Core\Support\DemoSurface;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -14,12 +14,13 @@ use Illuminate\View\View;
  * Pré-visualização dos e-mails transacionais (/mail-preview) — ferramenta de
  * DESENVOLVIMENTO.
  *
- * Fica atrás da mesma flag do login demo (config/ui.php ← DEMO_LOGIN_ENABLED,
- * padrão: só em APP_ENV=local) E do fail-closed de produção (DemoSurface): em
- * APP_ENV=production a rota responde 404 mesmo com a flag ligada. Uma galeria
- * pública com o desenho de todos os e-mails da plataforma é material pronto
- * para quem quiser montar um phishing convincente — e depender de a pessoa
- * lembrar de desligar a flag era deixar essa porta aberta por padrão.
+ * Quem decide se a galeria abre é o MailPreviewGate registrado no container:
+ * o padrão do produto (ConfiguredMailPreviewGate — flag MAIL_PREVIEW_ENABLED,
+ * padrão só em APP_ENV=local, e nunca em produção) ou a regra de uma extensão
+ * (a demonstração do kit alinha a galeria ao modo demo). Fechada, a rota
+ * responde 404. Uma galeria pública com o desenho de todos os e-mails da
+ * plataforma é material pronto para quem quiser montar um phishing
+ * convincente.
  *
  * Três formatos na mesma rota:
  *   (padrão) a galeria, no layout do site do kit;
@@ -55,14 +56,11 @@ final class MailPreviewController
     }
 
     /**
-     * A flag é a MESMA do login demo: as duas são "conveniências de dev que
-     * viram risco em produção", e duas flags para a mesma decisão acabam
-     * desalinhadas. A decisão final é do DemoSurface, que soma a flag ao
-     * ambiente.
+     * A galeria está aberta nesta requisição? (ver MailPreviewGate)
      */
     public static function enabled(): bool
     {
-        return DemoSurface::mailPreviewEnabled();
+        return app(MailPreviewGate::class)->allows();
     }
 
     /**

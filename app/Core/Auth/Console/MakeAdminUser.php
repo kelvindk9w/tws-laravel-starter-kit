@@ -6,7 +6,7 @@ namespace App\Core\Auth\Console;
 
 use App\Core\Audit\AuditScope;
 use App\Core\Audit\AuditTrail;
-use App\Core\Auth\Exceptions\DemoAccountProtectedException;
+use App\Core\Auth\Exceptions\AccountProtectedException;
 use App\Core\Auth\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -17,17 +17,18 @@ use Illuminate\Support\Facades\DB;
  * A flag is_admin NUNCA é mass-assignable nem editável por telas: a única
  * porta de entrada é este comando (trilha de quem rodou = log do SO/CI).
  *
- * CONTAS DEMO ficam de fora: `is_admin` é campo sensível (DemoAccountGuard),
- * e o model recusa a gravação. O comando não tenta contornar — traduz a
- * recusa em erro de console. Promover o cliente demo a admin, ou rebaixar o
- * admin demo, entregaria o painel inteiro ao próximo visitante.
+ * CONTAS PROTEGIDAS ficam de fora (App\Core\Auth\Contracts\AccountProtection):
+ * quando a extensão registrada protege `is_admin` de uma conta, o model recusa
+ * a gravação. O comando não tenta contornar — traduz a recusa em erro de
+ * console. (Hoje quem protege é a demonstração: promover o cliente demo a
+ * admin, ou rebaixar o admin demo, entregaria o painel ao próximo visitante.)
  *
  * Promover também marca o e-mail como confirmado (quem promove é o operador;
  * ver docs/autenticacao.md, "Verificação de e-mail").
  *
  * TRILHA DE AUDITORIA (contexto `console`): promover grava
  * `user.admin_granted` e rebaixar `user.admin_revoked`, com o antes/depois da
- * flag; a recusa da conta demo grava a mesma ação com `denied`. Sem usuário
+ * flag; a recusa da conta protegida grava a mesma ação com `denied`. Sem usuário
  * da aplicação para ser o ator, a linha leva o comando e o usuário do sistema
  * operacional no lugar do User-Agent (AuditScope::console).
  *
@@ -80,7 +81,7 @@ final class MakeAdminUser extends Command
 
             // Mudança e linha da trilha na mesma transação (falha fechada).
             DB::transaction(fn (): bool => $user->forceFill($changes)->save());
-        } catch (DemoAccountProtectedException $exception) {
+        } catch (AccountProtectedException $exception) {
             $trail->denied('user.'.$verb, $user, __('admin.command.demo_protected', ['email' => (string) $user->email]));
 
             $this->error(__('admin.command.demo_protected', ['email' => (string) $user->email]));

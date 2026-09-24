@@ -38,6 +38,11 @@ final class ApiKeyResource extends BaseResource
 
     protected static ?string $navigationGroupKey = 'admin.nav.group_management';
 
+    // Posição no grupo "Gestão", de 10 em 10: a ordem do menu não pode
+    // depender da ordem em que os resources são registrados (extensões, como
+    // a demonstração do kit, registram os seus por outro caminho).
+    protected static ?int $navigationSort = 10;
+
     // Navegação do /admin: TODO resource tem ícone (crítica de design #6 —
     // metade da nav aparecia como bolinha sem ícone).
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;

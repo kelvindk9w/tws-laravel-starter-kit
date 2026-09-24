@@ -27,7 +27,7 @@ final class UserAdminGuard
      */
     public static function editDenial(User $record): ?string
     {
-        return $record->isDemo() ? __('admin.users.demo_protected') : null;
+        return $record->isReservedAccount() ? __('admin.users.demo_protected') : null;
     }
 
     /**
@@ -39,7 +39,7 @@ final class UserAdminGuard
      */
     public static function verifyEmailDenial(User $record): ?string
     {
-        return $record->isDemo() ? __('admin.users.demo_protected') : null;
+        return $record->isReservedAccount() ? __('admin.users.demo_protected') : null;
     }
 
     /**
@@ -47,7 +47,7 @@ final class UserAdminGuard
      */
     public static function deleteDenial(User $record, ?User $actor): ?string
     {
-        if ($record->isDemo()) {
+        if ($record->isReservedAccount()) {
             return __('admin.users.demo_protected');
         }
 
@@ -67,7 +67,7 @@ final class UserAdminGuard
      */
     public static function blockDenial(User $record, ?User $actor): ?string
     {
-        if ($record->isDemo()) {
+        if ($record->isReservedAccount()) {
             return __('admin.users.demo_protected');
         }
 
@@ -89,7 +89,7 @@ final class UserAdminGuard
      */
     public static function updateDenial(User $record, array $data, ?User $actor): ?string
     {
-        if ($record->isDemo()) {
+        if ($record->isReservedAccount()) {
             return __('admin.users.demo_protected');
         }
 

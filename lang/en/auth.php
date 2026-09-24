@@ -88,14 +88,6 @@ return [
     ],
 
     // UI strings (authentication forms/screens).
-    // Demo account hardening (DemoAccountGuard): messages for anything that
-    // tries to touch them outside the super admin UI — tinker, artisan
-    // command, job. See docs/demo.md, "Contas demo são intocáveis".
-    'demo_account' => [
-        'update_blocked' => 'Protected demo account: ":email" does not accept changes to :fields. Name, photo, language and theme remain editable.',
-        'delete_blocked' => 'Protected demo account: ":email" cannot be deleted.',
-    ],
-
     'ui' => [
         'login_title' => 'Sign in',
         'login_submit' => 'Sign in',
@@ -124,10 +116,6 @@ return [
         'dashboard_title' => 'Dashboard',
         'dashboard_greeting' => 'Hello, :name',
         'dashboard_code' => 'Your user code',
-
-        // Demo login: only when config('ui.demo_login.enabled') — local/dev.
-        'demo_notice' => 'Demo environment: the credentials below are already filled in, just sign in.',
-        'demo_credentials' => 'Demo user',
     ],
 
 ];

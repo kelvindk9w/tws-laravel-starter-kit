@@ -28,6 +28,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Demonstração do kit (App\Demo): sai junto com a demo. -->
+        <testsuite name="Demo">
+            <directory>tests/Demo</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

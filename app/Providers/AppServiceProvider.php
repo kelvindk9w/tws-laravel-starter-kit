@@ -7,7 +7,6 @@ namespace App\Providers;
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
 use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
-use App\Core\Auth\Support\DemoAccountSession;
 use App\Core\Backup\Console\GuardedBackupCommand;
 use App\Core\Http\TrustedProxies;
 use App\Core\Mail\NonDeliveringMailers;
@@ -15,8 +14,8 @@ use App\Core\Security\AdminIpAllowlist;
 use App\Core\Security\ApiRateLimit;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Support\CriticalSecrets;
-use App\Core\Support\DemoSurface;
 use App\Core\Support\Platform;
+use App\Livewire\Support\SiteLinks;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -47,12 +46,9 @@ class AppServiceProvider extends ServiceProvider
         // agendamento e o Artisan::call(). Nada disso roda no boot.
         $this->app->bind(BackupCommand::class, GuardedBackupCommand::class);
 
-        // Gatilho das contas demo alinhado com o modo demo DESTA aplicação:
-        // com o modo desligado, cada conexão com o PostgreSQL desliga a
-        // proteção na própria sessão (ver DemoAccountSession). Fica no
-        // register, e não no boot, para valer também para conexões abertas
-        // por outros providers durante o boot. Não abre conexão nenhuma.
-        DemoAccountSession::register($this->app['events'], $this->app['db']);
+        // Links do site acrescentados por extensões (cabeçalho e rodapé
+        // públicos — ver SiteLinks). Um por aplicação: nada vaza entre testes.
+        $this->app->singleton(SiteLinks::class);
     }
 
     /**
@@ -95,19 +91,12 @@ class AppServiceProvider extends ServiceProvider
                 Log::warning('APP_DEBUG estava ligado em APP_ENV=production e foi forçado para false. Corrija o ambiente: em produção o debug expõe configuração, caminhos do servidor e trechos de código nas telas de erro.');
             }
 
-            // Opt-out da superfície de demonstração (DEMO_ALLOW_IN_PRODUCTION):
-            // legítimo para a demo pública hospedada do roadmap, e por isso
-            // BARULHENTO. Um opt-out de segurança que ninguém vê deixa de ser
-            // decisão e volta a ser esquecimento.
-            if (DemoSurface::allowedInProductionByOptOut()) {
-                Log::warning('DEMO_ALLOW_IN_PRODUCTION está ligado: em produção, as contas demo de credenciais públicas, a vitrine /ui, a galeria /mail-preview e os seeders de dado fictício estão LIBERADOS. Só use isto numa instalação descartável.');
-            }
-
             // Opt-out da barreira de ORIGEM das superfícies administrativas
             // (ADMIN_ALLOW_ANY_IP, ou faixa universal escrita na própria
-            // allowlist). Mesmo princípio do aviso acima: sem allowlist, o
-            // /admin e o /horizon ficam com UMA barreira só (is_admin + conta
-            // ativa), e quem decidiu isso tem de reencontrar a decisão no log.
+            // allowlist). Um opt-out de segurança que ninguém vê deixa de ser
+            // decisão e volta a ser esquecimento: sem allowlist, o /admin e o
+            // /horizon ficam com UMA barreira só (is_admin + conta ativa), e
+            // quem decidiu isso tem de reencontrar a decisão no log.
             //
             // Note que NÃO existe aviso de boot para o caso da allowlist
             // AUSENTE: sem `.env`, o Laravel resolve APP_ENV como `production`,

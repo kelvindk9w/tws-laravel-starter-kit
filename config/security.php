@@ -64,11 +64,14 @@ return [
         //   horizon     → content_security_policy_horizon. Segue o mesmo
         //                 HORIZON_PATH do config/horizon.php; caminho vazio =
         //                 nenhuma rota.
-        //   landing_alt → content_security_policy_landing_alt (/v2).
+        //   landing_alt → content_security_policy_landing_alt. O produto não
+        //                 tem página nessa superfície; quem a usa declara o
+        //                 caminho no próprio register (a demonstração do kit
+        //                 declara a landing alternativa, /v2).
         'surfaces' => [
             'admin' => ['admin*'],
             'horizon' => (static fn (string $path): array => $path === '' ? [] : [$path.'*'])(trim((string) env('HORIZON_PATH', 'horizon'), '/')),
-            'landing_alt' => ['v2'],
+            'landing_alt' => [],
         ],
 
         // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).

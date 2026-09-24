@@ -47,7 +47,7 @@ it('seletor de tema com os 3 estados nomeados aparece na landing, showcase e pai
         ->assertOk()
         ->assertSee('data-theme-set="dark"', false)
         ->assertSee(__('ui.theme.system'));
-});
+})->group('demo');
 
 it('perfil exibe o segmented control de aparência', function () {
     $this->actingAs(User::factory()->create())
@@ -116,4 +116,4 @@ it('o showcase mostra o toggle nos dois estados', function () {
     config()->set('ui.showcase_enabled', true);
 
     $this->get('/ui')->assertOk()->assertSee('peer-checked:bg-success', false);
-});
+})->group('demo');

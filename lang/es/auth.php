@@ -88,14 +88,6 @@ return [
     ],
 
     // Cadenas de interfaz (formularios/pantallas de autenticación).
-    // Blindaje de las cuentas de demostración (DemoAccountGuard): mensajes de
-    // quien intenta tocarlas fuera de la interfaz del super admin — tinker,
-    // comando artisan, job. Ver docs/demo.md, "Contas demo são intocáveis".
-    'demo_account' => [
-        'update_blocked' => 'Cuenta de demostración protegida: ":email" no acepta cambios en :fields. Nombre, foto, idioma y tema siguen editables.',
-        'delete_blocked' => 'Cuenta de demostración protegida: ":email" no se puede eliminar.',
-    ],
-
     'ui' => [
         'login_title' => 'Entrar',
         'login_submit' => 'Entrar',
@@ -124,10 +116,6 @@ return [
         'dashboard_title' => 'Panel',
         'dashboard_greeting' => 'Hola, :name',
         'dashboard_code' => 'Tu código de usuario',
-
-        // Login demo: solo cuando config('ui.demo_login.enabled') — local/dev.
-        'demo_notice' => 'Entorno de demostración: las credenciales ya vienen completadas, solo entra.',
-        'demo_credentials' => 'Usuario demo',
     ],
 
 ];

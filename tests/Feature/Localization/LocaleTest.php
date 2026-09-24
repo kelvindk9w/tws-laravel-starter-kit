@@ -18,7 +18,7 @@ it('visitante sem cookie vê o padrão da plataforma (pt-BR)', function () {
     $this->get('/')
         ->assertOk()
         ->assertSee(__('landing.hero.title_line_2', locale: 'pt_BR'));
-});
+})->group('demo');
 
 it('visitante com cookie vê o idioma escolhido', function (string $locale, string $expected) {
     // withCookie: o harness criptografa (como o EncryptCookies faria na borda).
@@ -26,7 +26,7 @@ it('visitante com cookie vê o idioma escolhido', function (string $locale, stri
         ->get('/')
         ->assertOk()
         ->assertSee($expected);
-})->with([
+})->group('demo')->with([
     'en' => ['en', 'The base your AI'],
     'es' => ['es', 'La base que tu IA'],
 ]);
@@ -36,7 +36,7 @@ it('cookie com locale fora da whitelist cai no padrão da plataforma', function 
         ->get('/')
         ->assertOk()
         ->assertSee(__('landing.hero.title_line_2', locale: 'pt_BR'));
-});
+})->group('demo');
 
 it('usuário logado com preferência salva vê o painel no idioma dela', function () {
     $user = User::factory()->create(['locale' => 'es']);
@@ -55,7 +55,7 @@ it('preferência da conta vence o cookie do visitante', function () {
         ->get('/')
         ->assertOk()
         ->assertSee(__('landing.hero.title_line_2', locale: 'en'));
-});
+})->group('demo');
 
 it('rota de troca grava o cookie e redireciona de volta', function () {
     $response = $this->get('/locale/en');

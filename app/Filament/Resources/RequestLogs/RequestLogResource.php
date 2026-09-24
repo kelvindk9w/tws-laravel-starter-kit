@@ -9,10 +9,10 @@ use App\Core\Identifiers\UuidColumn;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\AuditEvents\AuditEventResource;
-use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
 use App\Filament\Support\AdminColumns;
+use App\Filament\Support\AttackLabel;
 use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
@@ -172,7 +172,7 @@ final class RequestLogResource extends BaseResource
 
         $key = $record->status === RequestLogStatus::Bloqueada ? 'attack_blocked' : 'attack_observed';
 
-        return __('admin.request_logs.'.$key, ['type' => FormSubmissionResource::attackLabel($record->attack_type)]);
+        return __('admin.request_logs.'.$key, ['type' => AttackLabel::for($record->attack_type)]);
     }
 
     private static function attackColumn(): TextColumn

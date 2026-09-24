@@ -10,8 +10,8 @@ use App\Core\Audit\Enums\AuditOutcome;
 use App\Core\Audit\Models\AuditEvent;
 use App\Core\Audit\Support\AuditEventTrigger;
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
+use App\Demo\Catalog\Models\Product;
 use App\Filament\Resources\Users\Pages\EditUser;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\QueryException;
@@ -161,7 +161,7 @@ it('fora de um escopo aberto, gravação de model não gera linha', function () 
 
     expect(AuditEvent::query()->count())->toBe(0)
         ->and(app(AuditTrail::class)->current())->toBeNull();
-});
+})->group('demo');
 
 it('o escopo do /admin fecha ao fim da chamada Livewire', function () {
     $admin = User::factory()->create(['is_admin' => true]);
@@ -258,7 +258,7 @@ it('user:make-admin: conta demo e e-mail inexistente ficam como denied, sem o e-
         ->and(json_encode($recusas->map->getAttributes()))->not->toContain('ninguem-aqui@example.com')
         ->and(json_encode($recusas->map->getAttributes()))->not->toContain((string) $demo->email)
         ->and($demo->fresh()->is_admin)->toBeFalse();
-});
+})->group('demo');
 
 // -----------------------------------------------------------------------------
 // Retenção

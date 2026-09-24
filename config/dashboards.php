@@ -1,7 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use App\Filament\Dashboards\ContentDashboard;
 use App\Filament\Dashboards\GrowthDashboard;
 use App\Filament\Dashboards\OverviewDashboard;
 
@@ -27,7 +26,9 @@ return [
 
     // Variantes ligadas, na ordem em que aparecem no menu (slugs separados
     // por vírgula). Vazio = nenhuma variante do kit; o painel cai no
-    // Dashboard de fábrica do Filament para que /admin nunca dê 404.
+    // Dashboard de fábrica do Filament para que /admin nunca dê 404. Slug sem
+    // variante registrada é ignorado: `content` ("Conteúdo & Operação") é
+    // registrada pela demonstração do kit (App\Demo) e some sem ela.
     'enabled' => array_values(array_filter(array_map(
         'trim',
         explode(',', (string) env('DASHBOARD_ENABLED', 'overview,growth,content')),
@@ -56,7 +57,7 @@ return [
     // Quantas linhas as tabelas de "últimos registros" mostram.
     'latest_records' => (int) env('DASHBOARD_LATEST_RECORDS', 6),
 
-    // Catálogo das variantes que o kit traz. Uma quarta variante entra aqui
+    // Catálogo das variantes que o produto traz. Uma variante nova entra aqui
     // (slug => página + ícone + ordem) e passa a existir assim que o slug
     // for incluído em DASHBOARD_ENABLED. Ícone como STRING para que a
     // config continue cacheável (`config:cache`).
@@ -74,12 +75,11 @@ return [
             'sort' => 2,
         ],
 
-        'content' => [
-            'page' => ContentDashboard::class,
-            'icon' => 'heroicon-o-rectangle-stack',
-            'sort' => 3,
-        ],
-
     ],
+
+    // Widgets que extensões instaladas acrescentam a uma variante do
+    // produto, por slug: [['widget' => classe, 'before' => classe|null]].
+    // Preenchido pelas extensões no register (ver DashboardRegistry::widgets).
+    'widgets' => [],
 
 ];

@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Audit\AuditTrail;
 use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Models\User;
-use App\Core\Catalog\Models\Product;
+use App\Demo\Catalog\Models\Product;
 use App\Filament\AuditFixture\NewAdminScreen;
 use App\Filament\Pages\Profile;
 use App\Filament\Pages\Settings;
@@ -201,4 +201,4 @@ it('uma tela NOVA do painel, sem nenhuma linha de auditoria, já grava na trilha
     expect($evento->action)->toBe('product.archive_old')
         ->and($evento->actor_uuid)->toBe($admin->uuid)
         ->and($evento->changes['title'])->toBe(['before' => 'Cadeira', 'after' => 'Cadeira (arquivado)']);
-});
+})->group('demo');

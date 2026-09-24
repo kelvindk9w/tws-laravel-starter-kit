@@ -84,11 +84,13 @@ significa que alguém tem a senha). Os dois aparecem no catálogo
 lado do HTML. `?format=html` abre o e-mail sozinho na janela e `?format=text`
 mostra só o texto.
 
-A rota fica atrás da **mesma flag do login demo** (`DEMO_LOGIN_ENABLED`;
-padrão: só em `APP_ENV=local`) **e** do fail-closed de produção: em
-`APP_ENV=production` responde **404** mesmo com a flag ligada — uma galeria
-pública com o desenho oficial de todos os e-mails da plataforma é presente de
-phishing. Ver
+É ferramenta de **desenvolvimento do produto**. Quem abre a galeria é o
+`App\Core\Mail\Contracts\MailPreviewGate` registrado: no produto puro, a flag
+`MAIL_PREVIEW_ENABLED` (padrão: só em `APP_ENV=local`); com a demonstração
+instalada, a **mesma flag do login demo** (`DEMO_LOGIN_ENABLED`). Nos dois
+casos vale o fail-closed de produção: em `APP_ENV=production` responde
+**404** mesmo com a flag ligada — uma galeria pública com o desenho oficial de
+todos os e-mails da plataforma é presente de phishing. Ver
 [Superfície de demonstração: fail-closed em produção](demo.md#superfície-de-demonstração-fail-closed-em-produção).
 
 Para ver o e-mail **como ele chega** (cabeçalhos, multipart, anexos), o

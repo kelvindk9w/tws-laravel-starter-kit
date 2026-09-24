@@ -5,19 +5,17 @@
 @section('content')
     <h1 class="mb-6 font-display text-xl font-semibold tracking-[-0.01em]">{{ __('auth.ui.login_title') }}</h1>
 
-    {{-- As credenciais demo são IMPRESSAS na tela. Quem decide se elas
-         aparecem é o DemoSurface, não a flag crua: em APP_ENV=production
-         (sem DEMO_ALLOW_IN_PRODUCTION declarado) o aviso não aparece e os
-         campos nascem vazios, mesmo que DEMO_LOGIN_ENABLED tenha ficado
-         ligado no .env copiado do exemplo. --}}
-    @php($demo = config('ui.demo_login'))
-    @php($demoEnabled = \App\Core\Support\DemoSurface::loginEnabled())
+    {{-- Credenciais sugeridas (ponto de extensão LoginPrefillProvider): sem
+         extensão registrada, os campos nascem vazios e não há aviso. Quem
+         sugere decide também QUANDO — a demonstração do kit, por exemplo,
+         nunca sugere em APP_ENV=production sem opt-out declarado. --}}
+    @php($prefill = \App\Core\Auth\Support\LoginPrefill::for('web'))
 
-    @if ($demoEnabled)
+    @if ($prefill?->notice !== null)
         <x-alert type="info" class="mb-4">
-            {{ __('auth.ui.demo_notice') }}<br>
-            <strong>{{ __('auth.ui.demo_credentials') }}:</strong>
-            {{ $demo['email'] }} / {{ $demo['password'] }}
+            {{ $prefill->notice }}<br>
+            <strong>{{ $prefill->label }}:</strong>
+            {{ $prefill->email }} / {{ $prefill->password }}
         </x-alert>
     @endif
 
@@ -25,12 +23,12 @@
         @csrf
 
         <x-input :label="__('auth.ui.email')" name="email" type="email"
-                 :value="old('email', $demoEnabled ? $demo['email'] : '')"
+                 :value="old('email', $prefill?->email ?? '')"
                  :error="field_error('email')"
                  required autofocus autocomplete="username" />
 
         <x-input :label="__('auth.ui.password')" name="password" type="password"
-                 :value="$demoEnabled ? $demo['password'] : ''"
+                 :value="$prefill?->password ?? ''"
                  :error="field_error('password')"
                  required autocomplete="current-password" />
 

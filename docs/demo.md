@@ -1,5 +1,18 @@
 # Modo demo: login demo, superfície de demonstração e contas demo
 
+> **Onde mora a demonstração.** Tudo o que existe para mostrar o kit — e não
+> para ser a base de um produto — está separado do produto: as classes em
+> `app/Demo` (namespace `App\Demo`) e o resto em `demo/` (rotas, config,
+> migrations, views, traduções, JS e CSS), com os testes em `tests/Demo`
+> (grupo `demo`). O produto não importa nada da demo; onde precisava
+> perguntar algo a ela, pergunta a um ponto de extensão neutro (contas
+> protegidas, credenciais sugeridas no login, galeria de e-mails, links do
+> site, seeders, widgets de dashboard), e o
+> `App\Demo\Providers\DemoServiceProvider` registra as respostas da demo.
+> Tirar esse provider de `bootstrap/providers.php` (e o `previews.php` da demo
+> do `autoload.files`) desliga a demonstração inteira; a suíte do produto sem
+> ela é `pest --testsuite=Unit,Feature --exclude-group=demo`.
+
 ## Login demo e admin demo (fricção zero em dev)
 
 > **Em produção nada disto existe**, e isso não depende de ninguém lembrar de
@@ -12,7 +25,8 @@ clicar em "Entrar" (padrão demo.filamentphp.com). A MESMA flag ativa o **admin
 demo**: usuário com `is_admin` e credenciais pré-preenchidas em `/admin/login`
 (página própria `App\Filament\Pages\Auth\Login`), com link "Ver admin demo" na
 landing. Os dois usuários são criados pelo `DemoUserSeeder` + `DemoAdminSeeder`,
-chamados automaticamente pelo `DatabaseSeeder` quando o flag está ligado:
+chamados automaticamente pelo `DemoSeeder` (que o `DatabaseSeeder` roda) quando
+o flag está ligado:
 
 ```bash
 docker compose exec app php artisan migrate --seed   # cria os usuários demo
@@ -40,7 +54,7 @@ caminho normal de um starter kit (`cp .env.example .env`, ajustar, subir) levava
 a demonstração toda para produção. **Esquecer não pode ser o mesmo que
 autorizar.**
 
-Agora quem decide é `app/Core/Support/DemoSurface.php`, e a regra é: em
+Agora quem decide é `app/Demo/Support/DemoSurface.php`, e a regra é: em
 `APP_ENV=production` a superfície de demonstração **não existe**,
 independentemente do que as flags disserem. As flags continuam valendo — mas
 como **segunda** barreira, para desligar a demo fora de produção.
@@ -51,8 +65,8 @@ Em produção, portanto:
 | --- | --- | --- |
 | `/ui`, `POST /ui/form-demo`, `/mail-preview` | **404** | 403 confirmaria que a rota existe e está a uma flag de distância de abrir; 404 é indistinguível de rota que nunca foi escrita. As rotas seguem **registradas** (o rodapé e o menu do site geram `route('ui.showcase')` incondicionalmente — desregistrar derrubaria a home com `RouteNotFoundException`) |
 | Credenciais demo no login do painel e do `/admin` | não aparecem e não são pré-preenchidas | entregar `admin@tws.dev` com a senha pública já digitada no login do super admin é a forma mais curta de perder a instalação |
-| Seeder demo chamado **direto** (`db:seed --class=DemoAdminSeeder`) | **lança exceção** | quem chamou aquele seeder **pediu** aquela conta; terminar com "DONE" sem criar nada faria a pessoa acreditar que ela existe |
-| `db:seed` (o agregador `DatabaseSeeder`) | **avisa no console e segue** | é o que um script de deploy roda; derrubar o deploy por causa de dado de demonstração trocaria uma armadilha por outra |
+| Seeder demo chamado **direto** (`db:seed --class='App\Demo\Database\Seeders\DemoAdminSeeder'`) | **lança exceção** | quem chamou aquele seeder **pediu** aquela conta; terminar com "DONE" sem criar nada faria a pessoa acreditar que ela existe |
+| `db:seed` (o agregador `DatabaseSeeder`, que roda o `DemoSeeder`) | **avisa no console e segue** | é o que um script de deploy roda; derrubar o deploy por causa de dado de demonstração trocaria uma armadilha por outra |
 | `APP_DEBUG=true` | forçado para `false`, com aviso no log | fechar o vazamento sem derrubar o site: recusar o boot transformaria uma configuração errada em site fora do ar |
 
 > **Em produção não se roda `db:seed`.** O kit não tem seeder de dado
@@ -174,7 +188,7 @@ proteção na própria sessão, com a mesma flag que o trigger consulta
 - **Limite:** com um pooler em modo transação (PgBouncer
   `pool_mode=transaction`) a variável de sessão não acompanha a aplicação de
   uma transação para a outra. Nesse caso, com o modo demo desligado, rode uma
-  vez `php artisan tinker --execute="App\Core\Auth\Support\DemoAccountTrigger::install()"`
+  vez `php artisan tinker --execute="App\Demo\Accounts\DemoAccountTrigger::install()"`
   — com o modo desligado, o `install()` remove o trigger do banco.
 
 **A porta de serviço**: `DemoAccountGuard::withoutProtection(fn () => ...)`
@@ -186,7 +200,7 @@ Comandos que tocam usuários respeitam a regra: `user:make-admin` recusa
 promover o cliente demo e rebaixar o admin demo, com erro legível no
 console em vez de stack trace.
 
-Testes: `tests/Feature/Admin/DemoAccountHardeningTest.php` e
-`tests/Feature/Admin/DemoAccountSessionTest.php` (os testes do
+Testes: `tests/Demo/Feature/Admin/DemoAccountHardeningTest.php` e
+`tests/Demo/Feature/Admin/DemoAccountSessionTest.php` (os testes do
 trigger só rodam quando a suíte aponta para o PostgreSQL — o CI roda assim;
 no `pest` local em SQLite aparecem como `skip`).

@@ -102,4 +102,42 @@ final class DashboardRegistry
     {
         return self::variants()[$slug]['sort'] ?? 0;
     }
+
+    /**
+     * Widgets de uma variante: os que a página declara, mais os que as
+     * extensões instaladas acrescentam em `dashboards.widgets.{slug}`.
+     *
+     * Cada acréscimo é `['widget' => classe, 'before' => classe|null]`: entra
+     * logo antes do widget indicado (ou no fim, sem `before` ou se ele não
+     * estiver na lista). É como a demonstração do kit põe as "Últimas
+     * submissões" na Visão geral sem que a página do produto a conheça.
+     *
+     * @param  list<class-string>  $widgets
+     * @return list<class-string>
+     */
+    public static function widgets(string $slug, array $widgets): array
+    {
+        /** @var list<array{widget?: class-string, before?: class-string|null}> $extras */
+        $extras = (array) config("dashboards.widgets.{$slug}", []);
+
+        foreach ($extras as $extra) {
+            $widget = $extra['widget'] ?? null;
+
+            if (! is_string($widget) || ! class_exists($widget) || in_array($widget, $widgets, true)) {
+                continue;
+            }
+
+            $position = isset($extra['before']) ? array_search($extra['before'], $widgets, true) : false;
+
+            if ($position === false) {
+                $widgets[] = $widget;
+
+                continue;
+            }
+
+            array_splice($widgets, $position, 0, [$widget]);
+        }
+
+        return array_values($widgets);
+    }
 }

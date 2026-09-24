@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Contact\Mail\ContactMessageMail;
 use App\Core\Logging\CardNumberMaskingFormatter;
 use App\Core\Logging\MaskCardNumbersInLogs;
 use App\Core\Logging\Models\RequestLog;
-use App\Core\Showcase\Models\FormSubmission;
-use App\Core\Showcase\Support\FormSubmissionGuard;
 use App\Core\Support\Platform;
+use App\Demo\Contact\Mail\ContactMessageMail;
+use App\Demo\Showcase\Models\FormSubmission;
+use App\Demo\Showcase\Support\FormSubmissionGuard;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -35,7 +35,7 @@ it('grava o payload do request log com o cartão mascarado', function () {
 
     expect($log->payload['message'])->toBe('Meu cartão é **** **** **** 1111, podem estornar?')
         ->and(json_encode($log->payload))->not->toContain('4111 1111 1111 1111');
-});
+})->group('demo');
 
 it('grava a submissão do contato com o cartão mascarado e o resto do texto intacto', function () {
     Mail::fake();
@@ -46,7 +46,7 @@ it('grava a submissão do contato com o cartão mascarado e o resto do texto int
 
     expect($submission->message)->toBe('Meu cartão é **** **** **** 1111, podem estornar?')
         ->and($submission->sender_email)->toBe('maria@example.com');
-});
+})->group('demo');
 
 it('o e-mail enfileirado do contato não carrega o cartão', function () {
     Mail::fake();
@@ -59,7 +59,7 @@ it('o e-mail enfileirado do contato não carrega o cartão', function () {
         ContactMessageMail::class,
         fn (ContactMessageMail $mail): bool => $mail->messageText === 'Meu cartão é **** **** **** 1111, podem estornar?',
     );
-});
+})->group('demo');
 
 it('a tentativa de ataque grava o cartão mascarado na trilha, nos dois modos', function (string $mode, int $status) {
     config()->set('security.validation.mode', $mode);
@@ -73,7 +73,7 @@ it('a tentativa de ataque grava o cartão mascarado na trilha, nos dois modos', 
 
     expect(json_encode($log->payload))->toContain('************1111')
         ->not->toContain('4111111111111111');
-})->with([
+})->group('demo')->with([
     'block (BLOQUEADA, 422)' => ['block', 422],
     'observe (segue, redirect)' => ['observe', 302],
 ]);
@@ -91,7 +91,7 @@ it('a detecção de ataque do formulário vê o texto original (mascarar não es
         ->and($submission->nickname)->toBe('cartão ************4444')
         ->and($submission->subject)->toBe('assunto **** **** **** 1111')
         ->and($submission->message)->toBe('************1111 <script>alert(1)</script>');
-});
+})->group('demo');
 
 it('mascara o cartão no log de arquivo, na mensagem, no contexto e na exceção', function (string $channel) {
     $path = storage_path('framework/testing/pan-'.$channel.'-'.uniqid().'.log');

@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Filament\Dashboards\ContentDashboard;
+use App\Demo\Database\Seeders\DashboardHistorySeeder;
+use App\Demo\Database\Seeders\RequestLogSeeder;
+use App\Demo\Filament\Dashboards\ContentDashboard;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Dashboards\GrowthDashboard;
 use App\Filament\Dashboards\OverviewDashboard;
-use Database\Seeders\DashboardHistorySeeder;
-use Database\Seeders\RequestLogSeeder;
 use Filament\Pages\Dashboard;
 use Illuminate\Support\Facades\Route;
 
@@ -32,7 +32,7 @@ it('a variante padrão responde em /admin e as demais em /admin/dashboards/{slug
     $this->get('/admin')->assertOk()->assertSee(__('admin.dashboards.overview.title'));
     $this->get('/admin/dashboards/growth')->assertOk()->assertSee(__('admin.dashboards.growth.title'));
     $this->get('/admin/dashboards/content')->assertOk()->assertSee(__('admin.dashboards.content.title'));
-});
+})->group('demo');
 
 it('cada variante carrega exatamente os seus widgets', function () {
     expect((new OverviewDashboard)->getWidgets())->toHaveCount(5)
@@ -50,7 +50,7 @@ it('cada variante carrega exatamente os seus widgets', function () {
         ->and($html)->toContain('RequestsStatusChart')
         // O AccountWidget de fábrica ("Bem-vindo(a)") continua fora do painel.
         ->and($html)->not->toContain('AccountWidget');
-});
+})->group('demo');
 
 it('as três variantes aparecem no menu, no grupo Dashboards', function () {
     $this->get('/admin')->assertOk();
@@ -66,7 +66,7 @@ it('as três variantes aparecem no menu, no grupo Dashboards', function () {
     $grupos = collect(filament()->getNavigation())->map(fn ($grupo) => $grupo->getLabel());
 
     expect($grupos)->toContain(__('admin.nav.group_dashboards'));
-});
+})->group('demo');
 
 it('desligar uma variante na config a tira do painel — do menu e da rota', function () {
     config()->set('dashboards.enabled', ['overview', 'content']);
@@ -81,7 +81,7 @@ it('desligar uma variante na config a tira do painel — do menu e da rota', fun
     foreach (DashboardRegistry::pages() as $pagina) {
         expect(filament()->getPages())->toContain($pagina);
     }
-});
+})->group('demo');
 
 it('a variante padrão troca com DASHBOARD_DEFAULT, e slug desligado cai na primeira habilitada', function () {
     config()->set('dashboards.default', 'growth');
@@ -123,4 +123,4 @@ it('as três variantes renderizam com os dados que o kit semeia', function () {
     foreach (['/admin', '/admin/dashboards/growth', '/admin/dashboards/content'] as $url) {
         $this->get($url)->assertOk();
     }
-})->group('slow');
+})->group('demo')->group('slow');

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Dashboards;
 
-use App\Filament\Widgets\Overview\LatestSubmissions;
 use App\Filament\Widgets\Overview\LatestUploads;
 use App\Filament\Widgets\Overview\OverviewStats;
 use App\Filament\Widgets\Overview\RequestsStatusChart;
@@ -20,7 +19,7 @@ use App\Filament\Widgets\Overview\RequestsTrendChart;
  * Grade (12 colunas no desktop):
  *   [ KPIs: usuários · requisições · chaves · projetos ............... 12 ]
  *   [ Requisições por dia (linha + erros) .. 8 ][ Status (doughnut) .. 4 ]
- *   [ Últimas submissões ................... 6 ][ Últimos uploads .... 6 ]
+ *   [ (extensões: ex. últimas submissões) .. 6 ][ Últimos uploads .... 6 ]
  */
 final class OverviewDashboard extends BaseDashboard
 {
@@ -34,12 +33,14 @@ final class OverviewDashboard extends BaseDashboard
      */
     public function getWidgets(): array
     {
-        return [
+        // Extensões instaladas podem acrescentar widgets (ver
+        // DashboardRegistry::widgets) — a demonstração põe as últimas
+        // submissões de formulário antes dos últimos uploads.
+        return DashboardRegistry::widgets(self::variant(), [
             OverviewStats::class,
             RequestsTrendChart::class,
             RequestsStatusChart::class,
-            LatestSubmissions::class,
             LatestUploads::class,
-        ];
+        ]);
     }
 }

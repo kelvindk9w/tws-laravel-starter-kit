@@ -464,7 +464,7 @@ it('conta demo protegida conta como verificada mesmo com a coluna zerada', funct
 
     $this->actingAs($demo)->get('/dashboard')->assertOk();
     $this->actingAs($demo)->get(route('verification.notice'))->assertRedirect(route('dashboard'));
-});
+})->group('demo');
 
 it('confirmar o e-mail de conta demo não é bloqueado pela blindagem', function (): void {
     config(['ui.demo_login.enabled' => true]);

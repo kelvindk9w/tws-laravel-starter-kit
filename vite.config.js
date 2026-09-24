@@ -11,15 +11,16 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/filament.css',
                 'resources/js/app.js',
+                // DEMONSTRAÇÃO do kit (demo/): os bundles das duas landings.
                 // Landing "O Rastro" (/v2) — bundle próprio: só essa rota
                 // carrega GSAP, Lenis e a fonte display (Instrument Serif).
-                'resources/css/landing-v2.css',
-                'resources/js/landing-v2.js',
+                'demo/resources/css/landing-v2.css',
+                'demo/resources/js/landing-v2.js',
                 // Landing oficial "Céu" (/) — bundle próprio: GSAP/Lenis e o
                 // Three.js entram por import() dinâmico, em pedaços à parte.
                 // Nenhuma outra tela do produto baixa um byte disso.
-                'resources/css/landing.css',
-                'resources/js/landing.js',
+                'demo/resources/css/landing.css',
+                'demo/resources/js/landing.js',
             ],
             refresh: true,
         }),

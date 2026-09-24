@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Exceptions\DemoAccountProtectedException;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\SensitiveActionToken;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Services\SensitiveActionService;
 use App\Core\Auth\Services\TwoFactorLogin;
+use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
 use App\Livewire\Profile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -164,7 +164,7 @@ it('conta demo protegida: o cartão explica e nada liga — nem pelo service, ne
         ->toThrow(DemoAccountProtectedException::class);
 
     expect($demo->fresh()->two_factor_enabled_at)->toBeNull();
-});
+})->group('demo');
 
 it('com o modo demo desligado, a conta demo é comum e pode ligar', function () {
     config()->set('ui.demo_login.enabled', false);

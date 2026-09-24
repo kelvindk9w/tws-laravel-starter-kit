@@ -7,7 +7,7 @@ use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
-use App\Core\Contact\Mail\ContactMessageMail;
+use App\Demo\Contact\Mail\ContactMessageMail;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -68,7 +68,7 @@ it('a mensagem do formulário de contato não fica em claro no payload do job', 
     expect($payload)->not->toContain('maria@example.com')
         ->and($payload)->not->toContain('Maria Titular')
         ->and($payload)->not->toContain('meu CPF é 123');
-});
+})->group('demo');
 
 it('o token de redefinição de senha não fica em claro no payload do job', function (): void {
     $user = User::factory()->create(['email' => 'dona@example.com']);

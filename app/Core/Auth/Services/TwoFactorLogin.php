@@ -8,7 +8,7 @@ use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Enums\VerificationResult;
 use App\Core\Auth\Exceptions\TwoFactorLockedException;
 use App\Core\Auth\Models\User;
-use App\Core\Auth\Support\DemoAccountGuard;
+use App\Core\Auth\Support\ProtectedAccounts;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
@@ -44,9 +44,9 @@ use Illuminate\Validation\ValidationException;
  *      várias contas.
  * As duas últimas somam dentro da janela AUTH_TWO_FACTOR_LOCKOUT_MINUTES.
  *
- * CONTAS DEMO: com o modo demo ligado, a preferência delas é imutável (o
- * campo está em DemoAccountGuard::SENSITIVE_ATTRIBUTES, nas três camadas).
- * Aqui a recusa sai antes, com mensagem clara, em vez da exceção do model.
+ * CONTAS PROTEGIDAS (App\Core\Auth\Contracts\AccountProtection): enquanto
+ * a proteção vale, a preferência delas é imutável. Aqui a recusa sai antes,
+ * com mensagem clara, em vez da exceção do model.
  */
 final class TwoFactorLogin
 {
@@ -82,7 +82,7 @@ final class TwoFactorLogin
             return __('auth.two_factor.unavailable');
         }
 
-        if (DemoAccountGuard::protects($user)) {
+        if (ProtectedAccounts::protects($user)) {
             return __('auth.two_factor.demo_blocked');
         }
 

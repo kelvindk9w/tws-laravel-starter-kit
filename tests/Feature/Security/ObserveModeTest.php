@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Contact\Mail\ContactMessageMail;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Security\ValidationMode;
-use App\Core\Showcase\Models\FormSubmission;
+use App\Demo\Contact\Mail\ContactMessageMail;
+use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
@@ -123,7 +123,7 @@ it('a rota delegada grava a linha da trilha marcada e neutralizada (antes ia cru
         ->and($log->payload['classic_message'])->toContain('&lt;script&gt;')
         // A vitrine segue registrando a tentativa na camada do formulário.
         ->and(FormSubmission::query()->sole()->attack_type)->toBe('xss');
-})->with(['observe', 'block']);
+})->group('demo')->with(['observe', 'block']);
 
 it('no contato da landing, a tentativa segue até o formulário, que a registra com selo e não envia e-mail', function () {
     Mail::fake();
@@ -143,7 +143,7 @@ it('no contato da landing, a tentativa segue até o formulário, que a registra 
         ->and(RequestLog::query()->sole()->attack_type)->toBe('xss');
 
     Mail::assertNothingQueued();
-});
+})->group('demo');
 
 it('no contato da landing, a frase legítima que antes era barrada chega ao dono', function () {
     Mail::fake();
@@ -159,4 +159,4 @@ it('no contato da landing, a frase legítima que antes era barrada chega ao dono
     expect(FormSubmission::query()->sole()->isBlocked())->toBeFalse();
 
     Mail::assertQueued(ContactMessageMail::class);
-});
+})->group('demo');

@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Core\Auth\PasswordPolicy;
-use Database\Seeders\DemoAdminSeeder;
-use Database\Seeders\DemoUserSeeder;
+use App\Demo\Database\Seeders\DemoAdminSeeder;
+use App\Demo\Database\Seeders\DemoUserSeeder;
 use Illuminate\Support\Facades\Validator;
 
 // =============================================================================
@@ -134,7 +134,7 @@ it('o usuário demo semeado consegue logar com a senha da config', function () {
     ])->assertRedirect(route('dashboard'));
 
     $this->assertAuthenticated();
-});
+})->group('demo');
 
 it('o admin demo semeado consegue logar com a senha da config', function () {
     config()->set('ui.demo_login.enabled', true);
@@ -147,7 +147,7 @@ it('o admin demo semeado consegue logar com a senha da config', function () {
     ])->assertRedirect();
 
     $this->assertAuthenticated();
-});
+})->group('demo');
 
 it('a mensagem de senha fraca sai no idioma ativo, nunca em inglês fixo', function (string $locale, string $trecho) {
     app()->setLocale($locale);

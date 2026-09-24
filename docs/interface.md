@@ -21,12 +21,13 @@ sua IA não precisa gerar"*. O argumento não é prazo, é **token e retrabalho*
 auth, 2FA, API keys, logs com LGPD, uploads, painel e admin já prontos e
 testados, para o tempo de geração ir só no que é do produto.
 
-Arquivos: `resources/views/landing.blade.php` + `resources/views/landing/*`,
-`resources/css/landing.css`, `resources/js/landing.js` (+ `resources/js/landing/`),
-capturas em `public/img/landing/`. Strings em `lang/*/landing.php` +
-`lang/*/contact.php`; branding via `platform()`.
+A landing é da **demonstração** do kit (ver [demo.md](demo.md)). Arquivos:
+`demo/resources/views/landing.blade.php` + `demo/resources/views/landing/*`,
+`demo/resources/css/landing.css`, `demo/resources/js/landing.js` (+
+`demo/resources/js/landing/`), capturas em `public/img/landing/`. Strings em
+`lang/*/landing.php` + `demo/lang/*/contact.php`; branding via `platform()`.
 
-**Números vêm do `.env`, nunca da view** (`config/landing.php`):
+**Números vêm do `.env`, nunca da view** (`demo/config/landing.php`):
 `LANDING_CLONES` (prova social; 0 troca a frase pela suíte verde),
 `LANDING_TESTS`, `LANDING_HOURS_SAVED` (0 esconde a faixa inteira) e
 `LANDING_WEBGL` (desliga o 3D e cai no fallback em CSS). Nenhum número
@@ -44,9 +45,9 @@ céu e **pousa** — vira superfície opaca do kit — quando o céu acaba) e
 real de cada tecnologia (Laravel, PHP, PostgreSQL, Redis, Docker, Livewire,
 Filament, Tailwind), em SVG **inline no repositório** — nenhum CDN. Uma única
 fonte de verdade: o desenho e a cor da marca moram em
-`resources/views/landing/tech-mark.blade.php` (que é o fallback em CSS quando
+`demo/resources/views/landing/tech-mark.blade.php` (que é o fallback em CSS quando
 não há WebGL) e o Three.js **levanta esse mesmo SVG do DOM** para virar
-decalque (`resources/js/landing/marks.js`). A tinta do decalque é calculada
+decalque (`demo/resources/js/landing/marks.js`). A tinta do decalque é calculada
 pela luminância da cor da marca: branco na maioria, quase-preto sobre esmalte
 claro (o âmbar do Filament). As marcas são de seus donos e aparecem em uso
 nominativo, sem deformação e sem caixa.
@@ -233,7 +234,7 @@ Blade puro é redundante com o Livewire):
 2. **Livewire (AJAX)** — `wire:submit` + `wire:model`, validação server-side
    sem reload, estado preservado (não existe `old()` no Livewire). Para
    interações ricas no painel. Referência viva: telas do painel e o form demo
-   em versão Livewire no `/ui` (`App\Livewire\ContactForm`).
+   em versão Livewire no `/ui` (`App\Demo\Livewire\ContactForm`).
 
 **Os 2 forms demo do `/ui` gravam de verdade** (campos: apelido, assunto,
 mensagem + honeypot invisível): cada submissão vira uma linha em

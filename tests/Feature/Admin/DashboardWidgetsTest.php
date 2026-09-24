@@ -5,12 +5,12 @@ declare(strict_types=1);
 use App\Core\Auth\Models\User;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
-use App\Core\Showcase\Models\FormSubmission;
 use App\Core\Uploads\Models\Upload;
-use App\Filament\Widgets\Content\ContentStats;
-use App\Filament\Widgets\Content\UploadsPerDayChart;
+use App\Demo\Filament\Widgets\Content\ContentStats;
+use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
+use App\Demo\Filament\Widgets\Overview\LatestSubmissions;
+use App\Demo\Showcase\Models\FormSubmission;
 use App\Filament\Widgets\Growth\GrowthStats;
-use App\Filament\Widgets\Overview\LatestSubmissions;
 use App\Filament\Widgets\Overview\OverviewStats;
 use App\Filament\Widgets\Overview\RequestsTrendChart;
 use App\Filament\Widgets\Support\Metric;
@@ -205,7 +205,7 @@ it('gráfico sem nenhum movimento mostra estado vazio ilustrado, não uma reta n
     ]);
 
     expect(Livewire::test(UploadsPerDayChart::class)->assertOk()->instance()->isEmpty())->toBeFalse();
-});
+})->group('demo');
 
 it('a tabela de últimos registros mostra o mais recente, sem paginação e com ver tudo', function () {
     FormSubmission::factory()
@@ -229,7 +229,7 @@ it('a tabela de últimos registros mostra o mais recente, sem paginação e com 
     expect($componente->instance()->getTableRecords())
         ->toHaveCount((int) config('dashboards.latest_records'))
         ->and($recente->exists)->toBeTrue();
-});
+})->group('demo');
 
 it('a tabela do dashboard nunca imprime payload de tentativa de ataque', function () {
     FormSubmission::factory()->blocked('xss')->create([
@@ -241,7 +241,7 @@ it('a tabela do dashboard nunca imprime payload de tentativa de ataque', functio
         ->assertOk()
         ->assertDontSee('<script>', escape: false)
         ->assertSee(__('admin.submissions.attack_xss'));
-});
+})->group('demo');
 
 it('as faixas de KPI das três variantes montam os quatro cards com dados reais', function () {
     logEm(now()->toDateTimeString());
@@ -271,4 +271,4 @@ it('as faixas de KPI das três variantes montam os quatro cards com dados reais'
     Livewire::test(OverviewStats::class)->assertSee(__('admin.dashboards.overview.users'));
     Livewire::test(GrowthStats::class)->assertSee(__('admin.dashboards.growth.error_rate'));
     Livewire::test(ContentStats::class)->assertSee(__('admin.dashboards.content.storage'));
-});
+})->group('demo');
