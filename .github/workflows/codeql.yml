@@ -5,7 +5,7 @@ name: CodeQL
 
 on:
   push:
-    branches: [desenvolvimento, sandbox, producao]
+    branches: [desenvolvimento, sandbox, producao, '1.x']
   pull_request:
   schedule:
     - cron: '30 6 * * 1'

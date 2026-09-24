@@ -4,7 +4,7 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [Não publicado]
+## [1.1.0] — 2026-09-25
 
 ### Adicionado
 - `/admin` → Usuários: ação de suporte **Marcar e-mail como verificado**
@@ -96,4 +96,5 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
+[1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.0.0

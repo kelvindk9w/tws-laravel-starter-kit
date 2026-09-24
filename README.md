@@ -207,7 +207,7 @@ tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
 
 ## Branches
 
-`desenvolvimento` → `sandbox` → `producao`. Nunca commit direto nas protegidas.
+`desenvolvimento` → `sandbox` → `producao`. A linha `1.x` recebe só correções de segurança da versão 1 (por 6 meses depois da 2.0); o desenvolvimento novo acontece em `desenvolvimento`. Nunca commit direto nas protegidas.
 
 ## Versões
 
