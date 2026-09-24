@@ -19,6 +19,9 @@ use Illuminate\Console\Command;
  * recusa em erro de console. Promover o cliente demo a admin, ou rebaixar o
  * admin demo, entregaria o painel inteiro ao próximo visitante.
  *
+ * Promover também marca o e-mail como confirmado (quem promove é o operador;
+ * ver docs/autenticacao.md, "Verificação de e-mail").
+ *
  * Uso:
  *   php artisan user:make-admin email@exemplo.com          → promove
  *   php artisan user:make-admin email@exemplo.com --remove → rebaixa
@@ -43,7 +46,17 @@ final class MakeAdminUser extends Command
         $remove = (bool) $this->option('remove');
 
         try {
-            $user->forceFill(['is_admin' => ! $remove])->save();
+            // Promovido por quem opera o servidor: o e-mail passa a contar
+            // como confirmado (mesma regra da conta criada pelo /admin), para
+            // o novo admin não ficar preso no aviso de verificação do painel.
+            // Rebaixar não mexe na verificação.
+            $changes = ['is_admin' => ! $remove];
+
+            if (! $remove && $user->email_verified_at === null) {
+                $changes['email_verified_at'] = now();
+            }
+
+            $user->forceFill($changes)->save();
         } catch (DemoAccountProtectedException $exception) {
             $this->error(__('admin.command.demo_protected', ['email' => (string) $user->email]));
             $this->line($exception->getMessage());

@@ -84,6 +84,13 @@ Cobertura: `tests/Feature/Security/DemoSurfaceProductionTest.php`.
 
 ## Contas demo são intocáveis: como e por quê
 
+> **Verificação de e-mail**: as contas demo nascem com o e-mail confirmado e,
+> enquanto o modo demo está ligado, contam como confirmadas mesmo que alguém
+> zere `email_verified_at` (campo que a blindagem deixa livre) — senão o
+> próximo visitante ficaria preso na tela de aviso esperando um e-mail que
+> ninguém recebe. Ver
+> [Verificação de e-mail](autenticacao.md#verificação-de-e-mail-no-cadastro).
+
 As duas contas demo (`demo@tws.dev` e `admin@tws.dev` — e-mails de
 `config/ui.php`) são a porta de entrada de quem está avaliando o kit. Se um
 visitante troca a senha, o e-mail, a flag de admin ou a situação de uma

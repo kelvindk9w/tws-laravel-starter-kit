@@ -15,7 +15,8 @@ ir só no que é do produto.
 
 O que já vem pronto:
 
-- **Autenticação própria** com duas senhas (login e transação), código por
+- **Autenticação própria** com verificação de e-mail no cadastro (link
+  assinado; desligável), duas senhas (login e transação), código por
   e-mail para ação sensível, política de senha configurável e conta
   bloqueada perdendo acesso na próxima requisição.
 - **API v1 por par de chaves** (pública + secreta, só hash no banco), scopes
@@ -70,6 +71,11 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 
 Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
 
+Conta criada pelo `/register` só entra no painel depois de confirmar o
+e-mail — em dev o link chega no Mailpit (desligável com
+`AUTH_EMAIL_VERIFICATION_REQUIRED=false`; ver
+[Autenticação](docs/autenticacao.md#verificação-de-e-mail-no-cadastro)).
+
 Portas conflitando? Ajuste no `.env` (`DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT`, `DEV_MAILPIT_*`) e recrie os containers.
 
 ## Credenciais demo
@@ -82,7 +88,7 @@ Com `DEMO_LOGIN_ENABLED=true` (padrão só em `APP_ENV=local`), o
 | Painel do usuário (`/login`) | `demo@tws.dev` | `Demo-password1` |
 | Super admin (`/admin`) | `admin@tws.dev` | `Demo-admin-password1` |
 
-As contas são protegidas contra alteração (UI, model e gatilho no
+As duas nascem com o e-mail confirmado. As contas são protegidas contra alteração (UI, model e gatilho no
 PostgreSQL) e **não existem em produção** — ver [Modo demo](docs/demo.md).
 
 ## Comandos do dia a dia (sempre em container)

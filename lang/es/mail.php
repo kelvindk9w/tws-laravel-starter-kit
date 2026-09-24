@@ -41,6 +41,17 @@ return [
     ],
 
     // Recuperación de contraseña (bug de QA #9 — antes llegaba en inglés).
+    'email_verification' => [
+        'subject' => ':platform — Confirma tu correo',
+        'preheader' => 'Falta un paso: confirma tu correo para habilitar tu cuenta.',
+        'heading' => 'Confirma tu correo',
+        'intro' => 'Tu cuenta fue creada. Para habilitar el acceso al panel, confirma que esta dirección es tuya.',
+        'action' => 'Confirmar correo',
+        'expires' => 'Este enlace expira en :minutes minutos. Después, solicita uno nuevo en la pantalla de aviso.',
+        'fallback' => 'Si el botón no funciona, copia y pega esta dirección en tu navegador:',
+        'ignore' => 'Si no creaste esta cuenta, ignora este correo: sin la confirmación, no se habilita.',
+    ],
+
     'password_reset' => [
         'subject' => ':platform — Restablecer contraseña',
         'preheader' => 'Enlace de restablecimiento válido por :minutes minutos.',
@@ -74,6 +85,7 @@ return [
         'open_text' => 'Ver el texto plano',
         'mailpit_hint' => 'Para comprobar cómo llega el correo de verdad (cabeceras, multipart, adjuntos), dispara el flujo y abre Mailpit en http://localhost:18025.',
         'emails' => [
+            'email-verification' => 'Confirmación de correo',
             'verification-code' => 'Código de verificación',
             'password-reset' => 'Restablecer contraseña',
             'api-key-inactivity' => 'Clave de API inactiva',

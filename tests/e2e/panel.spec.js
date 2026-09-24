@@ -16,7 +16,9 @@ import { test, expect } from '@playwright/test';
 //            "email" => "e2e@example.com",
 //            "password" => "E2eSenhaForte123",
 //          ]);'
-//      (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD)
+//      (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD;
+//      a factory cria a conta com o e-mail já confirmado — sem isso o
+//      painel mandaria à tela de verificação)
 //
 // Rodar em container (sem Node local):
 //   docker run --rm --network host -v $(pwd):/work -w /work \

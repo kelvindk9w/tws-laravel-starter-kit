@@ -18,8 +18,11 @@ use Illuminate\Support\Facades\Hash;
  *
  * Características:
  * - Faker pt_BR (nomes e e-mails plausíveis para o público do kit);
- * - variedade proposital: uma parte BLOQUEADA e uma parte com e-mail NÃO
- *   verificado, para que os filtros de status do admin tenham o que filtrar;
+ * - variedade proposital: uma parte BLOQUEADA, para que o filtro de status
+ *   do admin tenha o que filtrar;
+ * - todos com e-mail JÁ CONFIRMADO: a verificação de e-mail é exigida para
+ *   operar o painel e a API, e massa semeada que nasce barrada só produziria
+ *   chaves de API semeadas que não autenticam;
  * - `created_at` espalhado nos últimos 90 dias, para que ordenação por data
  *   e o gráfico do dashboard não saiam achatados;
  * - IDEMPOTENTE: o Faker roda com semente fixa, então os mesmos 40 e-mails
@@ -71,7 +74,7 @@ class UserSeeder extends Seeder
 
             $indice = count($linhas);
 
-            // 1 em cada 8 bloqueado; 1 em cada 6 com e-mail não verificado.
+            // 1 em cada 8 bloqueado.
             $criadoEm = now()->subDays($faker->numberBetween(0, 90))
                 ->setTime($faker->numberBetween(7, 22), $faker->numberBetween(0, 59));
 
@@ -83,7 +86,7 @@ class UserSeeder extends Seeder
             $linhas[$email] = [
                 'name' => $faker->name(),
                 'status' => $indice % 8 === 3 ? UserStatus::Blocked : UserStatus::Active,
-                'email_verified_at' => $indice % 6 !== 1 ? $criadoEm : null,
+                'email_verified_at' => $criadoEm,
                 'locale' => $faker->randomElement(platform()->availableLocales),
                 'created_at' => $criadoEm,
             ];

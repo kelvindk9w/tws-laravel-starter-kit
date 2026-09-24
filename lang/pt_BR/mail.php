@@ -41,6 +41,17 @@ return [
     ],
 
     // Recuperação de senha (bug de QA #9 — antes vinha em inglês do pacote).
+    'email_verification' => [
+        'subject' => ':platform — Confirme seu e-mail',
+        'preheader' => 'Falta um passo: confirme o e-mail para liberar sua conta.',
+        'heading' => 'Confirme seu e-mail',
+        'intro' => 'Sua conta foi criada. Para liberar o acesso ao painel, confirme que este endereço é seu.',
+        'action' => 'Confirmar e-mail',
+        'expires' => 'Este link expira em :minutes minutos. Depois disso, peça um novo na tela de aviso.',
+        'fallback' => 'Se o botão não funcionar, copie e cole este endereço no navegador:',
+        'ignore' => 'Se você não criou esta conta, ignore este e-mail: sem a confirmação, ela não é liberada.',
+    ],
+
     'password_reset' => [
         'subject' => ':platform — Redefinição de senha',
         'preheader' => 'Link de redefinição válido por :minutes minutos.',
@@ -75,6 +86,7 @@ return [
         'open_text' => 'Ver o texto puro',
         'mailpit_hint' => 'Para conferir como o e-mail chega de verdade (cabeçalhos, multipart, anexos), dispare o fluxo e abra o Mailpit em http://localhost:18025.',
         'emails' => [
+            'email-verification' => 'Confirmação de e-mail',
             'verification-code' => 'Código de verificação',
             'password-reset' => 'Redefinição de senha',
             'api-key-inactivity' => 'Chave de API inativa',

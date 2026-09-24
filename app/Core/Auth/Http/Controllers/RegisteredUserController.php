@@ -6,6 +6,7 @@ namespace App\Core\Auth\Http\Controllers;
 
 use App\Core\Auth\Http\Requests\RegisterRequest;
 use App\Core\Auth\Models\User;
+use App\Core\Auth\Support\EmailVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -16,6 +17,11 @@ use Illuminate\View\View;
  * Cria o usuário com identificadores externos automáticos (uuid +
  * codigo_publico USR-xxxx, via model) e inicia a sessão com
  * session fixation prevenido (regenerate).
+ *
+ * Com a verificação de e-mail ligada (padrão — EmailVerification), a conta
+ * nasce SEM e-mail confirmado: o e-mail com o link sai na hora e a pessoa vai
+ * à tela de aviso, não ao painel. O idioma escolhido no site vira o idioma da
+ * conta, para esse primeiro e-mail já chegar no idioma de quem se cadastrou.
  */
 final class RegisteredUserController
 {
@@ -34,11 +40,20 @@ final class RegisteredUserController
             'email' => $validated['email'],
             // Cast 'hashed' do model aplica Argon2id (config/hashing.php).
             'password' => $validated['password'],
+            'locale' => app()->getLocale(),
         ]);
 
         Auth::login($user);
 
         $request->session()->regenerate();
+
+        if (EmailVerification::required()) {
+            EmailVerification::sendIfAllowed($user);
+
+            return redirect()
+                ->route('verification.notice')
+                ->with('status', __('auth.email_verification.registered'));
+        }
 
         return redirect()
             ->route('dashboard')

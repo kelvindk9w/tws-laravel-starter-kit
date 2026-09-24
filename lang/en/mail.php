@@ -41,6 +41,17 @@ return [
     ],
 
     // Password reset (QA bug #9 — used to arrive in the framework's English).
+    'email_verification' => [
+        'subject' => ':platform — Confirm your email',
+        'preheader' => 'One more step: confirm your email to unlock your account.',
+        'heading' => 'Confirm your email',
+        'intro' => 'Your account has been created. To unlock the dashboard, confirm that this address is yours.',
+        'action' => 'Confirm email',
+        'expires' => 'This link expires in :minutes minutes. After that, request a new one on the notice screen.',
+        'fallback' => 'If the button does not work, copy and paste this address into your browser:',
+        'ignore' => 'If you did not create this account, ignore this email: without confirmation it stays locked.',
+    ],
+
     'password_reset' => [
         'subject' => ':platform — Password reset',
         'preheader' => 'Reset link valid for :minutes minutes.',
@@ -74,6 +85,7 @@ return [
         'open_text' => 'View plain text',
         'mailpit_hint' => 'To check how the email actually arrives (headers, multipart, attachments), trigger the flow and open Mailpit at http://localhost:18025.',
         'emails' => [
+            'email-verification' => 'Email confirmation',
             'verification-code' => 'Verification code',
             'password-reset' => 'Password reset',
             'api-key-inactivity' => 'Inactive API key',

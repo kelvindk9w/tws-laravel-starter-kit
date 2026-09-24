@@ -171,6 +171,21 @@ return [
         'resend_cooldown_seconds' => (int) env('AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS', 60),
     ],
 
+    // Verificação de e-mail no cadastro (App\Core\Auth\Support\EmailVerification).
+    // LIGADA por padrão: conta que não confirmou o e-mail não entra no painel
+    // (páginas, formulários e ações Livewire) nem usa a API — só vê o aviso com
+    // "reenviar" e "sair". Desligar (AUTH_EMAIL_VERIFICATION_REQUIRED=false) é
+    // para projetos que não querem a etapa: o cadastro volta a ir direto ao
+    // painel e nenhum e-mail de verificação é enviado. Ver docs/autenticacao.md.
+    'email_verification' => [
+        'required' => (bool) env('AUTH_EMAIL_VERIFICATION_REQUIRED', true),
+        // Validade do link assinado do e-mail, em minutos.
+        'link_ttl_minutes' => (int) env('AUTH_EMAIL_VERIFICATION_LINK_TTL_MINUTES', 60),
+        // Intervalo mínimo entre dois envios do e-mail para a mesma conta,
+        // em segundos (o envio do cadastro também conta).
+        'resend_cooldown_seconds' => (int) env('AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60),
+    ],
+
     // Token de ação sensível: emitido após senha de transação + código válido;
     // curta duração e USO ÚNICO.
     'sensitive_action' => [

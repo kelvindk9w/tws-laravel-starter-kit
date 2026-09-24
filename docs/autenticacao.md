@@ -37,7 +37,8 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
 
 | Fluxo | Rotas | Observações |
 |---|---|---|
-| Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada |
+| Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada; com a verificação ligada, envia o e-mail e vai à tela de aviso |
+| Verificação de e-mail | `GET /email/verify`, `POST /email/verification-notification`, `GET /email/verify/{uuid}/{hash}` | ver [Verificação de e-mail](#verificação-de-e-mail-no-cadastro) |
 | Login | `GET/POST /login` | **bloqueio por tentativas** (RateLimiter, e-mail+IP — `AUTH_LOGIN_MAX_ATTEMPTS`/`AUTH_LOGIN_LOCKOUT_MINUTES`); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
 | Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
@@ -46,6 +47,83 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
 
 Todas as rotas sensíveis passam por `throttle:sensitive` (5/min padrão,
 `config/security.php`) além dos limites de negócio próprios.
+
+## Verificação de e-mail no cadastro
+
+**Ligada por padrão.** Quem se cadastra recebe um e-mail com um link e só
+opera o painel depois de clicar nele. Até lá, a conta vê apenas a tela de
+aviso (`/email/verify`, no layout do site), que diz para onde o e-mail foi e
+oferece **reenviar** e **sair**.
+
+O que fica fechado para conta sem e-mail confirmado:
+
+- **Painel** (middleware `verified` → `App\Core\Auth\Http\Middleware\EnsureEmailIsVerified`):
+  dashboard, chaves de API, projetos, perfil, notificações, senha de
+  transação, ação sensível e avatar. Página vai ao aviso; chamada que espera
+  JSON recebe 403 com a mensagem traduzida.
+- **Ações Livewire** dessas páginas: o middleware é registrado como
+  *persistente* do Livewire (`AppServiceProvider`), então uma ação disparada
+  de uma aba que ficou aberta passa pela mesma barreira que a página.
+- **API v1**: chave de conta sem e-mail confirmado recebe o mesmo 401 mudo de
+  conta inativa (`ResolveTenant`). Chave só nasce pelo painel, que já exige a
+  confirmação — então uma conta nova **não consegue criar chave** antes de
+  confirmar. A checagem na API cobre a conta que já tinha chave quando a
+  exigência foi ligada.
+
+O que continua livre: login, logout, recuperação de senha, troca de idioma e
+de tema, e o `/admin` (o painel do Filament não usa verificação de e-mail:
+admin é criado por outro admin ou pelo `user:make-admin`, e nos dois casos a
+conta já nasce/fica confirmada).
+
+**O link** (`App\Core\Auth\Support\EmailVerification`, que concentra a regra):
+
+- assinado e com expiração (`AUTH_EMAIL_VERIFICATION_LINK_TTL_MINUTES`,
+  padrão 60), identifica a conta pelo `uuid` e carrega o hash do e-mail —
+  trocar o e-mail da conta invalida o link antigo;
+- **ancorado em `APP_URL`, nunca no `Host` da requisição**: a assinatura é
+  calculada sobre o caminho (relativa) e a origem vem da configuração. Mesmo
+  que o e-mail seja montado dentro de uma requisição (fila síncrona) ou que o
+  TrustHosts um dia seja afrouxado, o link aponta para a aplicação;
+- precisa ser aberto com a própria conta logada. Sem sessão, o login devolve
+  ao link; link de outra conta, adulterado ou vencido volta ao aviso com a
+  explicação e o botão de reenviar;
+- depois de confirmar, a pessoa volta para a página que tentou abrir —
+  **pelo `SafeRedirect`** (destino fora da aplicação cai no painel).
+
+**O e-mail** é a notificação `VerifyEmailNotification`: layout único do kit,
+strings em `mail.email_verification.*` nos três idiomas, no idioma do
+**destinatário** (o cadastro grava o idioma em que a pessoa estava navegando),
+enfileirado com payload criptografado como todos os e-mails do kit. Aparece em
+`/mail-preview`.
+
+**Reenvio**: `throttle:sensitive` na rota e intervalo mínimo por conta
+(`AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS`, padrão 60 — o envio do
+cadastro também conta).
+
+**Desligar** (projeto que não quer a etapa):
+
+```dotenv
+AUTH_EMAIL_VERIFICATION_REQUIRED=false
+```
+
+Com a flag desligada o cadastro vai direto ao painel, nenhum e-mail de
+verificação é enviado e a API não olha a verificação. As contas criadas nesse
+período ficam **sem** e-mail confirmado: se a exigência for ligada depois,
+elas passam pela tela de aviso no próximo acesso (e as chaves delas param até
+confirmar) — marque-as como confirmadas antes, se não for isso que você quer.
+
+**Contas que já existiam** quando esta regra entrou: a migration
+`2026_09_24_000001_mark_existing_users_email_as_verified` marca todas como
+confirmadas, para o deploy da atualização não trancar ninguém. Numa
+instalação nova ela não faz nada.
+
+**Contas demo e semeadas**: os seeders criam tudo já confirmado (contas demo e
+a massa do `UserSeeder`). Além disso, enquanto o modo demo está ligado, a
+conta demo protegida **conta como confirmada** mesmo com a coluna zerada
+(`User::hasVerifiedEmail()`): o e-mail dela é fictício e `email_verified_at`
+é um campo que a blindagem deixa livre — sem isso, alguém zeraria a coluna e o
+próximo visitante ficaria preso no aviso. Confirmar o e-mail da demo continua
+permitido. Com o modo demo desligado, ela é uma conta comum.
 
 ## Ação sensível: senha de transação + código por e-mail (2FA)
 
@@ -88,7 +166,11 @@ Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no e
 
 ## Testes
 
-`tests/Feature/Auth/` (Pest): registro, login ok/errado, bloqueio após N
+`tests/Feature/Auth/` (Pest): registro, verificação de e-mail
+(`EmailVerificationTest`: painel, formulários, ação Livewire e API fechados;
+link assinado/vencido/adulterado/de outra conta; origem do link em APP_URL;
+reenvio com intervalo; flag desligada; demo, admin e contas existentes),
+login ok/errado, bloqueio após N
 tentativas + liberação após o decay, conta inativa, sessão regenerada, flags do
 cookie, deny-by-default, logout, CSRF (419 sem token), recuperação de senha
 (`Notification::fake()`), senha de transação (definir/alterar/erros), fluxo

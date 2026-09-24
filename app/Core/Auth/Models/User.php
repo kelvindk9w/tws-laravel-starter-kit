@@ -7,6 +7,7 @@ namespace App\Core\Auth\Models;
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Exceptions\DemoAccountProtectedException;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
+use App\Core\Auth\Notifications\VerifyEmailNotification;
 use App\Core\Auth\Support\DemoAccountGuard;
 use App\Core\Identifiers\HasPublicCode;
 use App\Core\Identifiers\RoutesByUuid;
@@ -14,6 +15,8 @@ use App\Core\Uploads\Models\Upload;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailBehavior;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -38,13 +41,17 @@ use Illuminate\Notifications\Notifiable;
  * Dados pessoais (criptografia em repouso conforme a classificação do dado):
  * - `name`: cast `encrypted` (AES-256-GCM da APP_KEY) — dado pessoal sensível.
  * - `email`: texto (é a chave de lookup do login; índice UNIQUE exige texto).
+ *
+ * Verificação de e-mail (MustVerifyEmail): conta nova só opera depois de
+ * confirmar o e-mail, quando a exigência está ligada — a regra mora em
+ * App\Core\Auth\Support\EmailVerification.
  */
 #[Fillable(['name', 'email', 'password', 'locale'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, HasLocalePreference
+class User extends Authenticatable implements FilamentUser, HasLocalePreference, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPublicCode, HasUuids, Notifiable, RoutesByUuid;
+    use HasFactory, HasPublicCode, HasUuids, MustVerifyEmailBehavior, Notifiable, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: USR-xxxxxx.
@@ -235,6 +242,31 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * E-mail de verificação do cadastro, no layout do kit e no idioma do
+     * DESTINATÁRIO (mesmo caminho da recuperação de senha: notificação
+     * enfileirada com payload criptografado).
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
+    }
+
+    /**
+     * O e-mail está confirmado?
+     *
+     * CONTA DEMO PROTEGIDA CONTA COMO VERIFICADA. O e-mail dela é fictício e a
+     * senha é pública: se a verificação dependesse da coluna, bastaria alguém
+     * zerar `email_verified_at` (campo que a blindagem deixa livre) para o
+     * próximo visitante cair na tela de aviso esperando um e-mail que ninguém
+     * recebe. Vale só enquanto a blindagem vale (modo demo ligado — ver
+     * DemoAccountGuard); fora dele a conta demo é uma conta comum.
+     */
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null || DemoAccountGuard::protects($this);
     }
 
     /**

@@ -23,11 +23,14 @@ it('semeia pelo menos 40 usuários realistas', function () {
         ->and($user->codigo_publico)->toStartWith('USR-');
 });
 
-it('produz variedade para os filtros do admin (bloqueados e não verificados)', function () {
+it('produz variedade para o filtro de status do admin, com todo e-mail já confirmado', function () {
     $this->seed(UserSeeder::class);
 
+    // Massa semeada nasce verificada: com a verificação exigida, conta
+    // semeada sem e-mail confirmado ficaria presa no aviso e as chaves de API
+    // semeadas para ela não autenticariam.
     expect(User::query()->where('status', UserStatus::Blocked->value)->count())->toBeGreaterThan(0)
-        ->and(User::query()->whereNull('email_verified_at')->count())->toBeGreaterThan(0);
+        ->and(User::query()->whereNull('email_verified_at')->count())->toBe(0);
 });
 
 it('espalha as datas de criação pelos últimos 90 dias', function () {

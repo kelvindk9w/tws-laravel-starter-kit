@@ -26,6 +26,21 @@ return [
     'registered' => 'Conta criada com sucesso. Bem-vindo(a)!',
     'logged_out' => 'Sessão encerrada com sucesso.',
 
+    // Verificação de e-mail do cadastro (App\Core\Auth\Support\EmailVerification).
+    'email_verification' => [
+        'title' => 'Confirme seu e-mail',
+        'intro' => 'Enviamos um link de confirmação para :email. Abra o e-mail e clique no link para liberar o painel.',
+        'hint' => 'Não chegou? Confira o spam ou peça um novo envio.',
+        'resend' => 'Reenviar e-mail',
+        'sent' => 'Enviamos um novo link de confirmação para o seu e-mail.',
+        'registered' => 'Conta criada. Confirme o e-mail para liberar o painel.',
+        'cooldown' => 'Aguarde :seconds segundos para pedir um novo envio.',
+        'verified' => 'E-mail confirmado. Bem-vindo(a)!',
+        'invalid_link' => 'Este link de confirmação é inválido ou expirou. Peça um novo envio abaixo.',
+        'not_verified' => 'Confirme seu e-mail para continuar.',
+        'wrong_account' => 'Este link é de outra conta. Saia e entre com a conta que recebeu o e-mail.',
+    ],
+
     // Senha de transação (separada da senha de login).
     'transaction_password' => [
         'invalid' => 'A senha de transação informada está incorreta.',

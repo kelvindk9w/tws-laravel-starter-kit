@@ -6,6 +6,7 @@ namespace App\Core\Tenancy\Middleware;
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
+use App\Core\Auth\Support\EmailVerification;
 use App\Core\Logging\Models\RequestLog;
 use App\Core\Security\ApiRateLimit;
 use App\Core\Tenancy\TenantContext;
@@ -80,7 +81,11 @@ final class ResolveTenant
 
         $tenant = $apiKey->owner;
 
-        if ($tenant === null || ! $tenant->isActive()) {
+        // Dono sem e-mail confirmado também não opera pela API (mesma regra do
+        // painel — EmailVerification). Chave só nasce pelo painel, que já
+        // exige a confirmação; isto cobre a conta que tinha chave antes de a
+        // exigência ser ligada. Mesma recusa muda da conta inativa.
+        if ($tenant === null || ! $tenant->isActive() || EmailVerification::pendingFor($tenant)) {
             $this->deny($request);
         }
 

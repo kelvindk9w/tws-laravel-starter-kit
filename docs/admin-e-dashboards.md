@@ -76,6 +76,12 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 # revogar:  ... user:make-admin email@exemplo.com --remove
 ```
 
+  Promover também marca o e-mail da conta como confirmado, e a conta criada
+  pelo formulário de usuário do `/admin` já nasce confirmada: quem cadastrou
+  foi o operador, não um visitante anônimo. O `/admin` em si não exige
+  verificação de e-mail (ver
+  [Verificação de e-mail](autenticacao.md#verificação-de-e-mail-no-cadastro)).
+
 - **i18n + seletor compacto na topbar** (bandeira + sigla): o painel segue a
   mesma resolução de locale do app (preferência da conta → cookie → padrão).
 - **Três dashboards nomeados para escolher** (`/admin`): "Visão geral",

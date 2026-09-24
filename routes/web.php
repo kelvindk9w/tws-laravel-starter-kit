@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Http\Controllers\AuthenticatedSessionController;
+use App\Core\Auth\Http\Controllers\EmailVerificationController;
 use App\Core\Auth\Http\Controllers\NewPasswordController;
 use App\Core\Auth\Http\Controllers\PasswordResetLinkController;
 use App\Core\Auth\Http\Controllers\RegisteredUserController;
@@ -108,6 +109,31 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
+    // Preferência de tema do usuário logado (claro/escuro/sistema) — a
+    // aplicação é instantânea via localStorage; aqui só persiste na conta.
+    // Fora do `verified`: o seletor de tema também aparece na tela de aviso.
+    Route::post('settings/theme', ThemePreferenceController::class)
+        ->name('settings.theme');
+
+    // Verificação de e-mail do cadastro (EmailVerificationController): a
+    // saída de quem ainda não confirmou — por isso fora do `verified`. O link
+    // do e-mail é validado no controller (assinatura relativa + expiração +
+    // conta + hash do e-mail) para que link vencido volte ao aviso com a
+    // explicação, não a uma página de erro.
+    Route::get('email/verify', [EmailVerificationController::class, 'notice'])
+        ->name('verification.notice');
+    Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:sensitive')
+        ->name('verification.send');
+    Route::get('email/verify/{uuid}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('throttle:sensitive')
+        ->name('verification.verify');
+});
+
+// Tudo abaixo exige e-mail confirmado (`verified` — EnsureEmailIsVerified,
+// que também vale para as ações Livewire destas páginas; desligável por
+// AUTH_EMAIL_VERIFICATION_REQUIRED).
+Route::middleware(['auth', 'verified'])->group(function (): void {
     // =====================================================================
     // Painel do usuário (Livewire 4).
     // UI direta: tudo se resolve na mesma tela, modais em vez de navegação.
@@ -117,11 +143,6 @@ Route::middleware('auth')->group(function (): void {
     Route::get('projects', ProjectsIndex::class)->name('panel.projects');
     Route::get('notifications', NotificationPreferences::class)->name('panel.notifications');
     Route::get('profile', Profile::class)->name('panel.profile');
-
-    // Preferência de tema do usuário logado (claro/escuro/sistema) — a
-    // aplicação é instantânea via localStorage; aqui só persiste na conta.
-    Route::post('settings/theme', ThemePreferenceController::class)
-        ->name('settings.theme');
 
     // Senha de transação (hash separado da senha de login).
     // Rota standalone mantida; o painel Livewire (Perfil) usa o

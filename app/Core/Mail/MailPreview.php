@@ -10,8 +10,10 @@ use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
+use App\Core\Auth\Notifications\VerifyEmailNotification;
 use App\Core\Contact\Mail\ContactMessageMail;
 use Illuminate\Mail\Mailable;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\App;
 
 /**
@@ -21,7 +23,7 @@ use Illuminate\Support\Facades\App;
  * Motivo de existir: e-mail é a única parte do produto que ninguém vê enquanto
  * desenvolve. Sem uma tela assim, conferir um ajuste de espaçamento significa
  * disparar o fluxo real (criar conta, pedir código, esperar a fila) e abrir o
- * Mailpit — e por isso, na prática, ninguém confere. Aqui os quatro e-mails
+ * Mailpit — e por isso, na prática, ninguém confere. Aqui os e-mails
  * aparecem lado a lado, nos três idiomas e nos dois temas.
  *
  * Cuidado ao acrescentar: os modelos abaixo NÃO são salvos (new User, new
@@ -36,7 +38,7 @@ final class MailPreview
      */
     public static function slugs(): array
     {
-        return ['verification-code', 'password-reset', 'api-key-inactivity', 'contact-message'];
+        return ['email-verification', 'verification-code', 'password-reset', 'api-key-inactivity', 'contact-message'];
     }
 
     /**
@@ -61,6 +63,7 @@ final class MailPreview
                         "Olá!\n\nUsei o kit para subir um piloto interno e a parte de chaves de API me economizou uma semana.\n\nUma sugestão: um exemplo de webhook assinado no README ajudaria bastante.",
                     )),
                     'password-reset' => self::passwordReset($locale),
+                    'email-verification' => self::emailVerification($locale),
                     default => throw new \InvalidArgumentException("E-mail de pré-visualização desconhecido: {$slug}"),
                 };
             } finally {
@@ -92,19 +95,46 @@ final class MailPreview
      */
     private static function passwordReset(string $locale): array
     {
+        $message = (new ResetPasswordNotification(str_repeat('a1b2c3d4', 8)))->toMail(self::sampleUser($locale));
+
+        return self::fromNotification('password-reset', $message);
+    }
+
+    /**
+     * A verificação de e-mail também é Notification. O usuário de exemplo
+     * ganha um uuid fixo porque o link assinado é montado com ele.
+     *
+     * @return array{slug: string, subject: string, html: string, text: string}
+     */
+    private static function emailVerification(string $locale): array
+    {
+        $user = self::sampleUser($locale);
+        $user->uuid = '01990000-0000-7000-8000-000000000000';
+
+        return self::fromNotification('email-verification', (new VerifyEmailNotification)->toMail($user));
+    }
+
+    private static function sampleUser(string $locale): User
+    {
         $user = new User;
         $user->name = 'Marina Duarte';
         $user->email = 'marina.duarte@example.com';
         $user->locale = $locale;
 
-        $message = (new ResetPasswordNotification(str_repeat('a1b2c3d4', 8)))->toMail($user);
+        return $user;
+    }
 
+    /**
+     * @return array{slug: string, subject: string, html: string, text: string}
+     */
+    private static function fromNotification(string $slug, MailMessage $message): array
+    {
         /** @var list<string> $views */
         $views = (array) $message->view;
         $html = view($views[0], $message->viewData)->render();
 
         return [
-            'slug' => 'password-reset',
+            'slug' => $slug,
             'subject' => (string) $message->subject,
             'html' => $html,
             'text' => PlainText::fromHtml($html),

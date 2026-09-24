@@ -26,6 +26,21 @@ return [
     'registered' => 'Cuenta creada con éxito. ¡Bienvenido(a)!',
     'logged_out' => 'Sesión cerrada con éxito.',
 
+    // Verificación de correo en el registro (App\Core\Auth\Support\EmailVerification).
+    'email_verification' => [
+        'title' => 'Confirma tu correo',
+        'intro' => 'Enviamos un enlace de confirmación a :email. Abre el correo y haz clic en el enlace para habilitar el panel.',
+        'hint' => '¿No llegó? Revisa la carpeta de spam o solicita un nuevo envío.',
+        'resend' => 'Reenviar correo',
+        'sent' => 'Enviamos un nuevo enlace de confirmación a tu correo.',
+        'registered' => 'Cuenta creada. Confirma tu correo para habilitar el panel.',
+        'cooldown' => 'Espera :seconds segundos para solicitar un nuevo envío.',
+        'verified' => 'Correo confirmado. ¡Bienvenido(a)!',
+        'invalid_link' => 'Este enlace de confirmación no es válido o expiró. Solicita uno nuevo abajo.',
+        'not_verified' => 'Confirma tu correo para continuar.',
+        'wrong_account' => 'Este enlace es de otra cuenta. Cierra sesión e ingresa con la cuenta que recibió el correo.',
+    ],
+
     // Contraseña de transacción (separada de la de acceso).
     'transaction_password' => [
         'invalid' => 'La contraseña de transacción ingresada es incorrecta.',

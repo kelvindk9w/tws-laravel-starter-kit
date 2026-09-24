@@ -50,7 +50,11 @@ encontra nada (404 uniforme).
 
 ## Testes E2E (Playwright)
 
-Com a stack de dev no ar, crie o usuário E2E (uma única vez por banco):
+Com a stack de dev no ar, crie o usuário E2E (uma única vez por banco). A
+factory cria a conta **com o e-mail já confirmado** — a verificação de e-mail
+é exigida para entrar no painel; sem isso o login do `global-setup` cairia na
+tela de aviso. Se o usuário já existia com o e-mail pendente, a migration
+`mark_existing_users_email_as_verified` o confirma no `migrate`.
 
 ```bash
 docker compose exec app php artisan tinker --execute='
@@ -71,6 +75,18 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
   mcr.microsoft.com/playwright:v1.63.0-noble sh -c "npm install --ignore-scripts && npx playwright test"
 
 # ou localmente, se tiver Node:  npx playwright test
+```
+
+O `email-verification.spec.js` faz o fluxo real do cadastro: registra uma
+conta nova, lê o e-mail de verificação na API do **Mailpit** (entregue pelo
+worker `queue`, então os dois precisam estar no ar; `E2E_MAILPIT_URL`, padrão
+`http://localhost:18025`), clica no link e confere o painel liberado. Cada
+rodada deixa uma conta `e2e-verificacao-<carimbo>@example.com` no banco de
+dev; para limpar:
+
+```bash
+docker compose exec app php artisan tinker --execute='
+  \App\Core\Auth\Models\User::where("email", "like", "e2e-verificacao-%@example.com")->delete();'
 ```
 
 Toda a suíte sai do mesmo IP e passa pelo limite de borda (300 requisições

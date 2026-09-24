@@ -17,7 +17,7 @@ it('exibe o formulário de registro', function () {
         ->assertSee('name="password_confirmation"', escape: false);
 });
 
-it('registra um usuário válido, autentica e redireciona ao painel', function () {
+it('registra um usuário válido, autentica e leva à confirmação do e-mail', function () {
     $response = $this->post('/register', [
         'name' => 'Fulano da Silva',
         'email' => 'fulano@example.com',
@@ -25,7 +25,9 @@ it('registra um usuário válido, autentica e redireciona ao painel', function (
         'password_confirmation' => 'SenhaForte123',
     ]);
 
-    $response->assertRedirect(route('dashboard'));
+    // Verificação de e-mail ligada (padrão): o painel só abre depois do link
+    // — ver EmailVerificationTest.
+    $response->assertRedirect(route('verification.notice'));
     $this->assertAuthenticated();
 
     $user = User::query()->where('email', 'fulano@example.com')->sole();

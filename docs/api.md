@@ -17,6 +17,15 @@ Authorization: Bearer sk_test_xQ7...
 O prefixo de ambiente (`live`/`test`) vem de `API_KEYS_ENVIRONMENT`
 (`config/api_keys.php`).
 
+**Dono da chave precisa estar ativo e com o e-mail confirmado.** A cada
+chamada o `ResolveTenant` confere o dono: conta bloqueada/pendente ou, com a
+verificação de e-mail ligada (padrão), conta sem e-mail confirmado recebe o
+mesmo 401 mudo de chave inválida. Na prática uma conta nova nem chega a ter
+chave antes de confirmar — chaves só nascem pelo painel, que exige a
+confirmação; a checagem na API cobre a conta que já tinha chave quando a
+exigência foi ligada. Ver
+[Verificação de e-mail](autenticacao.md#verificação-de-e-mail-no-cadastro).
+
 ## Hash da secreta — decisão documentada
 
 **HMAC-SHA256 com pepper** (`ApiKeyHasher`), no espírito do Sanctum (SHA-256):

@@ -26,6 +26,21 @@ return [
     'registered' => 'Account created successfully. Welcome!',
     'logged_out' => 'Signed out successfully.',
 
+    // Email verification at sign-up (App\Core\Auth\Support\EmailVerification).
+    'email_verification' => [
+        'title' => 'Confirm your email',
+        'intro' => 'We sent a confirmation link to :email. Open the email and click the link to unlock the dashboard.',
+        'hint' => 'Didn\'t get it? Check your spam folder or request a new one.',
+        'resend' => 'Resend email',
+        'sent' => 'We sent a new confirmation link to your email.',
+        'registered' => 'Account created. Confirm your email to unlock the dashboard.',
+        'cooldown' => 'Please wait :seconds seconds before requesting another email.',
+        'verified' => 'Email confirmed. Welcome!',
+        'invalid_link' => 'This confirmation link is invalid or has expired. Request a new one below.',
+        'not_verified' => 'Confirm your email to continue.',
+        'wrong_account' => 'This link belongs to another account. Sign out and sign in with the account that received the email.',
+    ],
+
     // Transaction password (separate from the login password).
     'transaction_password' => [
         'invalid' => 'The provided transaction password is incorrect.',

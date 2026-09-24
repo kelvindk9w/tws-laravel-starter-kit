@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
 use App\Core\Auth\Support\DemoAccountSession;
 use App\Core\Backup\Console\GuardedBackupCommand;
 use App\Core\Http\TrustedProxies;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 use Spatie\Backup\Commands\BackupCommand;
 
 class AppServiceProvider extends ServiceProvider
@@ -184,6 +186,14 @@ class AppServiceProvider extends ServiceProvider
         // painel não cobria. Mesma superfície, mesma barreira. O `push` mantém
         // o que o pacote declarar amanhã, em vez de congelar a lista dele.
         Route::pushMiddlewareToGroup('filament.actions', EnsureAdminIpAllowed::class);
+
+        // Verificação de e-mail nas AÇÕES Livewire do painel. O endpoint de
+        // atualização do Livewire é um só para todos os componentes e não
+        // carrega os middlewares da rota da página; só reaplica os da lista
+        // de persistentes, com a rota de origem gravada no snapshot. Sem esta
+        // linha, a página /api-keys mandaria ao aviso, mas a ação "criar
+        // chave" disparada de um snapshot anterior passaria.
+        Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class]);
 
         // Comandos próprios do kit (fora de app/Console/Commands).
         if ($this->app->runningInConsole()) {
