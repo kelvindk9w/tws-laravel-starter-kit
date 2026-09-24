@@ -17,6 +17,7 @@ use Throwable;
 use Twstec\Kit\Accounts\ApiKeys\Console\ProcessApiKeyInactivity;
 use Twstec\Kit\Accounts\ApiKeys\Http\Middleware\EnsureAccountWideApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Http\Middleware\EnsureApiKeyScope;
+use Twstec\Kit\Accounts\ApiKeys\Support\PepperWarnings;
 use Twstec\Kit\Accounts\Tenancy\Middleware\ResolveTenant;
 use Twstec\Kit\Accounts\Tenancy\Support\TenantRateLimitSubject;
 use Twstec\Kit\Accounts\Tenancy\TenantContext;
@@ -49,7 +50,8 @@ use WeakMap;
  *   em `api/*`.
  *
  * As regras que moram no domínio continuam lá e não dependem de provider:
- * o hash com pepper e a verificação timing-safe (ApiKeyHasher), a recusa de
+ * o hash com pepper (nunca vazio; peppers anteriores migrados no primeiro
+ * uso) e a verificação timing-safe (ApiKeyHasher), a recusa de
  * chave expirada, rotacionada, inativa ou de dono inativo/não verificado e o
  * limite de falhas de autenticação por chave e por IP (ResolveTenant +
  * ApiRateLimit do foundation), o recorte de projetos pelo vínculo da chave
@@ -116,6 +118,14 @@ final class AccountsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerApiProtections();
+
+        // Pepper do hash das chaves de API em produção: sem pepper dedicado
+        // (ausente ou VAZIO, que vale como ausente) ou com a flag do pepper
+        // vazio legado ligada → aviso no log a cada boot. Aviso, não recusa:
+        // ver ApiKeys\Support\PepperWarnings.
+        if ($this->app->environment('production')) {
+            PepperWarnings::announce();
+        }
 
         // As migrations rodam direto daqui, com os MESMOS nomes de arquivo
         // que tinham quando moravam no aplicativo: um banco que já as rodou

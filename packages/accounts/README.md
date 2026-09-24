@@ -17,7 +17,7 @@ usuário. Contas com membros e papéis chegam numa versão futura.
 
 | Peça | O que faz |
 | --- | --- |
-| `ApiKeys\Support` | Par de chaves `pk_`/`sk_` (`ApiKeyGenerator`) e o hash da secreta com HMAC-SHA256 + pepper, verificado com `hash_equals` (`ApiKeyHasher`) |
+| `ApiKeys\Support` | Par de chaves `pk_`/`sk_` (`ApiKeyGenerator`) e o hash da secreta com HMAC-SHA256 + pepper, verificado com `hash_equals` (`ApiKeyHasher`): pepper vazio nunca é usado, peppers anteriores e o legado do pepper vazio (só com flag) migram no primeiro uso, e os avisos de produção sobre o pepper (`PepperWarnings`) |
 | `ApiKeys\Models\ApiKey` | Escopos `recurso:acao` com curinga, vínculo com projetos e a marca de restrição (`restricted_to_projects`), validade, rotação com período de graça, inatividade, `last_used_at` com escrita limitada |
 | `ApiKeys\Services\ApiKeyService` | Criar, rotacionar (herda nome, escopos, projetos e a restrição), revogar e vincular projetos |
 | `ApiKeys\Console\ProcessApiKeyInactivity` | `api-keys:process-inactivity`: aviso prévio por e-mail e desativação por inatividade |
@@ -75,7 +75,8 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   foundation, registrado no tratador de exceções).
 - **Regras que moram no domínio** e valem com qualquer rota: pepper
   obrigatório no hash (`API_KEYS_HASH_PEPPER`, e a `APP_KEY` quando ele não
-  existe), recusa de chave revogada, expirada, rotacionada fora da graça ou
+  existe **ou está vazio** — vazio nunca é pepper), peppers anteriores com
+  migração no primeiro uso (ver abaixo), recusa de chave revogada, expirada, rotacionada fora da graça ou
   inativa há mais que o limite (na autenticação — não depende do agendamento),
   recusa de dono inativo ou com e-mail não confirmado, recorte de projetos pelo
   vínculo da chave (404 uniforme fora dele).
@@ -101,6 +102,27 @@ envelope do pacote.
 prioridade nem o envelope — e o pacote grava um aviso no log a cada boot, em
 qualquer ambiente. Só é seguro se a aplicação instalar as mesmas proteções por
 conta própria.
+
+## Pepper do hash das chaves
+
+| Variável | Config | O que faz |
+| --- | --- | --- |
+| `API_KEYS_HASH_PEPPER` | `api_keys.hash_pepper` | Pepper atual. Ausente, vazio ou só espaços → `APP_KEY` (vazio conta como ausente, também no `ApiKeyHasher`, que cobre uma cópia antiga do config no aplicativo). Sem pepper e sem `APP_KEY`, o hash é recusado (`MissingApiKeyPepperException`) |
+| `API_KEYS_PREVIOUS_HASH_PEPPERS` | `api_keys.previous_peppers` | Peppers anteriores, separados por vírgula (itens vazios descartados). A secreta que confere com um deles autentica e tem o hash regravado com o atual |
+| `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY` | `api_keys.accept_empty_pepper_legacy` | Desligada por padrão. Ligada, aceita e migra chaves gravadas com pepper vazio (antes desta correção) |
+
+Na autenticação, o `ApiKeyHasher::check()` calcula e compara com `hash_equals`
+**todos** os peppers aceitos, sem saída antecipada: o custo depende só da
+configuração, e a chave pública inexistente (conferida contra um hash
+fictício com o mesmo pepper) leva o mesmo tempo. A migração acontece depois
+de a autenticação passar inteira, com escrita condicional ao hash antigo, e
+grava `api_keys.secret_hash.migrated` no `request_log` (chave, dono e origem —
+sem segredo). A recusa continua 401 no envelope, contando para o limite de
+falhas.
+
+Em `APP_ENV=production`, o provider grava aviso no log a cada boot quando não
+há pepper dedicado (ausente ou vazio) e quando a flag do legado está ligada —
+aviso, não recusa. Roteiro de transição em [`docs/api.md`](../../docs/api.md#roteiro-de-transição).
 
 ## Rotas da API v1
 
@@ -169,7 +191,9 @@ vendor/bin/pint --test
 Ela prova que as proteções vêm do pacote (401 no envelope sem detalhe, limite
 de falhas por chave e por IP, 403 de escopo e de operação de conta, 404 fora do
 vínculo, 429 do limite por chave com outra chave do mesmo IP passando, chave
-revogada/expirada/rotacionada/inativa e dono não verificado recusados, pepper,
+revogada/expirada/rotacionada/inativa e dono não verificado recusados, pepper
+(vazio vale como ausente, peppers anteriores e legado migrados no primeiro uso,
+avisos de produção),
 opt-out com aviso), a fiação do provider (rotas, aliases, prioridade, envelope
 sem duplicar, registro manual das rotas), o canal de log e o limitador vindos
 do foundation com os do aplicativo vencendo, as traduções (com o aplicativo

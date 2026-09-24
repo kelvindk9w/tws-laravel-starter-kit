@@ -72,6 +72,13 @@ abstract class TestCase extends Testbench
         foreach (static::$scenario as $key => $value) {
             $app['config']->set($key, $value);
         }
+
+        // O Testbench fixa o ambiente em `testing`; um cenário que declara
+        // `app.env` (ex.: avisos de produção no boot) sobe nele de verdade.
+        if (isset(static::$scenario['app.env'])) {
+            $environment = (string) static::$scenario['app.env'];
+            $app->detectEnvironment(static fn (): string => $environment);
+        }
     }
 
     /**

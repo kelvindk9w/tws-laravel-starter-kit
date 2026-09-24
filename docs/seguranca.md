@@ -189,6 +189,14 @@ que o cliente mandou. **`/api/health`**, a rota da API sem autenticação, conta
 `throttle:api` (60/min), além da borda. A regra inteira está
 em `Twstec\Kit\Foundation\Security\ApiRateLimit`.
 
+**Pepper do hash das chaves.** Pepper vazio (`API_KEYS_HASH_PEPPER=` sem valor)
+nunca é usado: conta como ausente e cai na `APP_KEY`. Peppers anteriores
+(`API_KEYS_PREVIOUS_HASH_PEPPERS`) e, só com flag explícita, o pepper vazio de
+chaves antigas (`API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY`) são aceitos e migrados no
+primeiro uso, sempre com todos os candidatos comparados em tempo constante — a
+recusa continua o mesmo 401 e conta para os baldes acima. Ver
+[api.md](api.md#pepper-vazio-nunca-é-pepper).
+
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
 a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
 (`Twstec\Kit\Foundation\Security\ClientBucket`).

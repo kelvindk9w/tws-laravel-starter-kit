@@ -40,6 +40,77 @@ vazamento SÓ do banco não permita verificar chaves. Comparação SEMPRE
 timing-safe via `hash_equals()`, e pk_ inexistente também passa pela
 verificação (hash fictício) para não vazar existência por tempo de resposta.
 
+### Pepper vazio nunca é pepper
+
+A linha `API_KEYS_HASH_PEPPER=` **sem valor** não aciona o fallback do `env()`
+do Laravel: ele devolve a string vazia. Até esta correção o HMAC rodava então
+com um pepper de 0 caracteres, em silêncio — um hash que qualquer um com cópia
+do banco verifica offline. E o `.env.example` trazia exatamente essa linha.
+
+Agora **vazio ou só espaços vale como ausente**: o pepper passa a ser a
+`APP_KEY`, como se a variável não existisse. A regra está no config do pacote
+e, de novo, no `ApiKeyHasher` — o único ponto que entrega o pepper ao HMAC,
+incluindo o hash fictício da pk_ inexistente —, então vale mesmo com uma cópia
+antiga do `config/api_keys.php` publicada no aplicativo. Sem pepper dedicado e
+sem `APP_KEY`, o hasher **recusa** em vez de calcular hash sem segredo.
+
+### Trocar o pepper sem invalidar as chaves: peppers anteriores
+
+No estilo do `APP_PREVIOUS_KEYS`: `API_KEYS_PREVIOUS_HASH_PEPPERS` (lista
+separada por vírgula; `api_keys.previous_peppers`). Na autenticação, a secreta
+é conferida contra o pepper atual e contra cada anterior. Se conferir com um
+anterior, a requisição passa e o `secret_hash` é **regravado com o pepper
+atual** (migração transparente no primeiro uso); a trilha de arquivo
+(`request_log`) recebe `api_keys.secret_hash.migrated` com a chave, o dono e a
+origem (`previous_pepper` ou `empty_pepper_legacy`) — nunca a secreta, o hash
+ou o pepper.
+
+- **Tempo constante:** todos os peppers aceitos são calculados e comparados
+  com `hash_equals` em toda verificação, sem parar no primeiro que confere. O
+  custo depende só da configuração, então a pk_ inexistente (verificada contra
+  o hash fictício) continua levando o mesmo tempo que a existente.
+- **Recusa igual:** secreta que não confere com nenhum continua 401 no
+  envelope padrão e conta para o limite de falhas por chave e por IP.
+- A lista não aceita item vazio: o pepper vazio só entra pela flag abaixo.
+
+### Chaves emitidas com pepper vazio (legado)
+
+`API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true` (`api_keys.accept_empty_pepper_legacy`,
+**desligada por padrão**) aceita também o hash de pepper vazio — e o migra
+para o pepper atual no primeiro uso. Nunca é implícito. Em
+`APP_ENV=production` a flag ligada grava aviso no log **a cada boot**.
+
+### Avisos de produção
+
+Em `APP_ENV=production`, o boot grava aviso no log (não recusa — derrubar a
+aplicação não troca o pepper) quando:
+
+- `API_KEYS_HASH_PEPPER` está ausente ou **vazio** (o aviso diz que vazio
+  conta como ausente e que o hash está usando a `APP_KEY`);
+- `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`.
+
+### Roteiro de transição
+
+1. **Instalação com `API_KEYS_HASH_PEPPER=` vazio que já emitiu chaves**
+   (qualquer uma criada a partir do `.env.example` antigo):
+   - defina um pepper dedicado: `php artisan tinker` → `Str::random(64)`;
+   - ligue `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`;
+   - cada chave migra no primeiro uso (acompanhe
+     `api_keys.secret_hash.migrated` no `request_log`);
+   - desligue a flag quando todas as chaves em uso tiverem migrado ou sido
+     rotacionadas. Com a expiração por inatividade ligada (padrão), depois de
+     `API_KEYS_INACTIVITY_MONTHS` meses com a flag ligada toda chave ainda
+     ativa já foi usada — portanto migrada — ou foi desativada por inatividade.
+2. **Instalação sem pepper dedicado (fallback na `APP_KEY`):** defina o pepper
+   dedicado e declare a `APP_KEY` atual em `API_KEYS_PREVIOUS_HASH_PEPPERS`.
+   Depois da migração, rotacionar a `APP_KEY` deixa de afetar as chaves.
+3. **Trocar um pepper dedicado:** o novo em `API_KEYS_HASH_PEPPER`, o antigo em
+   `API_KEYS_PREVIOUS_HASH_PEPPERS`; retire o antigo da lista quando as chaves
+   tiverem migrado.
+
+Chave que nunca é usada durante a janela não migra: depois que o pepper
+anterior (ou a flag) sai, ela passa a receber 401 e precisa ser rotacionada.
+
 ## Scopes (permissões granulares)
 
 Formato `recurso:acao` (ex.: `customers:read`, `pix:create`, `withdrawals:*`),

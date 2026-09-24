@@ -65,6 +65,44 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   saiu das telas e dos controllers para serviços e Actions; as respostas de
   autenticação passam por contratos substituíveis.
 
+### Segurança
+- **Pepper vazio nunca é pepper.** O `.env.example` trazia
+  `API_KEYS_HASH_PEPPER=` sem valor, e variável vazia não aciona o fallback do
+  `env()`: o hash das chaves de API rodava com pepper de 0 caracteres, em
+  silêncio — verificável por quem tivesse só uma cópia do banco. Agora vazio
+  ou só espaços conta como ausente e o pepper passa a ser a `APP_KEY` (no
+  config do pacote, na cópia do starter e no `ApiKeyHasher`, que cobre uma
+  cópia antiga publicada no aplicativo). A linha do `.env.example` virou
+  comentário, com a instrução de gerar um valor dedicado.
+- **Peppers anteriores** (`API_KEYS_PREVIOUS_HASH_PEPPERS`, no estilo do
+  `APP_PREVIOUS_KEYS`): trocar o pepper — ou sair do fallback da `APP_KEY` —
+  não invalida mais as chaves emitidas. A chave que confere com um anterior
+  autentica e tem o hash regravado com o atual no primeiro uso (evento
+  `api_keys.secret_hash.migrated` no `request_log`, sem segredo). Todos os
+  peppers aceitos são comparados em tempo constante; a recusa continua 401 no
+  envelope, contando para o limite de falhas.
+- **Legado do pepper vazio** (`API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY`, desligada
+  por padrão): aceita e migra as chaves emitidas com o pepper vazio.
+- Em `APP_ENV=production` o boot avisa no log, a cada boot, quando não há
+  pepper dedicado (ausente ou vazio) e quando a flag do legado está ligada.
+  Aviso, não recusa.
+
+**Upgrade — quem tem `API_KEYS_HASH_PEPPER=` vazio e já emitiu chaves** (todo
+servidor montado a partir do `.env.example` antigo): sem ação, essas chaves
+passam a receber 401 depois do deploy. Antes do deploy:
+1. defina um `API_KEYS_HASH_PEPPER` dedicado (`php artisan tinker` →
+   `Str::random(64)`) e ligue `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`;
+2. cada chave migra para o pepper novo no primeiro uso (acompanhe
+   `api_keys.secret_hash.migrated` no `request_log`);
+3. desligue a flag quando todas as chaves em uso tiverem migrado ou sido
+   rotacionadas — com a inatividade ligada (padrão), bastam
+   `API_KEYS_INACTIVITY_MONTHS` meses. Chave que não migrou na janela precisa
+   ser rotacionada.
+
+Quem não tinha pepper dedicado (variável ausente) não é afetado; para sair do
+fallback da `APP_KEY`, defina o pepper e declare a `APP_KEY` atual em
+`API_KEYS_PREVIOUS_HASH_PEPPERS`. Detalhes em `docs/api.md`.
+
 ### Atualizando um clone existente
 1. `docker compose down` **antes** do `git pull`.
 2. Depois do pull, mover para `starters/livewire/` o que não é versionado:
@@ -83,6 +121,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
    pelos apelidos; troque os `use` antes da 3.0. O mesmo vale para
    `App\Core\Auth\…` (agora `Twstec\Kit\Auth\…`, e `App\Models\User` para o
    model); um `AUTH_MODEL` antigo no `.env` também continua valendo.
+6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
+   `.env.example` antigo), as chaves de API já criadas no banco de dev foram
+   gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`
+   para que continuem autenticando (e migrem no primeiro uso), ou recrie-as.
 
 ## [1.1.0] — 2026-09-25
 
