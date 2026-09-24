@@ -49,6 +49,61 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
 Todas as rotas sensíveis passam por `throttle:sensitive` (5/min padrão,
 `config/security.php`) além dos limites de negócio próprios.
 
+## Regra em Actions, resposta em contratos (trocar o front sem tocar na regra)
+
+Os controllers de `app/Core/Auth/Http/Controllers` só fazem HTTP. A regra de
+cada fluxo mora numa **Action** (`app/Core/Auth/Actions`), chamável de
+qualquer front, e o que volta ao navegador sai de um **contrato de resposta**
+(`app/Core/Auth/Contracts/Responses`) com implementação padrão registrada no
+container pelo `App\Core\Auth\Providers\AuthServiceProvider`.
+
+| Fluxo | Action | Contratos de resposta |
+|---|---|---|
+| Login por senha | `AttemptLogin` (bloqueio por tentativas, conta ativa, anti-enumeração, sessão regenerada, início do segundo fator) | `LoginResponse`, `TwoFactorRequiredResponse` |
+| Segundo fator | `CompleteTwoFactorLogin` (código, reenvio, desistência; conta conferida de novo; sessão nova) | `TwoFactorLoginResponse`, `TwoFactorChallengeResponse` |
+| Logout | `Logout` (invalida a sessão, renova o CSRF) | `LogoutResponse` |
+| Cadastro | `RegisterUser` (conta, idioma, sessão regenerada, e-mail de verificação) | `RegisterResponse` |
+| Link de redefinição | `SendPasswordResetLink` | `PasswordResetLinkSentResponse` |
+| Redefinição | `ResetPassword` (senha nova, `remember_token` renovado, evento `PasswordReset`) | `PasswordResetResponse`, `FailedPasswordResetResponse` |
+| Verificação de e-mail | `VerifyEmail`, `ResendEmailVerification` | `VerifyEmailResponse`, `EmailVerificationResponse` |
+
+As Actions devolvem um **resultado** (`LoginOutcome`, `TwoFactorChallengeResult`,
+`EmailVerificationResult`, o status do broker) e recusam com
+`ValidationException` quando a recusa é de formulário (senha errada, conta
+inativa, bloqueio) — o Laravel já a devolve como redirect com erro no Blade e
+como 422 em JSON. O controller escolhe o contrato pelo resultado; o contrato
+decide só a resposta. As respostas padrão (`app/Core/Auth/Http/Responses`)
+reproduzem exatamente o redirect, a mensagem e o destino das telas Blade.
+
+**Para trocar uma resposta** (outro front, uma API JSON, Inertia), registre a
+sua implementação do contrato num provider do app:
+
+```php
+$this->app->bind(
+    \App\Core\Auth\Contracts\Responses\LoginResponse::class,
+    \App\Http\Responses\MyLoginResponse::class,
+);
+```
+
+O padrão é registrado com `bindIf`, então o registro do app prevalece em
+qualquer ordem de providers. O que **não** muda ao trocar a resposta: o
+limite de tentativas, a regeneração e a invalidação da sessão, os eventos
+(`Login`, `Logout`, `PasswordReset`, `Verified`) e os
+logs — eles acontecem na Action, antes da resposta. O `throttle:sensitive` das
+rotas e o `SafeRedirect` do pós-login continuam onde estão (rota e resposta
+padrão, respectivamente): uma resposta própria que leve a um destino vindo do
+cliente precisa passar por `SafeRedirect::url()` também.
+
+Senha de transação e ação sensível já tinham a regra em serviços
+(`TransactionPasswordService`, `SensitiveActionService`, compartilhados com o
+painel Livewire) e seguem assim. As telas `GET` (formulários) continuam como
+views do starter.
+
+Um teste de arquitetura (`tests/Unit/Architecture/BusinessLogicPlacementTest.php`)
+reprova o build se um desses controllers voltar a autenticar, mexer no
+broker de senha, no limiter, no banco, na sessão ou no estado intermediário do
+segundo fator.
+
 ## Verificação de e-mail no cadastro
 
 **Ligada por padrão.** Quem se cadastra recebe um e-mail com um link e só

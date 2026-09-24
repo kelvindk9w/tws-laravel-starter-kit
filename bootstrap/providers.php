@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\Audit\Providers\AuditServiceProvider;
+use App\Core\Auth\Providers\AuthServiceProvider;
 use App\Core\Mail\Providers\MailServiceProvider;
 use App\Core\Settings\Providers\SettingsServiceProvider;
 use App\Core\Tenancy\Providers\TenancyServiceProvider;
@@ -11,6 +12,7 @@ use App\Providers\HorizonServiceProvider;
 
 return [
     AuditServiceProvider::class,
+    AuthServiceProvider::class,
     MailServiceProvider::class,
     SettingsServiceProvider::class,
     TenancyServiceProvider::class,

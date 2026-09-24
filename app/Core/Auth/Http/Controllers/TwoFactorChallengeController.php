@@ -4,165 +4,71 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Http\Controllers;
 
-use App\Core\Auth\Enums\VerificationResult;
-use App\Core\Auth\Exceptions\TwoFactorLockedException;
+use App\Core\Auth\Actions\CompleteTwoFactorLogin;
+use App\Core\Auth\Contracts\Responses\TwoFactorChallengeResponse;
+use App\Core\Auth\Contracts\Responses\TwoFactorLoginResponse;
+use App\Core\Auth\Enums\TwoFactorChallengeOutcome;
 use App\Core\Auth\Http\Requests\TwoFactorChallengeRequest;
-use App\Core\Auth\Models\User;
 use App\Core\Auth\Services\TwoFactorLogin;
-use App\Core\Auth\Support\PendingTwoFactorLogin;
-use App\Core\Auth\Support\PostLoginRedirect;
-use Illuminate\Http\RedirectResponse;
+use App\Core\Auth\Support\TwoFactorChallengeResult;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Segundo passo do login (verificação em duas etapas por e-mail).
+ * Segundo passo do login (verificação em duas etapas por e-mail) — só HTTP.
  *
  *   GET  /two-factor-challenge         tela do código (layout do site)
  *   POST /two-factor-challenge         confere o código → sessão autenticada
  *   POST /two-factor-challenge/resend  novo código (intervalo mínimo)
  *   POST /two-factor-challenge/cancel  desiste e volta ao login
  *
- * Só existe para quem está no ESTADO INTERMEDIÁRIO (PendingTwoFactorLogin):
- * acertou a senha de uma conta com o segundo fator ligado e ainda não está
- * autenticado. Sem esse estado, ou com ele vencido, tudo aqui volta ao login.
- *
- * O login só é concluído com o código certo — e, mesmo então, a conta é
- * conferida de novo (ativa?) antes de a sessão nascer, com ID de sessão novo
- * e "manter conectado" aplicado só agora.
+ * A regra (estado intermediário, conta ativa, bloqueio, código, sessão nova
+ * com "manter conectado") mora na Action CompleteTwoFactorLogin. O login
+ * concluído responde pelo contrato TwoFactorLoginResponse; todo o resto, pelo
+ * TwoFactorChallengeResponse.
  */
 final class TwoFactorChallengeController
 {
     public function __construct(
-        private readonly TwoFactorLogin $twoFactor,
+        private readonly CompleteTwoFactorLogin $challenge,
     ) {}
 
-    public function create(Request $request): View|RedirectResponse
+    public function create(Request $request, TwoFactorLogin $twoFactor): View|Response
     {
-        $user = PendingTwoFactorLogin::user($request);
+        $user = $this->challenge->pendingUser($request);
 
-        if ($user === null) {
-            return $this->backToLogin($request);
+        if ($user instanceof TwoFactorChallengeResult) {
+            return $this->respond($request, $user);
         }
 
         return view('auth.two-factor-challenge', [
             'email' => $user->email,
-            'codeTtlMinutes' => $this->twoFactor->codeTtlMinutes(),
+            'codeTtlMinutes' => $twoFactor->codeTtlMinutes(),
         ]);
     }
 
-    public function store(TwoFactorChallengeRequest $request): RedirectResponse
+    public function store(TwoFactorChallengeRequest $request): Response
     {
-        $user = PendingTwoFactorLogin::user($request);
-
-        if ($user === null) {
-            return $this->backToLogin($request);
-        }
-
-        // Conta bloqueada/pendente no meio do caminho: mesma recusa do login.
-        if (! $user->isActive()) {
-            return $this->abandon($request, $user, __('auth.account_inactive'));
-        }
-
-        try {
-            $result = $this->twoFactor->verify($user, $request->string('code')->toString(), $request->ip());
-        } catch (TwoFactorLockedException $exception) {
-            return $this->abandon($request, $user, $exception->userMessage());
-        }
-
-        return match ($result) {
-            VerificationResult::Valid => $this->login($request, $user),
-            VerificationResult::Invalid => $this->toChallenge()->withErrors(['code' => __('auth.two_factor.invalid')]),
-            VerificationResult::Expired => $this->toChallenge()->withErrors(['code' => __('auth.two_factor.expired')]),
-        };
+        return $this->respond($request, $this->challenge->handle($request, $request->string('code')->toString()));
     }
 
-    public function resend(Request $request): RedirectResponse
+    public function resend(Request $request): Response
     {
-        $user = PendingTwoFactorLogin::user($request);
-
-        if ($user === null) {
-            return $this->backToLogin($request);
-        }
-
-        try {
-            $this->twoFactor->ensureNotLocked($user, $request->ip());
-        } catch (TwoFactorLockedException $exception) {
-            return $this->abandon($request, $user, $exception->userMessage());
-        }
-
-        $remaining = $this->twoFactor->sendCode($user);
-
-        if ($remaining > 0) {
-            return $this->toChallenge()->withErrors(['code' => __('auth.two_factor.resend_cooldown', ['seconds' => $remaining])]);
-        }
-
-        return $this->toChallenge()->with('status', __('auth.two_factor.resent'));
+        return $this->respond($request, $this->challenge->resend($request));
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request): Response
     {
-        $user = PendingTwoFactorLogin::user($request);
+        return $this->respond($request, $this->challenge->cancel($request));
+    }
 
-        if ($user !== null) {
-            $this->twoFactor->cancel($user);
+    private function respond(Request $request, TwoFactorChallengeResult $result): Response
+    {
+        if ($result->outcome === TwoFactorChallengeOutcome::Authenticated) {
+            return app(TwoFactorLoginResponse::class)->toResponse($request);
         }
 
-        PendingTwoFactorLogin::forget($request);
-
-        return redirect()->route('login')->with('status', __('auth.two_factor.cancelled'));
-    }
-
-    /**
-     * De volta à tela do código — endereço fixo, nunca o Referer.
-     */
-    private function toChallenge(): RedirectResponse
-    {
-        return redirect()->route('two-factor.challenge');
-    }
-
-    /**
-     * Código certo: agora sim a sessão é autenticada.
-     */
-    private function login(Request $request, User $user): RedirectResponse
-    {
-        $remember = PendingTwoFactorLogin::remember($request);
-
-        PendingTwoFactorLogin::forget($request);
-
-        Auth::login($user, $remember);
-
-        // Prevenção de session fixation: a sessão autenticada nasce com ID novo.
-        $request->session()->regenerate();
-
-        return PostLoginRedirect::to($request);
-    }
-
-    /**
-     * Encerra o estado intermediário com um motivo (bloqueio, conta inativa):
-     * o código em curso morre e a pessoa volta ao login com a explicação.
-     */
-    private function abandon(Request $request, User $user, string $message): RedirectResponse
-    {
-        $this->twoFactor->cancel($user);
-        PendingTwoFactorLogin::forget($request);
-
-        return redirect()->route('login')->withErrors(['email' => $message]);
-    }
-
-    /**
-     * Sem estado intermediário válido. Se havia um (venceu, a senha mudou),
-     * a pessoa fica sabendo por quê; se nunca houve, só volta ao login.
-     */
-    private function backToLogin(Request $request): RedirectResponse
-    {
-        if (! PendingTwoFactorLogin::exists($request)) {
-            return redirect()->route('login');
-        }
-
-        PendingTwoFactorLogin::forget($request);
-
-        return redirect()->route('login')->withErrors(['email' => __('auth.two_factor.challenge_expired')]);
+        return app(TwoFactorChallengeResponse::class)->toResponse($request, $result);
     }
 }

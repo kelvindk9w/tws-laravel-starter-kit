@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Http\Controllers;
 
+use App\Core\Auth\Actions\SendPasswordResetLink;
+use App\Core\Auth\Contracts\Responses\PasswordResetLinkSentResponse;
 use App\Core\Auth\Http\Requests\ForgotPasswordRequest;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Solicitação de link de redefinição de senha por e-mail.
+ * Solicitação de link de redefinição de senha por e-mail — só HTTP.
  *
- * Anti-enumeração: a resposta é SEMPRE a mesma, existindo
- * ou não o e-mail cadastrado. O token do broker do Laravel já é armazenado
- * somente como hash e com expiração (config auth.passwords.users.expire).
+ * Anti-enumeração: a resposta (contrato PasswordResetLinkSentResponse) é
+ * SEMPRE a mesma, existindo ou não o e-mail. A regra mora na Action
+ * SendPasswordResetLink.
  */
 final class PasswordResetLinkController
 {
@@ -23,11 +24,10 @@ final class PasswordResetLinkController
         return view('auth.forgot-password');
     }
 
-    public function store(ForgotPasswordRequest $request): RedirectResponse
+    public function store(ForgotPasswordRequest $request, SendPasswordResetLink $send): Response
     {
-        Password::sendResetLink($request->only('email'));
+        $send->handle($request->string('email')->toString());
 
-        // Resposta uniforme: não revela se o e-mail existe.
-        return back()->with('status', __('passwords.sent'));
+        return app(PasswordResetLinkSentResponse::class)->toResponse($request);
     }
 }

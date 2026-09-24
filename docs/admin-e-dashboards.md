@@ -23,6 +23,12 @@ pelo middleware `ResolveTenant` — ver [Tenancy](tenancy.md)). Sem dados, cada 
 vazio desenhado — um gráfico de eixos zerados não informa nada e parece
 defeito.
 
+Os números saem do `App\Core\Tenancy\Queries\AccountOverviewQuery` (backend),
+que devolve um `AccountOverview` com contadores, a série diária completa e as
+últimas chamadas — as janelas (30 dias, 7 dias, 5 chamadas) são o padrão e
+podem ser trocadas por parâmetro. O componente `App\Livewire\Dashboard` só
+apresenta; outro front chama a mesma consulta e mostra os mesmos números.
+
 **O painel consome o próprio design system.** Nenhuma view de
 `resources/views/livewire/**` escreve Tailwind cru de botão, modal, alerta,
 estado vazio ou superfície: se falta variante, o componente é estendido.

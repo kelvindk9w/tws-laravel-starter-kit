@@ -6,6 +6,7 @@ namespace App\Livewire\Projects;
 
 use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
+use App\Core\Tenancy\Services\ProjectService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Component;
@@ -14,8 +15,9 @@ use Livewire\Component;
  * Projetos — CRUD só com nome, TUDO na mesma tela: criar e editar
  * inline, excluir com confirmação inline. Sem labirinto de cliques.
  *
- * Consome o mesmo model/invariantes da API v1: createWithPublicCodeRetry,
- * isolamento por dono (uuid de outro tenant = 404) e regras do StoreProjectRequest.
+ * A regra mora no ProjectService, o mesmo que a API v1 usa (posse por dono:
+ * uuid de outro tenant = 404; código público com nova tentativa). A tela só
+ * valida o formulário, chama o serviço e mostra o resultado.
  */
 final class Index extends Component
 {
@@ -37,11 +39,7 @@ final class Index extends Component
      */
     public function projects(): Collection
     {
-        return Project::query()
-            ->where('user_id', $this->user()->id)
-            ->withCount('apiKeys')
-            ->latest()
-            ->get();
+        return $this->service()->listForUser($this->user());
     }
 
     public function startCreate(): void
@@ -63,10 +61,7 @@ final class Index extends Component
             'name' => __('panel.common.name'),
         ]);
 
-        Project::createWithPublicCodeRetry([
-            'user_id' => $this->user()->id,
-            'name' => $this->name,
-        ]);
+        $this->service()->create($this->user(), $this->name);
 
         $this->cancelCreate();
         session()->flash('projects_status', __('panel.projects.created'));
@@ -93,8 +88,10 @@ final class Index extends Component
             'editingName' => __('panel.common.name'),
         ]);
 
-        $project = $this->findOwned((string) $this->editingUuid);
-        $project->update(['name' => $this->editingName]);
+        $this->service()->update(
+            $this->findOwned((string) $this->editingUuid),
+            ['name' => $this->editingName],
+        );
 
         $this->cancelEdit();
         session()->flash('projects_status', __('panel.projects.updated'));
@@ -123,11 +120,9 @@ final class Index extends Component
      */
     public function removeProject(): void
     {
-        $project = $this->findOwned((string) $this->confirmingDeleteUuid);
-
-        // O vínculo N:N cai junto (cascadeOnDelete na pivot); chaves
-        // que só atendiam este projeto voltam a enxergar a conta toda.
-        $project->delete();
+        // O vínculo N:N cai junto; a chave que só atendia este projeto segue
+        // restrita, agora a nenhum (ver ProjectService::delete()).
+        $this->service()->delete($this->findOwned((string) $this->confirmingDeleteUuid));
 
         $this->cancelDelete();
         session()->flash('projects_status', __('panel.projects.deleted'));
@@ -145,11 +140,16 @@ final class Index extends Component
      */
     private function findOwned(string $uuid): Project
     {
-        /** @var Project */
-        return Project::query()
-            ->where('user_id', $this->user()->id)
-            ->byUuid($uuid)
-            ->firstOrFail();
+        return $this->service()->findForUser($this->user(), $uuid);
+    }
+
+    /**
+     * Resolvido a cada chamada: componente Livewire é serializado entre
+     * requisições, e serviço não é estado da tela.
+     */
+    private function service(): ProjectService
+    {
+        return app(ProjectService::class);
     }
 
     private function user(): User

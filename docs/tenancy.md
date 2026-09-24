@@ -55,3 +55,15 @@ validação e nada muda (`ApiKeyService::resolveProjectIds`). Uploads (`POST /up
 ligam a projeto: gravam no nível da conta e não leem dado de nenhum projeto.
 
 Testes: `tests/Feature/Tenancy/ApiKeyProjectBindingTest.php`.
+
+**Um serviço só para o CRUD de projetos.** A tela do painel (`/projects`) e a
+API v1 chamam o `App\Core\Tenancy\Services\ProjectService`; nenhuma das duas
+lê ou grava `Project` direto (trava em
+`tests/Unit/Architecture/BusinessLogicPlacementTest.php`). O serviço tem os dois
+recortes de posse: `listForUser`/`findForUser` (a pessoa logada, no painel) e
+`paginateForApiKey`/`findForApiKey` (a chave, com o vínculo e a marca de
+restrição — `Project::visibleToApiKey()`). Fora do recorte é sempre a mesma
+`ModelNotFoundException` (404 uniforme). `create`, `update` (só `name` e
+`status`) e `delete` recebem o dono ou o projeto já achado por um recorte. Um
+front novo usa o mesmo serviço, com o recorte da pessoa. Testes:
+`tests/Feature/Tenancy/ProjectServiceTest.php`.

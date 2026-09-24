@@ -9,7 +9,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Http\Requests\StoreProjectRequest;
 use App\Core\Tenancy\Http\Requests\UpdateProjectRequest;
 use App\Core\Tenancy\Http\Resources\ProjectResource;
-use App\Core\Tenancy\Models\Project;
+use App\Core\Tenancy\Services\ProjectService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,23 +17,29 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 /**
  * CRUD de projetos da API v1 (camada organizacional).
  *
- * Isolamento: TODA consulta passa por Project::visibleToApiKey() — os projetos
- * do dono da chave e, se a chave é vinculada a projetos, só os vinculados.
+ * A regra mora no ProjectService (o mesmo que o painel usa); aqui ficam só o
+ * HTTP e o envelope das respostas.
+ *
+ * Isolamento: TODA consulta passa pelo recorte da chave no ProjectService
+ * (Project::visibleToApiKey()) — os projetos do dono da chave e, se a chave é
+ * vinculada a projetos, só os vinculados.
  * Projeto de outro tenant, ou do mesmo dono fora do vínculo da chave = 404
  * uniforme (não revela existência). Criar projeto é operação de conta: a rota
  * exige chave sem vínculo (middleware account.key).
  */
 final class ProjectController extends Controller
 {
+    public function __construct(private readonly ProjectService $projects) {}
+
     /**
      * GET /api/v1/projects — lista os projetos do tenant (scope projects:read).
      */
     public function index(): AnonymousResourceCollection
     {
-        $projects = Project::query()
-            ->visibleToApiKey($this->apiKey())
-            ->latest()
-            ->paginate((int) config('api_keys.pagination.per_page', 15));
+        $projects = $this->projects->paginateForApiKey(
+            $this->apiKey(),
+            (int) config('api_keys.pagination.per_page', 15),
+        );
 
         return ProjectResource::collection($projects);
     }
@@ -46,11 +52,7 @@ final class ProjectController extends Controller
         /** @var array{name: string} $data */
         $data = $request->validated();
 
-        /** @var Project $project */
-        $project = Project::createWithPublicCodeRetry([
-            'user_id' => $this->tenantUser()->id,
-            'name' => $data['name'],
-        ]);
+        $project = $this->projects->create($this->tenantUser(), $data['name']);
 
         return ProjectResource::make($project)
             ->additional(['message' => __('api_keys.projects.created')])
@@ -64,7 +66,7 @@ final class ProjectController extends Controller
     public function show(string $uuid): JsonResponse
     {
         return response()->json([
-            'data' => ProjectResource::make($this->findOwned($uuid)),
+            'data' => ProjectResource::make($this->projects->findForApiKey($this->apiKey(), $uuid)),
         ]);
     }
 
@@ -73,12 +75,12 @@ final class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, string $uuid): JsonResponse
     {
-        $project = $this->findOwned($uuid);
+        $project = $this->projects->findForApiKey($this->apiKey(), $uuid);
 
         /** @var array{name?: string, status?: string} $data */
         $data = $request->validated();
 
-        $project->update($data);
+        $this->projects->update($project, $data);
 
         return response()->json([
             'message' => __('api_keys.projects.updated'),
@@ -91,23 +93,9 @@ final class ProjectController extends Controller
      */
     public function destroy(string $uuid): JsonResponse
     {
-        $this->findOwned($uuid)->delete();
+        $this->projects->delete($this->projects->findForApiKey($this->apiKey(), $uuid));
 
         return response()->json(['message' => __('api_keys.projects.deleted')]);
-    }
-
-    /**
-     * Localiza o projeto pelo UUID entre os que a chave enxerga — 404
-     * uniforme para projeto de outro tenant, fora do vínculo da chave ou
-     * inexistente (anti-IDOR/BOLA: não revela que o recurso existe).
-     */
-    private function findOwned(string $uuid): Project
-    {
-        /** @var Project */
-        return Project::query()
-            ->byUuid($uuid)
-            ->visibleToApiKey($this->apiKey())
-            ->firstOrFail();
     }
 
     private function apiKey(): ApiKey
