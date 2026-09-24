@@ -30,6 +30,13 @@
          starter no ambiente, e o Laravel lê $_SERVER primeiro. -->
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Idioma de uma aplicação Laravel limpa, fixado: o container de
+             desenvolvimento injeta o APP_LOCALE do starter, e o CI não tem
+             nenhum. Os testes que dependem do idioma o escolhem sozinhos. -->
+        <env name="APP_LOCALE" value="en" force="true"/>
+        <server name="APP_LOCALE" value="en" force="true"/>
+        <env name="APP_FALLBACK_LOCALE" value="en" force="true"/>
+        <server name="APP_FALLBACK_LOCALE" value="en" force="true"/>
         <server name="APP_ENV" value="testing" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_STORE" value="array"/>

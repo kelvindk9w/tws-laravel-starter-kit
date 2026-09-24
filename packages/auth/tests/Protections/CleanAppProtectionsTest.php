@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -38,7 +39,24 @@ function ultimoCodigo(): string
     return (string) $codigo;
 }
 
-it('login: senha errada repetida bloqueia a conta+IP, e nem a senha certa entra durante o bloqueio', function (): void {
+/**
+ * O texto que o PACOTE traz para a chave, no idioma dado, até o primeiro
+ * marcador (`:seconds`, `:minutes`). Lido do arquivo do pacote — não do
+ * tradutor —, para provar que a mensagem que chega à tela é a do pacote e não
+ * a do framework nem a de um lang/ do ambiente.
+ */
+function packageMessagePrefix(string $key, string $locale): string
+{
+    [$group, $item] = explode('.', $key, 2);
+    $text = (string) Arr::get(require dirname(__DIR__, 2)."/lang/{$locale}/{$group}.php", $item);
+
+    return rtrim((string) strstr($text.':', ':', true));
+}
+
+it('login: senha errada repetida bloqueia a conta+IP, e nem a senha certa entra durante o bloqueio', function (string $locale): void {
+    // Idioma fixado pelo teste (o CI sobe sem APP_LOCALE; o container de
+    // desenvolvimento injeta o do starter).
+    app()->setLocale($locale);
     // O limite de rota (throttle:sensitive, 5/min) fica alto aqui para provar
     // a SEGUNDA camada: o bloqueio da própria Action (auth.login).
     config(['security.rate_limit.sensitive' => 100, 'auth.login.max_attempts' => 3]);
@@ -54,9 +72,10 @@ it('login: senha errada repetida bloqueia a conta+IP, e nem a senha certa entra 
     $bloqueio = $this->post('/login', ['email' => $user->email, 'password' => 'senha-correta']);
 
     $bloqueio->assertSessionHasErrors('email');
-    expect(session('errors')->first('email'))->toStartWith('Muitas tentativas de login');
+    expect(session('errors')->first('email'))->toStartWith(packageMessagePrefix('auth.throttle', $locale))
+        ->and(packageMessagePrefix('auth.throttle', $locale))->not->toBe('');
     $this->assertGuest();
-});
+})->with(['pt_BR', 'en', 'es']);
 
 it('login: o controller do pacote traz o próprio throttle:sensitive, sem a rota declarar nada', function (): void {
     config(['security.rate_limit.sensitive' => 2]);
@@ -112,7 +131,8 @@ it('segundo fator ligado: a senha certa NÃO autentica — abre o desafio e mand
     $this->assertAuthenticatedAs($user);
 });
 
-it('código do segundo fator: erros demais bloqueiam a conta, e nem o código certo passa', function (): void {
+it('código do segundo fator: erros demais bloqueiam a conta, e nem o código certo passa', function (string $locale): void {
+    app()->setLocale($locale);
     Mail::fake();
     config([
         'security.rate_limit.sensitive' => 100,
@@ -133,13 +153,14 @@ it('código do segundo fator: erros demais bloqueiam a conta, e nem o código ce
     // O terceiro erro atinge o limite: o desafio é encerrado com o bloqueio.
     $bloqueio = $this->post('/two-factor-challenge', ['code' => $errado]);
     $bloqueio->assertRedirect(route('login'))->assertSessionHasErrors('email');
-    expect(session('errors')->first('email'))->toStartWith('Muitos códigos incorretos');
+    expect(session('errors')->first('email'))->toStartWith(packageMessagePrefix('auth.two_factor.locked', $locale))
+        ->and(packageMessagePrefix('auth.two_factor.locked', $locale))->not->toBe('');
 
     // Senha certa de novo + código certo: continua bloqueado.
     $this->post('/login', ['email' => $user->email, 'password' => 'senha-correta'])->assertSessionHasErrors('email');
     $this->post('/two-factor-challenge', ['code' => $certo])->assertRedirect(route('login'));
     $this->assertGuest();
-});
+})->with(['pt_BR', 'en', 'es']);
 
 it('`verified` é o do pacote: conta sem e-mail confirmado não entra no painel, e a exigência é desligável', function (): void {
     $user = User::fixture(['email_verified_at' => null]);
