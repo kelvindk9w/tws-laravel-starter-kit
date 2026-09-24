@@ -99,7 +99,10 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   resources e páginas.
 - **Resources**: **Usuários** (CRUD completo — listar, ver, criar, editar,
   bloquear/desbloquear e excluir; senha com confirmação sob a MESMA política
-  do registro público; guardas de servidor no `UserAdminGuard`: contas demo
+  do registro público; ação de suporte **Marcar e-mail como verificado** na
+  listagem e no detalhe — só para conta não verificada, com confirmação,
+  registrada na trilha (`AdminAuditTrail`) — e filtro **E-mail verificado:
+  sim/não**; guardas de servidor no `UserAdminGuard`: contas demo
   intocáveis, o admin não se exclui nem se bloqueia e o último admin ativo
   não perde a flag/acesso; `UserSeeder` idempotente com 40 usuários
   realistas para paginação e filtros nascerem com conteúdo),
@@ -424,7 +427,7 @@ São **só ícone**, com o nome no hover e a **cor dizendo o que a ação faz**:
 | Cor | Significado | Ações |
 | --- | --- | --- |
 | `info` (azul) | consulta, não altera nada | Visualizar |
-| `success` (verde) | constrói ou devolve acesso | Editar, Desbloquear, Restaurar |
+| `success` (verde) | constrói ou devolve acesso | Editar, Desbloquear, Restaurar, Marcar e-mail como verificado |
 | `danger` (vermelho) | tira acesso ou destrói | Bloquear, Excluir, Revogar |
 | `warning` (âmbar) | substitui um segredo em uso | Rotacionar |
 | `gray` | neutra | Abrir arquivo, Baixar |

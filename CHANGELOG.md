@@ -4,6 +4,22 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+### Adicionado
+- `/admin` → Usuários: ação de suporte **Marcar e-mail como verificado**
+  (listagem, cards e detalhe; só para conta não verificada, nunca para conta
+  demo, com confirmação e registrada na trilha como ação de admin) e filtro
+  **E-mail verificado: sim/não**.
+- Linha `admin.action` na trilha de arquivo para ações de admin
+  (`AdminAuditTrail`), com o mesmo `correlation_id` da linha do banco.
+
+### Alterado
+- Dependências: Filament 5.8.4, Laravel 13.33.0, Horizon 5.50.0,
+  Livewire 4.4.6 (e brick/math 1.0.0, transitiva).
+- O E2E da verificação de e-mail apaga a conta e as mensagens que cria, como
+  o de duas etapas (limpeza comum em `tests/e2e/support/cleanup.js`).
+
 ## [1.0.0] — 2026-09-24
 
 Primeira versão estável. Base Laravel 13 com Livewire 4 (painel do cliente)

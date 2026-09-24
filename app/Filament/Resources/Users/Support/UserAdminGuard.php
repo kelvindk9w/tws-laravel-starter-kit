@@ -31,6 +31,18 @@ final class UserAdminGuard
     }
 
     /**
+     * Pode marcar o e-mail deste registro como verificado (ação de suporte)?
+     *
+     * Conta demo fica de fora como nas demais ações: ela já conta como
+     * verificada enquanto a blindagem vale (User::hasVerifiedEmail) e não é
+     * o suporte quem mexe nela.
+     */
+    public static function verifyEmailDenial(User $record): ?string
+    {
+        return $record->isDemo() ? __('admin.users.demo_protected') : null;
+    }
+
+    /**
      * Pode excluir este registro?
      */
     public static function deleteDenial(User $record, ?User $actor): ?string

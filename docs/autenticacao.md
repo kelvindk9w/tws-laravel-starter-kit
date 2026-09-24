@@ -101,6 +101,14 @@ enfileirado com payload criptografado como todos os e-mails do kit. Aparece em
 (`AUTH_EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS`, padrão 60 — o envio do
 cadastro também conta).
 
+**Quando o e-mail não chega** (filtro de spam, caixa corporativa que descarta):
+o suporte confirma a identidade por outro canal e usa, no `/admin` → Usuários,
+a ação **Marcar e-mail como verificado** (na listagem e no detalhe; só aparece
+para conta ainda não verificada, nunca para conta demo, pede confirmação e fica
+registrada na trilha como ação de admin — ver
+[Admin e dashboards](admin-e-dashboards.md)). A listagem tem o filtro
+**E-mail verificado: sim/não** para achar essas contas.
+
 **Desligar** (projeto que não quer a etapa):
 
 ```dotenv

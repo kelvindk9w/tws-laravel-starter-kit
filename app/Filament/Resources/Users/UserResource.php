@@ -11,6 +11,7 @@ use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
+use App\Filament\Resources\Users\Support\MarkEmailVerifiedAction;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\AvatarUpload;
@@ -258,6 +259,12 @@ final class UserResource extends BaseResource
                     ]),
                 TernaryFilter::make('is_admin')
                     ->label(__('admin.users.admin')),
+                // "Sim" = coluna preenchida, "Não" = nula. Conta demo com a
+                // coluna nula conta como verificada no login (blindagem), mas
+                // o seeder já grava a data — o filtro olha o dado gravado.
+                TernaryFilter::make('email_verified_at')
+                    ->label(__('admin.users.email_verified'))
+                    ->nullable(),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -300,6 +307,7 @@ final class UserResource extends BaseResource
 
                         Notification::make()->success()->title(__('admin.users.unblocked_success'))->send();
                     }),
+                MarkEmailVerifiedAction::make(),
                 DeleteAction::make()
                     ->label(__('admin.users.delete'))
                     ->modalHeading(__('admin.users.delete_heading'))
@@ -337,6 +345,10 @@ final class UserResource extends BaseResource
                         UserStatus::Pending => __('admin.users.pending'),
                     }),
                 IconEntry::make('is_admin')->label(__('admin.users.admin'))->boolean(),
+                IconEntry::make('email_verified')
+                    ->label(__('admin.users.email_verified'))
+                    ->getStateUsing(fn (User $record): bool => $record->hasVerifiedEmail())
+                    ->boolean(),
                 IconEntry::make('transaction_password_set_at')
                     ->label(__('admin.users.transaction_password'))
                     ->boolean(fn ($state): bool => $state !== null),

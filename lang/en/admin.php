@@ -70,6 +70,13 @@ return [
         'action_denied' => 'Action not allowed',
         'avatar' => 'Photo',
         'avatar_hint' => 'JPG, PNG or WEBP, up to :max KB. Leave empty to use the name initials.',
+        'email_verified' => 'Email verified',
+        'mark_email_verified' => 'Mark email as verified',
+        'mark_email_verified_heading' => 'Mark email as verified',
+        'mark_email_verified_warning' => 'Only use this after confirming the person\'s identity through another channel: the account ":email" will be able to enter the panel without opening the confirmation link. The action is recorded in the audit trail. Do you want to continue?',
+        'mark_email_verified_confirm' => 'Mark as verified',
+        'email_marked_verified' => 'Email marked as verified.',
+        'email_already_verified' => 'This email was already verified.',
     ],
 
     'api_keys' => [

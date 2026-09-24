@@ -19,7 +19,6 @@ use App\Filament\Resources\Uploads\Pages\ListUploads;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 // =============================================================================
@@ -85,14 +84,16 @@ describe('uuid malformado nas ações do painel (Livewire)', function () {
     it('projetos: 404 uniforme', function () {
         Livewire::actingAs(User::factory()->create())
             ->test(ProjectsIndex::class)
-            ->call('startDelete', UUID_MALFORMADO);
-    })->throws(ModelNotFoundException::class);
+            ->call('startDelete', UUID_MALFORMADO)
+            ->assertNotFound();
+    });
 
     it('chaves de API: 404 uniforme', function () {
         Livewire::actingAs(User::factory()->withTransactionPassword()->create())
             ->test(ApiKeysIndex::class)
-            ->call('startRevoke', UUID_MALFORMADO);
-    })->throws(ModelNotFoundException::class);
+            ->call('startRevoke', UUID_MALFORMADO)
+            ->assertNotFound();
+    });
 });
 
 // -----------------------------------------------------------------------------

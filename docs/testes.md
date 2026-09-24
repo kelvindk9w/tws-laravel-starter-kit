@@ -78,15 +78,22 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 ```
 
 O `email-verification.spec.js` faz o fluxo real do cadastro: registra uma
-conta nova, lê o e-mail de verificação na API do **Mailpit** (entregue pelo
-worker `queue`, então os dois precisam estar no ar; `E2E_MAILPIT_URL`, padrão
-`http://localhost:18025`), clica no link e confere o painel liberado. Cada
-rodada deixa uma conta `e2e-verificacao-<carimbo>@example.com` no banco de
-dev; para limpar:
+conta nova (`e2e-verificacao-<carimbo>@example.com`), lê o e-mail de
+verificação na API do **Mailpit** (entregue pelo worker `queue`, então os dois
+precisam estar no ar; `E2E_MAILPIT_URL`, padrão `http://localhost:18025`),
+clica no link e confere o painel liberado. No fim — passando ou falhando — ele
+**apaga o que criou**, como o `two-factor.spec.js` abaixo: a conta, pelo
+`/admin` com o super admin demo, e as mensagens dela no Mailpit.
+
+A limpeza dos dois specs mora em `tests/e2e/support/cleanup.js`
+(`deleteAccountViaAdmin` e `deleteMailpitMessagesTo`). Spec novo que cadastrar
+conta deve chamá-la num `finally`. Para conferir que nada sobrou depois de uma
+rodada:
 
 ```bash
 docker compose exec app php artisan tinker --execute='
-  \App\Core\Auth\Models\User::where("email", "like", "e2e-verificacao-%@example.com")->delete();'
+  echo \App\Core\Auth\Models\User::where("email", "like", "e2e-%@example.com")
+    ->where("email", "!=", "e2e@example.com")->count();'
 ```
 
 O `two-factor.spec.js` faz a verificação em duas etapas de ponta a ponta:

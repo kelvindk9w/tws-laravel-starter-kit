@@ -45,12 +45,23 @@ são o dado do próprio contato, necessário para respondê-lo.
 | Camada | Onde | Conteúdo |
 |---|---|---|
 | Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload redigido (neutralizado quando há `attack_type`), duração, IP, tenant |
-| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`); número de cartão sai mascarado (ver [Redaction](#redaction-lgpd)) |
+| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`, `admin.action`); número de cartão sai mascarado (ver [Redaction](#redaction-lgpd)) |
 | Borda | access log do nginx | tudo, inclusive health checks |
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
 arquivo da mesma requisição. Também entra no contexto compartilhado do Monolog
 (`Log::shareContext`) — todo `Log::*` emitido durante a requisição o carrega.
+
+**Ações de admin.** A linha do banco de uma ação no `/admin` é o update do Livewire, com payload
+resumido (só o nome do componente) — ela prova que houve a requisição, não QUAL ação foi feita.
+Ação de admin que muda dado de uma conta grava também a linha `admin.action` no arquivo
+(`App\Filament\Support\AdminAuditTrail`): nome estável da ação (ex.:
+`user.email_marked_verified`), `actor_uuid`, `target_type`, `target_uuid` e o mesmo
+`correlation_id` da linha do banco. Nunca e-mail nem nome — o uuid basta para chegar à conta.
+
+```bash
+grep '"admin.action"' storage/logs/request-*.log
+```
 
 ## O que significa um log INICIADA "órfão"
 

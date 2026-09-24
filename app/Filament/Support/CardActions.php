@@ -29,7 +29,8 @@ use Filament\Support\Icons\Heroicon;
  *
  * CORES (semântica, não decoração):
  * - info    → consulta, não altera nada (Visualizar);
- * - success → constrói ou devolve acesso (Editar, Desbloquear, Restaurar);
+ * - success → constrói ou devolve acesso (Editar, Desbloquear, Restaurar,
+ *             Marcar e-mail como verificado);
  * - danger  → tira acesso ou destrói (Bloquear, Excluir, Revogar);
  * - warning → substitui um segredo em uso (Rotacionar);
  * - gray    → neutra (abrir arquivo, baixar).
@@ -55,6 +56,7 @@ final class CardActions
         'restore' => ['icon' => Heroicon::OutlinedArrowUturnLeft, 'color' => 'success'],
         'block' => ['icon' => Heroicon::OutlinedLockClosed, 'color' => 'danger'],
         'unblock' => ['icon' => Heroicon::OutlinedLockOpen, 'color' => 'success'],
+        'markEmailVerified' => ['icon' => Heroicon::OutlinedCheckBadge, 'color' => 'success'],
         'revoke' => ['icon' => Heroicon::OutlinedNoSymbol, 'color' => 'danger'],
         'rotate' => ['icon' => Heroicon::OutlinedArrowPath, 'color' => 'warning'],
         'open' => ['icon' => Heroicon::OutlinedArrowTopRightOnSquare, 'color' => 'gray'],

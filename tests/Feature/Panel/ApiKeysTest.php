@@ -10,7 +10,6 @@ use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\ApiKeys\Index;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
@@ -274,11 +273,13 @@ it('não rotaciona nem revoga chave de outro tenant (404 uniforme)', function ()
     $outro = User::factory()->create();
     $alheia = app(ApiKeyService::class)->create($outro, ['name' => 'Alheia'])['api_key'];
 
-    // firstOrFail → ModelNotFoundException (404 na request real do Livewire).
+    // firstOrFail → ModelNotFoundException → 404 (desde o Livewire 4.4.6 o
+    // harness de teste responde 404 como a request real, sem propagar).
     Livewire::actingAs($user)
         ->test(Index::class)
-        ->call('startRotate', $alheia->uuid);
-})->throws(ModelNotFoundException::class);
+        ->call('startRotate', $alheia->uuid)
+        ->assertNotFound();
+});
 
 it('não revoga chave de outro tenant (404 uniforme)', function () {
     $user = User::factory()->withTransactionPassword()->create();
@@ -287,8 +288,9 @@ it('não revoga chave de outro tenant (404 uniforme)', function () {
 
     Livewire::actingAs($user)
         ->test(Index::class)
-        ->call('startRevoke', $alheia->uuid);
-})->throws(ModelNotFoundException::class);
+        ->call('startRevoke', $alheia->uuid)
+        ->assertNotFound();
+});
 
 // =============================================================================
 // Regressões de interface (QA): o que a tela mostra, não só o que ela grava.

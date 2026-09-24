@@ -70,6 +70,13 @@ return [
         'action_denied' => 'Acción no permitida',
         'avatar' => 'Foto',
         'avatar_hint' => 'JPG, PNG o WEBP, hasta :max KB. Déjalo vacío para usar las iniciales del nombre.',
+        'email_verified' => 'Correo verificado',
+        'mark_email_verified' => 'Marcar correo como verificado',
+        'mark_email_verified_heading' => 'Marcar correo como verificado',
+        'mark_email_verified_warning' => 'Úsalo solo después de confirmar la identidad de la persona por otro canal: la cuenta ":email" podrá entrar al panel sin abrir el enlace de confirmación. La acción queda registrada en el rastro de auditoría. ¿Deseas continuar?',
+        'mark_email_verified_confirm' => 'Marcar como verificado',
+        'email_marked_verified' => 'Correo marcado como verificado.',
+        'email_already_verified' => 'Este correo ya estaba verificado.',
     ],
 
     'api_keys' => [

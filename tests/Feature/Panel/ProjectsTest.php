@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use App\Livewire\Projects\Index;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 // =============================================================================
@@ -95,9 +94,13 @@ it('não toca em projeto de outro tenant (404 uniforme — anti-IDOR)', function
     $outro = User::factory()->create();
     $alheio = Project::createWithPublicCodeRetry(['user_id' => $outro->id, 'name' => 'Alheio']);
 
-    // findOwned() usa firstOrFail → ModelNotFoundException (404 na request
-    // real do Livewire; no harness de teste a exceção propaga).
+    // findOwned() usa firstOrFail → ModelNotFoundException → 404. Desde o
+    // Livewire 4.4.6 o harness de teste trata a exceção como a request real
+    // (resposta 404) em vez de propagá-la.
     Livewire::actingAs($user)
         ->test(Index::class)
-        ->call('startDelete', $alheio->uuid);
-})->throws(ModelNotFoundException::class);
+        ->call('startDelete', $alheio->uuid)
+        ->assertNotFound();
+
+    expect($alheio->fresh())->not->toBeNull();
+});

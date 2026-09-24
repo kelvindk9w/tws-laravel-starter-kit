@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { deleteAccountViaAdmin, deleteMailpitMessagesTo } from './support/cleanup.js';
 
 // =============================================================================
 // E2E da verificação em duas etapas no login, de ponta a ponta e sem atalho:
@@ -149,29 +150,8 @@ test.describe('verificação em duas etapas no login', () => {
         } finally {
             // Limpeza: a conta sai do banco pelo /admin (super admin demo, que
             // não tem segundo fator) e as mensagens saem do Mailpit.
-            const admin = await browser.newPage();
-
-            try {
-                await admin.goto('/admin/login', { waitUntil: 'networkidle' });
-                await admin.getByRole('button', { name: /entrar|sign in|iniciar|^login$/i }).click();
-                await admin.waitForURL((url) => !url.pathname.includes('login'), { timeout: 15_000 });
-
-                await admin.goto(`/admin/users?search=${encodeURIComponent(address)}`, { waitUntil: 'networkidle' });
-                const row = admin.getByRole('row').filter({ hasText: address });
-                await expect(row).toHaveCount(1, { timeout: 15_000 });
-                await row.getByRole('button', { name: 'Excluir' }).click();
-                // O modal de confirmação do Filament não tem role=dialog.
-                await admin.locator('.fi-modal-window').getByRole('button', { name: 'Excluir' }).click();
-                await expect(admin.getByText('Usuário excluído.')).toBeVisible({ timeout: 15_000 });
-            } finally {
-                await admin.close();
-            }
-
-            const search = await request.get(`${mailpit}/api/v1/search`, { params: { query: `to:"${address}"` } });
-            const ids = ((await search.json()).messages ?? []).map((m) => m.ID);
-            if (ids.length > 0) {
-                await request.delete(`${mailpit}/api/v1/messages`, { data: { IDs: ids } });
-            }
+            await deleteAccountViaAdmin(browser, address);
+            await deleteMailpitMessagesTo(request, address);
         }
     });
 });
