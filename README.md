@@ -30,7 +30,8 @@ docker compose up -d --build
 docker compose exec app php artisan key:generate --force
 docker compose up -d --force-recreate app queue scheduler
 
-# 4) Banco e testes
+# 4) Banco e testes (SQLite em memória; contra o PostgreSQL, ver
+#    "Testes contra o PostgreSQL" abaixo)
 docker compose exec app php artisan migrate
 docker compose exec app ./vendor/bin/pest
 
@@ -54,6 +55,40 @@ docker run --rm -v $(pwd):/app -w /app composer:latest composer <cmd>
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm install
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm run build
 ```
+
+### Testes contra o PostgreSQL
+
+O `pest` puro roda em **SQLite em memória** (`phpunit.xml`): rápido e sem
+banco nenhum. Produção é **PostgreSQL**, e o SQLite é tolerante onde o
+PostgreSQL não é (coluna `uuid` nativa, transação abortada após erro, LIKE
+que diferencia maiúsculas). Por isso o **CI roda a suíte contra PostgreSQL 18**
+— é o check que vale — e em paralelo repete no SQLite, para o comando local
+padrão continuar verde. Alguns testes (o gatilho das contas demo) só existem
+no PostgreSQL e ficam como *skip* no SQLite.
+
+Para rodar localmente contra o Postgres do docker de dev, use o
+`phpunit.pgsql.xml`. Ele aponta para um banco **separado**,
+`tws_starter_test`, nunca para o banco do `.env` — a suíte apaga o schema a
+cada execução, e a `tests/TestCase.php` recusa qualquer banco cujo nome não
+termine em `_test`.
+
+```bash
+# Uma vez só, se o volume do Postgres já existia antes deste arquivo
+# (volumes novos já nascem com o banco — docker/postgres/initdb/):
+docker compose exec postgres createdb -U tws tws_starter_test
+
+# Suíte contra o PostgreSQL:
+docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
+```
+
+Host, porta, usuário e senha vêm do `.env` (os mesmos do banco de dev); só o
+nome do banco é forçado pelo `phpunit.pgsql.xml`.
+
+**Consultas com valor vindo de fora em coluna `uuid`** (URL, ação do Livewire,
+filtro do /admin): use `Model::query()->byUuid($valor)` (escopo da
+`RoutesByUuid`) ou `UuidColumn::where()`. No PostgreSQL, texto que não é uuid
+comparado com a coluna derruba a consulta com 500; com o helper ele só não
+encontra nada (404 uniforme).
 
 ### Testes E2E (Playwright)
 
@@ -507,8 +542,8 @@ promover o cliente demo e rebaixar o admin demo, com erro legível no
 console em vez de stack trace.
 
 Testes: `tests/Feature/Admin/DemoAccountHardeningTest.php` (os testes do
-trigger só rodam quando a suíte aponta para o PostgreSQL — marcados com
-`skip` no SQLite).
+trigger só rodam quando a suíte aponta para o PostgreSQL — o CI roda assim;
+no `pest` local em SQLite aparecem como `skip`).
 
 ### Política de senha (configurável, sem tocar em código)
 
@@ -939,8 +974,10 @@ docker compose run --rm --no-deps -v /dev/null:/var/www/html/.env --entrypoint s
    `PLATFORM_AVAILABLE_LOCALES`.
 7. **Segredos:** somente em `.env` (gitignored), nunca no código nem na imagem.
 8. **Testes (ADR-010):** Pest 4 + Playwright, validando **conteúdo** das
-   respostas, não apenas status HTTP. A suíte PHP roda com SQLite em memória
-   (o phpunit.xml força `DB_*` para isolar do PostgreSQL de dev).
+   respostas, não apenas status HTTP. A suíte PHP roda contra PostgreSQL 18
+   no CI (`phpunit.pgsql.xml`, banco `tws_starter_test`) e, localmente por
+   padrão, com SQLite em memória (o `phpunit.xml` força `DB_*` para isolar do
+   PostgreSQL de dev). Ver "Testes contra o PostgreSQL".
 
 ## Segurança e Logs (pipeline de requisição — ADR-004/005/010)
 

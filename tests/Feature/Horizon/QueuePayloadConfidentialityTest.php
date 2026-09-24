@@ -33,7 +33,7 @@ use Illuminate\Support\Facades\Mail;
 // =============================================================================
 
 /**
- * Enfileira na conexão `database` (sqlite da suíte) e devolve o payload bruto
+ * Enfileira na conexão `database` (banco da suíte) e devolve o payload bruto
  * exatamente como ele ficaria guardado na fila.
  */
 function payloadGuardadoNaFila(callable $enfileira): string

@@ -148,7 +148,7 @@ final class Index extends Component
         /** @var Project */
         return Project::query()
             ->where('user_id', $this->user()->id)
-            ->where('uuid', $uuid)
+            ->byUuid($uuid)
             ->firstOrFail();
     }
 

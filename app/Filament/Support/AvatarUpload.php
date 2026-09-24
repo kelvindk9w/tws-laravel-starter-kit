@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Support;
 
 use App\Core\Auth\Models\User;
+use App\Core\Identifiers\UuidColumn;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Models\Upload;
 use App\Core\Uploads\Rules\SafeFile;
@@ -96,12 +97,21 @@ final class AvatarUpload
         }
 
         // O campo pode carregar o caminho da foto ATUAL junto com o uuid da
-        // recém-enviada. Vence o Upload mais novo: é o que a pessoa acabou
-        // de escolher.
-        $upload = Upload::query()->whereIn('uuid', $valores)->orderByDesc('id')->first();
+        // recém-enviada. Só os uuids vão para a consulta: no PostgreSQL a
+        // coluna é `uuid` nativo e um caminho de arquivo na lista derruba a
+        // consulta inteira com erro de sintaxe (o SQLite aceitava calado).
+        $uuids = UuidColumn::onlyValid($valores);
+
+        if ($uuids === []) {
+            // Só caminhos de arquivo já existentes: nada mudou.
+            return;
+        }
+
+        // Vence o Upload mais novo: é o que a pessoa acabou de escolher.
+        $upload = Upload::query()->whereIn('uuid', $uuids)->orderByDesc('id')->first();
 
         if ($upload === null) {
-            // Só caminhos de arquivo já existentes: nada mudou.
+            // uuid que não corresponde a Upload nenhum: nada a vincular.
             return;
         }
 

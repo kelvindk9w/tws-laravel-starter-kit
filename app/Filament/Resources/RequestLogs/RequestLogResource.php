@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RequestLogs;
 
+use App\Core\Identifiers\UuidColumn;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
@@ -226,7 +227,9 @@ final class RequestLogResource extends BaseResource
                     ])
                     ->query(fn (Builder $query, array $data): Builder => $query->when(
                         filled($data['tenant'] ?? null),
-                        fn (Builder $q): Builder => $q->where('tenant_uuid', (string) $data['tenant']),
+                        // Texto que não é uuid não encontra nada (no PostgreSQL ele
+                        // derrubaria a tela — coluna `uuid` nativa; ver UuidColumn).
+                        fn (Builder $q): Builder => UuidColumn::where($q, 'tenant_uuid', trim((string) $data['tenant'])),
                     )),
                 Filter::make('endpoint')
                     ->label(__('admin.request_logs.filter_endpoint'))
@@ -235,7 +238,9 @@ final class RequestLogResource extends BaseResource
                     ])
                     ->query(fn (Builder $query, array $data): Builder => $query->when(
                         filled($data['contains'] ?? null),
-                        fn (Builder $q): Builder => $q->where('endpoint', 'like', '%'.str_replace(['%', '_'], '', (string) $data['contains']).'%'),
+                        // Sem diferenciar maiúsculas nos dois bancos (LIKE do PostgreSQL
+                        // diferencia; o do SQLite não — whereLike vira ILIKE no pgsql).
+                        fn (Builder $q): Builder => $q->whereLike('endpoint', '%'.str_replace(['%', '_'], '', (string) $data['contains']).'%'),
                     )),
                 Filter::make('client_correlation_id')
                     ->label(__('admin.request_logs.filter_client_correlation'))

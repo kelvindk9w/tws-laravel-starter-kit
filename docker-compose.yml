@@ -57,6 +57,8 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Cria o banco da suíte de testes (tws_starter_test) na primeira subida.
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     ports:
       - "${DEV_POSTGRES_PORT:-15432}:5432"
     healthcheck:

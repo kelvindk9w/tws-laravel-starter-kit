@@ -385,7 +385,7 @@ final class Index extends Component
         /** @var ApiKey */
         return ApiKey::query()
             ->where('user_id', $this->user()->id)
-            ->where('uuid', $uuid)
+            ->byUuid($uuid)
             ->firstOrFail();
     }
 

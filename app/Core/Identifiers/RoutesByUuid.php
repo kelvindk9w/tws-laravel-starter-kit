@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Identifiers;
 
+use Illuminate\Database\Eloquent\Builder;
+
 /**
  * Roteamento por UUID (ADR-010: o `id` interno NUNCA aparece na URL).
  *
@@ -17,6 +19,14 @@ namespace App\Core\Identifiers;
  *
  * Declarar o uuid AQUI resolve os dois lados de uma vez (geração e
  * resolução) e vale para qualquer rota do app, não só para o Filament.
+ *
+ * Use SEMPRE junto com `HasUuids` + `uniqueIds(): ['uuid']`: é o HasUuids que
+ * recusa (404) um uuid malformado na URL ANTES de ir ao banco. Sem ele, no
+ * PostgreSQL (coluna `uuid` nativa) o texto malformado derruba a consulta e a
+ * rota responde 500.
+ *
+ * Para buscas manuais por uuid vindo de fora (ação do Livewire, parâmetro de
+ * rota da API), use o escopo `byUuid()` — mesma proteção (ver UuidColumn).
  */
 trait RoutesByUuid
 {
@@ -26,5 +36,17 @@ trait RoutesByUuid
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    /**
+     * Filtra pelo uuid público; valor que não é uuid não encontra nada (em
+     * vez de derrubar a consulta no PostgreSQL — ver UuidColumn).
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeByUuid(Builder $query, string $uuid): Builder
+    {
+        return UuidColumn::where($query, $query->qualifyColumn('uuid'), $uuid);
     }
 }

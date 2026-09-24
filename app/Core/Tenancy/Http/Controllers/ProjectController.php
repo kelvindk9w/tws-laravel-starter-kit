@@ -105,7 +105,7 @@ final class ProjectController extends Controller
     {
         /** @var Project */
         return Project::query()
-            ->where('uuid', $uuid)
+            ->byUuid($uuid)
             ->visibleToApiKey($this->apiKey())
             ->firstOrFail();
     }

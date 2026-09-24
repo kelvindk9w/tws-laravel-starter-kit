@@ -154,7 +154,7 @@ final class ApiKeyController extends Controller
     {
         /** @var ApiKey */
         return ApiKey::query()
-            ->where('uuid', $uuid)
+            ->byUuid($uuid)
             ->where('user_id', $this->tenantUser()->id)
             ->firstOrFail();
     }

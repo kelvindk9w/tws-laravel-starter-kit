@@ -9,6 +9,7 @@ use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyGenerator;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Auth\Models\User;
+use App\Core\Identifiers\UuidColumn;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -166,6 +167,13 @@ final class ApiKeyService
         }
 
         $projectUuids = array_values(array_unique($projectUuids));
+
+        // Texto que não é uuid = projeto que não existe (os Form Requests já
+        // barram, isto protege quem chama o service direto): no PostgreSQL ele
+        // derrubaria a consulta em vez de simplesmente não encontrar.
+        if (count(UuidColumn::onlyValid($projectUuids)) !== count($projectUuids)) {
+            throw new InvalidArgumentException('projects');
+        }
 
         /** @var list<int> $ids */
         $ids = Project::query()

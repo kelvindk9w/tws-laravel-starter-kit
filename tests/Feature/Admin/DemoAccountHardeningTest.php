@@ -26,8 +26,9 @@ use Livewire\Livewire;
 //
 //   1. UI      — a mensagem amigável continua aparecendo (nada regrediu);
 //   2. MODEL   — eventos updating/deleting lançam exceção (roda no SQLite);
-//   3. BANCO   — o gatilho recusa update/delete EM MASSA (só no PostgreSQL,
-//                por isso os testes da camada 3 são marcados com skip).
+//   3. BANCO   — o gatilho recusa update/delete EM MASSA (só no PostgreSQL:
+//                os testes da camada 3 rodam no CI, com phpunit.pgsql.xml,
+//                e ficam como skip no `pest` local em SQLite).
 //
 // E o corte entre CAMPO SENSÍVEL e CAMPO INOFENSIVO é testado nos dois
 // sentidos: a demo tem de continuar funcional para quem a está visitando.
@@ -368,5 +369,5 @@ describe('gatilho do PostgreSQL', function () {
     });
 })->skip(
     fn (): bool => DB::connection()->getDriverName() !== 'pgsql',
-    'O gatilho é do PostgreSQL; a suíte roda em SQLite (a camada de model cobre este cenário aqui).',
+    'O gatilho é do PostgreSQL; rode com -c phpunit.pgsql.xml (o CI roda). No SQLite a camada de model cobre este cenário.',
 );

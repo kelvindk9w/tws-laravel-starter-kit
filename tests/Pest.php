@@ -5,7 +5,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 // Configuração do Pest 4.
-// Feature: roda com a aplicação Laravel completa + banco em memória (sqlite).
+// Feature: roda com a aplicação Laravel completa + banco de teste — SQLite em
+// memória no phpunit.xml (padrão local) ou PostgreSQL no phpunit.pgsql.xml (CI).
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)

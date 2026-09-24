@@ -17,7 +17,8 @@ use Illuminate\Support\Str;
  * - Sequencial puro é PROIBIDO (enumeração).
  * - A unicidade é garantida pelo BANCO (constraint UNIQUE na coluna
  *   `codigo_publico`), nunca pela probabilidade: em colisão, tenta de novo
- *   (ver self::createWithPublicCodeRetry()).
+ *   (ver self::createWithPublicCodeRetry()). O retry funciona também dentro
+ *   de uma transação já aberta (savepoint por tentativa — ver o método).
  *
  * Uso no model:
  *   class Cliente extends Model {
@@ -67,8 +68,16 @@ trait HasPublicCode
 
         while (true) {
             try {
+                // Cada tentativa num SAVEPOINT quando já há transação aberta.
+                // No PostgreSQL, a violação de UNIQUE aborta a transação
+                // inteira: sem o savepoint, a tentativa seguinte falharia com
+                // "current transaction is aborted" em vez de gravar. O
+                // savepoint desfaz só o insert que colidiu. Fora de transação
+                // nada muda (o insert falho não contamina nada).
+                $query = static::query();
+
                 /** @var static */
-                return static::query()->create($attributes);
+                return $query->withSavepointIfNeeded(fn () => $query->create($attributes));
             } catch (UniqueConstraintViolationException $exception) {
                 $attempts++;
 

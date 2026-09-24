@@ -1,8 +1,21 @@
 # CI do TWS Laravel Starter Kit — roda em todo push e PR.
 # É o mesmo conjunto que o README manda rodar localmente: Pint (estilo),
-# Pest (testes, SQLite em memória como no phpunit.xml), auditoria de
-# dependências PHP e Node, e o build do frontend. As branches sandbox e
-# producao exigem este workflow verde para receber push.
+# Pest (testes), auditoria de dependências PHP e Node, e o build do frontend.
+# As branches sandbox e producao exigem este workflow verde para receber push.
+#
+# BANCO DOS TESTES — decisão:
+# - O job obrigatório (`tests`) roda a suíte contra PostgreSQL 18 de verdade
+#   (service container), com o phpunit.pgsql.xml. É o banco de produção: o
+#   SQLite em memória escondeu bugs reais (coluna `uuid` nativa que derruba a
+#   consulta com texto que não é uuid; transação abortada pelo PostgreSQL
+#   depois de colisão de UNIQUE; LIKE que diferencia maiúsculas). Os testes que
+#   só existem no PostgreSQL (gatilho das contas demo) rodam aqui.
+# - O job `tests-sqlite` roda a MESMA suíte no SQLite em memória, que é o
+#   comando padrão de quem clona o kit (`pest`, sem banco nenhum). Ele corre
+#   em paralelo — não soma tempo de parede — e garante que o comando local
+#   continua verde. Quem vale para produção é o job do PostgreSQL.
+# - Sem Redis: a suíte força cache/sessão em array e fila sync (phpunit*.xml);
+#   nenhum teste fala com Redis.
 name: CI
 
 on:
@@ -19,9 +32,36 @@ concurrency:
 
 jobs:
   tests:
+    # Nome = check obrigatório das branches sandbox/producao: não renomear
+    # sem atualizar a proteção de branch.
     name: Pint · Pest · auditorias · build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    # PostgreSQL da mesma versão major da produção (docker-compose*.yml).
+    # O banco termina em _test: a suíte recusa qualquer outro (tests/TestCase.php).
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: tws_starter_test
+          POSTGRES_USER: tws
+          POSTGRES_PASSWORD: tws_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tws -d tws_starter_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Variáveis reais do processo vencem o .env (o Laravel não sobrescreve o
+    # que já está no ambiente); o nome do banco vem forçado pelo phpunit.pgsql.xml.
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: tws
+      DB_PASSWORD: tws_ci_password
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +70,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_sqlite, sqlite3, intl, gd, bcmath, zip, pcntl, mbstring, redis
+          extensions: pdo_pgsql, pgsql, pdo_sqlite, sqlite3, intl, gd, bcmath, zip, pcntl, mbstring, redis
           coverage: none
 
       - name: Node 24
@@ -62,7 +102,47 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
 
-      - name: Testes (Pest)
+      - name: Testes (Pest · PostgreSQL 18)
+        run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
+
+  # A mesma suíte no SQLite em memória — o `pest` puro de quem clona o kit.
+  # Paralelo ao job acima; sem Pint/auditorias (já cobertos lá).
+  tests-sqlite:
+    name: Pest · SQLite (comando local padrão)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, intl, gd, bcmath, zip, pcntl, mbstring, redis
+          coverage: none
+
+      - name: Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Dependências PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # As views usam @vite: sem o manifesto do build, as páginas não renderizam.
+      - name: Build do frontend
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Ambiente de teste
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Testes (Pest · SQLite)
         run: ./vendor/bin/pest --ci
 
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
@@ -113,7 +193,7 @@ jobs:
           docker run --rm --entrypoint sh tws-starter-app:ci -c '
             set -e
             test "$(id -u)" != 0
-            for proibido in .env .env.example .env.prod.example tests phpunit.xml node_modules; do
+            for proibido in .env .env.example .env.prod.example tests phpunit.xml phpunit.pgsql.xml node_modules; do
               if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
             done
             test -z "$(find /var/www/html/storage -type f)"

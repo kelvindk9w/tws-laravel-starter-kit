@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
 use App\Core\Uploads\Models\Upload;
+use App\Core\Uploads\Services\SecureUploadService;
 use App\Filament\Pages\Profile as AdminProfile;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
+use App\Filament\Support\AvatarUpload;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -179,6 +181,45 @@ it('abrir a edição sem mexer na foto NÃO apaga a foto que já está lá', fun
         ->assertHasNoFormErrors();
 
     expect($user->fresh()->avatar_upload_id)->toBe($vinculo);
+});
+
+// O estado do campo pode trazer o CAMINHO da foto atual junto do UUID da
+// recém-enviada. No PostgreSQL a coluna `uploads.uuid` é `uuid` nativo: o
+// caminho na mesma consulta derrubava o salvamento com erro de sintaxe (o
+// SQLite aceitava calado). Os dois testes abaixo exercitam isso direto no
+// AvatarUpload::applyTo(), sem depender de como o harness monta o estado.
+it('estado com o caminho da foto atual junto do uuid da nova: vale a nova', function () {
+    $user = User::factory()->create(['email' => 'misto@example.com']);
+
+    Livewire::test(EditUser::class, ['record' => $user->uuid])
+        ->fillForm(['avatar' => fixtureArquivoLivewire(fixtureBytesPng(), 'antiga.png')])
+        ->call('save');
+
+    $antiga = $user->fresh()->avatar;
+
+    $nova = app(SecureUploadService::class)->handle(
+        fixtureArquivoLivewire(fixtureBytesPng(), 'nova.png'),
+        directory: AvatarUpload::DIRECTORY,
+        allowedTypes: ['image'],
+    );
+
+    AvatarUpload::applyTo($user, [(string) $antiga->path, $nova->uuid]);
+
+    expect($user->fresh()->avatar_upload_id)->toBe($nova->id)->not->toBe($antiga->id);
+});
+
+it('estado só com o caminho da foto atual: nada muda', function () {
+    $user = User::factory()->create(['email' => 'so-caminho@example.com']);
+
+    Livewire::test(EditUser::class, ['record' => $user->uuid])
+        ->fillForm(['avatar' => fixtureArquivoLivewire(fixtureBytesPng(), 'atual.png')])
+        ->call('save');
+
+    $atual = $user->fresh()->avatar;
+
+    AvatarUpload::applyTo($user, ['avatar-atual' => (string) $atual->path]);
+
+    expect($user->fresh()->avatar_upload_id)->toBe($atual->id);
 });
 
 // -----------------------------------------------------------------------------

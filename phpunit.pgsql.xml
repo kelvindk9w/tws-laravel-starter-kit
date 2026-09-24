@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Suíte contra PostgreSQL de verdade (o banco de produção). O CI roda com
+    este arquivo; o phpunit.xml (SQLite em memória) continua sendo o comando
+    padrão local, que não exige banco nenhum.
+
+    Diferenças para o phpunit.xml: só DB_CONNECTION e DB_DATABASE. Host,
+    porta, usuário e senha vêm do ambiente (no container `app` do dev, do
+    .env; no CI, das variáveis do job).
+
+    O nome do banco é FORÇADO para `tws_starter_test`: a suíte apaga o banco
+    a cada execução e nunca pode apontar para o banco de desenvolvimento do
+    .env. A tests/TestCase.php recusa qualquer banco cujo nome não termine
+    em _test. Para criar o banco de teste no Postgres do docker de dev, ver
+    o README ("Testes contra o PostgreSQL").
+
+        docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
+-->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
@@ -32,13 +49,14 @@
         <env name="ARGON_TIME" value="1"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite" force="true"/>
-        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <!-- Único ponto que difere do phpunit.xml. -->
+        <env name="DB_CONNECTION" value="pgsql" force="true"/>
+        <env name="DB_DATABASE" value="tws_starter_test" force="true"/>
         <env name="DB_URL" value="" force="true"/>
         <!-- $_SERVER precisa bater com o env acima: os containers Docker injetam
              DB_* do .env via env_file, e o Laravel lê $_SERVER primeiro. -->
-        <server name="DB_CONNECTION" value="sqlite" force="true"/>
-        <server name="DB_DATABASE" value=":memory:" force="true"/>
+        <server name="DB_CONNECTION" value="pgsql" force="true"/>
+        <server name="DB_DATABASE" value="tws_starter_test" force="true"/>
         <server name="DB_URL" value="" force="true"/>
         <!-- Idem cache: o rate limiter usa a store default; Redis persistiria
              os contadores ENTRE testes, tornando-os dependentes de ordem. -->

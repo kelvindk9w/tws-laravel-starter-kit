@@ -7,8 +7,8 @@ namespace App\Core\Logging\Models;
 use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -32,7 +32,7 @@ use InvalidArgumentException;
  */
 class RequestLog extends Model
 {
-    use RoutesByUuid;
+    use HasUuids, RoutesByUuid;
 
     /**
      * Append-only: sem coluna updated_at.
@@ -84,14 +84,20 @@ class RequestLog extends Model
         ];
     }
 
+    /**
+     * Coluna preenchida automaticamente com UUID v7 na criação (HasUuids). É
+     * também o que faz a rota do /admin responder 404 — e não erro de banco —
+     * para um uuid malformado na URL (ver RoutesByUuid).
+     *
+     * @return list<string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
     protected static function booted(): void
     {
-        static::creating(function (RequestLog $log): void {
-            if (empty($log->uuid)) {
-                $log->uuid = (string) Str::uuid7();
-            }
-        });
-
         static::updating(function (RequestLog $log): void {
             if (! $log->allowLifecycleUpdate) {
                 throw AppendOnlyViolationException::updateAttempted();
