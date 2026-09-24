@@ -126,7 +126,19 @@ fallback da `APP_KEY`, defina o pepper e declare a `APP_KEY` atual em
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`
    para que continuem autenticando (e migrem no primeiro uso), ou recrie-as.
 
-## [1.1.0] — 2026-09-25
+## [1.1.1] — 2026-09-24
+
+Correção de segurança da linha 1.x (a mesma correção está em "Não publicado"
+acima, para a 2.0).
+
+### Segurança
+- Pepper vazio das chaves de API deixa de valer como pepper: vazio conta como
+  ausente e cai na `APP_KEY`; peppers anteriores e o legado do pepper vazio
+  (`API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY`, desligado por padrão) continuam
+  autenticando e migram no primeiro uso. Passo a passo de upgrade no
+  CHANGELOG da tag `v1.1.1` e em `docs/api.md`.
+
+## [1.1.0] — 2026-09-24
 
 ### Adicionado
 - `/admin` → Usuários: ação de suporte **Marcar e-mail como verificado**
@@ -218,5 +230,6 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
+[1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.0.0
