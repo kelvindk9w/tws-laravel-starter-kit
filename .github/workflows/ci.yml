@@ -64,7 +64,7 @@ jobs:
       DB_PASSWORD: tws_ci_password
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -113,7 +113,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@v2
@@ -168,7 +168,7 @@ jobs:
             dockerfile: docker/nginx/Dockerfile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
