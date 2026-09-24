@@ -208,6 +208,10 @@ tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
 
 `desenvolvimento` → `sandbox` → `producao`. Nunca commit direto nas protegidas.
 
+## Versões
+
+O histórico de mudanças por versão está em [CHANGELOG.md](CHANGELOG.md). Cada versão estável tem uma tag `vX.Y.Z` na branch `producao`.
+
 ## Licença
 
 MIT (ver LICENSE).
