@@ -106,6 +106,27 @@ return [
         'save_avatar' => 'Guardar foto',
         'save_password' => 'Cambiar contraseña de acceso',
         'save_transaction_password' => 'Cambiar contraseña de transacción',
+        'two_factor_heading' => 'Verificación en dos pasos',
+        'two_factor_hint' => 'Al iniciar sesión, además de la contraseña, pedimos un código enviado a :email. Quien descubra tu contraseña todavía no entra.',
+        'two_factor_on' => 'Activada',
+        'two_factor_off' => 'Desactivada',
+        'two_factor_enable' => 'Activar verificación en dos pasos',
+        'two_factor_disable' => 'Desactivar verificación en dos pasos',
+        'two_factor_recovery' => 'El código siempre llega al correo de la cuenta: sin acceso a él, no hay forma de completar el inicio de sesión. Mantén ese correo seguro.',
+        'two_factor_confirm_enable' => 'Para activar la verificación en dos pasos, confirma con tu contraseña de transacción y el código enviado por correo.',
+        'two_factor_confirm_disable' => 'Para desactivar la verificación en dos pasos, confirma con tu contraseña de transacción y el código enviado por correo.',
+    ],
+
+    // Confirmación de acción sensible (modal compartido del panel: contraseña
+    // de transacción → código por correo → ejecuta).
+    'sensitive' => [
+        'heading' => 'Confirmación de seguridad',
+        'password_hint' => 'Ingresa tu contraseña de transacción para recibir un código de verificación por correo.',
+        'send_code' => 'Enviar código por correo',
+        'code_hint' => 'Enviamos un código de 6 dígitos a tu correo. Expira en pocos minutos.',
+        'code' => 'Código de verificación',
+        'confirm' => 'Confirmar y ejecutar',
+        'resend_in' => 'Reenviar en :seconds s',
     ],
 
     // Proyectos (capa organizacional, solo nombre).
@@ -181,13 +202,6 @@ return [
         'copied_public' => 'Clave pública copiada.',
 
         // Flujo de acción sensible (contraseña de transacción + código por correo).
-        'sensitive_heading' => 'Confirmación de seguridad',
-        'sensitive_password_hint' => 'Ingresa tu contraseña de transacción para recibir un código de verificación por correo.',
-        'sensitive_send_code' => 'Enviar código por correo',
-        'sensitive_code_hint' => 'Enviamos un código de 6 dígitos a tu correo. Expira en pocos minutos.',
-        'sensitive_code' => 'Código de verificación',
-        'sensitive_confirm' => 'Confirmar y ejecutar',
-        'sensitive_resend_in' => 'Reenviar en :seconds s',
         'sensitive_requires_password' => 'Define tu contraseña de transacción en el Perfil antes de crear claves.',
 
         'status_active' => 'Activa',

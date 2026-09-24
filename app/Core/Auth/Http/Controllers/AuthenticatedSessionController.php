@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Http\Controllers;
 
+use App\Core\Auth\Exceptions\TwoFactorLockedException;
 use App\Core\Auth\Http\Requests\LoginRequest;
 use App\Core\Auth\Models\User;
-use App\Core\Http\SafeRedirect;
+use App\Core\Auth\Services\TwoFactorLogin;
+use App\Core\Auth\Support\PendingTwoFactorLogin;
+use App\Core\Auth\Support\PostLoginRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,9 +27,17 @@ use Illuminate\View\View;
  * - Anti-enumeração: a mesma mensagem para e-mail inexistente ou senha errada.
  * - Login regenera o ID da sessão (fixation); logout invalida e renova o
  *   token CSRF.
+ * - Verificação em duas etapas (opcional, por conta — TwoFactorLogin): com
+ *   ela ligada, a senha certa NÃO autentica; abre o estado intermediário
+ *   (PendingTwoFactorLogin), envia o código por e-mail e leva à tela do
+ *   código (TwoFactorChallengeController), que é quem conclui o login.
  */
 final class AuthenticatedSessionController
 {
+    public function __construct(
+        private readonly TwoFactorLogin $twoFactor,
+    ) {}
+
     public function create(): View
     {
         return view('auth.login');
@@ -63,29 +74,53 @@ final class AuthenticatedSessionController
         RateLimiter::clear($this->throttleKey($request));
 
         /** @var User $user */
+        return $this->completeLogin($request, $user);
+    }
+
+    /**
+     * Conclui o login: segundo fator, quando a conta tem, ou sessão
+     * autenticada direto.
+     *
+     * @throws ValidationException
+     */
+    private function completeLogin(LoginRequest $request, User $user): RedirectResponse
+    {
+        if ($this->twoFactor->enabledFor($user)) {
+            return $this->startTwoFactorChallenge($request, $user);
+        }
+
         Auth::login($user, $request->boolean('remember'));
 
         // Prevenção de session fixation.
         $request->session()->regenerate();
 
-        // O destino original passa pelo SafeRedirect, e não por
-        // `redirect()->intended()` direto. O framework grava `url.intended` a
-        // partir do `fullUrl()` da requisição que foi barrada — URL montada com
-        // o HOST, que é dado do cliente (`Host`, e `X-Forwarded-Host` quando ele
-        // é obedecido). O TrustedHosts já recusa host desconhecido antes disso,
-        // mas esta é a segunda barreira, ancorada em configuração em vez de na
-        // borda: mesmo que uma instalação alargue a lista de proxies ou ligue o
-        // `X-Forwarded-Host`, o pós-login continua só devolvendo para DENTRO da
-        // aplicação. O preço é conhecido e está documentado no SafeRedirect:
-        // instalação cuja APP_URL não bate com o endereço servido (http na
-        // configuração, https na borda) perde o deep link e cai no dashboard até
-        // declarar a origem em SECURITY_REDIRECT_ALLOWED_ORIGINS.
-        $intended = $request->session()->pull('url.intended');
+        return PostLoginRedirect::to($request);
+    }
 
-        return redirect()->to(SafeRedirect::url(
-            is_string($intended) ? $intended : null,
-            route('dashboard'),
-        ));
+    /**
+     * Senha certa numa conta com segundo fator: nada de sessão autenticada
+     * ainda. Só chega aqui quem acertou a senha de uma conta ativa — a
+     * resposta a senha errada e a e-mail inexistente continua a mesma de
+     * sempre (anti-enumeração).
+     *
+     * @throws ValidationException Conta ou IP bloqueados por códigos errados demais.
+     */
+    private function startTwoFactorChallenge(LoginRequest $request, User $user): RedirectResponse
+    {
+        try {
+            $this->twoFactor->ensureNotLocked($user, $request->ip());
+        } catch (TwoFactorLockedException $exception) {
+            throw ValidationException::withMessages(['email' => $exception->userMessage()]);
+        }
+
+        PendingTwoFactorLogin::start($request, $user, $request->boolean('remember'), $this->twoFactor->challengeTtlMinutes());
+
+        // O estado intermediário também ganha ID de sessão novo (fixation).
+        $request->session()->regenerate();
+
+        $this->twoFactor->sendCode($user);
+
+        return redirect()->route('two-factor.challenge');
     }
 
     public function destroy(Request $request): RedirectResponse

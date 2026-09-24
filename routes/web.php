@@ -9,6 +9,7 @@ use App\Core\Auth\Http\Controllers\PasswordResetLinkController;
 use App\Core\Auth\Http\Controllers\RegisteredUserController;
 use App\Core\Auth\Http\Controllers\SensitiveActionController;
 use App\Core\Auth\Http\Controllers\TransactionPasswordController;
+use App\Core\Auth\Http\Controllers\TwoFactorChallengeController;
 use App\Core\Contact\Http\Controllers\ContactController;
 use App\Core\Localization\Http\Controllers\LocaleController;
 use App\Core\Mail\Http\Controllers\MailPreviewController;
@@ -94,6 +95,19 @@ Route::middleware('guest')->group(function (): void {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:sensitive');
+
+    // Segundo passo do login (verificação em duas etapas por e-mail). Fica
+    // no `guest` porque quem está aqui AINDA NÃO está autenticado: acertou a
+    // senha e tem só o estado intermediário na sessão (PendingTwoFactorLogin).
+    Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'create'])
+        ->name('two-factor.challenge');
+    Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:sensitive');
+    Route::post('two-factor-challenge/resend', [TwoFactorChallengeController::class, 'resend'])
+        ->middleware('throttle:sensitive')
+        ->name('two-factor.resend');
+    Route::post('two-factor-challenge/cancel', [TwoFactorChallengeController::class, 'destroy'])
+        ->name('two-factor.cancel');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])

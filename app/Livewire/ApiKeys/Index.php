@@ -10,6 +10,7 @@ use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Services\SensitiveActionService;
 use App\Core\Tenancy\Models\Project;
+use App\Livewire\Concerns\ConfirmsSensitiveAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -30,6 +31,8 @@ use Livewire\Component;
  */
 final class Index extends Component
 {
+    use ConfirmsSensitiveAction;
+
     // --- Formulário de criação (inline, mesma tela) --------------------------
     public bool $showCreateForm = false;
 
@@ -65,15 +68,8 @@ final class Index extends Component
     /** @var list<string> */
     public array $editingProjectsSelection = [];
 
-    // --- Fluxo de ação sensível (modal) ------------------------------------------
-    /** Ação aguardando confirmação: 'create' | 'rotate'. */
-    public ?string $pendingAction = null;
-
-    public string $transactionPassword = '';
-
-    public string $verificationCode = '';
-
-    public bool $codeSent = false;
+    // --- Fluxo de ação sensível (modal): estado no trait ConfirmsSensitiveAction.
+    // Ações confirmáveis desta tela: 'create' | 'rotate'.
 
     /**
      * Chaves do usuário (todas — a listagem mostra também o histórico:
@@ -236,60 +232,22 @@ final class Index extends Component
 
     // =========================================================================
     // Fluxo de ação sensível: senha de transação → código por e-mail → executa
-    // (consome o SensitiveActionService — nada duplicado).
+    // (trait ConfirmsSensitiveAction + SensitiveActionService — nada duplicado).
     // =========================================================================
 
-    public function sendSensitiveCode(SensitiveActionService $sensitive): void
+    protected function performSensitiveAction(string $action, string $token): void
     {
-        $this->validate(['transactionPassword' => ['required', 'string']]);
+        // Consome o token exatamente como o middleware `sensitive.token`
+        // faria na API — a operação abaixo é a única autorizada por ele.
+        abort_unless(app(SensitiveActionService::class)->validateToken($this->user(), $token), 403);
 
-        try {
-            $sensitive->sendCode($this->user(), $this->transactionPassword);
-        } catch (ValidationException $exception) {
-            throw $this->mapSensitiveErrors($exception);
-        }
+        $apiKeys = app(ApiKeyService::class);
 
-        $this->codeSent = true;
-        $this->reset('verificationCode');
-    }
-
-    public function confirmSensitiveAction(SensitiveActionService $sensitive, ApiKeyService $apiKeys): void
-    {
-        $this->validate(['verificationCode' => ['required', 'string', 'size:6']]);
-
-        try {
-            // Código válido → token de ação sensível (uso único, curta duração).
-            $issued = $sensitive->confirmCode($this->user(), $this->verificationCode);
-
-            // Consome o token exatamente como o middleware `sensitive.token`
-            // faria na API — a operação abaixo é a única autorizada por ele.
-            abort_unless($sensitive->validateToken($this->user(), $issued['token']), 403);
-        } catch (ValidationException $exception) {
-            throw $this->mapSensitiveErrors($exception);
-        }
-
-        match ($this->pendingAction) {
+        match ($action) {
             'create' => $this->performCreate($apiKeys),
             'rotate' => $this->performRotate($apiKeys),
             default => null,
         };
-
-        $this->closeSensitiveModal();
-    }
-
-    public function cancelSensitiveAction(): void
-    {
-        $this->closeSensitiveModal();
-    }
-
-    /**
-     * Segundos restantes de cooldown de reenvio do código (UI desabilita o
-     * botão de reenvio durante a janela — mesma regra do service).
-     */
-    public function resendCooldown(): int
-    {
-        // Sem DI de método: a view chama $this->resendCooldown() diretamente.
-        return app(SensitiveActionService::class)->resendCooldownRemaining($this->user());
     }
 
     // =========================================================================
@@ -387,38 +345,6 @@ final class Index extends Component
             ->where('user_id', $this->user()->id)
             ->byUuid($uuid)
             ->firstOrFail();
-    }
-
-    private function openSensitiveModal(string $action): void
-    {
-        $this->resetValidation();
-        $this->pendingAction = $action;
-        $this->codeSent = false;
-        $this->reset('transactionPassword', 'verificationCode');
-    }
-
-    private function closeSensitiveModal(): void
-    {
-        $this->pendingAction = null;
-        $this->codeSent = false;
-        $this->reset('transactionPassword', 'verificationCode');
-    }
-
-    /**
-     * O SensitiveActionService lança erros com chaves snake_case
-     * ('transaction_password', 'code') — mapeia para os campos do modal.
-     */
-    private function mapSensitiveErrors(ValidationException $exception): ValidationException
-    {
-        $map = ['transaction_password' => 'transactionPassword', 'code' => 'verificationCode'];
-
-        $errors = [];
-
-        foreach ($exception->errors() as $key => $messages) {
-            $errors[$map[$key] ?? $key] = $messages;
-        }
-
-        return ValidationException::withMessages($errors);
     }
 
     private function user(): User

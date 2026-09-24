@@ -38,7 +38,7 @@ final class MailPreview
      */
     public static function slugs(): array
     {
-        return ['email-verification', 'verification-code', 'password-reset', 'api-key-inactivity', 'contact-message'];
+        return ['email-verification', 'verification-code', 'login-code', 'password-reset', 'api-key-inactivity', 'contact-message'];
     }
 
     /**
@@ -55,6 +55,7 @@ final class MailPreview
             try {
                 return match ($slug) {
                     'verification-code' => self::fromMailable($slug, new VerificationCodeMail('482913', VerificationPurpose::SensitiveAction)),
+                    'login-code' => self::fromMailable($slug, new VerificationCodeMail('570264', VerificationPurpose::LoginChallenge)),
                     'api-key-inactivity' => self::fromMailable($slug, new ApiKeyInactivityWarningMail(self::sampleApiKey(), 7)),
                     'contact-message' => self::fromMailable($slug, new ContactMessageMail(
                         'Marina Duarte',

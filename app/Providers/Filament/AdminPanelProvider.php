@@ -8,6 +8,7 @@ use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Security\Middleware\UseEvalBundleForAdmin;
 use App\Core\Support\BrandMark;
+use App\Filament\Auth\EmailCodeAuthentication;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Profile;
@@ -55,6 +56,12 @@ class AdminPanelProvider extends PanelProvider
             // Página própria: pré-preenche as credenciais do admin demo
             // quando o login demo está habilitado (só em local).
             ->login(Login::class)
+            // Verificação em duas etapas no login, pelo mecanismo de MFA do
+            // Filament com o MOTOR do kit: mesma preferência por conta do painel
+            // do cliente, mesmo código por e-mail e mesmos limites (ver
+            // EmailCodeAuthentication). Opcional — só pede o código de quem
+            // ligou; ligar/desligar fica no perfil (Pages\Profile).
+            ->multiFactorAuthentication([EmailCodeAuthentication::make()])
             ->brandName(platform()->name)
             // Marca: o .env sempre vence; sem ele, o kit tem uma
             // marca monocromática própria em vez de um quadrado preto.

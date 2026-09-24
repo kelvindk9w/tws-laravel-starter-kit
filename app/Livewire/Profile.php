@@ -7,9 +7,11 @@ namespace App\Livewire;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\PasswordPolicy;
 use App\Core\Auth\Services\TransactionPasswordService;
+use App\Core\Auth\Services\TwoFactorLogin;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Rules\SafeFile;
 use App\Core\Uploads\Services\SecureUploadService;
+use App\Livewire\Concerns\ConfirmsSensitiveAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -20,16 +22,21 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 /**
- * Perfil do usuário: dados, senha de login, senha de transação e
- * avatar — tudo na MESMA tela (simplicidade máxima, sem labirinto).
+ * Perfil do usuário: dados, senha de login, senha de transação, avatar e a
+ * verificação em duas etapas do login — tudo na MESMA tela (simplicidade
+ * máxima, sem labirinto).
  *
  * Reuso (sem duplicar lógica):
  * - Senha de transação → TransactionPasswordService (mesma regra do fluxo de autenticação).
  * - Avatar → SecureUploadService (função global de upload: valida
  *   o CONTEÚDO do arquivo e faz re-encode GD antes de persistir).
+ * - Verificação em duas etapas → TwoFactorLogin. Ligar e desligar são ações
+ *   sensíveis: passam pelo modal de confirmação (ConfirmsSensitiveAction) e o
+ *   token emitido é consumido pelo próprio TwoFactorLogin.
  */
 final class Profile extends Component
 {
+    use ConfirmsSensitiveAction;
     use WithFileUploads;
 
     public string $name = '';
@@ -186,10 +193,55 @@ final class Profile extends Component
         session()->flash('avatar_status', __('panel.profile.avatar_updated'));
     }
 
+    /**
+     * Abre a confirmação sensível para ligar/desligar a verificação em duas
+     * etapas. Conta que não pode (demo protegida, sem senha de transação,
+     * opção desligada na instalação) recebe o motivo em vez do modal.
+     */
+    public function requestTwoFactorToggle(TwoFactorLogin $twoFactor): void
+    {
+        $reason = $twoFactor->blockedReason($this->user());
+
+        if ($reason !== null) {
+            throw ValidationException::withMessages(['twoFactor' => $reason]);
+        }
+
+        $this->openSensitiveModal($twoFactor->enabledFor($this->user()) ? 'two_factor_disable' : 'two_factor_enable');
+    }
+
+    protected function performSensitiveAction(string $action, string $token): void
+    {
+        $twoFactor = app(TwoFactorLogin::class);
+
+        try {
+            match ($action) {
+                'two_factor_enable' => $twoFactor->enable($this->user(), $token),
+                'two_factor_disable' => $twoFactor->disable($this->user(), $token),
+                default => null,
+            };
+        } catch (ValidationException $exception) {
+            // Recusa da própria operação: aparece no passo em que a pessoa está.
+            throw ValidationException::withMessages(['sensitiveCode' => collect($exception->errors())->flatten()->all()]);
+        }
+
+        session()->flash('two_factor_status', __($action === 'two_factor_enable' ? 'auth.two_factor.enabled' : 'auth.two_factor.disabled'));
+    }
+
     public function render(): View
     {
+        $user = $this->user()->fresh(['avatar']);
+        $twoFactor = app(TwoFactorLogin::class);
+
         return view('livewire.profile', [
-            'user' => $this->user()->fresh(['avatar']),
+            'user' => $user,
+            'twoFactorAvailable' => TwoFactorLogin::available(),
+            'twoFactorEnabled' => $twoFactor->enabledFor($user),
+            'twoFactorBlockedReason' => $twoFactor->blockedReason($user),
+            'sensitiveDescription' => match ($this->pendingAction) {
+                'two_factor_enable' => __('panel.profile.two_factor_confirm_enable'),
+                'two_factor_disable' => __('panel.profile.two_factor_confirm_disable'),
+                default => null,
+            },
         ])->title(__('panel.profile.title'));
     }
 

@@ -40,6 +40,16 @@ return [
         'ignore' => 'If you did not request this action, ignore this email and consider changing your password.',
     ],
 
+    // Second-factor code for LOGIN (same code email, different purpose).
+    'login_code' => [
+        'subject' => ':platform — Your sign-in code',
+        'preheader' => 'Your sign-in code expires in :minutes minutes.',
+        'heading' => 'Your sign-in code',
+        'intro' => 'Your account password was entered correctly and one step is left to finish signing in. If it was you, use the code below. It is single-use.',
+        'expires' => 'This code expires in :minutes minutes.',
+        'ignore' => 'Wasn\'t you? Don\'t share this code with anyone and change your password now: whoever tried to sign in knows your current password.',
+    ],
+
     // Password reset (QA bug #9 — used to arrive in the framework's English).
     'email_verification' => [
         'subject' => ':platform — Confirm your email',
@@ -87,6 +97,7 @@ return [
         'emails' => [
             'email-verification' => 'Email confirmation',
             'verification-code' => 'Verification code',
+            'login-code' => 'Sign-in code (login)',
             'password-reset' => 'Password reset',
             'api-key-inactivity' => 'Inactive API key',
             'contact-message' => 'Contact form',

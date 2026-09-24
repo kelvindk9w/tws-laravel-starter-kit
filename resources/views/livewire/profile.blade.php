@@ -153,4 +153,43 @@
             </div>
         </form>
     </x-card>
+
+    {{-- Verificação em duas etapas no login (TwoFactorLogin) ---------------------
+         Depois da senha de transação de propósito: ligar e desligar são ações
+         sensíveis e dependem dela. Quem não pode mudar (conta demo protegida,
+         sem senha de transação) vê o motivo no lugar do botão. --}}
+    @if ($twoFactorAvailable)
+        <x-card :title="__('panel.profile.two_factor_heading')" :description="__('panel.profile.two_factor_hint', ['email' => $user->email])" data-two-factor-card>
+            <x-slot:actions>
+                <x-badge :color="$twoFactorEnabled ? 'green' : 'gray'" data-two-factor-status>
+                    {{ $twoFactorEnabled ? __('panel.profile.two_factor_on') : __('panel.profile.two_factor_off') }}
+                </x-badge>
+            </x-slot:actions>
+
+            @if (session('two_factor_status'))
+                <x-alert type="success" class="mb-4">{{ session('two_factor_status') }}</x-alert>
+            @endif
+
+            @if ($twoFactorBlockedReason !== null)
+                <x-alert type="info" class="mb-4" data-two-factor-blocked>{{ $twoFactorBlockedReason }}</x-alert>
+            @endif
+
+            @error('twoFactor')
+                <x-alert type="warning" class="mb-4">{{ $message }}</x-alert>
+            @enderror
+
+            <p class="text-sm text-text-muted">{{ __('panel.profile.two_factor_recovery') }}</p>
+
+            <div class="mt-4 flex justify-end">
+                <x-button type="button" :variant="$twoFactorEnabled ? 'secondary' : 'primary'"
+                          wire:click="requestTwoFactorToggle"
+                          :disabled="$twoFactorBlockedReason !== null">
+                    {{ $twoFactorEnabled ? __('panel.profile.two_factor_disable') : __('panel.profile.two_factor_enable') }}
+                </x-button>
+            </div>
+        </x-card>
+    @endif
+
+    {{-- Confirmação sensível (senha de transação → código por e-mail). --}}
+    @include('livewire.partials.sensitive-action-modal')
 </div>

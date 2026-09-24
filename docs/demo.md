@@ -138,7 +138,7 @@ corte é por **consequência**:
 
 | | Campos | Por quê |
 | --- | --- | --- |
-| **Bloqueado** | `email`, `password`, `is_admin`, `status` | mudam **quem entra e com qual poder**; trocar qualquer um derruba o acesso do próximo visitante |
+| **Bloqueado** | `email`, `password`, `is_admin`, `status`, `two_factor_enabled_at` | mudam **quem entra e com qual poder**; trocar qualquer um derruba o acesso do próximo visitante (o último é a verificação em duas etapas do login: ligada na demo, o código iria para uma caixa que ninguém lê) |
 | **Livre** | `name`, `avatar_upload_id`, `locale`, `theme`, `notification_preferences`, `transaction_password` (+ timestamps e controle) | mudam **aparência e preferências**; o pior caso é a demo aparecer com o nome que o último visitante escreveu — e o seeder devolve o original |
 
 A lista vive em `DemoAccountGuard::SENSITIVE_ATTRIBUTES` e é a **mesma nas

@@ -192,4 +192,26 @@ return [
         'token_ttl_minutes' => (int) env('AUTH_SENSITIVE_TOKEN_TTL_MINUTES', 10),
     ],
 
+    // Verificação em duas etapas no LOGIN (App\Core\Auth\Services\TwoFactorLogin).
+    // Opcional, por conta: quem liga no próprio perfil (/profile ou
+    // /admin/profile) passa a receber um código por e-mail depois da senha. O
+    // código é o do motor comum (seção `verification` acima: validade,
+    // tentativas por código e intervalo de reenvio). Ver docs/autenticacao.md.
+    'two_factor' => [
+        // A opção existe nesta instalação? Desligar ESCONDE a opção dos perfis
+        // e faz o login ignorar a preferência de quem já tinha ligado (que
+        // fica gravada e volta a valer se a flag for religada).
+        'enabled' => (bool) env('AUTH_TWO_FACTOR_ENABLED', true),
+        // Validade do estado intermediário (senha certa, código pendente), em
+        // minutos. Vencido, a pessoa volta ao login e digita a senha de novo.
+        'challenge_ttl_minutes' => (int) env('AUTH_TWO_FACTOR_CHALLENGE_TTL_MINUTES', 10),
+        // Códigos errados aceitos por CONTA e por IP (somando todos os
+        // códigos da janela) antes do bloqueio — o limite por código sozinho
+        // deixaria pedir código novo e seguir tentando.
+        'max_attempts_per_account' => (int) env('AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_ACCOUNT', 10),
+        'max_attempts_per_ip' => (int) env('AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP', 30),
+        // Duração do bloqueio (janela dos dois contadores acima), em minutos.
+        'lockout_minutes' => (int) env('AUTH_TWO_FACTOR_LOCKOUT_MINUTES', 15),
+    ],
+
 ];

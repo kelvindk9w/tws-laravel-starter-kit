@@ -57,6 +57,30 @@ return [
         'resend_cooldown' => 'Aguarde :seconds segundos para solicitar um novo código.',
     ],
 
+    // Verificação em duas etapas no LOGIN (TwoFactorLogin): tela do código,
+    // mensagens do fluxo e as recusas de ligar/desligar.
+    'two_factor' => [
+        'title' => 'Verificação em duas etapas',
+        'intro' => 'Enviamos um código de 6 dígitos para :email. Digite-o abaixo para concluir a entrada — ele vale por :minutes minutos.',
+        'code_label' => 'Código de verificação',
+        'submit' => 'Confirmar e entrar',
+        'resend' => 'Enviar outro código',
+        'resend_hint' => 'Não chegou? Confira o spam. Um código novo invalida o anterior.',
+        'cancel' => 'Voltar ao login',
+        'invalid' => 'Código incorreto. Confira o último e-mail recebido.',
+        'expired' => 'Este código expirou ou já foi usado. Peça um novo abaixo.',
+        'resend_cooldown' => 'Aguarde :seconds segundos para pedir outro código.',
+        'resent' => 'Enviamos um novo código para o seu e-mail.',
+        'cancelled' => 'Entrada cancelada. Nada foi autenticado.',
+        'challenge_expired' => 'A verificação expirou. Entre novamente com sua senha.',
+        'locked' => 'Muitos códigos incorretos. Por segurança, aguarde :minutes minuto(s) e entre novamente.',
+        'unavailable' => 'A verificação em duas etapas não está disponível nesta instalação.',
+        'demo_blocked' => 'Indisponível na conta de demonstração: ligar a verificação em duas etapas trancaria a demo para os próximos visitantes.',
+        'requires_transaction_password' => 'Defina sua senha de transação antes: ligar e desligar a verificação em duas etapas são ações sensíveis.',
+        'enabled' => 'Verificação em duas etapas ligada. A partir do próximo login, pediremos o código enviado ao seu e-mail.',
+        'disabled' => 'Verificação em duas etapas desligada. O login volta a pedir só a senha.',
+    ],
+
     // Token de ação sensível (uso único, curta duração).
     'sensitive_action' => [
         'token_issued' => 'Ação sensível autorizada. Use o token imediatamente — ele é de uso único.',

@@ -67,6 +67,13 @@ Envie sempre no idioma do DESTINATÁRIO: `Mail::to($user)->locale($user->preferr
 (o `User` implementa `HasLocalePreference`, então notificações já fazem isso
 sozinhas).
 
+**Um e-mail, duas finalidades.** O `VerificationCodeMail` (código de 6
+dígitos) serve à ação sensível e ao segundo fator do login; o texto segue a
+finalidade (`mail.verification_code.*` ou `mail.login_code.*` — este diz
+"Seu código de acesso" e avisa que recebê-lo sem ter tentado entrar
+significa que alguém tem a senha). Os dois aparecem no catálogo
+(`verification-code` e `login-code`).
+
 ## Pré-visualização (`/mail-preview`) e Mailpit
 
 `/mail-preview` lista todos os e-mails com dados de exemplo, alternando os

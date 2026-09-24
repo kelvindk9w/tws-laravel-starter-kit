@@ -57,6 +57,30 @@ return [
         'resend_cooldown' => 'Espera :seconds segundos para solicitar un nuevo código.',
     ],
 
+    // Verificación en dos pasos en el INICIO DE SESIÓN (TwoFactorLogin):
+    // pantalla del código, mensajes del flujo y los rechazos al activar/desactivar.
+    'two_factor' => [
+        'title' => 'Verificación en dos pasos',
+        'intro' => 'Enviamos un código de 6 dígitos a :email. Escríbelo abajo para completar el inicio de sesión — es válido por :minutes minutos.',
+        'code_label' => 'Código de verificación',
+        'submit' => 'Confirmar y entrar',
+        'resend' => 'Enviar otro código',
+        'resend_hint' => '¿No llegó? Revisa el spam. Un código nuevo invalida el anterior.',
+        'cancel' => 'Volver al inicio de sesión',
+        'invalid' => 'Código incorrecto. Revisa el último correo recibido.',
+        'expired' => 'Este código expiró o ya fue usado. Solicita uno nuevo abajo.',
+        'resend_cooldown' => 'Espera :seconds segundos para solicitar otro código.',
+        'resent' => 'Enviamos un nuevo código a tu correo.',
+        'cancelled' => 'Inicio de sesión cancelado. No se autenticó nada.',
+        'challenge_expired' => 'La verificación expiró. Inicia sesión de nuevo con tu contraseña.',
+        'locked' => 'Demasiados códigos incorrectos. Por seguridad, espera :minutes minuto(s) e inicia sesión de nuevo.',
+        'unavailable' => 'La verificación en dos pasos no está disponible en esta instalación.',
+        'demo_blocked' => 'No disponible en la cuenta de demostración: activar la verificación en dos pasos bloquearía la demo para los próximos visitantes.',
+        'requires_transaction_password' => 'Define primero tu contraseña de transacción: activar y desactivar la verificación en dos pasos son acciones sensibles.',
+        'enabled' => 'Verificación en dos pasos activada. Desde tu próximo inicio de sesión, pediremos el código enviado a tu correo.',
+        'disabled' => 'Verificación en dos pasos desactivada. El inicio de sesión vuelve a pedir solo la contraseña.',
+    ],
+
     // Token de acción sensible (uso único, corta duración).
     'sensitive_action' => [
         'token_issued' => 'Acción sensible autorizada. Usa el token de inmediato — es de uso único.',

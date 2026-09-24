@@ -12,4 +12,7 @@ enum VerificationPurpose: string
 {
     /** Confirmação de ação sensível (saque, rotação de chave etc.). */
     case SensitiveAction = 'sensitive_action';
+
+    /** Segundo fator do login (verificação em duas etapas por e-mail). */
+    case LoginChallenge = 'login_challenge';
 }

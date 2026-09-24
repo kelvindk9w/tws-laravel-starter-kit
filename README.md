@@ -17,8 +17,9 @@ O que já vem pronto:
 
 - **Autenticação própria** com verificação de e-mail no cadastro (link
   assinado; desligável), duas senhas (login e transação), código por
-  e-mail para ação sensível, política de senha configurável e conta
-  bloqueada perdendo acesso na próxima requisição.
+  e-mail para ação sensível, **verificação em duas etapas opcional no
+  login** (código por e-mail, no painel e no `/admin`), política de senha
+  configurável e conta bloqueada perdendo acesso na próxima requisição.
 - **API v1 por par de chaves** (pública + secreta, só hash no banco), scopes
   `recurso:acao`, rotação, expiração por inatividade e limite por chave.
 - **Trilha de requisições append-only**, gravada antes de qualquer validação,
@@ -154,8 +155,13 @@ herdar o kit ou para a infraestrutura em volta dele:
 5. **Receptor do webhook de validação cruzada no sandbox**: o contrato do
    payload está em [Backup](docs/backup.md); o endpoint que
    baixa/restaura/valida o dump é responsabilidade do projeto filho.
-6. **Canais de verificação TOTP/WhatsApp**: o contrato
-   `VerificationChannelDriver` está pronto; hoje só e-mail.
+6. **Segundo fator por app autenticador (TOTP), códigos de recuperação e
+   WhatsApp**: a verificação em duas etapas da 1.0 usa só o e-mail, e a
+   recuperação é o próprio e-mail (ver
+   [Autenticação](docs/autenticacao.md#verificação-em-duas-etapas-no-login-opcional)).
+   A evolução natural é o TOTP com códigos de recuperação de uso único — o
+   contrato `VerificationChannelDriver` e o motor `VerificationCodes` já
+   separam canal de fluxo.
 7. **IP allowlist por chave de API** (restringe de onde uma chave vazada pode
    ser usada): essencial quando existirem chaves com permissão de mover
    dinheiro.

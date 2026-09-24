@@ -57,6 +57,30 @@ return [
         'resend_cooldown' => 'Please wait :seconds seconds before requesting a new code.',
     ],
 
+    // Two-step verification at LOGIN (TwoFactorLogin): code screen, flow
+    // messages and the refusals to turn it on/off.
+    'two_factor' => [
+        'title' => 'Two-step verification',
+        'intro' => 'We sent a 6-digit code to :email. Enter it below to finish signing in — it is valid for :minutes minutes.',
+        'code_label' => 'Verification code',
+        'submit' => 'Confirm and sign in',
+        'resend' => 'Send another code',
+        'resend_hint' => 'Didn\'t get it? Check your spam folder. A new code invalidates the previous one.',
+        'cancel' => 'Back to sign in',
+        'invalid' => 'Incorrect code. Check the latest email you received.',
+        'expired' => 'This code has expired or was already used. Request a new one below.',
+        'resend_cooldown' => 'Please wait :seconds seconds before requesting another code.',
+        'resent' => 'We sent a new code to your email.',
+        'cancelled' => 'Sign-in cancelled. Nothing was authenticated.',
+        'challenge_expired' => 'The verification expired. Sign in again with your password.',
+        'locked' => 'Too many incorrect codes. For your security, wait :minutes minute(s) and sign in again.',
+        'unavailable' => 'Two-step verification is not available on this installation.',
+        'demo_blocked' => 'Not available on the demo account: turning on two-step verification would lock the demo for the next visitors.',
+        'requires_transaction_password' => 'Set your transaction password first: turning two-step verification on and off are sensitive actions.',
+        'enabled' => 'Two-step verification is on. From your next sign-in, we will ask for the code sent to your email.',
+        'disabled' => 'Two-step verification is off. Sign-in asks for your password only again.',
+    ],
+
     // Sensitive action token (single use, short-lived).
     'sensitive_action' => [
         'token_issued' => 'Sensitive action authorized. Use the token immediately — it is single-use.',

@@ -71,7 +71,7 @@ it('cria chave pela UI com 2FA completo e exibe a secreta UMA única vez', funct
         ->assertHasNoErrors()
         ->assertSet('pendingAction', 'create')
         // Passo 1: senha de transação → código por e-mail.
-        ->set('transactionPassword', 'Trans4cao!Segura')
+        ->set('sensitivePassword', 'Trans4cao!Segura')
         ->call('sendSensitiveCode')
         ->assertSet('codeSent', true);
 
@@ -79,7 +79,7 @@ it('cria chave pela UI com 2FA completo e exibe a secreta UMA única vez', funct
 
     // Passo 2: código → token de uso único consumido → chave criada.
     $component
-        ->set('verificationCode', latestSentCode())
+        ->set('sensitiveCode', latestSentCode())
         ->call('confirmSensitiveAction')
         ->assertHasNoErrors()
         ->assertSet('pendingAction', null);
@@ -114,9 +114,9 @@ it('cria chave com escopos granulares quando o toggle "todas" está desligado', 
         ->set('allScopes', false)
         ->set('selectedScopes', ['projects:read', 'uploads:create'])
         ->call('requestCreate')
-        ->set('transactionPassword', 'Trans4cao!Segura')
+        ->set('sensitivePassword', 'Trans4cao!Segura')
         ->call('sendSensitiveCode')
-        ->set('verificationCode', latestSentCode())
+        ->set('sensitiveCode', latestSentCode())
         ->call('confirmSensitiveAction')
         ->assertHasNoErrors();
 
@@ -162,9 +162,9 @@ it('rejeita senha de transação incorreta no fluxo sensível', function () {
         ->call('startCreate')
         ->set('name', 'ERP')
         ->call('requestCreate')
-        ->set('transactionPassword', 'senha-errada')
+        ->set('sensitivePassword', 'senha-errada')
         ->call('sendSensitiveCode')
-        ->assertHasErrors(['transactionPassword'])
+        ->assertHasErrors(['sensitivePassword'])
         ->assertSet('codeSent', false);
 
     expect(ApiKey::query()->count())->toBe(0);
@@ -178,11 +178,11 @@ it('rejeita código de verificação incorreto', function () {
         ->call('startCreate')
         ->set('name', 'ERP')
         ->call('requestCreate')
-        ->set('transactionPassword', 'Trans4cao!Segura')
+        ->set('sensitivePassword', 'Trans4cao!Segura')
         ->call('sendSensitiveCode')
-        ->set('verificationCode', '000000')
+        ->set('sensitiveCode', '000000')
         ->call('confirmSensitiveAction')
-        ->assertHasErrors(['verificationCode']);
+        ->assertHasErrors(['sensitiveCode']);
 
     expect(ApiKey::query()->count())->toBe(0);
 });
@@ -201,9 +201,9 @@ it('rotaciona com grace period: nova chave herda tudo e a antiga fica em transi�
         ->call('startRotate', $original->uuid)
         ->set('gracePeriodMinutes', 60)
         ->call('requestRotate')
-        ->set('transactionPassword', 'Trans4cao!Segura')
+        ->set('sensitivePassword', 'Trans4cao!Segura')
         ->call('sendSensitiveCode')
-        ->set('verificationCode', latestSentCode())
+        ->set('sensitiveCode', latestSentCode())
         ->call('confirmSensitiveAction')
         ->assertHasNoErrors();
 
@@ -304,13 +304,13 @@ it('não empilha dois modais: a confirmação de segurança substitui o de rota�
 
     // Passo 1: só o modal de rotação está na tela.
     $component->assertSee(__('panel.api_keys.rotate_title'))
-        ->assertDontSee(__('panel.api_keys.sensitive_heading'));
+        ->assertDontSee(__('panel.sensitive.heading'));
 
     // Passo 2: a confirmação de segurança abre e o de rotação SAI — antes os
     // dois ficavam sobrepostos, o de trás visível através do backdrop.
     $component->set('gracePeriodMinutes', 0)
         ->call('requestRotate')
-        ->assertSee(__('panel.api_keys.sensitive_heading'))
+        ->assertSee(__('panel.sensitive.heading'))
         ->assertDontSee(__('panel.api_keys.rotate_title'));
 
     // Cancelar a confirmação volta para o passo anterior (nada some sem aviso).

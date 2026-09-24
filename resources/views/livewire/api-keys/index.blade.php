@@ -363,60 +363,7 @@
 
     {{-- =====================================================================
          MODAL: AÇÃO SENSÍVEL (senha de transação → código por e-mail → confirma)
+         Partial compartilhado com o Perfil (trait ConfirmsSensitiveAction).
          ==================================================================== --}}
-    @if ($pendingAction)
-        <x-modal
-            id="sensitive-action"
-            :open="true"
-            dismiss="cancelSensitiveAction"
-            :title="__('panel.api_keys.sensitive_heading')"
-        >
-            @unless ($codeSent)
-                <form wire:submit="sendSensitiveCode" class="space-y-4">
-                    <p class="text-sm text-text-muted">{{ __('panel.api_keys.sensitive_password_hint') }}</p>
-
-                    <x-input
-                        :label="__('auth.ui.transaction_password_title')"
-                        name="transactionPassword"
-                        type="password"
-                        wire:model="transactionPassword"
-                        autocomplete="off"
-                        :error="$errors->first('transactionPassword')"
-                    />
-
-                    <div class="flex flex-wrap justify-end gap-2">
-                        <x-button type="button" variant="secondary" wire:click="cancelSensitiveAction">{{ __('panel.common.cancel') }}</x-button>
-                        <x-button type="submit">{{ __('panel.api_keys.sensitive_send_code') }}</x-button>
-                    </div>
-                </form>
-            @else
-                <form wire:submit="confirmSensitiveAction" class="space-y-4">
-                    <p class="text-sm text-text-muted">{{ __('panel.api_keys.sensitive_code_hint') }}</p>
-
-                    <x-input
-                        class="text-center"
-                        :label="__('panel.api_keys.sensitive_code')"
-                        name="verificationCode"
-                        wire:model="verificationCode"
-                        inputmode="numeric"
-                        maxlength="6"
-                        autocomplete="one-time-code"
-                        :error="$errors->first('verificationCode')"
-                    />
-
-                    <div class="flex flex-wrap items-center justify-end gap-2">
-                        <x-button type="button" variant="ghost" wire:click="sendSensitiveCode" :disabled="$this->resendCooldown() > 0">
-                            @if ($this->resendCooldown() > 0)
-                                {{ __('panel.api_keys.sensitive_resend_in', ['seconds' => $this->resendCooldown()]) }}
-                            @else
-                                {{ __('panel.api_keys.sensitive_send_code') }}
-                            @endif
-                        </x-button>
-                        <x-button type="button" variant="secondary" wire:click="cancelSensitiveAction">{{ __('panel.common.cancel') }}</x-button>
-                        <x-button type="submit">{{ __('panel.api_keys.sensitive_confirm') }}</x-button>
-                    </div>
-                </form>
-            @endunless
-        </x-modal>
-    @endif
+    @include('livewire.partials.sensitive-action-modal')
 </div>

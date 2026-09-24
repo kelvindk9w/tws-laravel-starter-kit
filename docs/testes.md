@@ -89,6 +89,16 @@ docker compose exec app php artisan tinker --execute='
   \App\Core\Auth\Models\User::where("email", "like", "e2e-verificacao-%@example.com")->delete();'
 ```
 
+O `two-factor.spec.js` faz a verificação em duas etapas de ponta a ponta:
+cadastra uma conta nova (`e2e-2fa-<carimbo>@example.com`), confirma o
+e-mail, define a senha de transação, **liga** o segundo fator no perfil
+(código de ação sensível lido no Mailpit), sai, entra com a senha, confere
+que o painel continua fechado no estado intermediário e conclui com o código
+de acesso lido no Mailpit. No fim ele **apaga o que criou**: a conta, pelo
+`/admin` com o super admin demo (por isso precisa do modo demo ligado), e as
+mensagens dela no Mailpit. Ele usa conta própria de propósito — ligar o
+segundo fator no `e2e@example.com` quebraria o login dos outros specs.
+
 Toda a suíte sai do mesmo IP e passa pelo limite de borda (300 requisições
 por minuto por IP — ver
 [Limite de requisições](seguranca.md#limite-de-requisições-rate-limit-e-contenção-da-trilha)).

@@ -40,6 +40,7 @@ o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenan
 | Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada; com a verificação ligada, envia o e-mail e vai à tela de aviso |
 | Verificação de e-mail | `GET /email/verify`, `POST /email/verification-notification`, `GET /email/verify/{uuid}/{hash}` | ver [Verificação de e-mail](#verificação-de-e-mail-no-cadastro) |
 | Login | `GET/POST /login` | **bloqueio por tentativas** (RateLimiter, e-mail+IP — `AUTH_LOGIN_MAX_ATTEMPTS`/`AUTH_LOGIN_LOCKOUT_MINUTES`); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
+| Segundo fator do login | `GET/POST /two-factor-challenge`, `POST /two-factor-challenge/resend`, `POST /two-factor-challenge/cancel` | só para quem ligou; ver [Verificação em duas etapas](#verificação-em-duas-etapas-no-login-opcional) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
 | Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
@@ -125,6 +126,132 @@ conta demo protegida **conta como confirmada** mesmo com a coluna zerada
 próximo visitante ficaria preso no aviso. Confirmar o e-mail da demo continua
 permitido. Com o modo demo desligado, ela é uma conta comum.
 
+## Verificação em duas etapas no login (opcional)
+
+**Cada conta decide.** No `/profile` (e no `/admin/profile`, para o admin)
+há o cartão **Verificação em duas etapas**, com o estado (ligada/desligada) e
+um botão. Com ela ligada, o login passa a ter dois passos: senha certa →
+código de 6 dígitos por e-mail → sessão.
+
+**Ligar e desligar são ações sensíveis.** O botão abre a mesma confirmação
+das chaves de API: senha de transação → código por e-mail → token de ação
+sensível de uso único. O token é conferido pelo próprio
+`App\Core\Auth\Services\TwoFactorLogin` (não só pela tela), então nenhum
+caminho troca a preferência sem ele. Conta **sem senha de transação** vê o
+motivo no cartão ("defina sua senha de transação antes") e o botão
+desabilitado — a senha de transação fica no mesmo perfil, logo acima.
+
+**O login com o segundo fator** (`AuthenticatedSessionController` →
+`TwoFactorChallengeController`):
+
+1. Senha certa numa conta ativa com o segundo fator ligado **não autentica**.
+   A sessão ganha só o **estado intermediário**
+   (`App\Core\Auth\Support\PendingTwoFactorLogin`: qual conta, se "manter
+   conectado" foi marcado, validade e uma impressão digital da senha), com ID
+   de sessão novo. O guard continua vazio: painel, formulários e ações
+   Livewire tratam a sessão como visitante.
+2. O código sai por e-mail — layout do kit, idioma do **destinatário**, fila
+   com payload criptografado, texto próprio do login ("Seu código de acesso";
+   o aviso final diz que receber o e-mail sem ter tentado entrar significa
+   que alguém tem a senha). A pessoa vai à tela do código
+   (`/two-factor-challenge`, layout do site, 3 idiomas), que oferece
+   **enviar outro código** (intervalo mínimo) e **voltar ao login**
+   (cancela: o código enviado deixa de valer).
+3. Código certo → a conta é conferida de novo (ativa?), `Auth::login` com o
+   "manter conectado" guardado no passo 1 — **o cookie de longa duração só
+   nasce depois do segundo fator** —, ID de sessão novo e o destino original
+   pelo `SafeRedirect`.
+
+O estado intermediário **deixa de valer** quando passa da validade
+(`AUTH_TWO_FACTOR_CHALLENGE_TTL_MINUTES`, padrão 10), quando a senha da conta
+muda no meio do caminho (redefinição por e-mail, troca em outra sessão) ou
+quando a conta some. A pessoa volta ao login com a explicação.
+
+**O código** é o do motor comum `App\Core\Auth\Services\VerificationCodes`
+(o mesmo da ação sensível), com finalidade própria
+(`VerificationPurpose::LoginChallenge` — um código de ação sensível não
+conclui login, e vice-versa):
+
+- só o hash no banco (Argon2id), comparação com `Hash::check`;
+- validade `AUTH_VERIFICATION_CODE_TTL_MINUTES`; código novo invalida o
+  anterior; reenvio com `AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS`;
+- **uso único** com consumo condicional no banco (`consumed_at IS NULL`):
+  duas requisições com o mesmo código certo, só uma vence;
+- **tentativas limitadas em três camadas**: por código
+  (`AUTH_VERIFICATION_CODE_MAX_ATTEMPTS` — a tentativa é reservada no banco
+  antes da conferência, então nem requisições simultâneas passam do limite),
+  por **conta** (`AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_ACCOUNT`, padrão 10 — sem
+  ele bastaria pedir código novo e seguir tentando) e por **IP**
+  (`AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP`, padrão 30), as duas últimas numa
+  janela de `AUTH_TWO_FACTOR_LOCKOUT_MINUTES` (padrão 15). Ao atingir o
+  limite, o estado intermediário acaba, o código morre e a senha certa não
+  reabre o desafio até a janela passar. As rotas ainda passam pelo
+  `throttle:sensitive`.
+
+**Sem enumeração nova.** Senha errada numa conta com o segundo fator recebe
+exatamente a resposta de sempre (`auth.failed`, mesmo destino, nenhum e-mail,
+nenhum estado na sessão) — igual a e-mail inexistente. A tela do código só
+aparece para quem acertou a senha, o mesmo que o login de um passo já
+revelava ao autenticar. Conta bloqueada/pendente continua com a recusa
+específica do login atual, antes de qualquer código; conta sem e-mail
+confirmado conclui o código e cai no aviso de verificação, como antes.
+
+**O que NÃO desliga o segundo fator:** trocar a senha no perfil e redefinir
+por e-mail. Ele existe justamente para o dia em que a senha vazou — se
+trocar a senha o desligasse, quem descobriu a senha também desligaria.
+
+**Recuperação.** O canal é o e-mail da conta, então a recuperação é o próprio
+e-mail: quem perdeu a senha redefine pelo e-mail e, no login, recebe o código
+no mesmo e-mail. **Quem perdeu o acesso ao e-mail não conclui o login** — é o
+preço de o segundo fator valer alguma coisa; o cartão do perfil avisa. O
+suporte de uma instalação pode desligar a preferência de uma conta
+verificando a identidade por fora (ex.:
+`User::whereKey($id)->update(['two_factor_enabled_at' => null])`). App
+autenticador (TOTP) e códigos de recuperação ficam para depois da 1.0 (ver
+README, "Pendências conhecidas").
+
+**`/admin` (Filament).** O login do `/admin` usa o mecanismo de MFA do
+Filament 5 (`->multiFactorAuthentication()` no `AdminPanelProvider`): a
+página troca o formulário da senha pelo do código e, depois do código,
+confere as credenciais de novo e cria a sessão com "lembrar de mim" e ID
+novo. O **provedor** é do kit (`App\Filament\Auth\EmailCodeAuthentication`),
+não o `EmailAuthentication` nativo, porque o nativo guarda o código na sessão
+sem limite de tentativas por código, manda uma notificação fora do layout,
+do idioma e da fila criptografada do kit e tem preferência e ações de
+ligar/desligar próprias, sem senha de transação. O provedor do kit usa o
+mesmo `TwoFactorLogin`: mesmo código, mesmo e-mail, mesmos limites. A página
+de login do `/admin` acrescenta a **validade** do estado intermediário e o
+botão **voltar**; o perfil do `/admin` liga/desliga com a mesma confirmação
+sensível (dois modais: senha de transação → código).
+
+**Uma preferência só (`users.two_factor_enabled_at`) para os dois
+painéis — de propósito.** O `/login` e o `/admin/login` autenticam o mesmo
+guard de sessão (`web`): quem entra por um já está dentro do outro. Com
+preferências separadas, ligar o segundo fator só no `/admin` deixaria o
+`/login` como porta dos fundos para a mesma sessão.
+
+**Contas demo.** Com o modo demo ligado, a coluna está entre os campos
+blindados (`DemoAccountGuard::SENSITIVE_ATTRIBUTES` — tela, model e gatilho
+do PostgreSQL): ligar o segundo fator numa conta de senha pública mandaria o
+código para uma caixa que ninguém lê e trancaria a demo para todos. O cartão
+explica e o botão fica desabilitado. Com o modo demo desligado, é uma conta
+comum.
+
+**Configuração** (`config/auth.php` → `two_factor`):
+
+```dotenv
+AUTH_TWO_FACTOR_ENABLED=true                 # false = opção escondida e login só com senha para todos
+AUTH_TWO_FACTOR_CHALLENGE_TTL_MINUTES=10     # validade do estado intermediário
+AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_ACCOUNT=10  # códigos errados por conta na janela
+AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP=30       # códigos errados por IP na janela
+AUTH_TWO_FACTOR_LOCKOUT_MINUTES=15           # janela/bloqueio
+```
+
+Desligar `AUTH_TWO_FACTOR_ENABLED` esconde a opção dos perfis e faz o login
+ignorar a preferência de quem já tinha ligado (ela fica gravada e volta a
+valer se a flag for religada). Sem `.env` (instalação nova, CI) os padrões
+acima valem — nada disso roda no boot.
+
 ## Ação sensível: senha de transação + código por e-mail (2FA)
 
 Fluxo (para saque, rotação de chave de API e alterações críticas):
@@ -148,6 +275,11 @@ Fluxo (para saque, rotação de chave de API e alterações críticas):
 ```php
 Route::post('/saque', ...)->middleware(['auth', 'sensitive.token']);
 ```
+
+O código (geração, hash, validade, tentativas reservadas no banco, uso único
+com consumo condicional) é do motor comum `VerificationCodes`, o mesmo do
+segundo fator do login; o token de ação sensível também é consumido com
+`UPDATE` condicional.
 
 **Canais de verificação plugáveis** (TOTP/WhatsApp futuros): contrato
 `App\Core\Auth\Contracts\VerificationChannelDriver` + `VerificationChannelManager`.
@@ -176,7 +308,14 @@ cookie, deny-by-default, logout, CSRF (419 sem token), recuperação de senha
 (`Notification::fake()`), senha de transação (definir/alterar/erros), fluxo
 completo de ação sensível (`Mail::fake()` — código válido/inválido/expirado/
 tentativas esgotadas, cooldown de reenvio, token uso único/expirado/de outro
-usuário).
+usuário), verificação em duas etapas (`TwoFactorLoginTest`: estado
+intermediário não autenticado, uso único, finalidades separadas, limites por
+código/conta/IP, validade, senha trocada e conta bloqueada no meio,
+anti-enumeração, "manter conectado" só depois do código, troca/redefinição
+de senha não desligam; `ProfileTwoFactorTest`: ligar/desligar com a
+confirmação sensível, token exigido pelo service, demo; `AdminTwoFactorTest`:
+login do Filament com o provedor do kit, voltar, validade, limites e o perfil
+do `/admin`; `VerificationCodesTest`: o motor).
 
 ## Política de senha (configurável, sem tocar em código)
 

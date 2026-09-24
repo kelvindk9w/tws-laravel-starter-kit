@@ -40,6 +40,16 @@ return [
         'ignore' => 'Se você não solicitou esta ação, ignore este e-mail e considere trocar sua senha.',
     ],
 
+    // Código do segundo fator do LOGIN (mesmo e-mail do código, outra finalidade).
+    'login_code' => [
+        'subject' => ':platform — Seu código de acesso',
+        'preheader' => 'Seu código de acesso expira em :minutes minutos.',
+        'heading' => 'Seu código de acesso',
+        'intro' => 'A senha da sua conta foi digitada corretamente e falta um passo para concluir a entrada. Se foi você, use o código abaixo. Ele é de uso único.',
+        'expires' => 'Este código expira em :minutes minutos.',
+        'ignore' => 'Não foi você? Não repasse este código a ninguém e troque sua senha agora: quem tentou entrar sabe a senha atual.',
+    ],
+
     // Recuperação de senha (bug de QA #9 — antes vinha em inglês do pacote).
     'email_verification' => [
         'subject' => ':platform — Confirme seu e-mail',
@@ -88,6 +98,7 @@ return [
         'emails' => [
             'email-verification' => 'Confirmação de e-mail',
             'verification-code' => 'Código de verificação',
+            'login-code' => 'Código de acesso (login)',
             'password-reset' => 'Redefinição de senha',
             'api-key-inactivity' => 'Chave de API inativa',
             'contact-message' => 'Formulário de contato',

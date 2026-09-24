@@ -92,6 +92,7 @@ it('recusa alterar campo sensível da conta demo', function (string $campo, mixe
     'senha de login' => ['password', 'Outra-senha-123'],
     'flag de admin' => ['is_admin', true],
     'situação (bloqueio)' => ['status', UserStatus::Blocked],
+    'verificação em duas etapas (trancaria a demo)' => ['two_factor_enabled_at', '2026-01-01 00:00:00'],
 ]);
 
 it('a exceção diz QUAL campo foi recusado (erro que se entende sem abrir o código)', function () {
@@ -256,6 +257,15 @@ describe('gatilho do PostgreSQL', function () {
             ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
 
         expect($this->demo->fresh()->status)->toBe(UserStatus::Active);
+    });
+
+    it('update em massa não liga a verificação em duas etapas da conta demo', function () {
+        DemoAccountTrigger::install();
+
+        expect(fn () => recusadoPeloBanco(fn () => User::query()->whereKey($this->demo->getKey())->update(['two_factor_enabled_at' => now()])))
+            ->toThrow(QueryException::class, 'TWS_DEMO_ACCOUNT_PROTECTED');
+
+        expect($this->demo->fresh()->two_factor_enabled_at)->toBeNull();
     });
 
     it('update em massa de campo inofensivo passa (a demo continua funcional)', function () {

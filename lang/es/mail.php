@@ -40,6 +40,16 @@ return [
         'ignore' => 'Si no solicitaste esta acción, ignora este correo y considera cambiar tu contraseña.',
     ],
 
+    // Código del segundo factor del INICIO DE SESIÓN (mismo correo de código, otra finalidad).
+    'login_code' => [
+        'subject' => ':platform — Tu código de acceso',
+        'preheader' => 'Tu código de acceso expira en :minutes minutos.',
+        'heading' => 'Tu código de acceso',
+        'intro' => 'La contraseña de tu cuenta se escribió correctamente y falta un paso para completar el inicio de sesión. Si fuiste tú, usa el código de abajo. Es de un solo uso.',
+        'expires' => 'Este código expira en :minutes minutos.',
+        'ignore' => '¿No fuiste tú? No compartas este código con nadie y cambia tu contraseña ahora: quien intentó entrar conoce tu contraseña actual.',
+    ],
+
     // Recuperación de contraseña (bug de QA #9 — antes llegaba en inglés).
     'email_verification' => [
         'subject' => ':platform — Confirma tu correo',
@@ -87,6 +97,7 @@ return [
         'emails' => [
             'email-verification' => 'Confirmación de correo',
             'verification-code' => 'Código de verificación',
+            'login-code' => 'Código de acceso (inicio de sesión)',
             'password-reset' => 'Restablecer contraseña',
             'api-key-inactivity' => 'Clave de API inactiva',
             'contact-message' => 'Formulario de contacto',
