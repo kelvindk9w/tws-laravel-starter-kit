@@ -7,9 +7,8 @@ namespace App\Filament\Resources\Users\Pages;
 use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AvatarUpload;
-use Filament\Actions\DeleteAction;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
 use Filament\Support\Exceptions\Halt;
@@ -50,11 +49,7 @@ final class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make()
-                ->label(__('admin.users.delete'))
-                ->modalHeading(__('admin.users.delete_heading'))
-                ->successNotificationTitle(__('admin.users.deleted_success'))
-                ->visible(fn (): bool => UserAdminGuard::deleteDenial($this->getRecord(), auth()->user()) === null),
+            UserResource::deleteAction(),
         ];
     }
 
@@ -82,7 +77,8 @@ final class EditUser extends EditRecord
     {
         /** @var User $record */
         if ($motivo = UserAdminGuard::updateDenial($record, $data, auth()->user())) {
-            Notification::make()->danger()->title(__('admin.users.action_denied'))->body($motivo)->send();
+            // Recusa registrada na trilha (`user.updated`, denied) e mostrada.
+            AdminAudit::denied($motivo, $record, 'updated', __('admin.users.action_denied'));
 
             throw new Halt;
         }

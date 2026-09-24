@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Configurações do sistema (super admin): ajustes operacionais
@@ -24,6 +25,10 @@ use Filament\Support\Icons\Heroicon;
  * volta ao valor do .env (o override da tabela settings é removido). Os
  * valores gravados passam a valer no próximo request (o
  * SettingsServiceProvider os aplica no boot, via cache).
+ *
+ * TRILHA DE AUDITORIA: cada chave que muda vira uma linha `setting.changed`
+ * com o de/para — quem grava é o SettingsManager (nulo = sem sobreposição,
+ * vale o .env). Chave que não mudou não gera linha.
  */
 final class Settings extends Page implements HasForms
 {
@@ -117,12 +122,15 @@ final class Settings extends Page implements HasForms
         /** @var array<string, mixed> $state */
         $state = $this->form->getState();
 
-        foreach (array_keys($settings->whitelist()) as $key) {
-            $value = $state[self::fieldName($key)] ?? null;
+        // Uma transação: as mudanças e as linhas da trilha entram juntas.
+        DB::transaction(function () use ($settings, $state): void {
+            foreach (array_keys($settings->whitelist()) as $key) {
+                $value = $state[self::fieldName($key)] ?? null;
 
-            // Vazio = remove o override (volta ao .env). Valor = grava.
-            $settings->set($key, $value === null || $value === '' ? null : (int) $value);
-        }
+                // Vazio = remove o override (volta ao .env). Valor = grava.
+                $settings->set($key, $value === null || $value === '' ? null : (int) $value);
+            }
+        });
 
         Notification::make()
             ->success()

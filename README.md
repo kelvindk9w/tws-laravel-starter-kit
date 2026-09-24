@@ -166,8 +166,9 @@ herdar o kit ou para a infraestrutura em volta dele:
    ser usada): essencial quando existirem chaves com permissão de mover
    dinheiro.
 8. **Append-only em nível de banco**: `REVOKE UPDATE, DELETE` da role da
-   aplicação no PostgreSQL de produção (a imutabilidade hoje é garantida
-   pela aplicação — ver [Logs e LGPD](docs/logs-lgpd.md#append-only)).
+   aplicação no PostgreSQL de produção para `request_logs` (a imutabilidade
+   dela hoje é garantida pela aplicação; a de `audit_events` já tem gatilho
+   no banco — ver [Logs e LGPD](docs/logs-lgpd.md#append-only)).
 9. **E-mail autenticado (operação, não código)**: SPF/DKIM/DMARC no domínio
    de envio — sem isso, e-mail com código de verificação é fácil de forjar.
 10. **Octane/FrankenPHP**: reavaliar só com volume relevante e auditoria de

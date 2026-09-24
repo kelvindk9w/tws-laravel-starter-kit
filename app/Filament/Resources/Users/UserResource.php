@@ -13,6 +13,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Support\MarkEmailVerifiedAction;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
+use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\AvatarUpload;
 use App\Filament\Support\BaseResource;
@@ -279,9 +280,10 @@ final class UserResource extends BaseResource
                     ->modalDescription(fn (User $record): string => __('admin.users.block_warning', ['email' => $record->email]))
                     ->action(function (User $record): void {
                         // Guardas de servidor: conta demo, a própria conta e
-                        // o último admin ativo não podem ser bloqueados.
+                        // o último admin ativo não podem ser bloqueados. A
+                        // recusa fica na trilha (`user.blocked`, denied).
                         if ($motivo = UserAdminGuard::blockDenial($record, auth()->user())) {
-                            Notification::make()->danger()->title($motivo)->send();
+                            AdminAudit::denied($motivo, $record, 'blocked');
 
                             return;
                         }
@@ -298,7 +300,7 @@ final class UserResource extends BaseResource
                     ->modalHeading(__('admin.users.unblock_heading'))
                     ->action(function (User $record): void {
                         if ($record->isDemo()) {
-                            Notification::make()->danger()->title(__('admin.users.demo_protected'))->send();
+                            AdminAudit::denied(__('admin.users.demo_protected'), $record, 'unblocked');
 
                             return;
                         }
@@ -308,21 +310,30 @@ final class UserResource extends BaseResource
                         Notification::make()->success()->title(__('admin.users.unblocked_success'))->send();
                     }),
                 MarkEmailVerifiedAction::make(),
-                DeleteAction::make()
-                    ->label(__('admin.users.delete'))
-                    ->modalHeading(__('admin.users.delete_heading'))
-                    ->modalDescription(fn (User $record): string => __('admin.users.delete_warning', ['email' => $record->email]))
-                    ->successNotificationTitle(__('admin.users.deleted_success'))
-                    // Some quando proibido E é recusada no servidor (before).
-                    ->visible(fn (User $record): bool => UserAdminGuard::deleteDenial($record, auth()->user()) === null)
-                    ->before(function (User $record, DeleteAction $action): void {
-                        if ($motivo = UserAdminGuard::deleteDenial($record, auth()->user())) {
-                            Notification::make()->danger()->title(__('admin.users.action_denied'))->body($motivo)->send();
-
-                            $action->cancel();
-                        }
-                    }),
+                self::deleteAction(),
             ]);
+    }
+
+    /**
+     * Excluir usuário — a MESMA definição na listagem e na edição, para a
+     * guarda não existir só num dos lados. Some quando proibido E é recusada
+     * no servidor (before), com a tentativa registrada na trilha.
+     */
+    public static function deleteAction(): DeleteAction
+    {
+        return DeleteAction::make()
+            ->label(__('admin.users.delete'))
+            ->modalHeading(__('admin.users.delete_heading'))
+            ->modalDescription(fn (User $record): string => __('admin.users.delete_warning', ['email' => $record->email]))
+            ->successNotificationTitle(__('admin.users.deleted_success'))
+            ->visible(fn (User $record): bool => UserAdminGuard::deleteDenial($record, auth()->user()) === null)
+            ->before(function (User $record, DeleteAction $action): void {
+                if ($motivo = UserAdminGuard::deleteDenial($record, auth()->user())) {
+                    AdminAudit::denied($motivo, $record, 'deleted', __('admin.users.action_denied'));
+
+                    $action->cancel();
+                }
+            });
     }
 
     public static function infolist(Schema $schema): Schema

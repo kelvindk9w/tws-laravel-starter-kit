@@ -9,10 +9,28 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Adicionado
 - `/admin` → Usuários: ação de suporte **Marcar e-mail como verificado**
   (listagem, cards e detalhe; só para conta não verificada, nunca para conta
-  demo, com confirmação e registrada na trilha como ação de admin) e filtro
+  demo, com confirmação e registrada na trilha de auditoria) e filtro
   **E-mail verificado: sim/não**.
-- Linha `admin.action` na trilha de arquivo para ações de admin
-  (`AdminAuditTrail`), com o mesmo `correlation_id` da linha do banco.
+- **Trilha de auditoria de ações no banco** (`audit_events`, append-only):
+  toda escrita do `/admin` — usuários (criar, editar, excluir, bloquear,
+  desbloquear, marcar e-mail verificado), 2FA do próprio admin, chaves de
+  API, produtos, configurações (chave e de/para) e perfil — e o
+  `user:make-admin` (contexto `console`) gravam quem agiu, o registro
+  afetado, o antes/depois redigido (nunca senha, hash, token ou código;
+  e-mail e nome mascarados), IP, User-Agent e o `correlation_id` da linha
+  de `request_logs`. Tentativas recusadas pelas guardas ficam como
+  `denied`. A captura é central (`AdminAudit` + `AuditTrail`): resource
+  novo já nasce auditado, e um teste de arquitetura reprova escrita que
+  escapa da trilha. Falha fechada: o painel roda Actions e Criar/Salvar em
+  transação, e sem a linha da trilha a mudança é desfeita.
+- Tela **Auditoria** no `/admin` (somente leitura, pt-BR/en/es): filtros por
+  ação, resultado, origem, quem agiu, registro afetado e período; detalhe
+  com o resumo mascarado e link para a requisição.
+- Retenção da trilha por `AUDIT_RETENTION_DAYS` (padrão 365; 0 = não poda),
+  com poda diária `audit:prune` — a única remoção aceita; no PostgreSQL um
+  gatilho recusa UPDATE/TRUNCATE e DELETE fora da poda.
+- Segunda camada no arquivo: linha `audit.event` (depois do commit) e
+  `audit.persist_failed`, no lugar da antiga `admin.action`.
 
 ### Alterado
 - Dependências: Filament 5.8.4, Laravel 13.33.0, Horizon 5.50.0,

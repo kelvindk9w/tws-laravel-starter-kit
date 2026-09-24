@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Services\SensitiveActionService;
 use App\Core\Auth\Services\TwoFactorLogin;
+use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AvatarUpload;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -39,6 +41,13 @@ use Illuminate\Validation\ValidationException;
  *   transação + código por e-mail (SensitiveActionService) e o token emitido é
  *   consumido pelo próprio TwoFactorLogin. Em dois modais encadeados: senha →
  *   código. A conta demo protegida vê o motivo e o botão desabilitado.
+ *
+ * TRILHA DE AUDITORIA: salvar o perfil vira `user.updated` (nome mascarado)
+ * e ligar/desligar vira `user.two_factor_enabled`/`user.two_factor_disabled`
+ * — pela captura central do /admin (AdminAudit). Toda recusa (senha de
+ * transação errada, código errado, conta demo) fica registrada como
+ * `denied` com o motivo: é o sinal de alguém tentando mexer no segundo fator
+ * de uma sessão que não é a dele.
  */
 final class Profile extends Page implements HasForms
 {
@@ -122,15 +131,16 @@ final class Profile extends Page implements HasForms
             ->modalSubmitActionLabel(__('panel.sensitive.send_code'))
             ->action(function (array $data): void {
                 $reason = app(TwoFactorLogin::class)->blockedReason($this->user());
+                $verb = $this->twoFactorVerb(! $this->twoFactorEnabled());
 
                 if ($reason !== null) {
-                    $this->refuse($reason);
+                    $this->refuse($reason, $verb);
                 }
 
                 try {
                     app(SensitiveActionService::class)->sendCode($this->user(), (string) ($data['transaction_password'] ?? ''));
                 } catch (ValidationException $exception) {
-                    $this->refuse($this->firstMessage($exception));
+                    $this->refuse($this->firstMessage($exception), $verb);
                 }
 
                 $this->replaceMountedAction('confirmTwoFactor');
@@ -156,6 +166,9 @@ final class Profile extends Page implements HasForms
                 $user = $this->user();
                 $enabling = ! $twoFactor->enabledFor($user);
 
+                // A mesma Action liga e desliga: o nome na trilha depende do estado.
+                AdminAudit::describeAs($this->twoFactorVerb($enabling));
+
                 try {
                     $issued = app(SensitiveActionService::class)->confirmCode($user, (string) ($data['code'] ?? ''));
 
@@ -163,7 +176,7 @@ final class Profile extends Page implements HasForms
                         ? $twoFactor->enable($user, $issued['token'])
                         : $twoFactor->disable($user, $issued['token']);
                 } catch (ValidationException $exception) {
-                    $this->refuse($this->firstMessage($exception));
+                    $this->refuse($this->firstMessage($exception), $this->twoFactorVerb($enabling));
                 }
 
                 Notification::make()
@@ -196,9 +209,13 @@ final class Profile extends Page implements HasForms
         /** @var User $user */
         $user = auth()->user();
 
-        $user->forceFill(['name' => $state['name']])->save();
+        // Uma transação: a linha da trilha (user.updated) e a mudança entram
+        // juntas ou não entram (ver AuditTrail — falha fechada).
+        DB::transaction(function () use ($user, $state): void {
+            $user->forceFill(['name' => $state['name']])->save();
 
-        AvatarUpload::applyTo($user, $state['avatar'] ?? null);
+            AvatarUpload::applyTo($user, $state['avatar'] ?? null);
+        });
 
         Notification::make()
             ->success()
@@ -207,15 +224,21 @@ final class Profile extends Page implements HasForms
     }
 
     /**
-     * Recusa com o motivo na tela e mantém o modal aberto.
+     * Recusa com o motivo na tela, registra a tentativa na trilha e mantém o
+     * modal aberto.
      */
-    private function refuse(string $message): never
+    private function refuse(string $message, string $verb): never
     {
-        Notification::make()->danger()->title($message)->send();
+        AdminAudit::denied($message, $this->user(), $verb);
 
         // Mesmo efeito de $action->halt(), escrito como `throw` para o
         // retorno `never` ficar explícito.
         throw new Halt;
+    }
+
+    private function twoFactorVerb(bool $enabling): string
+    {
+        return $enabling ? 'two_factor_enabled' : 'two_factor_disabled';
     }
 
     private function firstMessage(ValidationException $exception): string

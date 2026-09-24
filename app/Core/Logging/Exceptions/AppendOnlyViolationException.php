@@ -7,12 +7,15 @@ namespace App\Core\Logging\Exceptions;
 use RuntimeException;
 
 /**
- * Violação da imutabilidade do request log (logs append-only).
+ * Violação da imutabilidade de uma trilha append-only.
  *
- * Lançada quando código da aplicação tenta UPDATE ou DELETE arbitrário
- * em request_logs via Eloquent. As únicas mutações permitidas são as
- * transições controladas de ciclo de vida (RequestLog::markFinished()
- * e RequestLog::bindTenant()).
+ * Lançada quando código da aplicação tenta UPDATE ou DELETE arbitrário:
+ * - em request_logs via Eloquent — as únicas mutações permitidas são as
+ *   transições controladas de ciclo de vida (RequestLog::markFinished()
+ *   e RequestLog::bindTenant());
+ * - em audit_events, por model OU por query em massa — nenhuma alteração
+ *   é permitida, e a única remoção é a poda por idade do comando
+ *   `audit:prune` (AuditEvent::pruneOlderThan()).
  */
 final class AppendOnlyViolationException extends RuntimeException
 {
@@ -27,5 +30,18 @@ final class AppendOnlyViolationException extends RuntimeException
     public static function deleteAttempted(): self
     {
         return new self('request_logs é append-only: DELETE é proibido (trilha de auditoria imutável).');
+    }
+
+    public static function auditUpdateAttempted(): self
+    {
+        return new self('audit_events é append-only: UPDATE é proibido (trilha de auditoria imutável).');
+    }
+
+    public static function auditDeleteAttempted(): self
+    {
+        return new self(
+            'audit_events é append-only: DELETE é proibido. '
+            .'A única remoção permitida é a poda por idade do comando audit:prune (AuditEvent::pruneOlderThan()).',
+        );
     }
 }

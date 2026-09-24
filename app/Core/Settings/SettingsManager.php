@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Settings;
 
+use App\Core\Audit\AuditTrail;
 use App\Core\Settings\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
@@ -76,12 +77,19 @@ final class SettingsManager
 
     /**
      * Grava (ou remove, com null) uma sobreposição. Fora da whitelist = exceção.
+     *
+     * Toda mudança EFETIVA fica na trilha de auditoria como `setting.changed`,
+     * com a chave e o de/para da sobreposição (nulo = sem sobreposição, vale o
+     * .env). Gravar o mesmo valor não gera linha. O ator e o contexto vêm do
+     * escopo aberto (o /admin, um comando) — ver AuditTrail.
      */
     public function set(string $key, ?int $value): void
     {
         if (! array_key_exists($key, (array) config('settings.overrides', []))) {
             throw new InvalidArgumentException("Chave de configuração não permitida: {$key}");
         }
+
+        $before = $this->all()[$key] ?? null;
 
         if ($value === null) {
             Setting::query()->where('key', $key)->delete();
@@ -90,6 +98,14 @@ final class SettingsManager
         }
 
         Cache::forget($this->cacheKey());
+
+        if ($before !== $value) {
+            app(AuditTrail::class)->record(
+                action: 'setting.changed',
+                changes: [$key => ['before' => $before, 'after' => $value]],
+                subjectType: 'setting',
+            );
+        }
     }
 
     /**

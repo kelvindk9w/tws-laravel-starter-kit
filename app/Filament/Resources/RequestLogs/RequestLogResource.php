@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RequestLogs;
 
+use App\Core\Audit\Models\AuditEvent;
 use App\Core\Identifiers\UuidColumn;
 use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
+use App\Filament\Resources\AuditEvents\AuditEventResource;
 use App\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
@@ -289,6 +291,22 @@ final class RequestLogResource extends BaseResource
         return $schema
             ->components([
                 TextEntry::make('correlation_id')->label('Correlation ID')->copyable(),
+                // Ações de negócio que esta requisição executou (trilha de
+                // auditoria, ligada pelo mesmo correlation_id). Some quando
+                // a requisição não fez nenhuma.
+                TextEntry::make('audit_actions')
+                    ->label(__('admin.audit.view_actions'))
+                    ->getStateUsing(fn (RequestLog $record): int => AuditEvent::query()
+                        ->where('correlation_id', $record->correlation_id)
+                        ->count())
+                    ->visible(fn (RequestLog $record): bool => AuditEvent::query()
+                        ->where('correlation_id', $record->correlation_id)
+                        ->exists())
+                    ->badge()
+                    ->color('info')
+                    ->url(fn (RequestLog $record): string => AuditEventResource::getUrl('index', [
+                        'filters' => ['correlation_id' => ['value' => $record->correlation_id]],
+                    ])),
                 TextEntry::make('client_correlation_id')
                     ->label(__('admin.request_logs.client_correlation'))
                     ->helperText(__('admin.request_logs.client_correlation_hint'))

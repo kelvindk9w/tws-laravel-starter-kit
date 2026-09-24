@@ -12,6 +12,7 @@ use App\Filament\Auth\EmailCodeAuthentication;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Profile;
+use App\Filament\Support\AdminAudit;
 use App\Filament\Support\InitialsAvatarProvider;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -47,6 +48,15 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  */
 class AdminPanelProvider extends PanelProvider
 {
+    /**
+     * Trilha de auditoria de ações: toda chamada Livewire de componente do
+     * painel roda com um escopo de auditoria aberto — ver AdminAudit.
+     */
+    public function boot(): void
+    {
+        AdminAudit::register();
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -56,6 +66,13 @@ class AdminPanelProvider extends PanelProvider
             // Página própria: pré-preenche as credenciais do admin demo
             // quando o login demo está habilitado (só em local).
             ->login(Login::class)
+            // Toda Action e todo Criar/Salvar do painel roda numa transação.
+            // É o que faz a trilha de auditoria falhar FECHADA: a linha de
+            // `audit_events` é gravada dentro da mesma transação da mudança,
+            // e se ela não puder ser gravada a mudança é desfeita (ver
+            // App\Core\Audit\AuditTrail). Halt/Cancel (recusa de guarda)
+            // confirmam a transação — a tentativa recusada fica registrada.
+            ->databaseTransactions()
             // Verificação em duas etapas no login, pelo mecanismo de MFA do
             // Filament com o MOTOR do kit: mesma preferência por conta do painel
             // do cliente, mesmo código por e-mail e mesmos limites (ver

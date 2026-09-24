@@ -36,6 +36,14 @@ Schedule::command('queue:prune-failed', ['--hours' => (int) config('queue.failed
     ->withoutOverlapping()
     ->onOneServer();
 
+// Poda da trilha de auditoria de ações (`audit_events`): a ÚNICA remoção
+// que a tabela append-only aceita (ver PruneAuditEvents). Janela em
+// audit.retention_days (AUDIT_RETENTION_DAYS, padrão 365 dias; 0 = não poda).
+Schedule::command('audit:prune')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('backup:run --only-db')
     ->cron((string) env('BACKUP_RUN_CRON', '0 * * * *'))
     ->withoutOverlapping()

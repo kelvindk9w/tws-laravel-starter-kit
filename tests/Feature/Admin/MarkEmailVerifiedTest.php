@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Core\Audit\AuditTrail;
+use App\Core\Audit\Enums\AuditContext;
+use App\Core\Audit\Enums\AuditOutcome;
+use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Support\MarkEmailVerifiedAction;
 use App\Filament\Resources\Users\Support\UserAdminGuard;
-use App\Filament\Support\AdminAuditTrail;
 use App\Filament\Support\CardActions;
 use App\Filament\Support\ViewModeToggle;
 use Filament\Actions\Testing\TestAction;
@@ -21,9 +24,10 @@ use Livewire\Livewire;
 // detalhe do usuário) e o filtro "E-mail verificado" da listagem.
 //
 // Regras: só aparece para conta NÃO verificada; conta demo fica de fora (some
-// e é recusada no servidor); pede confirmação; dispara `Verified`; registra a
-// linha `admin.action` na trilha (canal request_log) com a correlação da
-// requisição, sem dado pessoal.
+// e é recusada no servidor); pede confirmação; dispara `Verified`; fica na
+// trilha de auditoria do BANCO (`audit_events`, pela captura central do
+// /admin) e, depois do commit, na linha `audit.event` do arquivo — as duas
+// com a correlação da requisição e sem dado pessoal. A recusa também fica.
 // =============================================================================
 
 beforeEach(function () {
@@ -170,7 +174,28 @@ it('marca o e-mail como verificado pelo detalhe e a ação some em seguida', fun
         ->assertActionHidden(MarkEmailVerifiedAction::NAME);
 });
 
-it('registra a ação na trilha como ação de admin, sem dado pessoal', function () {
+it('registra a ação na trilha de auditoria do banco, com o antes/depois e sem dado pessoal', function () {
+    $pendente = User::factory()->unverified()->create(['email' => 'suporte-alvo@example.com']);
+
+    Livewire::test(ListUsers::class)
+        ->callTableAction(MarkEmailVerifiedAction::NAME, $pendente);
+
+    $evento = AuditEvent::query()->where('action', MarkEmailVerifiedAction::AUDIT_ACTION)->sole();
+
+    expect($evento->outcome)->toBe(AuditOutcome::Success)
+        ->and($evento->context)->toBe(AuditContext::Admin)
+        ->and($evento->actor_uuid)->toBe($this->admin->uuid)
+        ->and($evento->actor_is_admin)->toBeTrue()
+        ->and($evento->subject_type)->toBe('user')
+        ->and($evento->subject_uuid)->toBe($pendente->uuid)
+        ->and($evento->correlation_id)->toBeString()->not->toBeEmpty()
+        ->and(array_keys($evento->changes))->toBe(['email_verified_at'])
+        ->and($evento->changes['email_verified_at']['before'])->toBeNull()
+        ->and($evento->changes['email_verified_at']['after'])->toBeString()
+        ->and(json_encode($evento->getAttributes()))->not->toContain('suporte-alvo@example.com');
+});
+
+it('depois do commit, a mesma ação vira a linha audit.event no arquivo, só com os nomes dos campos', function () {
     $linhas = captureRequestLogChannel();
 
     $pendente = User::factory()->unverified()->create(['email' => 'suporte-alvo@example.com']);
@@ -178,23 +203,26 @@ it('registra a ação na trilha como ação de admin, sem dado pessoal', functio
     Livewire::test(ListUsers::class)
         ->callTableAction(MarkEmailVerifiedAction::NAME, $pendente);
 
-    $registro = collect($linhas)->firstWhere('message', AdminAuditTrail::MESSAGE);
+    $registro = collect($linhas)->firstWhere('message', AuditTrail::LOG_MESSAGE);
+    $evento = AuditEvent::query()->where('action', MarkEmailVerifiedAction::AUDIT_ACTION)->sole();
 
     expect($registro)->not->toBeNull()
         ->and($registro['level'])->toBe('notice')
         ->and($registro['context'])->toMatchArray([
             'action' => MarkEmailVerifiedAction::AUDIT_ACTION,
+            'outcome' => 'success',
+            'context' => 'admin',
             'actor_uuid' => $this->admin->uuid,
-            'target_type' => 'User',
-            'target_uuid' => $pendente->uuid,
+            'subject_type' => 'user',
+            'subject_uuid' => $pendente->uuid,
+            'fields' => ['email_verified_at'],
+            'correlation_id' => $evento->correlation_id,
+            'audit_uuid' => $evento->uuid,
         ])
-        ->and($registro['context']['correlation_id'])->toBeString()->not->toBeEmpty()
         ->and(json_encode($registro))->not->toContain('suporte-alvo@example.com');
 });
 
 it('confirmação que chega depois de outro admin já ter verificado não regrava nem registra', function () {
-    $linhas = captureRequestLogChannel();
-
     $pendente = User::factory()->unverified()->create();
 
     // O modal abre com a conta ainda pendente...
@@ -209,33 +237,35 @@ it('confirmação que chega depois de outro admin já ter verificado não regrav
     $pagina->callMountedTableAction();
 
     expect($pendente->fresh()->email_verified_at->equalTo($verificadoEm))->toBeTrue()
-        ->and(collect($linhas)->where('message', AdminAuditTrail::MESSAGE))->toBeEmpty();
+        ->and(AuditEvent::query()->where('subject_uuid', $pendente->uuid)->exists())->toBeFalse();
 });
 
-it('a execução reconfere a guarda no servidor, mesmo chamada fora da tela', function () {
+it('a execução reconfere a guarda no servidor, mesmo chamada fora da tela — e a recusa fica na trilha', function () {
     // Segunda barreira: se a ação for reaproveitada com outra regra de
     // visibilidade, a própria execução ainda recusa conta demo.
     config()->set('ui.demo_login.enabled', false);
-    $linhas = captureRequestLogChannel();
 
     $demo = User::factory()->unverified()->create(['email' => config('ui.demo_login.email')]);
 
     MarkEmailVerifiedAction::make()->record($demo)->call();
 
+    $recusa = AuditEvent::query()->where('subject_uuid', $demo->uuid)->sole();
+
     expect($demo->fresh()->email_verified_at)->toBeNull()
-        ->and(collect($linhas)->where('message', AdminAuditTrail::MESSAGE))->toBeEmpty();
+        ->and($recusa->action)->toBe(MarkEmailVerifiedAction::AUDIT_ACTION)
+        ->and($recusa->outcome)->toBe(AuditOutcome::Denied)
+        ->and($recusa->reason)->toBe(__('admin.users.demo_protected'))
+        ->and($recusa->changes)->toBeNull();
 });
 
 it('a execução não regrava a data de quem já está verificado, mesmo chamada fora da tela', function () {
-    $linhas = captureRequestLogChannel();
-
     $verificadoEm = now()->subMonth()->startOfSecond();
     $verificado = User::factory()->create(['email_verified_at' => $verificadoEm]);
 
     MarkEmailVerifiedAction::make()->record($verificado)->call();
 
     expect($verificado->fresh()->email_verified_at->equalTo($verificadoEm))->toBeTrue()
-        ->and(collect($linhas)->where('message', AdminAuditTrail::MESSAGE))->toBeEmpty();
+        ->and(AuditEvent::query()->where('subject_uuid', $verificado->uuid)->exists())->toBeFalse();
 });
 
 // -----------------------------------------------------------------------------

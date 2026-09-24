@@ -101,8 +101,8 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   bloquear/desbloquear e excluir; senha com confirmação sob a MESMA política
   do registro público; ação de suporte **Marcar e-mail como verificado** na
   listagem e no detalhe — só para conta não verificada, com confirmação,
-  registrada na trilha (`AdminAuditTrail`) — e filtro **E-mail verificado:
-  sim/não**; guardas de servidor no `UserAdminGuard`: contas demo
+  registrada na trilha de auditoria de ações como
+  `user.email_marked_verified` — e filtro **E-mail verificado: sim/não**; guardas de servidor no `UserAdminGuard`: contas demo
   intocáveis, o admin não se exclui nem se bloqueia e o último admin ativo
   não perde a flag/acesso; `UserSeeder` idempotente com 40 usuários
   realistas para paginação e filtros nascerem com conteúdo),
@@ -116,7 +116,20 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   landing**, origem `contact`, a única com remetente identificado),
   Request Logs (auditoria de API
   + web + admin, com filtros de status/tenant/endpoint/período — logs órfãos,
-  sem tenant, destacados em vermelho) e Uploads.
+  sem tenant, destacados em vermelho), **Auditoria** (a trilha de AÇÕES —
+  somente leitura, ver abaixo) e Uploads.
+- **Trilha de auditoria de ações** (`/admin/audit-events`): **toda** escrita
+  do painel — criar/editar/excluir usuário, bloquear/desbloquear, marcar
+  e-mail verificado, ligar/desligar o 2FA do próprio admin, revogar chave,
+  criar/editar/excluir produto, salvar configurações (uma linha por chave,
+  com o de/para), salvar o perfil — vira uma linha em `audit_events` com
+  quem agiu, o registro afetado e o antes/depois já mascarado. As tentativas
+  recusadas pelas guardas (conta demo, excluir a si mesmo, último admin,
+  senha de transação errada) também, como **Recusada**. A tela filtra por
+  ação, resultado, origem, quem agiu, registro afetado e período, alterna
+  tabela/cards como as demais e liga cada linha à requisição da trilha de
+  requisições pelo `correlation_id`. Regras, redação e retenção em
+  [Logs e LGPD](logs-lgpd.md#trilha-de-auditoria-de-ações-audit_events).
 - **Menu do usuário**: avatar (foto de perfil de quem subiu uma — o mesmo
   Upload validado pelo [módulo de uploads](uploads.md) —, senão as **iniciais** desenhadas localmente em
   SVG `data:`, sem CDN de avatar), Perfil, **alternador de tema**
@@ -522,6 +535,20 @@ final class FaturaResource extends BaseResource
 5. **O teste** — em `tests/Feature/Admin/`, com `Livewire::test(ListFaturas::class)`
    validando **conteúdo** (registros visíveis, filtro que filtra, ação que
    age), não só status HTTP.
+
+**A auditoria vem de graça.** Toda escrita da tela nova (CreateAction,
+EditAction, DeleteAction, Action customizada que faz `->save()`) já grava
+em `audit_events` — quem registra é a base (`AdminAudit`), não o resource.
+O nome da ação sai do nome da Action (`Action::make('archive')` →
+`fatura.archive`; os verbos comuns estão em `AdminAudit::VERBS`). Duas
+regras, cobradas pelo teste de arquitetura:
+
+- **escreva pelo model** (`$record->save()`, `->update()`, `->delete()`):
+  `DB::`, query em massa (`Fatura::where(...)->update()`), `*Quietly()` e
+  `withoutEvents()` não disparam evento e reprovam o build;
+- **recuse com `AdminAudit::denied($motivo, $record)`**: registra a
+  tentativa como Recusada e mostra a notificação. `Notification::make()
+  ->danger()` à mão reprova o build.
 
 Ajustes finos disponíveis por propriedade estática: `$defaultSortColumn` /
 `$defaultSortDirection` (`null` na coluna = o resource ordena sozinho, como

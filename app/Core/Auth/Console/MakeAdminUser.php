@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Console;
 
+use App\Core\Audit\AuditScope;
+use App\Core\Audit\AuditTrail;
 use App\Core\Auth\Exceptions\DemoAccountProtectedException;
 use App\Core\Auth\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Promoção/rebaixamento de super admin (acesso ao /admin).
@@ -22,6 +25,12 @@ use Illuminate\Console\Command;
  * Promover também marca o e-mail como confirmado (quem promove é o operador;
  * ver docs/autenticacao.md, "Verificação de e-mail").
  *
+ * TRILHA DE AUDITORIA (contexto `console`): promover grava
+ * `user.admin_granted` e rebaixar `user.admin_revoked`, com o antes/depois da
+ * flag; a recusa da conta demo grava a mesma ação com `denied`. Sem usuário
+ * da aplicação para ser o ator, a linha leva o comando e o usuário do sistema
+ * operacional no lugar do User-Agent (AuditScope::console).
+ *
  * Uso:
  *   php artisan user:make-admin email@exemplo.com          → promove
  *   php artisan user:make-admin email@exemplo.com --remove → rebaixa
@@ -32,18 +41,31 @@ final class MakeAdminUser extends Command
 
     protected $description = 'Concede (ou revoga, com --remove) o acesso de super admin a um usuário';
 
-    public function handle(): int
+    public function handle(AuditTrail $trail): int
+    {
+        $remove = (bool) $this->option('remove');
+        $verb = $remove ? 'admin_revoked' : 'admin_granted';
+
+        return $trail->within(
+            AuditScope::console('user:make-admin'.($remove ? ' --remove' : ''), $verb),
+            fn (): int => $this->apply($trail, $remove, $verb),
+        );
+    }
+
+    private function apply(AuditTrail $trail, bool $remove, string $verb): int
     {
         /** @var User|null $user */
         $user = User::query()->where('email', $this->argument('email'))->first();
 
         if ($user === null) {
+            // O e-mail digitado NÃO vai para a trilha (dado pessoal de
+            // alguém que talvez nem tenha conta): só o fato da recusa.
+            $trail->denied('user.'.$verb, null, __('admin.command.user_not_found'), subjectType: 'user');
+
             $this->error(__('admin.command.user_not_found'));
 
             return self::FAILURE;
         }
-
-        $remove = (bool) $this->option('remove');
 
         try {
             // Promovido por quem opera o servidor: o e-mail passa a contar
@@ -56,8 +78,11 @@ final class MakeAdminUser extends Command
                 $changes['email_verified_at'] = now();
             }
 
-            $user->forceFill($changes)->save();
+            // Mudança e linha da trilha na mesma transação (falha fechada).
+            DB::transaction(fn (): bool => $user->forceFill($changes)->save());
         } catch (DemoAccountProtectedException $exception) {
+            $trail->denied('user.'.$verb, $user, __('admin.command.demo_protected', ['email' => (string) $user->email]));
+
             $this->error(__('admin.command.demo_protected', ['email' => (string) $user->email]));
             $this->line($exception->getMessage());
 
