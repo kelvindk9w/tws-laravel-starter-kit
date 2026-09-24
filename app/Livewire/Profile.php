@@ -8,6 +8,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Auth\PasswordPolicy;
 use App\Core\Auth\Services\TransactionPasswordService;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
+use App\Core\Uploads\Rules\SafeFile;
 use App\Core\Uploads\Services\SecureUploadService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
@@ -161,8 +162,16 @@ final class Profile extends Component
     {
         $maxKb = (int) setting('uploads.types.image.max_kb');
 
+        // SafeFile vem PRIMEIRO, com bail: a validação por conteúdo do kit é
+        // quem explica a recusa. Desde o Livewire 4.4.2 o upload temporário
+        // detecta o MIME pelo conteúdo, então `image`/`mimes` também recusam o
+        // texto renomeado para .png — mas com a mensagem genérica do framework
+        // ("deve ser uma imagem"), que não diz o porquê. Elas seguem na lista
+        // como segunda camada; o SecureUploadService revalida ao persistir.
         $this->validate([
-            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.$maxKb],
+            'avatar' => ['bail', 'required', new SafeFile(['image']), 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.$maxKb],
+        ], [], [
+            'avatar' => __('panel.profile.avatar_heading'),
         ]);
 
         try {

@@ -467,7 +467,7 @@
                             <x-avatar name="Ana Ribeiro" size="sm" />
                             <x-avatar name="Ana Ribeiro" size="md" />
                             <x-avatar name="Ana Ribeiro" size="lg" />
-                            <x-avatar :src="asset('img/landing/dashboard.png')" name="Ana Ribeiro" size="lg" />
+                            <x-avatar :src="asset('img/landing/dashboard-light-720.webp')" name="Ana Ribeiro" size="lg" />
                         </div>
                         <div class="mt-3 flex flex-col gap-2">
                             <x-snippet :code="$snip['avatar']" />

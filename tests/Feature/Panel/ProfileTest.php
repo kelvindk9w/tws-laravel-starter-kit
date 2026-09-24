@@ -145,3 +145,28 @@ it('rejeita avatar que não é imagem de verdade (validação por conteúdo)', f
     expect(Upload::query()->count())->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
 });
+
+it('texto renomeado para .png é recusado com a mensagem da validação por conteúdo', function () {
+    $user = User::factory()->create();
+
+    // O Livewire (>= 4.4.2) detecta o MIME do upload temporário pelo conteúdo,
+    // então as regras genéricas `image`/`mimes` também recusariam — com um
+    // "deve ser uma imagem" que não explica nada. Quem responde é a SafeFile.
+    // Em teste o Livewire não lê o conteúdo: usa o MIME do arquivo falso. Por
+    // isso ele é declarado como o navegador real o faria chegar (text/plain).
+    $arquivo = fixtureArquivoLivewire('isto aqui e texto puro, apenas renomeado para .png', 'nao-e-imagem.png')
+        ->mimeType('text/plain');
+
+    $component = Livewire::actingAs($user)
+        ->test(Profile::class)
+        ->set('avatar', $arquivo)
+        ->call('updateAvatar')
+        ->assertHasErrors(['avatar']);
+
+    $erros = $component->errors()->get('avatar');
+
+    expect($erros)->toHaveCount(1)
+        ->and(array_values(__('uploads.rejected')))->toContain($erros[0])
+        ->and(Upload::query()->count())->toBe(0)
+        ->and($user->fresh()->avatar_upload_id)->toBeNull();
+});

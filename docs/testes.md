@@ -68,7 +68,7 @@ Depois rode a suíte:
 # root-owned (test-results/, tests/e2e/.auth/) no repositório:
 docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
   -v $(pwd):/work -w /work \
-  mcr.microsoft.com/playwright:v1.62.1-noble sh -c "npm install --ignore-scripts && npx playwright test"
+  mcr.microsoft.com/playwright:v1.63.0-noble sh -c "npm install --ignore-scripts && npx playwright test"
 
 # ou localmente, se tiver Node:  npx playwright test
 ```

@@ -20,7 +20,7 @@ import { test, expect } from '@playwright/test';
 //
 // Rodar em container (sem Node local):
 //   docker run --rm --network host -v $(pwd):/work -w /work \
-//     mcr.microsoft.com/playwright:v1.62.1-noble npx playwright test
+//     mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
 // =============================================================================
 
 const email = process.env.E2E_USER_EMAIL ?? 'e2e@example.com';

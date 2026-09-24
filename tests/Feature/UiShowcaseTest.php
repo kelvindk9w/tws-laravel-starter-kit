@@ -135,3 +135,27 @@ it('showcase documenta os componentes novos do sistema', function () {
     $response->assertSee('data-chart="line"', false)
         ->assertSee(__('ui.chart.empty_title'));
 });
+
+it('showcase só aponta para imagens que existem em public/', function () {
+    config()->set('ui.showcase_enabled', true);
+
+    $html = (string) $this->get('/ui')->assertOk()->getContent();
+    $base = rtrim((string) config('app.url'), '/').'/';
+
+    preg_match_all('/<img\b[^>]*\bsrc="([^"]+)"/i', $html, $matches);
+
+    // Só as imagens servidas de public/ (data: URI e hosts externos ficam de fora).
+    $local = collect($matches[1])
+        ->map(fn (string $src): string => html_entity_decode($src))
+        ->filter(fn (string $src): bool => str_starts_with($src, $base) || str_starts_with($src, '/'))
+        ->map(fn (string $src): string => ltrim(str_starts_with($src, $base) ? substr($src, strlen($base)) : $src, '/'))
+        ->map(fn (string $path): string => strtok($path, '?#'))
+        ->unique()
+        ->values();
+
+    expect($local)->not->toBeEmpty();
+
+    foreach ($local as $path) {
+        expect(public_path($path))->toBeFile("imagem inexistente no showcase: {$path}");
+    }
+});
