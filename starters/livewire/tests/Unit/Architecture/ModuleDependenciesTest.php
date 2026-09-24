@@ -12,14 +12,15 @@ use Symfony\Component\Finder\Finder;
 // ABAIXO dele: foundation não conhece ninguém; auth conhece foundation;
 // accounts conhece auth e foundation; uploads conhece os três.
 //
-// As camadas foundation e auth JÁ SAÍRAM de app/Core: são os pacotes
-// twstec/kit-foundation (packages/foundation) e twstec/kit-auth
-// (packages/auth), e a trava de cada uma — não conhecer nada do aplicativo nem
-// das camadas de cima — mora na suíte do próprio pacote. Aqui ficam as regras
-// dos módulos que ainda moram em app/Core, e mais uma: o código do aplicativo
-// usa os nomes NOVOS das classes que saíram (Twstec\Kit\Foundation\…,
-// Twstec\Kit\Auth\…, e App\Models\User para o model de usuário, que é do
-// aplicativo); os nomes antigos (App\Core\<Módulo>\…) existem só como
+// As camadas foundation, auth e accounts JÁ SAÍRAM de app/Core: são os
+// pacotes twstec/kit-foundation (packages/foundation), twstec/kit-auth
+// (packages/auth) e twstec/kit-accounts (packages/accounts), e a trava de
+// cada uma — não conhecer nada do aplicativo nem das camadas de cima — mora
+// na suíte do próprio pacote. Aqui ficam as regras dos módulos que ainda
+// moram em app/Core, e mais uma: o código do aplicativo usa os nomes NOVOS das
+// classes que saíram (Twstec\Kit\Foundation\…, Twstec\Kit\Auth\…,
+// Twstec\Kit\Accounts\…, e App\Models\User para o model de usuário, que é
+// do aplicativo); os nomes antigos (App\Core\<Módulo>\…) existem só como
 // apelidos de compatibilidade para o que está gravado fora do código.
 //
 // A DEMONSTRAÇÃO do kit (App\Demo, em app/Demo e demo/) fica no topo, FORA de
@@ -50,12 +51,11 @@ use Symfony\Component\Finder\Finder;
 /**
  * Camadas, de baixo para cima, e os módulos de cada uma.
  *
- * As camadas foundation e auth não aparecem: são os pacotes
- * twstec/kit-foundation e twstec/kit-auth, e usar classe deles é sempre descer
- * na hierarquia.
+ * As camadas foundation, auth e accounts não aparecem: são os pacotes
+ * twstec/kit-foundation, twstec/kit-auth e twstec/kit-accounts, e usar classe
+ * deles é sempre descer na hierarquia.
  */
 const CORE_LAYERS = [
-    'accounts' => ['Tenancy', 'ApiKeys'],
     'uploads' => ['Uploads'],
 ];
 
@@ -63,14 +63,14 @@ const CORE_LAYERS = [
  * Grupos coesos: ciclos aceitos porque os módulos vão juntos para o MESMO
  * pacote. Qualquer outro ciclo reprova.
  *
- *   Projetos ↔ chaves de API → accounts.
+ * Vazia desde a extração do pacote accounts (F5): o grupo projetos ↔ chaves de
+ * API foi junto para o twstec/kit-accounts, como o grupo segurança ↔ trilha ↔
+ * HTTP ↔ idioma tinha ido para o twstec/kit-foundation; a suíte de cada
+ * pacote confere o dele.
  *
- * (O grupo segurança ↔ trilha ↔ HTTP ↔ idioma foi junto com a base para o
- * pacote twstec/kit-foundation; a suíte dele confere esse grupo.)
+ * @var list<list<string>>
  */
-const CORE_COHESIVE_CYCLES = [
-    ['ApiKeys', 'Tenancy'],
-];
+const CORE_COHESIVE_CYCLES = [];
 
 /**
  * Módulos que saíram de app/Core para o pacote twstec/kit-foundation. O nome
@@ -84,6 +84,14 @@ const FOUNDATION_MOVED_MODULES = ['Identifiers', 'Money', 'Http', 'Security', 'L
  * App\Models\User, do aplicativo; o resto é Twstec\Kit\Auth\…).
  */
 const AUTH_MOVED_MODULES = ['Auth'];
+
+/**
+ * Módulos que saíram de app/Core para o pacote twstec/kit-accounts. O nome
+ * antigo App\Core\Tenancy\… ou App\Core\ApiKeys\… não pode voltar ao
+ * código (o novo é Twstec\Kit\Accounts\Tenancy\… e
+ * Twstec\Kit\Accounts\ApiKeys\…).
+ */
+const ACCOUNTS_MOVED_MODULES = ['Tenancy', 'ApiKeys'];
 
 /**
  * Imports que sobem na hierarquia e ainda não puderam sair: arquivo => classes.
@@ -524,6 +532,48 @@ it('usa os nomes novos das classes de autenticação, nunca os apelidos App\\Cor
     foreach (AUTH_MOVED_MODULES as $module) {
         if (is_dir(base_path("app/Core/{$module}"))) {
             $violations[] = "app/Core/{$module} existe de novo (o módulo é do pacote twstec/kit-auth)";
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
+it('usa os nomes novos das classes de contas e API, nunca os apelidos App\\Core\\Tenancy e App\\Core\\ApiKeys', function (): void {
+    // Mesma regra, para o que saiu com o pacote twstec/kit-accounts: os
+    // apelidos (packages/accounts/src/Compat) existem só para o que está
+    // gravado fora do código — payload de fila antigo, snapshot do Livewire,
+    // rota em cache. A leitura é por tokens: o nome antigo escrito como TEXTO
+    // (string, nowdoc, comentário) não conta.
+    $pattern = '/^App\\\\Core\\\\('.implode('|', ACCOUNTS_MOVED_MODULES).')\\\\/';
+    $violations = [];
+
+    foreach (['app', 'bootstrap', 'config', 'database', 'routes', 'demo', 'tests'] as $directory) {
+        if (! is_dir(base_path($directory))) {
+            continue;
+        }
+
+        foreach ((new Finder)->files()->in(base_path($directory))->name('*.php') as $file) {
+            $path = str_replace(base_path().'/', '', $file->getRealPath());
+
+            foreach (appReferencesIn($file->getContents()) as $name) {
+                if (preg_match($pattern, $name) === 1) {
+                    $violations[] = "{$path} usa {$name}";
+                }
+            }
+        }
+    }
+
+    // Nas views Blade, que não são PHP puro, vale o nome escrito.
+    foreach ((new Finder)->files()->in(base_path('resources/views'))->name('*.blade.php') as $file) {
+        if (preg_match('/App\\\\+Core\\\\+('.implode('|', ACCOUNTS_MOVED_MODULES).')\\\\+/', $file->getContents()) === 1) {
+            $violations[] = str_replace(base_path().'/', '', $file->getRealPath()).' usa App\\Core\\Tenancy ou App\\Core\\ApiKeys';
+        }
+    }
+
+    // E nenhum dos módulos voltou a morar em app/Core.
+    foreach (ACCOUNTS_MOVED_MODULES as $module) {
+        if (is_dir(base_path("app/Core/{$module}"))) {
+            $violations[] = "app/Core/{$module} existe de novo (o módulo é do pacote twstec/kit-accounts)";
         }
     }
 

@@ -11,7 +11,6 @@ return [
 
     // Aviso previo de expiración de clave de API por inactividad.
     'api_key_inactivity' => [
-        'subject' => ':platform — Tu clave de API se desactivará por inactividad',
         'preheader' => 'Una clave sin uso se desactivará en :days días.',
         'heading' => 'Una de tus claves de API está por desactivarse',
         'intro' => 'La clave de abajo no se está usando y se desactivará automáticamente por inactividad.',

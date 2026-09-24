@@ -1,8 +1,12 @@
 # API e chaves de API
 
-Motor de chaves de API em `app/Core/ApiKeys/` + resolução de tenant em
-`app/Core/Tenancy/`. A autenticação da API é por **par de chaves no header**
-(não por sessão):
+Motor de chaves de API, resolução de tenant e a API v1 no pacote
+**`twstec/kit-accounts`** ([`packages/accounts`](../packages/accounts/README.md),
+namespaces `Twstec\Kit\Accounts\ApiKeys\…` e `Twstec\Kit\Accounts\Tenancy\…`).
+O pacote liga sozinho a autenticação por chave, os escopos, o limite por chave
+e o envelope de erro — o aplicativo não precisa lembrar de nada (ver
+[O que o pacote instala](#o-que-o-pacote-instala-sozinho)). A autenticação da
+API é por **par de chaves no header** (não por sessão):
 
 | Chave | Formato | Papel |
 |---|---|---|
@@ -58,8 +62,9 @@ Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 ```
 
 **Erro** — contrapartida simétrica, em `error`
-(`Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer`, registrado em
-`bootstrap/app.php`). Vale para TODA rota `api/*`:
+(`Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer`, do foundation,
+registrado no tratador de exceções pelo pacote `twstec/kit-accounts`, dono da
+API). Vale para TODA rota `api/*`:
 
 ```json
 {
@@ -114,7 +119,7 @@ Exemplo de 422:
 Cobertura: `tests/Feature/Api/ErrorEnvelopeTest.php` — um teste por status
 (401/403/404/422/429/500), mais a checagem de que nada de servidor vaza.
 
-## Endpoints da API v1 (`routes/api.php`)
+## Endpoints da API v1 (do pacote — `Twstec\Kit\Accounts\Http\ApiRoutes`)
 
 Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
 (anti-enumeração — recurso de outro tenant = **404 uniforme**, nunca 403).
@@ -127,6 +132,7 @@ Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
 | `POST /api/v1/api-keys/{uuid}/rotate` | `api-keys:rotate` | **ação sensível**; `grace_period_minutes` no corpo |
 | `PUT /api/v1/api-keys/{uuid}/projects` | `api-keys:assign` | vínculo N:N (lista vazia = conta toda) |
 | `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome |
+| `POST /api/v1/uploads` | `uploads:create` | do starter (`routes/api.php`), no mesmo grupo — vai para o pacote de uploads numa fase futura |
 
 Além do scope, o **vínculo da chave com projetos** limita o que ela alcança (ver
 [Projetos](tenancy.md#projetos-multi-empresa-organizacional)): toda rota de `api-keys` e o
@@ -143,7 +149,7 @@ primeira chave do usuário é criada pelo painel (`/api-keys`) ou, em dev, via
 `tinker` com o `ApiKeyService`:
 
 ```php
-app(App\Core\ApiKeys\Services\ApiKeyService::class)
+app(Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService::class)
     ->create($user, ['name' => 'Bootstrap']); // retorna a sk_ em claro 1x
 ```
 
@@ -159,8 +165,8 @@ Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
 
 - **Validade 100% do usuário**: `expires_at` vazio = sem validade; o sistema
   NUNCA impõe prazo.
-- **Inatividade**: job diário `api-keys:process-inactivity` (scheduler em
-  `routes/console.php`, `daily()` + `withoutOverlapping()` + `onOneServer()`)
+- **Inatividade**: job diário `api-keys:process-inactivity` (comando do
+  pacote; o agendamento é do aplicativo, em `routes/console.php`, `daily()` + `withoutOverlapping()` + `onOneServer()`)
   desativa chaves sem uso há `API_KEYS_INACTIVITY_MONTHS` meses (padrão 3) com
   status `expired_inactivity`. **Aviso prévio por e-mail**
   `API_KEYS_INACTIVITY_WARNING_DAYS` dias antes (padrão 7), UMA vez por ciclo —
@@ -168,9 +174,40 @@ Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
   chave volta a ser usada. O middleware `resolve.tenant` também rejeita chave
   inativa (defesa em profundidade caso o scheduler atrase). Tudo em UTC.
 
+## O que o pacote instala sozinho
+
+O `Twstec\Kit\Accounts\AccountsServiceProvider` é descoberto pelo Composer e
+liga, sem nenhuma linha no `bootstrap/app.php`:
+
+| Proteção | Como |
+|---|---|
+| Autenticação por chave | alias `resolve.tenant` (`ResolveTenant`), sempre no grupo das rotas v1 |
+| Escopo e operação de conta | aliases `scope` e `account.key`, declarados em cada rota |
+| Limite por chave | `throttle:api` na frente do grupo `api` (o limitador `api` é do foundation) e o `ResolveTenant` antes do `ThrottleRequests` na lista de prioridade — o limite conta a chave, não o IP |
+| Limite de falhas de autenticação por chave e por IP | dentro do próprio `ResolveTenant` (`ApiRateLimit`, do foundation) |
+| Envelope de erro sem vazamento | render do `ApiErrorRenderer` para `api/*` no tratador de exceções |
+| Quem o limite conta | `TenantRateLimitSubject` (a chave, ou o dono com `RATE_LIMIT_API_BY=tenant`) |
+
+Os aliases só entram se o aplicativo não declarou um de mesmo nome, e um
+render próprio do aplicativo no `bootstrap/app.php` roda antes do envelope do
+pacote. **Opt-out:** `API_KEYS_API_PROTECTIONS=false` — nada disso é instalado
+e um aviso vai para o log a cada boot; só é seguro se o aplicativo instalar as
+mesmas proteções.
+
+**Rotas.** O pacote registra as rotas `/api/v1` (prefixo, middleware e nome em
+`api_keys.api.routes`). Para registrar você mesmo, desligue com
+`API_KEYS_API_ROUTES=false` e chame `ApiRoutes::register()` onde quiser; a
+autenticação por chave entra no grupo em qualquer caso. O envelope de erro vale
+para `api/*`: um prefixo fora de `api/` fica sem ele.
+
 ## Testes
 
-`tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` (Pest): geração/hash (só
+`packages/accounts/tests` (aplicação Laravel limpa, sem nada do starter): as
+proteções acima (401 no envelope, limite de falhas, 403 de escopo, 404 fora do
+vínculo, 429 por chave, inatividade, dono não verificado, pepper), os nomes
+antigos, as traduções e a arquitetura do pacote.
+
+`tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` do starter (Pest): geração/hash (só
 hash no banco, formato por ambiente, pepper), ciclo criar/usar/revogar,
 rotação com e sem grace (`travel()`), scopes (exato/wildcards/negado = 403 com
 mensagem), validade por data, inatividade (aviso 1x, expiração, rearme,

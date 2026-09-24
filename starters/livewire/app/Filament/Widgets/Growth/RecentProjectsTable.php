@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Growth;
 
-use App\Core\Tenancy\Models\Project;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Widgets\Support\BaseLatestRecordsWidget;
 use App\Filament\Widgets\Support\Period;
@@ -13,6 +12,7 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 /**
  * Projetos recentes com o dono e o quanto cada um já rende em chaves de API —

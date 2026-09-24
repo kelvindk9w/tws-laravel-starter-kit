@@ -13,6 +13,7 @@
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.4",
         "spatie/laravel-backup": "^10.3",
+        "twstec/kit-accounts": "2.x-dev",
         "twstec/kit-auth": "2.x-dev",
         "twstec/kit-foundation": "2.x-dev"
     },
@@ -35,8 +36,6 @@
         },
         "files": [
             "app/Support/legacy-aliases.php",
-            "app/Core/Tenancy/helpers.php",
-            "app/Core/ApiKeys/Mail/previews.php",
             "app/Demo/Contact/Mail/previews.php",
             "app/Support/ui-helpers.php"
         ]
@@ -106,6 +105,16 @@
         }
     },
     "repositories": [
+        {
+            "type": "path",
+            "url": "../../packages/accounts",
+            "options": {
+                "versions": {
+                    "twstec/kit-accounts": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
         {
             "type": "path",
             "url": "../../packages/auth",

@@ -35,7 +35,8 @@ use Twstec\Kit\Foundation\Security\Contracts\RateLimitSubjectResolver;
  *      com RATE_LIMIT_API_BY=tenant). É o limiter nomeado `api`, aplicado
  *      pelo `throttle:api` do grupo da API — que agora roda DEPOIS do
  *      `resolve.tenant` (a ordem é garantida pela lista de prioridade de
- *      middleware em bootstrap/app.php, não pela posição na rota). Rota da
+ *      middleware — quem instala o `resolve.tenant` o põe antes do
+ *      ThrottleRequests —, não pela posição na rota). Rota da
  *      API sem autenticação (`/api/health`) continua contando por IP.
  *
  *   2. FALHA DE AUTENTICAÇÃO → dois baldes, consultados pelo próprio

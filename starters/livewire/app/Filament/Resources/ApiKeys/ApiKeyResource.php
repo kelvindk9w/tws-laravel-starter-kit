@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\ApiKeys;
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\BaseResource;
@@ -21,6 +18,9 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 
 /**
  * Chaves de API — visão GLOBAL de todos os tenants (super admin).

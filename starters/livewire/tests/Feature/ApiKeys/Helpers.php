@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================

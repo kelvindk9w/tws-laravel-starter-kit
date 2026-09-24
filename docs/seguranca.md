@@ -156,7 +156,7 @@ balde do proxy (ver *Proxies confiáveis*, abaixo).
 **API: por chave, não por IP.** O `throttle:api` rodava antes do `resolve.tenant` e por isso
 contava sempre por IP: duas integrações atrás do mesmo NAT dividiam o orçamento, e a mesma chave
 ganhava orçamento novo a cada IP. Agora ele roda **depois** da autenticação (a ordem é garantida
-pela lista de prioridade de middleware em `bootstrap/app.php`, não pela posição na rota) e conta
+pela lista de prioridade de middleware, que o pacote `twstec/kit-accounts` monta sozinho, não pela posição na rota) e conta
 pela chave — ou pelo dono, com `RATE_LIMIT_API_BY=tenant`, para que criar chaves novas não
 multiplique o limite. Mover o limite para depois da autenticação abriria uma porta:
 a chave inválida é recusada com 401 **antes** de chegar ao throttle. Por isso as **falhas** de

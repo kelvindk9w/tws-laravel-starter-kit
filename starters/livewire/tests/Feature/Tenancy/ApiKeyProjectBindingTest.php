@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Tenancy\Models\Project;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 // =============================================================================
 // VÍNCULO CHAVE DE API ↔ PROJETO — a regra, provada ponta a ponta.

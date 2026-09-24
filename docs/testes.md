@@ -14,13 +14,17 @@ Orchestra Testbench:
 ```bash
 docker compose exec -w /var/packages/foundation app ./vendor/bin/pest   # pacote twstec/kit-foundation
 docker compose exec -w /var/packages/auth app ./vendor/bin/pest         # pacote twstec/kit-auth
+docker compose exec -w /var/packages/accounts app ./vendor/bin/pest     # pacote twstec/kit-accounts
 ```
 
 Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
 ataques, redação LGPD, balde de cliente, dinheiro, sanitização), a ordem da
 pilha global de segurança, os apelidos de compatibilidade, a fiação do provider
 e a arquitetura do pacote; a do auth prova, numa aplicação Laravel limpa, que
-as proteções de login, conta bloqueada e segundo fator vêm do pacote. Os testes de ponta a ponta dessas peças (rotas,
+as proteções de login, conta bloqueada e segundo fator vêm do pacote; e a do
+accounts prova o mesmo para a API (401 no envelope, limites por chave e de
+falha, escopo, vínculo com projetos), com o ambiente de uma aplicação nova
+fixado. Os testes de ponta a ponta dessas peças (rotas,
 painel, banco) continuam na suíte do starter. Como instalar as dependências do
 pacote está em [`packages/README.md`](../packages/README.md).
 

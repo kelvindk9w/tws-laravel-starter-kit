@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Tenancy\Models\Project;
 use App\Demo\Support\DemoSurface;
 use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 /**
  * Chaves de API de demonstração.

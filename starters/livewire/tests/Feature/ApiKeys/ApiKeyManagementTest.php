@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Support\ApiKeyHasher;
-use App\Core\Tenancy\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 // Endpoints do motor de chaves da API v1: criar (ação
 // sensível), listar, revogar, rotacionar (ação sensível + grace period)

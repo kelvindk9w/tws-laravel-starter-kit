@@ -1,6 +1,5 @@
 <?php
 
-use App\Core\Tenancy\Providers\TenancyServiceProvider;
 use App\Demo\Providers\DemoServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
@@ -8,11 +7,12 @@ use App\Providers\HorizonServiceProvider;
 
 return [
     // Os providers da base do kit (auditoria, e-mail, configurações
-    // editáveis e a pilha de segurança) vêm do pacote twstec/kit-foundation,
-    // e o de autenticação (respostas padrão, proteções da sessão web,
-    // migrations e traduções) vem do twstec/kit-auth — os dois pela
-    // descoberta automática de pacotes do Laravel.
-    TenancyServiceProvider::class,
+    // editáveis e a pilha de segurança) vêm do pacote twstec/kit-foundation;
+    // o de autenticação (respostas padrão, proteções da sessão web,
+    // migrations e traduções), do twstec/kit-auth; e o de contas e API
+    // (projetos, chaves de API, a API v1 e as proteções dela), do
+    // twstec/kit-accounts — os três pela descoberta automática de pacotes do
+    // Laravel.
     AppServiceProvider::class,
     AdminPanelProvider::class,
     HorizonServiceProvider::class,

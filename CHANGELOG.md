@@ -26,6 +26,15 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   os aliases `verified` e `sensitive.token` e o `throttle:sensitive` dos
   envios (opt-out: `AUTH_WEB_PROTECTIONS=false`, com aviso no log). Telas,
   rotas e `user:make-admin` ficam no starter.
+- **Terceiro pacote: `twstec/kit-accounts`** (`packages/accounts`), sem
+  telas: projetos, chaves de API e a API v1 (o dono continua sendo a pessoa).
+  Mesmo comportamento, mesmas rotas e sem migration pendente. O pacote liga
+  sozinho a autenticação por chave, os escopos, o limite por chave e o
+  envelope de erro de `api/*` (opt-out: `API_KEYS_API_PROTECTIONS=false`, com
+  aviso no log); as rotas `/api/v1` podem ser registradas pelo aplicativo
+  (`API_KEYS_API_ROUTES=false`). Classes em `Twstec\Kit\Accounts\…`; os nomes
+  `App\Core\Tenancy\…` e `App\Core\ApiKeys\…` resolvem até a 3.0. Telas,
+  resources do painel e o agendamento da inatividade ficam no starter.
 - O canal de log `request_log` (a segunda camada das trilhas de requisição,
   segurança e auditoria) passa a vir do `twstec/kit-foundation`, com a mesma
   definição; uma aplicação sem o canal não perde mais essas linhas para o log

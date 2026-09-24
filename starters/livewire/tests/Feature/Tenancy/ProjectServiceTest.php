@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Enums\ProjectStatus;
-use App\Core\Tenancy\Models\Project;
-use App\Core\Tenancy\Services\ProjectService;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
 
 // =============================================================================
 // ProjectService — a regra ÚNICA do CRUD de projetos (painel e API v1).

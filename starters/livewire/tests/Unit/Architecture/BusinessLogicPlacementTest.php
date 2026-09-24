@@ -66,7 +66,7 @@ const THIN_AUTH_FORBIDDEN_METHODS = [
 const SERVICE_BACKED_ENTRY_POINTS = [
     'app/Livewire/Dashboard.php',
     'app/Livewire/Projects/Index.php',
-    'app/Core/Tenancy/Http/Controllers/ProjectController.php',
+    'vendor/twstec/kit-accounts/src/Tenancy/Http/Controllers/ProjectController.php',
 ];
 
 /**

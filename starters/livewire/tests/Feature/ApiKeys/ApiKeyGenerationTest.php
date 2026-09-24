@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Support\ApiKeyGenerator;
-use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Models\User;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyGenerator;
+use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
 
 // Geração do par pk_/sk_ e hash da secreta:
 // aleatoriedade criptográfica, prefixo por ambiente, só hash no banco.

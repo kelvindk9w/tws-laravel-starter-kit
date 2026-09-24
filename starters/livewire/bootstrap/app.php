@@ -2,15 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Http\Middleware\EnsureAccountWideApiKey;
-use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
-use App\Core\Tenancy\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Middleware\ThrottleRequests;
-use Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -28,24 +23,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // Twstec\Kit\Foundation\FoundationServiceProvider::GLOBAL_MIDDLEWARE.
         // Os aliases `security.validation`, `security.headers` e
         // `request.logging` também vêm de lá. Aqui fica só a composição do
-        // aplicativo: API, prioridade, grupo web e os aliases dos outros módulos.
+        // aplicativo: o grupo web e o destino do convidado.
 
-        // Cadeia da API: rate limiting (valores em config/security.php).
-        $middleware->api(prepend: ['throttle:api']);
-
-        // O `throttle:api` conta pela CHAVE de API, então precisa rodar DEPOIS
-        // do `resolve.tenant`, que é quem descobre a chave. Pela posição ele
-        // rodaria antes (middleware de grupo vem antes do de rota) e contaria
-        // sempre por IP — era o defeito. A lista de PRIORIDADE do framework é
-        // o que reordena middleware entre grupo e rota, e o ThrottleRequests
-        // já está nela: pôr o ResolveTenant logo antes dele garante a ordem
-        // em toda rota que usar os dois, sem depender de como a rota foi
-        // declarada. Chave inválida não escapa por ficar antes: o próprio
-        // ResolveTenant limita as falhas por IP (Twstec\Kit\Foundation\Security\ApiRateLimit).
-        $middleware->prependToPriorityList(
-            before: ThrottleRequests::class,
-            prepend: ResolveTenant::class,
-        );
+        // A cadeia da API — o `throttle:api` (limite por chave) na frente do
+        // grupo `api`, a autenticação por chave (`resolve.tenant`) antes do
+        // limite na lista de prioridade e os aliases `resolve.tenant`,
+        // `scope` e `account.key` — é instalada pelo pacote
+        // twstec/kit-accounts (Twstec\Kit\Accounts\AccountsServiceProvider),
+        // junto com as rotas /api/v1 dele.
 
         // Locale da interface web: usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
@@ -58,21 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Livewire está no grupo `web`).
         $middleware->web(append: [SetLocale::class]);
 
-        // Aliases para uso explícito em rotas/grupos. Os de autenticação —
-        // `sensitive.token` (token de ação sensível, uso único) e `verified`
-        // (painel só com e-mail confirmado, AUTH_EMAIL_VERIFICATION_REQUIRED;
-        // substitui o do framework) — são instalados pelo pacote
-        // twstec/kit-auth.
-        $middleware->alias([
-            // Tenancy da API: resolve o tenant pela pk_/sk_ no
-            // header, vincula o request log e atualiza o last_used_at.
-            'resolve.tenant' => ResolveTenant::class,
-            // Autorização por scope da chave: 'scope:recurso:acao'.
-            'scope' => EnsureApiKeyScope::class,
-            // Operação de conta (gerenciar chaves, criar projeto): recusa a
-            // chave vinculada a projetos.
-            'account.key' => EnsureAccountWideApiKey::class,
-        ]);
+        // Os aliases de autenticação — `sensitive.token` (token de ação
+        // sensível, uso único) e `verified` (painel só com e-mail confirmado,
+        // AUTH_EMAIL_VERIFICATION_REQUIRED; substitui o do framework) — são
+        // instalados pelo pacote twstec/kit-auth; os da API, pelo
+        // twstec/kit-accounts.
 
         // Deny-by-default: convidado em rota `auth` vai para
         // o login; `redirect()->intended()` devolve ao destino original.
@@ -83,11 +58,12 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
-        // Envelope padronizado de erro da API (`api/*`), contrapartida do
-        // envelope de sucesso {"data": …} — ver ApiErrorRenderer e
-        // docs/api.md. Nunca stack trace/caminho de servidor, nem com
-        // APP_DEBUG=true: o contrato do cliente é o mesmo em todo ambiente.
-        $exceptions->render(fn (Throwable $e, Request $request) => app(ApiErrorRenderer::class)($e, $request));
+        // O envelope padronizado de erro da API (`api/*`, contrapartida do
+        // envelope de sucesso {"data": …} — nunca stack trace/caminho de
+        // servidor, nem com APP_DEBUG=true) é registrado pelo pacote
+        // twstec/kit-accounts, dono da API (ver ApiErrorRenderer, do
+        // foundation, e docs/api.md). Um render próprio declarado aqui roda
+        // ANTES do dele e prevalece.
 
         // Captura a mensagem da exceção para o request log finalizar como ERRO
         // com o motivo (redigido depois pelo RequestLogging — LGPD).

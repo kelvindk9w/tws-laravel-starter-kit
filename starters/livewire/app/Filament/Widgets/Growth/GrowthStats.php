@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Growth;
 
-use App\Core\ApiKeys\Models\ApiKey;
 use App\Filament\Widgets\Support\BaseStatsWidget;
 use App\Filament\Widgets\Support\Metric;
 use App\Filament\Widgets\Support\MetricFormat;
@@ -13,6 +12,7 @@ use App\Filament\Widgets\Support\Period;
 use App\Models\User;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**

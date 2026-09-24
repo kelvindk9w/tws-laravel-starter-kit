@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fb9712fff5b264f56c398d53d73a602f",
+    "content-hash": "e22ce129c99ee1c259cc1e4ea60cc6c4",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8467,6 +8467,71 @@
             "time": "2025-12-02T11:56:42+00:00"
         },
         {
+            "name": "twstec/kit-accounts",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/accounts",
+                "reference": "6e9b82e11be1b248ab02de3f3b1c6ac200bf6e7d"
+            },
+            "require": {
+                "laravel/framework": "^13.17",
+                "php": "^8.4",
+                "twstec/kit-auth": "2.x-dev",
+                "twstec/kit-foundation": "2.x-dev"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Accounts\\AccountsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Accounts\\": "src/"
+                },
+                "files": [
+                    "src/Compat/legacy-aliases.php",
+                    "src/Tenancy/helpers.php",
+                    "src/ApiKeys/Mail/previews.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Accounts\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Contas e API do TWS Laravel Starter Kit, sem telas: projetos, chaves de API com par pública/secreta, hash com pepper, escopos, vínculo chave-projeto, rotação com período de graça, expiração por inatividade, autenticação e limites da API e a API v1.",
+            "keywords": [
+                "api",
+                "api-keys",
+                "laravel",
+                "starter-kit",
+                "tenancy"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "twstec/kit-auth",
             "version": "2.x-dev",
             "dist": {
@@ -12335,6 +12400,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "twstec/kit-accounts": 20,
         "twstec/kit-auth": 20,
         "twstec/kit-foundation": 20
     },

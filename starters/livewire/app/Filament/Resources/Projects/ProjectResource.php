@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Projects;
 
-use App\Core\Tenancy\Enums\ProjectStatus;
-use App\Core\Tenancy\Models\Project;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\BaseResource;
@@ -18,6 +16,8 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 /**
  * Projetos — visão global (super admin). Somente leitura: projetos

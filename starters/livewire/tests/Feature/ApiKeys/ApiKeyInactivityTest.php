@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Mail\ApiKeyInactivityWarningMail;
-use App\Core\ApiKeys\Models\ApiKey;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Mail\ApiKeyInactivityWarningMail;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 
 // Expiração por inatividade: job diário desativa chaves sem uso
 // há X meses (config) e envia e-mail de AVISO PRÉVIO Y dias antes — uma

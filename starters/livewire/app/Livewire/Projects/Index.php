@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire\Projects;
 
-use App\Core\Tenancy\Models\Project;
-use App\Core\Tenancy\Services\ProjectService;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Component;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
 
 /**
  * Projetos — CRUD só com nome, TUDO na mesma tela: criar e editar

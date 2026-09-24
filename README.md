@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`). Os demais entram nas próximas fases. |
+| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`) e [`accounts`](packages/accounts) (`twstec/kit-accounts`). Os demais entram nas próximas fases. |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -219,6 +219,8 @@ packages/                # pacotes do kit (ver packages/README.md):
   auth/                  # twstec/kit-auth — autenticação sem telas: login,
                          # cadastro, verificação de e-mail, segundo fator,
                          # senha de transação, ação sensível
+  accounts/              # twstec/kit-accounts — projetos, chaves de API e a
+                         # API v1 (autenticação, escopos, limites, envelope)
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,

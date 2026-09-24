@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
@@ -20,6 +19,7 @@ use Filament\Support\Exceptions\Cancel;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;

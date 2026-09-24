@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Models\Project;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -11,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
 use Twstec\Kit\Auth\Notifications\VerifyEmailNotification;
 use Twstec\Kit\Auth\Support\EmailVerification;

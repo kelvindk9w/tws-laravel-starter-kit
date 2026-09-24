@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Overview;
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Tenancy\Models\Project;
 use App\Filament\Widgets\Support\BaseStatsWidget;
 use App\Filament\Widgets\Support\Metric;
 use App\Filament\Widgets\Support\MetricStat;
@@ -14,6 +11,9 @@ use App\Filament\Widgets\Support\Period;
 use App\Models\User;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**

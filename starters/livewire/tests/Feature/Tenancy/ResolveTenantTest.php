@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
@@ -167,8 +167,8 @@ it('a verificação da secreta usa comparação timing-safe (hash_equals) — es
     // Garantia estrutural: a verificação da sk_ passa por
     // hash_equals (nunca ===), e o fallback de pk_ inexistente também compara
     // (não vaza por tempo se a chave pública existe).
-    $hasher = file_get_contents(base_path('app/Core/ApiKeys/Support/ApiKeyHasher.php'));
-    $middleware = file_get_contents(base_path('app/Core/Tenancy/Middleware/ResolveTenant.php'));
+    $hasher = file_get_contents(base_path('vendor/twstec/kit-accounts/src/ApiKeys/Support/ApiKeyHasher.php'));
+    $middleware = file_get_contents(base_path('vendor/twstec/kit-accounts/src/Tenancy/Middleware/ResolveTenant.php'));
 
     expect($hasher)->toContain('hash_equals')
         ->and($middleware)->toContain('hash_hmac'); // hash fictício p/ pk_ inválida

@@ -64,4 +64,27 @@ return [
         'uploads' => ['create'],
     ],
 
+    // --- API v1 (pacote twstec/kit-accounts) ------------------------------------
+    'api' => [
+        // PROTEÇÕES da API que o pacote instala sozinho: os aliases
+        // `resolve.tenant` (autenticação por chave), `scope` e `account.key`;
+        // o `throttle:api` (limite por chave) na frente do grupo `api`; a
+        // autenticação antes do limite na lista de prioridade; e o envelope de
+        // erro de `api/*` sem vazamento de detalhe. Desligar só é seguro se a
+        // aplicação instalar as mesmas proteções — e fica registrado no log a
+        // cada boot.
+        'protections' => env('API_KEYS_API_PROTECTIONS', true),
+
+        // Rotas /api/v1 (chaves de API e projetos). Com `enabled` = false o
+        // pacote não as registra e a aplicação chama
+        // Twstec\Kit\Accounts\Http\ApiRoutes::register() onde quiser. A
+        // autenticação por chave (`resolve.tenant`) entra no grupo sempre.
+        'routes' => [
+            'enabled' => env('API_KEYS_API_ROUTES', true),
+            'prefix' => 'api/v1',
+            'middleware' => ['api'],
+            'name' => 'api.v1.',
+        ],
+    ],
+
 ];

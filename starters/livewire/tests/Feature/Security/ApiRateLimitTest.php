@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Middleware\ResolveTenant;
 use App\Models\User;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Accounts\Tenancy\Middleware\ResolveTenant;
 
 // =============================================================================
 // LIMITE DA API POR CHAVE, NÃO POR IP (Twstec\Kit\Foundation\Security\ApiRateLimit).

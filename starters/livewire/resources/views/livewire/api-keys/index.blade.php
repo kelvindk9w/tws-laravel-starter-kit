@@ -1,5 +1,5 @@
 @php
-    use App\Core\ApiKeys\Enums\ApiKeyStatus;
+    use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 
     $timezone = platform()->displayTimezone;
     $revokingKey = $revokingKeyUuid !== null ? $keys->firstWhere('uuid', $revokingKeyUuid) : null;

@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Database\Seeders\ApiKeySeeder;
@@ -18,6 +16,8 @@ use App\Demo\Database\Seeders\UploadSeeder;
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 

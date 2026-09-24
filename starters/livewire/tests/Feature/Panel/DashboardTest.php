@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\Tenancy\Models\Project;
 use App\Livewire\Dashboard;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -12,6 +9,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Support\Platform;
 

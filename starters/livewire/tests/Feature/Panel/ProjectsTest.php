@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Models\Project;
 use App\Livewire\Projects\Index;
 use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 // =============================================================================
 // Projetos pela UI (Livewire): CRUD só com nome, tudo na

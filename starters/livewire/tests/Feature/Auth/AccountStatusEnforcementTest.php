@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Models\Project;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Enums\UserStatus;
 
 // =============================================================================

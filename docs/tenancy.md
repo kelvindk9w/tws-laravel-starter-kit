@@ -1,8 +1,15 @@
 # Tenancy e projetos
 
+Módulo `Tenancy` do pacote **`twstec/kit-accounts`**
+([`packages/accounts`](../packages/accounts/README.md)): contexto do tenant,
+projetos, o serviço de projetos e a visão geral da conta. Nesta versão o
+**dono é a pessoa** (o usuário dono da chave); contas com membros chegam numa
+fase futura.
+
 ## Tenancy
 
-Middleware **`resolve.tenant`** (`ResolveTenant`, grupo `api/v1`): valida o par
+Middleware **`resolve.tenant`** (`ResolveTenant`, grupo `api/v1`; alias
+instalado pelo pacote): valida o par
 pk_/sk_ (existência → hash timing-safe → status → validade → grace de rotação
 → inatividade) → resolve o **tenant** (usuário dono da chave) no container
 (helpers `tenant()` / `tenantKey()`, `TenantContext`) e no user resolver da
@@ -57,7 +64,7 @@ ligam a projeto: gravam no nível da conta e não leem dado de nenhum projeto.
 Testes: `tests/Feature/Tenancy/ApiKeyProjectBindingTest.php`.
 
 **Um serviço só para o CRUD de projetos.** A tela do painel (`/projects`) e a
-API v1 chamam o `App\Core\Tenancy\Services\ProjectService`; nenhuma das duas
+API v1 chamam o `Twstec\Kit\Accounts\Tenancy\Services\ProjectService`; nenhuma das duas
 lê ou grava `Project` direto (trava em
 `tests/Unit/Architecture/BusinessLogicPlacementTest.php`). O serviço tem os dois
 recortes de posse: `listForUser`/`findForUser` (a pessoa logada, no painel) e

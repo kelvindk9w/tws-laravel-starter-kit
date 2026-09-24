@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Tenancy\Models\Project;
 use App\Models\User;
 use Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 

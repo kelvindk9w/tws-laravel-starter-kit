@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\Tenancy\Enums\ProjectStatus;
-use App\Core\Tenancy\Models\Project;
 use App\Demo\Support\DemoSurface;
 use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 /**
  * Projetos de demonstração (camada organizacional da conta).

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Console\Commands\MakeAdminUser;
-use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Livewire\Support\SiteLinks;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -23,8 +22,8 @@ class AppServiceProvider extends ServiceProvider
         // O singleton da plataforma (platform()) e a troca do `backup:run` pela
         // versão que recusa backup sem criptografia em produção são do pacote
         // twstec/kit-foundation (FoundationServiceProvider). O contexto do
-        // tenant da requisição é registrado pelo próprio módulo
-        // (App\Core\Tenancy\Providers\TenancyServiceProvider).
+        // tenant da requisição e o comando `api-keys:process-inactivity` são
+        // do pacote twstec/kit-accounts (AccountsServiceProvider).
 
         // Links do site acrescentados por extensões (cabeçalho e rodapé
         // públicos — ver SiteLinks). Um por aplicação: nada vaza entre testes.
@@ -60,7 +59,6 @@ class AppServiceProvider extends ServiceProvider
         // Comandos próprios do kit (fora de app/Console/Commands).
         if ($this->app->runningInConsole()) {
             $this->commands([
-                ProcessApiKeyInactivity::class,
                 MakeAdminUser::class,
             ]);
         }

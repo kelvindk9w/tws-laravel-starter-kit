@@ -11,7 +11,6 @@ return [
 
     // Advance warning of API key expiration by inactivity.
     'api_key_inactivity' => [
-        'subject' => ':platform — Your API key will be deactivated due to inactivity',
         'preheader' => 'An unused key will be deactivated in :days days.',
         'heading' => 'One of your API keys is about to be deactivated',
         'intro' => 'The key below has not been used and will be automatically deactivated due to inactivity.',

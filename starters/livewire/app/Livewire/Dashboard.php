@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Core\Tenancy\Queries\AccountOverviewQuery;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
+use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverviewQuery;
 
 /**
  * Dashboard do painel do usuário (Livewire).

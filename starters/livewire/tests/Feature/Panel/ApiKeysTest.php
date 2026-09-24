@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\ApiKeys\Services\ApiKeyService;
-use App\Core\ApiKeys\Support\ApiKeyHasher;
-use App\Core\Tenancy\Models\Project;
 use App\Livewire\ApiKeys\Index;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================
