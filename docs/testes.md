@@ -75,9 +75,12 @@ docker compose exec app php artisan tinker --execute='
 # (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD)
 ```
 
-Depois rode a suíte:
+Depois rode a suíte, **de dentro de `starters/livewire`** (é onde estão o
+`playwright.config.js`, o `package.json` e `tests/e2e`; o comando monta a pasta
+atual no container):
 
 ```bash
+cd starters/livewire
 # em container (não exige Node local) — o --user evita artefatos
 # root-owned (test-results/, tests/e2e/.auth/) no repositório:
 docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \

@@ -4,6 +4,34 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+### Alterado
+- **O repositório virou monorepo.** O aplicativo foi para `starters/livewire/`
+  (histórico preservado); a raiz guarda o CI, a documentação (`docs/`), o
+  `docker-compose.yml` de desenvolvimento e `packages/`, que recebe os pacotes
+  de backend nas próximas versões. Comandos de `composer`, `npm`, `artisan`,
+  Pest e Playwright rodam dentro de `starters/livewire`; `docker compose`
+  funciona da raiz ou de dentro do starter.
+- O código de demonstração (landings, vitrine `/ui`, contato, catálogo,
+  proteção das contas demo, seeders de dado fictício) fica isolado em
+  `app/Demo` e `demo/`, ligado por um único provider; o produto funciona sem
+  ele.
+- A regra de negócio de projetos, do dashboard do cliente e da autenticação
+  saiu das telas e dos controllers para serviços e Actions; as respostas de
+  autenticação passam por contratos substituíveis.
+
+### Atualizando um clone existente
+1. `docker compose down` **antes** do `git pull`.
+2. Depois do pull, mover para `starters/livewire/` o que não é versionado:
+   `.env`, `vendor/`, `node_modules/`, `public/build/` e o conteúdo de
+   `storage/`.
+3. `docker compose up -d`. O nome do projeto Compose é fixo
+   (`tws-laravel-starter-kit`), então o banco de desenvolvimento é o mesmo; em
+   clone com outro nome de pasta, defina `COMPOSE_PROJECT_NAME` com o nome
+   antigo para reaproveitar os volumes.
+4. `php artisan migrate` (há uma migration nova da demo) e `npm run build`.
+
 ## [1.1.0] — 2026-09-25
 
 ### Adicionado

@@ -1,20 +1,36 @@
 # =============================================================================
-# Docker Compose — DESENVOLVIMENTO
+# Docker Compose — DESENVOLVIMENTO (raiz do monorepo)
 #
-# Sobe a stack completa local: app (PHP-FPM 8.4), nginx, PostgreSQL 18,
-# Redis 8, Mailpit, worker de fila e scheduler.
+# Sobe, a partir da RAIZ do repositório, os serviços compartilhados
+# (PostgreSQL 18, Redis 8, Mailpit) e o starter Livewire (app PHP-FPM 8.4,
+# nginx na porta 8180, worker de fila e scheduler). O código do starter vive em
+# starters/livewire e é montado por volume; o .env dele é o
+# starters/livewire/.env. A porta 8181 fica reservada para o starter React.
 #
+#   export UID GID=$(id -g)
 #   docker compose up -d --build
 #   docker compose exec app php artisan migrate
 #
 # Banco e Redis usam VOLUMES NOMEADOS persistentes: reiniciar ou
 # derrubar os containers NUNCA apaga os dados (só `down -v`, proibido aqui).
+#
+# O NOME DO PROJETO É FIXO (`name:` abaixo) e igual ao de antes do monorepo:
+# os volumes se chamam tws-laravel-starter-kit_postgres_data e
+# tws-laravel-starter-kit_redis_data. Mudar esse nome cria volumes novos e
+# vazios — o banco de desenvolvimento "some" (continua no volume antigo).
+#
+# Variáveis DB_* e DEV_*_PORT usadas AQUI (no Postgres e nas portas) vêm do
+# ambiente do shell ou de um .env na raiz, não do starters/livewire/.env; os
+# padrões são os mesmos do .env.example do starter. Quem trocar DB_* no .env do
+# starter precisa exportar o mesmo valor antes do `docker compose up`.
 # =============================================================================
+
+name: tws-laravel-starter-kit
 
 services:
   app:
     build:
-      context: .
+      context: ./starters/livewire
       dockerfile: docker/php/Dockerfile
       target: dev
       # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
@@ -22,9 +38,9 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    env_file: .env
+    env_file: ./starters/livewire/.env
     volumes:
-      - .:/var/www/html
+      - ./starters/livewire:/var/www/html
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,13 +51,13 @@ services:
 
   nginx:
     build:
-      context: .
+      context: ./starters/livewire
       dockerfile: docker/nginx/Dockerfile
       target: dev
     ports:
       - "${DEV_WEB_PORT:-8180}:80"
     volumes:
-      - .:/var/www/html:ro
+      - ./starters/livewire:/var/www/html:ro
     depends_on:
       - app
     networks:
@@ -58,7 +74,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Cria o banco da suíte de testes (tws_starter_test) na primeira subida.
-      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+      - ./starters/livewire/docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     ports:
       - "${DEV_POSTGRES_PORT:-15432}:5432"
     healthcheck:
@@ -90,7 +106,7 @@ services:
 
   queue:
     build:
-      context: .
+      context: ./starters/livewire
       dockerfile: docker/php/Dockerfile
       target: dev
       # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
@@ -98,10 +114,10 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    env_file: .env
+    env_file: ./starters/livewire/.env
     command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
     volumes:
-      - .:/var/www/html
+      - ./starters/livewire:/var/www/html
     depends_on:
       - app
       - redis
@@ -110,7 +126,7 @@ services:
 
   scheduler:
     build:
-      context: .
+      context: ./starters/livewire
       dockerfile: docker/php/Dockerfile
       target: dev
       # uid/gid do usuário do host (ver stage dev do Dockerfile). Se o seu
@@ -118,11 +134,11 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    env_file: .env
+    env_file: ./starters/livewire/.env
     # Loop do scheduler nativo do Laravel (equivale ao cron de 1 em 1 minuto).
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
-      - .:/var/www/html
+      - ./starters/livewire:/var/www/html
     depends_on:
       - app
     networks:

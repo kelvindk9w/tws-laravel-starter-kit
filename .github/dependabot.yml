@@ -1,9 +1,10 @@
 # Atualizações automáticas de dependências, agrupadas por ecossistema, uma
 # vez por semana, abrindo PR contra a branch de trabalho.
+# Composer e npm apontam para o starter Livewire (starters/livewire).
 version: 2
 updates:
   - package-ecosystem: composer
-    directory: /
+    directory: /starters/livewire
     schedule:
       interval: weekly
       day: monday
@@ -15,7 +16,7 @@ updates:
       dev:
         dependency-type: development
   - package-ecosystem: npm
-    directory: /
+    directory: /starters/livewire
     schedule:
       interval: weekly
       day: monday

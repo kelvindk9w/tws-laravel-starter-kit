@@ -35,6 +35,23 @@ O que já vem pronto:
 
 As regras que o código segue estão em [Convenções](docs/convencoes.md).
 
+## Como o repositório está organizado
+
+Este repositório é um **monorepo**: o kit está sendo separado em pacotes
+reutilizáveis e em pontos de partida (starters) de interface.
+
+| Pasta | O que tem |
+| --- | --- |
+| [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
+| [`packages/`](packages) | Os pacotes do kit. Vazia por enquanto: os pacotes entram nas próximas fases. |
+| [`docs/`](docs) | A documentação do kit, por assunto. |
+| `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
+
+Todos os comandos `docker compose` funcionam tanto da raiz quanto de dentro de
+`starters/livewire` (o Compose procura o `docker-compose.yml` nas pastas
+acima). Os comandos que montam a pasta atual num container (`docker run ...
+-v $(pwd):/app`) precisam rodar **dentro de `starters/livewire`**.
+
 ## Requisitos
 
 Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
@@ -42,11 +59,11 @@ Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
 ## Instalação (desenvolvimento)
 
 ```bash
-git clone <repo> meu-projeto && cd meu-projeto
+git clone <repo> meu-projeto && cd meu-projeto/starters/livewire
 cp .env.example .env
 
 # 1) Dependências PHP (roda em container, nada local)
-docker run --rm -v $(pwd):/app -w /app composer:latest composer install --no-interaction
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app composer:latest composer install --no-interaction
 
 # 2) Subir a stack
 #    Os containers de dev rodam com o uid/gid do SEU usuário (padrão 1000),
@@ -77,7 +94,7 @@ e-mail — em dev o link chega no Mailpit (desligável com
 `AUTH_EMAIL_VERIFICATION_REQUIRED=false`; ver
 [Autenticação](docs/autenticacao.md#verificação-de-e-mail-no-cadastro)).
 
-Portas conflitando? Ajuste no `.env` (`DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT`, `DEV_MAILPIT_*`) e recrie os containers.
+Portas conflitando? Exporte `DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT` ou `DEV_MAILPIT_*` no shell (ou num `.env` na **raiz** do repositório, que é o que o Compose lê para montar o `docker-compose.yml`) e recrie os containers. O `starters/livewire/.env` é o ambiente da aplicação, não do Compose; se trocar `DB_*` nele, exporte os mesmos valores antes do `docker compose up`.
 
 ## Credenciais demo
 
@@ -95,11 +112,17 @@ PostgreSQL) e **não existem em produção** — ver [Modo demo](docs/demo.md).
 ## Comandos do dia a dia (sempre em container)
 
 ```bash
+# Subir o ambiente (da raiz ou de starters/livewire)
+export UID GID=$(id -g)
+docker compose up -d --build
+
 docker compose exec app php artisan <comando>        # artisan
 docker compose exec app php artisan test             # testes (Pest 4)
 docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml   # testes contra PostgreSQL
 docker compose exec app ./vendor/bin/pint            # estilo de código
-docker run --rm -v $(pwd):/app -w /app composer:latest composer <cmd>
+
+# Os comandos abaixo montam a pasta atual: rode-os DENTRO de starters/livewire.
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app composer:latest composer <cmd>
 
 # Build do frontend (Node 24 em container; --user evita node_modules e
 # public/build com dono root, que o php-fpm não conseguiria sobrescrever):
@@ -183,27 +206,32 @@ herdar o kit ou para a infraestrutura em volta dele:
 ## Estrutura
 
 ```
-docker/
-  php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
-                       # intl (icu-data-full p/ pt_BR), bcmath, gd, zip,
-                       # opcache, pcntl, sqlite (testes), pg_dump 18 (backups)
-  php/*.ini            # configs PHP dev/prod + opcache
-  nginx/Dockerfile     # nginx dev (HTTP) e prod (HTTPS + headers OWASP)
-docker-compose.yml       # DESENVOLVIMENTO
-docker-compose.prod.yml  # PRODUÇÃO autocontida
-config/platform.php      # config centralizada da plataforma (nada hardcoded)
-lang/{pt_BR,en,es}/      # traduções (pt-BR é o idioma padrão)
-app/
-  Core/    # tudo que é genérico e reutilizável: Auth, ApiKeys, Tenancy,
-           # Security, Logging, Uploads, Money, Identifiers, Http/Resources,
-           # Settings (configs editáveis pelo admin), Support (Platform +
-           # helpers globais)
-  Livewire/   # painel do usuário
-  Filament/   # super admin /admin
-  Domain/  # regras de negócio do projeto filho
-docs/      # documentação por assunto (ver a tabela acima)
-tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
+docker-compose.yml       # DESENVOLVIMENTO (raiz do monorepo)
+docs/                    # documentação por assunto (ver a tabela acima)
+packages/                # pacotes do kit (entram nas próximas fases)
+starters/livewire/       # o aplicativo:
+  docker/
+    php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
+                         # intl (icu-data-full p/ pt_BR), bcmath, gd, zip,
+                         # opcache, pcntl, sqlite (testes), pg_dump 18 (backups)
+    php/*.ini            # configs PHP dev/prod + opcache
+    nginx/Dockerfile     # nginx dev (HTTP) e prod (HTTPS + headers OWASP)
+  docker-compose.prod.yml  # PRODUÇÃO autocontida (rodar de starters/livewire)
+  config/platform.php      # config centralizada da plataforma (nada hardcoded)
+  lang/{pt_BR,en,es}/      # traduções (pt-BR é o idioma padrão)
+  app/
+    Core/    # tudo que é genérico e reutilizável: Auth, ApiKeys, Tenancy,
+             # Security, Logging, Uploads, Money, Identifiers, Http/Resources,
+             # Settings (configs editáveis pelo admin), Support (Platform +
+             # helpers globais)
+    Livewire/   # painel do usuário
+    Filament/   # super admin /admin
+    Domain/  # regras de negócio do projeto filho
+  tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
 ```
+
+Dentro de `starters/livewire/`, a árvore é a do aplicativo Laravel: os caminhos
+acima (`docker/`, `config/`, `app/`, `tests/`...) são relativos a ela.
 
 ## Branches
 
@@ -215,4 +243,4 @@ O histórico de mudanças por versão está em [CHANGELOG.md](CHANGELOG.md). Cad
 
 ## Licença
 
-MIT (ver LICENSE).
+MIT (ver [LICENSE](LICENSE)).

@@ -1,5 +1,11 @@
 # Produção e deploy
 
+> **Monorepo:** o deploy de produção é do starter. O `docker-compose.prod.yml`,
+> o `.env.prod.example` e o contexto das imagens vivem em `starters/livewire/`,
+> e todos os comandos desta página rodam **de dentro dessa pasta** (é ela que
+> vai para o servidor). O `docker-compose.yml` da raiz do repositório é só o
+> ambiente de desenvolvimento.
+
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,
 `docker compose -f docker-compose.prod.yml up -d --build` sobe tudo — app
 PHP-FPM com OPcache (imagem imutável), nginx nas portas 80/443 (TLS com
@@ -15,7 +21,7 @@ Para produção real:
    [A chave da aplicação em produção](#a-chave-da-aplicação-em-produção)).
 2. Senhas da stack: `PROD_POSTGRES_PASSWORD` e `PROD_REDIS_PASSWORD` **não têm
    valor padrão** — sem elas o Compose se recusa a resolver o arquivo. Defina
-   `PROD_*` no shell ou no `.env` da raiz (o Compose interpola `${PROD_*}` dali
+   `PROD_*` no shell ou no `.env` ao lado do `docker-compose.prod.yml` (o Compose interpola `${PROD_*}` dali
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
 3. TLS real: monte seus certificados (`server.crt`/`server.key`) em
    `/etc/nginx/certs` — ver comentário no `docker-compose.prod.yml`.
@@ -74,9 +80,10 @@ docker run --rm --entrypoint sh tws-app:prod -c \
 ```
 
 Esperado: `uid=82(www-data)`; na raiz só `app artisan bootstrap composer.json
-composer.lock config database lang package*.json public resources routes
-storage vendor vite.config.js` e os `.md`/`LICENSE`/`.npmrc`/`.dockerignore`; zero arquivo em
-`storage/`; nenhum `.env*`.
+composer.lock config database demo lang package*.json public resources routes
+storage vendor vite.config.js`, o `README.md` do starter, `.npmrc` e `.dockerignore`
+(o contexto do build é `starters/livewire`: `docs/`, `LICENSE` e os demais `.md`
+da raiz do repositório não entram); zero arquivo em `storage/`; nenhum `.env*`.
 
 ## E-mail em produção: sem mailer de verdade, nenhum e-mail sai
 

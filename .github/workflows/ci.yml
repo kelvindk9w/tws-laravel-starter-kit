@@ -16,6 +16,11 @@
 #   continua verde. Quem vale para produção é o job do PostgreSQL.
 # - Sem Redis: a suíte força cache/sessão em array e fila sync (phpunit*.xml);
 #   nenhum teste fala com Redis.
+#
+# MONOREPO: o aplicativo vive em starters/livewire. Os jobs de teste rodam lá
+# dentro (defaults.run.working-directory) e as imagens são construídas com
+# esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
+# imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 name: CI
 
 on:
@@ -37,6 +42,10 @@ jobs:
     name: Pint · Pest · auditorias · build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: starters/livewire
 
     # PostgreSQL da mesma versão major da produção (docker-compose*.yml).
     # O banco termina em _test: a suíte recusa qualquer outro (tests/TestCase.php).
@@ -78,6 +87,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: starters/livewire/package-lock.json
 
       - name: Dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -112,6 +122,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    defaults:
+      run:
+        working-directory: starters/livewire
+
     steps:
       - uses: actions/checkout@v7
 
@@ -127,6 +141,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: starters/livewire/package-lock.json
 
       - name: Dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -175,8 +190,9 @@ jobs:
       - name: Build ${{ matrix.image }} (target prod)
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ${{ matrix.dockerfile }}
+          # Contexto = o starter; o Dockerfile da matriz é relativo a ele.
+          context: starters/livewire
+          file: starters/livewire/${{ matrix.dockerfile }}
           target: prod
           push: false
           load: ${{ matrix.image == 'app' }}
