@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Tenancy\Enums;
 
 /**
- * Status do projeto (camada organizacional — ADR-005).
+ * Status do projeto (camada organizacional).
  */
 enum ProjectStatus: string
 {

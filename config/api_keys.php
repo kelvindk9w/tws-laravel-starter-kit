@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Motor de API Keys + Tenancy (Fase 4 — ADR-005/006/010).
+// Motor de API Keys + Tenancy.
 //
-// Todos os valores são ajustáveis por .env — NUNCA hardcodar (ADR-007).
+// Todos os valores são ajustáveis por .env — NUNCA hardcodar.
 // =============================================================================
 
 return [
@@ -14,8 +14,8 @@ return [
     // pk_test_/sk_test_. Produção usa 'live'; sandbox/dev usam 'test'.
     'environment' => env('API_KEYS_ENVIRONMENT', 'live'),
 
-    // --- Hash da chave secreta (checklist item 5) ------------------------------
-    // DECISÃO (documentada no README): HMAC-SHA256 com pepper, no padrão Sanctum
+    // --- Hash da chave secreta --------------------------------------------------
+    // DECISÃO (documentada em docs/api.md): HMAC-SHA256 com pepper, no padrão Sanctum
     // (SHA-256). A sk_ tem 256 bits de entropia aleatória criptográfica — KDF
     // lenta (Argon2id) protege segredos de BAIXA entropia (senhas humanas); aqui
     // só adicionaria latência por requisição sem ganho. O pepper (segredo fora
@@ -28,7 +28,7 @@ return [
     // segundos por chave (a request nunca paga um UPDATE a cada chamada).
     'last_used_throttle_seconds' => (int) env('API_KEYS_LAST_USED_THROTTLE_SECONDS', 60),
 
-    // --- Expiração por inatividade (ADR-006) -----------------------------------
+    // --- Expiração por inatividade ---------------------------------------------
     // Job diário (api-keys:process-inactivity): chave sem uso por `months`
     // meses é desativada (status expired_inactivity); `warning_days` antes,
     // envia e-mail de AVISO PRÉVIO (uma única vez por ciclo de inatividade).
@@ -38,7 +38,7 @@ return [
         'warning_days' => (int) env('API_KEYS_INACTIVITY_WARNING_DAYS', 7),
     ],
 
-    // --- Rotação (ADR-006) -------------------------------------------------------
+    // --- Rotação ---------------------------------------------------------------
     // No ato da rotação o usuário escolhe a morte da antiga: grace_period_minutes
     // nulo/0 = morte imediata; positivo = janela de coexistência (sem downtime).
     'rotation' => [
@@ -50,7 +50,7 @@ return [
         'per_page' => (int) env('API_KEYS_PER_PAGE', 15),
     ],
 
-    // Scopes padrão na criação: TUDO habilitado (ADR-006). O usuário pode
+    // Scopes padrão na criação: TUDO habilitado. O usuário pode
     // restringir por recurso:ação (menor privilégio) informando `scopes`.
     'default_scopes' => ['*:*'],
 

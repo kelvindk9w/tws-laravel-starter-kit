@@ -7,7 +7,7 @@ namespace App\Core\ApiKeys\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Criação de chave de API (ADR-006). Sempre combinado com os middlewares
+ * Criação de chave de API. Sempre combinado com os middlewares
  * resolve.tenant + scope:api-keys:create + sensitive.token (rota).
  *
  * - scopes omitido = padrão da config (tudo habilitado, ['*:*']).

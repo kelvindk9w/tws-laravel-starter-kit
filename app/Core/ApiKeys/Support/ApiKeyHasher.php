@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\ApiKeys\Support;
 
 /**
- * Hash da chave SECRETA (sk_) — checklist item 5 / ADR-006.
+ * Hash da chave SECRETA (sk_) — só o hash vai ao banco; a secreta é exibida uma vez.
  *
  * DECISÃO: HMAC-SHA256 com pepper (padrão Sanctum, que usa SHA-256 puro).
  * Justificativa:
@@ -17,7 +17,7 @@ namespace App\Core\ApiKeys\Support;
  * - O pepper (segredo fora do banco, via .env) garante que um vazamento
  *   SOMENTE do banco não permita computar/verificar hashes.
  * - A comparação é SEMPRE timing-safe: hash_equals() — timing attack em
- *   comparação de segredos é vetor real (checklist item 5).
+ *   comparação de segredos é vetor real.
  */
 final class ApiKeyHasher
 {
@@ -39,7 +39,7 @@ final class ApiKeyHasher
 
     /**
      * Pepper do HMAC: segredo dedicado (API_KEYS_HASH_PEPPER) com fallback
-     * para a APP_KEY — nunca hardcoded (ADR-007).
+     * para a APP_KEY — nunca hardcoded.
      */
     private function pepper(): string
     {

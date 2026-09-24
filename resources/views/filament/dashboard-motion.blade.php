@@ -1,6 +1,6 @@
 {{--
-    Animação de entrada dos números dos dashboards (checklist premium:
-    "count-up sutil, sem exagero").
+    Animação de entrada dos números dos dashboards ("count-up sutil,
+    sem exagero").
 
     DECISÕES:
     - PROGRESSIVE ENHANCEMENT: o número correto já vem renderizado pelo

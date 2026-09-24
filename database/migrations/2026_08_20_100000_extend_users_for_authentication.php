@@ -7,13 +7,13 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // =============================================================================
-// Fase 3 — Autenticação (ADR-006/010).
+// Autenticação.
 //
 // - users: identificadores externos (uuid + codigo_publico USR-xxxx — o `id`
 //   interno NUNCA é exposto), senha de transação (hash SEPARADO da senha de
 //   login) e status da conta.
-// - `name` vira TEXT: o cast `encrypted` (AES-256-GCM da APP_KEY — checklist
-//   item 12) expande o valor armazenado; VARCHAR(255) seria insuficiente.
+// - `name` vira TEXT: o cast `encrypted` (AES-256-GCM da APP_KEY)
+//   expande o valor armazenado; VARCHAR(255) seria insuficiente.
 // - verification_codes: códigos de verificação (2FA por e-mail e futuros
 //   canais TOTP/WhatsApp). SEMPRE com hash + expiração — nunca plaintext.
 // - sensitive_action_tokens: token de ação sensível, de curta duração e uso
@@ -24,14 +24,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Identificadores externos (ADR-010) — o `id` nunca sai do banco.
+            // Identificadores externos — o `id` nunca sai do banco.
             $table->uuid('uuid')->nullable()->unique()->after('id');
             $table->string('codigo_publico', 32)->nullable()->unique()->after('uuid');
 
-            // Dado pessoal criptografado em repouso (checklist 12) → TEXT.
+            // Dado pessoal criptografado em repouso → TEXT.
             $table->text('name')->change();
 
-            // Senha de transação: hash separado da senha de login (ADR-006).
+            // Senha de transação: hash separado da senha de login.
             $table->string('transaction_password')->nullable()->after('password');
             $table->timestamp('transaction_password_set_at')->nullable()->after('transaction_password');
 
@@ -45,7 +45,7 @@ return new class extends Migration
             // Canal (email hoje; totp/whatsapp futuros) e finalidade do código.
             $table->string('channel', 20);
             $table->string('purpose', 40);
-            // NUNCA plaintext: somente o hash do código (checklist 4/24).
+            // NUNCA plaintext: somente o hash do código.
             $table->string('code_hash');
             $table->unsignedTinyInteger('attempts')->default(0);
             $table->timestamp('expires_at');

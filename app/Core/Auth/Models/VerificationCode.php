@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Código de verificação (2FA por e-mail — checklist item 24; ADR-006).
+ * Código de verificação (2FA por e-mail).
  *
  * Invariantes de segurança:
  * - `code_hash`: SOMENTE o hash do código (Argon2id) — nunca plaintext.

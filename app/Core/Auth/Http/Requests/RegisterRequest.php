@@ -8,8 +8,8 @@ use App\Core\Auth\PasswordPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Registro de usuário (checklist item 9 — validação server-side de TODA
- * entrada via Form Request). Força mínima da senha via config (ADR-007).
+ * Registro de usuário (validação server-side de TODA
+ * entrada via Form Request). Força mínima da senha via config (nada hardcoded).
  */
 final class RegisterRequest extends FormRequest
 {

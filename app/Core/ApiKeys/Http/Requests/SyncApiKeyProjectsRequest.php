@@ -7,11 +7,11 @@ namespace App\Core\ApiKeys\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Vínculo N:N chave ↔ projetos (ADR-005/006). Sempre combinado com
+ * Vínculo N:N chave ↔ projetos. Sempre combinado com
  * resolve.tenant + scope:api-keys:assign (rota).
  *
  * `project_uuids` presente e vazio = remove TODOS os vínculos (a chave volta
- * a enxergar a conta toda — semântica do ADR-005).
+ * a enxergar a conta toda).
  */
 final class SyncApiKeyProjectsRequest extends FormRequest
 {

@@ -49,7 +49,7 @@ use Illuminate\Support\Str;
  * clique de distância e sabe que está olhando para evidência; quem só
  * tria a fila nunca esbarra nele.
  *
- * A GRAVAÇÃO CONTINUA CRUA no banco (auditoria — ADR-004/005): quem
+ * A GRAVAÇÃO CONTINUA CRUA no banco (auditoria): quem
  * neutraliza é a exibição, nunca o registro.
  *
  * - ORDEM: tentativas bloqueadas SEMPRE no topo (blocked_at não nulo

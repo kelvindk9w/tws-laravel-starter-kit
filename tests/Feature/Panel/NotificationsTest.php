@@ -7,8 +7,8 @@ use App\Livewire\Notifications\Preferences;
 use Livewire\Livewire;
 
 // =============================================================================
-// Preferências de notificação (Livewire — Fase 6): esqueleto de toggles de
-// e-mail preparado para as notificações de pagamento do gatPay (ADR-009).
+// Preferências de notificação (Livewire): esqueleto de toggles de
+// e-mail preparado para as notificações do projeto que herdar o kit.
 // =============================================================================
 
 it('exige autenticação (deny-by-default)', function () {

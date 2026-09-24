@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas de autenticación (es). Toda cadena de UI pasa por __() — ADR-007.
+// Cadenas de autenticación (es). Toda cadena de UI pasa por __().
 
 return [
 
@@ -26,7 +26,7 @@ return [
     'registered' => 'Cuenta creada con éxito. ¡Bienvenido(a)!',
     'logged_out' => 'Sesión cerrada con éxito.',
 
-    // Contraseña de transacción (ADR-006 — separada de la de acceso).
+    // Contraseña de transacción (separada de la de acceso).
     'transaction_password' => [
         'invalid' => 'La contraseña de transacción ingresada es incorrecta.',
         'current_invalid' => 'La contraseña de transacción actual es incorrecta.',
@@ -42,7 +42,7 @@ return [
         'resend_cooldown' => 'Espera :seconds segundos para solicitar un nuevo código.',
     ],
 
-    // Token de acción sensible (uso único, corta duración — ADR-006/010).
+    // Token de acción sensible (uso único, corta duración).
     'sensitive_action' => [
         'token_issued' => 'Acción sensible autorizada. Usa el token de inmediato — es de uso único.',
         'invalid_token' => 'Token de acción sensible ausente, inválido o expirado. Confirma la acción de nuevo.',
@@ -51,7 +51,7 @@ return [
     // Cadenas de interfaz (formularios/pantallas de autenticación).
     // Blindaje de las cuentas de demostración (DemoAccountGuard): mensajes de
     // quien intenta tocarlas fuera de la interfaz del super admin — tinker,
-    // comando artisan, job. Ver el README, "Las cuentas demo son intocables".
+    // comando artisan, job. Ver docs/demo.md, "Contas demo são intocáveis".
     'demo_account' => [
         'update_blocked' => 'Cuenta de demostración protegida: ":email" no acepta cambios en :fields. Nombre, foto, idioma y tema siguen editables.',
         'delete_blocked' => 'Cuenta de demostración protegida: ":email" no se puede eliminar.',

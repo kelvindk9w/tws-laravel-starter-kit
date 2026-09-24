@@ -7,7 +7,7 @@ namespace App\Core\Identifiers;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Roteamento por UUID (ADR-010: o `id` interno NUNCA aparece na URL).
+ * Roteamento por UUID (o `id` interno NUNCA aparece na URL: impede enumeração).
  *
  * Por que a trait existe: no Filament 5 o `$recordRouteKeyName` do Resource
  * é usado APENAS para RESOLVER o registro a partir da URL

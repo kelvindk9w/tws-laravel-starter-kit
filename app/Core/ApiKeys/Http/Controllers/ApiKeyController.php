@@ -17,15 +17,15 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\ValidationException;
 
 /**
- * API v1 do motor de chaves (ADR-006). Grupo protegido por resolve.tenant
+ * API v1 do motor de chaves. Grupo protegido por resolve.tenant
  * (+ scope por rota); criação e rotação exigem ainda o token de ação
- * sensível (senha de transação + 2FA por e-mail — Fase 3).
+ * sensível (senha de transação + 2FA por e-mail).
  *
  * As rotas exigem chave de CONTA (middleware account.key): chave vinculada a
  * projetos não gerencia chaves, exceto rotacionar ou revogar a si mesma
  * (account.key:self) — ver EnsureAccountWideApiKey.
  *
- * Isolamento de tenant (checklist itens 11/31): TODA consulta é filtrada
+ * Isolamento de tenant (coberto por testes de tenant A x B): TODA consulta é filtrada
  * pelo dono autenticado; chave de outro tenant = 404 uniforme (nunca 403,
  * para não revelar existência).
  */
@@ -50,7 +50,7 @@ final class ApiKeyController extends Controller
     /**
      * POST /api/v1/api-keys — cria chave (scope api-keys:create + ação
      * sensível). A secreta em claro sai UMA única vez, no campo avulso
-     * `secret_key` do envelope — no banco fica somente o hash (ADR-006).
+     * `secret_key` do envelope — no banco fica somente o hash.
      */
     public function store(StoreApiKeyRequest $request): JsonResponse
     {
@@ -121,7 +121,7 @@ final class ApiKeyController extends Controller
     /**
      * PUT /api/v1/api-keys/{uuid}/projects — vínculo N:N chave ↔ projetos
      * (scope api-keys:assign; só por chave de conta — account.key). Lista com
-     * projetos = chave restrita a eles; lista vazia = conta toda (ADR-005).
+     * projetos = chave restrita a eles; lista vazia = conta toda.
      */
     public function syncProjects(SyncApiKeyProjectsRequest $request, string $uuid): JsonResponse
     {
@@ -148,7 +148,7 @@ final class ApiKeyController extends Controller
 
     /**
      * Localiza a chave do tenant pelo UUID — 404 uniforme para chave de
-     * outro tenant ou inexistente (anti-IDOR/BOLA, checklist item 11).
+     * outro tenant ou inexistente (anti-IDOR/BOLA: não revela que o recurso existe).
      */
     private function findOwned(string $uuid): ApiKey
     {

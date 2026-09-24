@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 // =============================================================================
-// VÍNCULO CHAVE DE API ↔ PROJETO (ADR-005/006) — a regra, provada ponta a ponta.
+// VÍNCULO CHAVE DE API ↔ PROJETO — a regra, provada ponta a ponta.
 //
 //   - Chave SEM vínculo = conta toda: vê e gerencia todos os projetos do dono,
 //     cria projetos e gerencia chaves (se os scopes permitirem).

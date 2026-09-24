@@ -24,18 +24,18 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 /**
- * Usuário da plataforma (ADR-006/010).
+ * Usuário da plataforma.
  *
- * Identificadores (3 camadas — ADR-010):
+ * Identificadores (3 camadas — anti-enumeração):
  * - `id` interno: NUNCA exposto.
  * - `uuid`: identificador externo seguro (UUID v7 ordered via HasUuids).
  * - `codigo_publico`: legível, `USR-xxxxxx` (HasPublicCode + UNIQUE no banco).
  *
- * Senhas (ADR-006 — separadas, ambas com hash Argon2id via config/hashing.php):
+ * Senhas (separadas, ambas com hash Argon2id via config/hashing.php):
  * - `password`: senha de LOGIN.
  * - `transaction_password`: senha de TRANSAÇÃO (ações sensíveis), hash separado.
  *
- * Dados pessoais (checklist item 12 — classificação de dados do ADR-006):
+ * Dados pessoais (criptografia em repouso conforme a classificação do dado):
  * - `name`: cast `encrypted` (AES-256-GCM da APP_KEY) — dado pessoal sensível.
  * - `email`: texto (é a chave de lookup do login; índice UNIQUE exige texto).
  */
@@ -47,7 +47,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     use HasFactory, HasPublicCode, HasUuids, Notifiable, RoutesByUuid;
 
     /**
-     * Prefixo do código público legível (ADR-010): USR-xxxxxx.
+     * Prefixo do código público legível: USR-xxxxxx.
      */
     protected const PUBLIC_CODE_PREFIX = 'USR';
 
@@ -63,7 +63,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     ];
 
     /**
-     * BLINDAGEM DAS CONTAS DEMO no nível do model (ADR-011).
+     * BLINDAGEM DAS CONTAS DEMO no nível do model.
      *
      * A UI do Filament já recusava (UserAdminGuard), mas ela só protege a
      * demo de quem clica. Estes dois eventos protegem também de quem
@@ -144,7 +144,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     }
 
     /**
-     * Avatar do perfil (upload validado pela função global da Fase 5).
+     * Avatar do perfil (upload validado pela função global de upload, SecureUploadService).
      *
      * @return BelongsTo<Upload, $this>
      */
@@ -162,7 +162,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     }
 
     /**
-     * Acesso ao super admin Filament (/admin — ADR-011). Deny-by-default:
+     * Acesso ao super admin Filament (/admin). Deny-by-default:
      * somente a flag is_admin (concedida pelo comando `user:make-admin`)
      * E conta ativa liberam o painel; os demais recebem 403.
      */
@@ -204,7 +204,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     }
 
     /**
-     * Locale preferido do usuário (interface + e-mails — ADR-007).
+     * Locale preferido do usuário (interface + e-mails).
      * Sem preferência salva (ou valor fora da whitelist) = padrão da plataforma.
      */
     public function preferredLocale(): string
@@ -238,7 +238,7 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference
     }
 
     /**
-     * A conta está ativa? (Login é deny-by-default — checklist 13.)
+     * A conta está ativa? (Login é deny-by-default.)
      */
     public function isActive(): bool
     {

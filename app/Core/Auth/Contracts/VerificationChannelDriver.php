@@ -13,7 +13,7 @@ use App\Core\Auth\Models\User;
  *
  * Hoje existe apenas o driver de e-mail. TOTP (app autenticador) e WhatsApp
  * entram como NOVOS drivers implementando esta interface, sem tocar no fluxo
- * de verificação (ADR-006: "Futuro: app autenticador e/ou WhatsApp").
+ * de verificação.
  */
 interface VerificationChannelDriver
 {

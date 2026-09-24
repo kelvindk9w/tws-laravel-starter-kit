@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Headers de segurança OWASP (checklist item 20) — presentes em TODAS as
+// Headers de segurança OWASP — presentes em TODAS as
 // respostas, inclusive bloqueios e erros (middleware mais externo da cadeia).
 
 it('respostas normais carregam os headers de segurança', function () {

@@ -2,7 +2,7 @@
 
 // =============================================================================
 // Envelope de ERRO da API (`api/*`) — ver App\Core\Http\Exceptions\ApiErrorRenderer
-// e a seção "API" do README.
+// e docs/api.md ("Contrato de resposta da API").
 //
 // A `message` é humana e traduzida; o `code` é estável e NÃO se traduz
 // (é ele que o cliente da API programa).

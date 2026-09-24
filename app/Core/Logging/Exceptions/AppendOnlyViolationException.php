@@ -7,7 +7,7 @@ namespace App\Core\Logging\Exceptions;
 use RuntimeException;
 
 /**
- * Violação da imutabilidade do request log (ADR-004 — logs append-only).
+ * Violação da imutabilidade do request log (logs append-only).
  *
  * Lançada quando código da aplicação tenta UPDATE ou DELETE arbitrário
  * em request_logs via Eloquent. As únicas mutações permitidas são as
@@ -26,6 +26,6 @@ final class AppendOnlyViolationException extends RuntimeException
 
     public static function deleteAttempted(): self
     {
-        return new self('request_logs é append-only: DELETE é proibido (ADR-004 — trilha de auditoria imutável).');
+        return new self('request_logs é append-only: DELETE é proibido (trilha de auditoria imutável).');
     }
 }

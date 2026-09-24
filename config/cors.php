@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // =============================================================================
-// CORS restritivo (checklist item 19).
+// CORS restritivo.
 //
 // Padrão seguro: NENHUMA origem permitida (CORS_ALLOWED_ORIGINS vazio) —
 // a API é consumida server-to-server com chave no header. Liberar apenas as

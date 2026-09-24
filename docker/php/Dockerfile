@@ -11,7 +11,7 @@
 # As dependências PHP de produção são instaladas SOBRE este mesmo base (estágio
 # composer-prod), então a checagem de plataforma do Composer vale para o PHP
 # que de fato roda em produção.
-# postgresql18-client: pg_dump/pg_restore 18 para os backups (Fase 7).
+# postgresql18-client: pg_dump/pg_restore 18 para os backups.
 # =============================================================================
 
 # -----------------------------------------------------------------------------

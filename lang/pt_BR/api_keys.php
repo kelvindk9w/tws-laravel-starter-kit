@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-// Strings do motor de API Keys + Tenancy (pt-BR — ADR-007). Sempre via __().
+// Strings do motor de API Keys + Tenancy (pt-BR). Sempre via __().
 
 return [
 
-    // Autenticação da API (ResolveTenant — ADR-010).
+    // Autenticação da API (ResolveTenant).
     'auth' => [
         // Mensagem ÚNICA e deliberadamente genérica: não revela se a chave
         // pública existe, se a secreta errou ou se a chave expirou (não
-        // oracular — checklist item 11).
+        // oracular: impede descobrir quais chaves existem).
         'invalid' => 'Credenciais de API ausentes, inválidas ou expiradas.',
     ],
 
-    // Autorização por scope (middleware scope:recurso:acao — ADR-006).
+    // Autorização por scope (middleware scope:recurso:acao).
     'scopes' => [
         'denied' => 'Esta chave de API não tem permissão para o escopo ":scope".',
         'invalid_format' => 'Cada escopo deve estar no formato "recurso:acao" (ex.: customers:read, pix:create, withdrawals:*).',
@@ -29,7 +29,7 @@ return [
         'projects_synced' => 'Projetos vinculados à chave com sucesso.',
     ],
 
-    // Projetos (camada organizacional — ADR-005).
+    // Projetos (camada organizacional).
     'projects' => [
         'created' => 'Projeto criado com sucesso.',
         'updated' => 'Projeto atualizado com sucesso.',

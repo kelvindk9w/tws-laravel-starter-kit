@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Security;
 
 /**
- * Detector de padrões maliciosos em inputs de requisição (ADR-005).
+ * Detector de padrões maliciosos em inputs de requisição.
  *
  * É DEFESA EM PROFUNDIDADE E TELEMETRIA, não a defesa primária. Quem impede
  * a injeção é o framework: Eloquent/Query Builder com bindings (SQL), Blade
@@ -73,7 +73,7 @@ final class AttackDetector
 
     /**
      * Padrões por tipo de ataque. O tipo é persistido no request log
-     * (metadado da tentativa — ADR-005).
+     * (metadado da tentativa).
      *
      * @var array<string, list<string>>|null
      */

@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Definição/alteração da senha de TRANSAÇÃO (ADR-006 — separada da senha
+ * Definição/alteração da senha de TRANSAÇÃO (separada da senha
  * de login). Na redefinição, a senha de transação ATUAL é exigida.
  */
 final class TransactionPasswordRequest extends FormRequest

@@ -68,8 +68,9 @@ final class DemoAccountGuard
     public const SENSITIVE_ATTRIBUTES = ['email', 'password', 'is_admin', 'status'];
 
     /**
-     * Chave de sessão do PostgreSQL que desliga o trigger (usada só pelos
-     * seeders, via withoutProtection()).
+     * Chave de sessão do PostgreSQL que desliga o trigger. Quem escreve nela:
+     * withoutProtection() (os seeders) e DemoAccountSession, que a desliga em
+     * toda conexão quando o modo demo está desligado.
      */
     public const DATABASE_FLAG = 'tws.demo_guard';
 
@@ -156,8 +157,23 @@ final class DemoAccountGuard
             return $callback();
         } finally {
             self::$disabled = $anterior;
-            self::setDatabaseFlag('on');
+            self::syncDatabaseSession();
         }
+    }
+
+    /**
+     * Devolve a flag de sessão do banco ao estado que a aplicação manda: `off`
+     * dentro de withoutProtection(); fora dela, o que o modo demo determina
+     * (DemoAccountSession::baseline()).
+     *
+     * Por que não simplesmente `on` ao sair do withoutProtection: com o modo
+     * demo desligado a sessão nasce com a proteção desligada
+     * (DemoAccountSession), e religá-la ao fim de um seeder faria um gatilho
+     * esquecido no banco voltar a recusar pelo resto do processo.
+     */
+    public static function syncDatabaseSession(): void
+    {
+        self::setDatabaseFlag(self::$disabled ? 'off' : DemoAccountSession::baseline());
     }
 
     /**

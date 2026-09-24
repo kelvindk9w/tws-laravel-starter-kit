@@ -43,10 +43,10 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 /**
- * Usuários (super admin — ADR-011): CRUD completo — listar, ver, criar,
+ * Usuários (super admin): CRUD completo — listar, ver, criar,
  * editar, bloquear/desbloquear e excluir.
  *
- * Histórico: até a Fase 6 o resource era só leitura (contas nasciam pelo
+ * Histórico: no início o resource era só leitura (contas nasciam pelo
  * registro público e a flag is_admin só mudava por comando). O operador do
  * painel precisava de shell no servidor para cadastrar alguém, o que não se
  * sustenta em um super admin — a UI passou a fazer o ciclo inteiro. O
@@ -57,10 +57,10 @@ use Filament\Tables\Table;
  * contas demo intocáveis, o admin não se exclui nem se bloqueia e o último
  * admin ativo não perde a flag/acesso.
  *
- * `is_admin` e `status` NÃO são mass-assignable (ADR-011): as páginas de
+ * `is_admin` e `status` NÃO são mass-assignable: as páginas de
  * criação/edição gravam por forceFill explícito.
  *
- * Rotas e buscas usam o UUID — o id interno nunca é exposto (ADR-010).
+ * Rotas e buscas usam o UUID — o id interno nunca é exposto (anti-enumeração).
  */
 final class UserResource extends BaseResource
 {
@@ -74,7 +74,7 @@ final class UserResource extends BaseResource
 
     /**
      * Formulário de criação/edição. `status` e `is_admin` são gravados por
-     * forceFill nas páginas (nunca mass assignment — ADR-011).
+     * forceFill nas páginas (nunca mass assignment).
      */
     public static function form(Schema $schema): Schema
     {
@@ -149,7 +149,7 @@ final class UserResource extends BaseResource
         return [
             self::avatarColumn(),
             AdminColumns::publicCode(),
-            // `name` é criptografado em repouso (checklist 12): exibido,
+            // `name` é criptografado em repouso: exibido,
             // mas NÃO pesquisável/ordenável (a coluna é o ciphertext).
             TextColumn::make('name')
                 ->label(__('panel.common.name')),

@@ -17,7 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
  * O que ela garante, sem que cada e-mail precise lembrar:
  *   1. Fila SEMPRE (ShouldQueue). Um e-mail que sai na requisição faz o
  *      usuário esperar o SMTP responder.
- *   2. Assunto vindo de __() (ADR-007) — três idiomas, um por destinatário.
+ *   2. Assunto vindo de __() — três idiomas, um por destinatário.
  *   3. Versão em TEXTO PURO automática, gerada do próprio HTML
  *      (App\Core\Mail\PlainText): multipart/alternative sem manter duas
  *      cópias do mesmo texto.
@@ -32,7 +32,7 @@ use Illuminate\Mail\Mailables\Envelope;
  *      chave, abre o conteúdo na hora de enviar.
  *
  * Um e-mail novo implementa dois métodos — o assunto e a view do corpo — e
- * herda o resto. Ver README, seção "E-mails transacionais".
+ * herda o resto. Ver docs/emails.md.
  */
 abstract class KitMailable extends Mailable implements ShouldBeEncrypted, ShouldQueue
 {

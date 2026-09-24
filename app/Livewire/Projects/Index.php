@@ -11,10 +11,10 @@ use Illuminate\Support\Collection;
 use Livewire\Component;
 
 /**
- * Projetos — CRUD só com nome, TUDO na mesma tela (ADR-005): criar e editar
+ * Projetos — CRUD só com nome, TUDO na mesma tela: criar e editar
  * inline, excluir com confirmação inline. Sem labirinto de cliques.
  *
- * Consome o mesmo model/invariantes da API v1 (Fase 4): createWithPublicCodeRetry,
+ * Consome o mesmo model/invariantes da API v1: createWithPublicCodeRetry,
  * isolamento por dono (uuid de outro tenant = 404) e regras do StoreProjectRequest.
  */
 final class Index extends Component
@@ -125,7 +125,7 @@ final class Index extends Component
     {
         $project = $this->findOwned((string) $this->confirmingDeleteUuid);
 
-        // O vínculo N:N cai junto (cascadeOnDelete na pivot — Fase 4); chaves
+        // O vínculo N:N cai junto (cascadeOnDelete na pivot); chaves
         // que só atendiam este projeto voltam a enxergar a conta toda.
         $project->delete();
 
@@ -141,7 +141,7 @@ final class Index extends Component
     }
 
     /**
-     * Projeto do PRÓPRIO usuário por UUID — de outro tenant = 404 (checklist 11/31).
+     * Projeto do PRÓPRIO usuário por UUID — de outro tenant = 404 (nem confirma que existe).
      */
     private function findOwned(string $uuid): Project
     {

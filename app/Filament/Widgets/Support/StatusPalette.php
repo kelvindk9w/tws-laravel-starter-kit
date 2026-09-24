@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets\Support;
 
 /**
- * A ÚNICA paleta de status dos dashboards (checklist premium: "cor de status
- * com propósito").
+ * A ÚNICA paleta de status dos dashboards: cor de status só com propósito.
  *
  * Regra: verde/âmbar/vermelho só carregam SIGNIFICADO — sucesso, atenção,
  * falha. Todo o resto do painel é neutro. Sem um lugar só para isso, "erro de

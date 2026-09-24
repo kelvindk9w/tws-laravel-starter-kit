@@ -16,7 +16,7 @@ use App\Core\Mail\MailPreview;
 it('renderiza todo e-mail do catálogo com o cabeçalho e o rodapé do kit', function (string $slug): void {
     $email = MailPreview::render($slug, 'pt_BR');
 
-    // Cabeçalho: a marca vem de config/platform.php (ADR-007), nunca fixa.
+    // Cabeçalho: a marca vem de config/platform.php, nunca fixa.
     expect($email['html'])->toContain(platform()->name);
 
     // Rodapé: empresa, aviso de e-mail transacional e direitos autorais.

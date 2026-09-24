@@ -8,7 +8,7 @@ use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Mail\KitMailable;
 
 /**
- * E-mail com o código de verificação (2FA por e-mail — ADR-006).
+ * E-mail com o código de verificação (2FA por e-mail).
  *
  * SEMPRE enfileirado (KitMailable é ShouldQueue → Redis em dev/produção;
  * Mailpit como SMTP de dev). O código em claro existe apenas neste payload
@@ -16,7 +16,7 @@ use App\Core\Mail\KitMailable;
  * (verification_codes).
  *
  * Assunto, corpo e versão em texto puro vêm do layout único do kit
- * (KitMailable + <x-email::layouts.kit>). Strings via __() (ADR-007):
+ * (KitMailable + <x-email::layouts.kit>). Strings via __() (nada hardcoded):
  * ver lang/{pt_BR,en,es}/mail.php.
  */
 final class VerificationCodeMail extends KitMailable

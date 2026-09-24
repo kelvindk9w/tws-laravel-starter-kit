@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * O painel do usuário e a API seguem com o bundle CSP-safe + CSP estrita.
  * Mitigação: /admin é painel interno — acesso por is_admin + IP allowlist
- * obrigatória em produção (ADR-011, checklist item 25).
+ * obrigatória em produção.
  */
 final class UseEvalBundleForAdmin
 {

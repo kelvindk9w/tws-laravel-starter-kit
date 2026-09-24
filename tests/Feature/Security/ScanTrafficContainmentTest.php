@@ -9,10 +9,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-// Contenção da amplificação de escrita em `request_logs` (Lote 2 da
-// auditoria): cada 404 de varredura anônima gerava INSERT + UPDATE. Agora, de
+// Contenção da amplificação de escrita em `request_logs`: cada 404 de varredura anônima gerava INSERT + UPDATE. Agora, de
 // cada cliente, só a PRIMEIRA requisição a rota inexistente por janela vai ao
-// banco; o resto fica no log de arquivo. REGRA INEGOCIÁVEL (ADR de logs):
+// banco; o resto fica no log de arquivo. REGRA INEGOCIÁVEL:
 // tentativa bloqueada pelo SecurityValidation e requisição a rota existente —
 // autenticada ou não — continuam gravadas sempre.
 

@@ -45,7 +45,7 @@ class UserFactory extends Factory
     }
 
     /**
-     * Usuário com senha de transação definida (hash separado — ADR-006).
+     * Usuário com senha de transação definida (hash separado da senha de login).
      */
     public function withTransactionPassword(string $password = 'Trans4cao!Segura'): static
     {

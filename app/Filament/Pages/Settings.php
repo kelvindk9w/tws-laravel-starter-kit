@@ -17,8 +17,8 @@ use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Configurações do sistema (super admin — Fase 6): ajustes operacionais
- * editáveis pela UI, SEM tocar no .env (ADR-006/007).
+ * Configurações do sistema (super admin): ajustes operacionais
+ * editáveis pela UI, SEM tocar no .env.
  *
  * Somente a whitelist de config/settings.php aparece aqui. Campo VAZIO =
  * volta ao valor do .env (o override da tabela settings é removido). Os

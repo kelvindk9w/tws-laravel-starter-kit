@@ -6,7 +6,7 @@ use App\Core\Logging\Models\RequestLog;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
-// Limite de requisições da BORDA (Lote 2 da auditoria): antes, só o grupo
+// Limite de requisições da BORDA: antes, só o grupo
 // `api` tinha throttle — 20 de 20 `GET /` davam 200 e um flood anônimo de 404
 // virava INSERT + UPDATE por requisição em `request_logs`. O EdgeRateLimit é
 // global, por cliente (IP ou prefixo IPv6), e roda antes da varredura de

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Security;
 
 /**
- * Sanitização de payload para PERSISTÊNCIA (ADR-005).
+ * Sanitização de payload para PERSISTÊNCIA.
  *
  * Regra de lei: payload malicioso é armazenado SANITIZADO/escapado —
  * NUNCA em formato executável. Strings são escapadas em HTML

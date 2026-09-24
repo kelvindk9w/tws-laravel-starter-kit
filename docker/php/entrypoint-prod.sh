@@ -92,7 +92,7 @@ legivel. Isso NAO vale para as chaves de API: o hash delas usa apenas o pepper
 atual, entao defina API_KEYS_HASH_PEPPER como segredo dedicado, independente da
 APP_KEY, antes de emitir a primeira chave.
 
-Detalhes: .env.prod.example e README, secao Producao.
+Detalhes: .env.prod.example e docs/producao.md.
 MSG
         exit 78
     fi

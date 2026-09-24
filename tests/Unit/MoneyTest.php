@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Money\Money;
 
-// Testes das funções globais monetárias (ADR-004/005): inteiro canônico,
+// Testes das funções globais monetárias: inteiro canônico,
 // formatado só na borda, NUNCA float.
 
 it('formata inteiro de centavos para BRL', function () {

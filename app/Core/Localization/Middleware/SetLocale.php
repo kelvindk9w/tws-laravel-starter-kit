@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Resolve o locale da requisição (ADR-007), nesta ordem:
+ * Resolve o locale da requisição, nesta ordem:
  *
  * 1. Usuário autenticado → preferência salva na conta (users.locale);
  * 2. Visitante → cookie `locale` (gravado pela rota locale.switch);

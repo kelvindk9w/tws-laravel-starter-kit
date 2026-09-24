@@ -19,7 +19,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  *
  * O ponto que não podia ser negociado: o Filament, de fábrica, grava o
  * arquivo direto no disco. Isso pularia a FUNÇÃO GLOBAL DE UPLOAD do kit
- * (SecureUploadService — ADR-010) e, com ela, a validação por magic bytes,
+ * (SecureUploadService) e, com ela, a validação por magic bytes,
  * o re-encode GD, o nome derivado do MIME real e o registro em `uploads`.
  * Ou seja: o /admin viraria a única porta do sistema por onde um arquivo
  * entra sem passar pela lei.
@@ -55,7 +55,7 @@ final class AvatarUpload
             ->disk((string) config('uploads.disk', 'local'))
             ->directory(self::DIRECTORY)
             // Sem isto o Filament monta URL pública: a política do kit é
-            // documento nunca em bucket público (ADR-010).
+            // documento nunca em bucket público.
             ->visibility('private')
             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
             ->maxSize($maxKb)

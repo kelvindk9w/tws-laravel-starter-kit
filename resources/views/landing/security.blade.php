@@ -17,7 +17,7 @@
     // admin e e-mails saírem dos MESMOS componentes.
     $readyIcons = ['envelope', 'code-bracket'];
 
-    // ADR-007: o número vem do config, nunca da view. Zero esconde a faixa.
+    // Config centralizada: o número vem do config, nunca da view. Zero esconde a faixa.
     $hoursSaved = (int) config('landing.hours_saved');
 @endphp
 

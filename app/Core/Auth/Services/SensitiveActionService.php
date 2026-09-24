@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Fluxo de confirmação de AÇÃO SENSÍVEL (ADR-006/010):
+ * Fluxo de confirmação de AÇÃO SENSÍVEL:
  *
  *   1. sendCode()     — valida a SENHA DE TRANSAÇÃO (hash separado) e envia
  *                       um código de 6 dígitos pelo canal configurado (e-mail).
@@ -66,7 +66,7 @@ final class SensitiveActionService
             'user_id' => $user->id,
             'channel' => $channel,
             'purpose' => VerificationPurpose::SensitiveAction,
-            // SOMENTE o hash — nunca o código em claro (checklist 24).
+            // SOMENTE o hash — nunca o código em claro.
             'code_hash' => Hash::make($code),
             'attempts' => 0,
             'expires_at' => now()->addMinutes($this->codeTtlMinutes()),

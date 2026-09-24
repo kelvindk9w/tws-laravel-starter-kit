@@ -10,7 +10,7 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Route;
 
-// Middleware ResolveTenant (ADR-010): par pk_/sk_ no header → resolve o
+// Middleware ResolveTenant: par pk_/sk_ no header → resolve o
 // tenant (dono da chave), vincula o request log, atualiza last_used_at
 // throttled. Credencial inválida = 401 + log SEM tenant (sinal de ataque).
 
@@ -21,7 +21,7 @@ beforeEach(function () {
         'key_uuid' => tenantKey()?->uuid,
     ]))->middleware('resolve.tenant');
 
-    // Rota protegida por tenancy + scope granular (ADR-006).
+    // Rota protegida por tenancy + scope granular.
     Route::get('/api/v1/_test/customers', fn () => response()->json(['ok' => true]))
         ->middleware(['resolve.tenant', 'scope:customers:read']);
 });
@@ -36,7 +36,7 @@ it('autentica com par pk_/sk_ válido e resolve o tenant no contexto', function 
         ->assertJsonPath('key_uuid', $key->uuid);
 });
 
-it('vincula o request log ao tenant quando a credencial é válida (ADR-010)', function () {
+it('vincula o request log ao tenant quando a credencial é válida', function () {
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
 
@@ -58,7 +58,7 @@ it('rejeita credenciais ausentes, secreta errada ou pk_ inexistente com 401 e lo
     $response->assertUnauthorized()
         ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
 
-    // Log SEM tenant = sinal de possível ataque/tentativa de burla (ADR-010).
+    // Log SEM tenant = sinal de possível ataque/tentativa de burla.
     $log = RequestLog::query()
         ->where('correlation_id', $response->headers->get('X-Correlation-Id'))
         ->sole();
@@ -164,7 +164,7 @@ it('atualiza o last_used_at de forma throttled (no máximo 1x por janela)', func
 });
 
 it('a verificação da secreta usa comparação timing-safe (hash_equals) — estrutural', function () {
-    // Garantia estrutural do checklist item 5: a verificação da sk_ passa por
+    // Garantia estrutural: a verificação da sk_ passa por
     // hash_equals (nunca ===), e o fallback de pk_ inexistente também compara
     // (não vaza por tempo se a chave pública existe).
     $hasher = file_get_contents(base_path('app/Core/ApiKeys/Support/ApiKeyHasher.php'));

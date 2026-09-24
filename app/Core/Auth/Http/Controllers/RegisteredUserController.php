@@ -15,7 +15,7 @@ use Illuminate\View\View;
  *
  * Cria o usuário com identificadores externos automáticos (uuid +
  * codigo_publico USR-xxxx, via model) e inicia a sessão com
- * session fixation prevenido (regenerate — checklist 22).
+ * session fixation prevenido (regenerate).
  */
 final class RegisteredUserController
 {

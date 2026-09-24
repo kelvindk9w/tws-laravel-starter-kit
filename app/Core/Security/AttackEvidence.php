@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * marcada do modo `observe` (e da rota delegada) guardam o payload do mesmo
  * jeito.
  *
- * Regra de lei (ADR-005): payload de ataque é gravado SANITIZADO/escapado e
+ * Regra de lei: payload de ataque é gravado SANITIZADO/escapado e
  * redigido — nunca em forma executável, nunca com dado sensível cru. Quando a
  * tentativa estava num cabeçalho, ele entra na evidência (neutralizado);
  * quando estava no caminho, só a indicação — o caminho real nunca é gravado

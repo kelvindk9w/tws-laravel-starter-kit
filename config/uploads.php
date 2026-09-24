@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Uploads Seguros (Fase 5 — ADR-010 + checklist item 14).
+// Uploads Seguros.
 //
 // Política (lei): o arquivo é validado pelo CONTEÚDO (magic bytes via finfo),
 // NUNCA pela extensão declarada. PDF é só PDF, imagem é só imagem.
 // Executável, script embutido, polyglot ou qualquer suspeita = REJEITADO.
 //
-// Todos os valores são ajustáveis por .env — NUNCA hardcodar (ADR-007).
+// Todos os valores são ajustáveis por .env — NUNCA hardcodar.
 // =============================================================================
 
 return [
@@ -39,7 +39,7 @@ return [
     //        chamador, via Form Request; este é o limite de segurança final).
     // reencode: re-gera a imagem via GD antes de persistir (elimina qualquer
     //        payload embutido em metadados/trailing data — decisão documentada
-    //        no README, seção Uploads).
+    //        em docs/uploads.md).
     // max_pixels: teto de largura×altura (proteção contra "decompression
     //        bomb" antes de decodificar com a GD).
     'types' => [

@@ -8,7 +8,7 @@ use App\Core\Uploads\Exceptions\UploadRejectedException;
 use finfo;
 
 /**
- * NÚCLEO da validação de segurança de uploads (ADR-010, checklist item 14).
+ * NÚCLEO da validação de segurança de uploads (conteúdo real, nunca extensão ou MIME declarado).
  *
  * Política (lei): o arquivo é o que os MAGIC BYTES dizem, nunca a extensão
  * declarada. Pipeline, nesta ordem — qualquer suspeita = REJEITADO:
@@ -188,7 +188,7 @@ final class FileSecurityValidator
 
     /**
      * 5. PDF com JavaScript embutido ou ações automáticas = REJEITADO
-     *    (política do dono — ADR-010: suspeita = não aceita).
+     *    (política: suspeita = não aceita).
      */
     private function ensurePdfHasNoAutoActions(string $content): void
     {

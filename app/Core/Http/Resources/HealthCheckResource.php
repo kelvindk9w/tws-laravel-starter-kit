@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 /**
  * Resource do endpoint de saúde (GET /api/health).
  *
- * Segue a convenção ADR-010: resposta via Resource, expondo apenas o
+ * Segue a convenção da API: resposta via Resource, expondo apenas o
  * necessário — status, versão da plataforma (config centralizada) e o
  * correlation_id da requisição para rastreabilidade.
  */

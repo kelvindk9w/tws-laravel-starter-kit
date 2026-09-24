@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Teste de fumaça (ADR-010): valida CONTEÚDO da resposta, não apenas status.
+// Teste de fumaça: valida CONTEÚDO da resposta, não apenas status.
 
 it('página inicial responde 200 e exibe o nome da plataforma vindo da config', function () {
     $response = $this->get('/');
@@ -11,7 +11,7 @@ it('página inicial responde 200 e exibe o nome da plataforma vindo da config', 
     $response->assertSee(platform()->name);
 });
 
-it('helper platform() expõe a configuração centralizada (ADR-007)', function () {
+it('helper platform() expõe a configuração centralizada', function () {
     expect(platform()->name)->toBe(config('platform.name'))
         ->and(platform()->officialUrl)->toBe(config('platform.official_url'))
         ->and(platform()->locale)->toBe('pt_BR')

@@ -13,7 +13,7 @@ use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
 
 /**
- * Projetos de demonstração (camada organizacional da conta — ADR-005).
+ * Projetos de demonstração (camada organizacional da conta).
  *
  * Sem eles, o card "Projetos" e a tabela "Projetos recentes" dos dashboards
  * nascem zerados em toda instalação nova. Os projetos ficam espalhados no

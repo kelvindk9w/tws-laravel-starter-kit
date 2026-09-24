@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings do módulo de Uploads Seguros (pt-BR — ADR-007). Sempre via __().
+// Strings do módulo de Uploads Seguros (pt-BR). Sempre via __().
 
 return [
 

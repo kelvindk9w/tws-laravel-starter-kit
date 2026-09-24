@@ -12,7 +12,7 @@ use App\Core\Auth\Models\User;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Driver de verificação por E-MAIL (canal padrão do MVP — ADR-006).
+ * Driver de verificação por E-MAIL (canal padrão do kit).
  *
  * O envio é enfileirado (Redis em produção/dev, Mailpit como SMTP de dev):
  * a requisição do usuário nunca espera o SMTP. O e-mail contém apenas o
@@ -27,7 +27,7 @@ final class EmailVerificationDriver implements VerificationChannelDriver
 
     public function send(User $user, string $code, VerificationPurpose $purpose): void
     {
-        // Locale do destinatário (ADR-007): usuário com preferência salva
+        // Locale do destinatário: usuário com preferência salva
         // recebe o código no idioma escolhido, mesmo em fluxo de visitante
         // (ex.: reset de senha com cookie de idioma diferente).
         Mail::to($user)->locale($user->preferredLocale())->queue(new VerificationCodeMail($code, $purpose));

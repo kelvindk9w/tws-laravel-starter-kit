@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Support;
 
 /**
- * Acesso tipado à configuração centralizada da plataforma (ADR-007).
+ * Acesso tipado à configuração centralizada da plataforma (nada hardcoded).
  *
  * Uso: platform()->name, platform()->supportEmail etc.
  * Nunca ler config('platform.*') espalhado pelo código — sempre por aqui,

@@ -15,14 +15,14 @@ use Illuminate\Support\Collection;
 use Livewire\Component;
 
 /**
- * Dashboard do painel do usuário (Fase 6 — ADR-005/011).
+ * Dashboard do painel do usuário (Livewire).
  *
  * A tela de entrada mostra o que o kit JÁ COLETA sobre a conta: chaves,
  * projetos e o tráfego real da API do tenant (request_logs). Um dashboard que
  * só conta linhas de duas tabelas não prova que a instrumentação existe.
  *
  * Fonte do tráfego: `request_logs.tenant_uuid` = uuid do dono da chave,
- * vinculado pelo middleware ResolveTenant (Fase 4). Log sem tenant não é
+ * vinculado pelo middleware ResolveTenant. Log sem tenant não é
  * desta conta e nunca aparece aqui.
  */
 final class Dashboard extends Component

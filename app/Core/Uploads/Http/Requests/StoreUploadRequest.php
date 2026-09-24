@@ -7,8 +7,8 @@ namespace App\Core\Uploads\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validação de FORMULÁRIO do upload da API v1 (etapa (a) do pipeline —
- * ADR-010). É um corte grosseiro: a validação de SEGURANÇA do conteúdo
+ * Validação de FORMULÁRIO do upload da API v1 (etapa (a) do
+ * pipeline). É um corte grosseiro: a validação de SEGURANÇA do conteúdo
  * (magic bytes, polyglot, PDF com script) é do SecureUploadService.
  */
 final class StoreUploadRequest extends FormRequest

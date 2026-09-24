@@ -13,7 +13,7 @@ use Filament\Tables\Columns\Layout\Component as ColumnLayoutComponent;
 use Filament\Tables\Table;
 
 /**
- * Base de TODO resource do super admin (/admin — ADR-011).
+ * Base de TODO resource do super admin (/admin).
  *
  * O painel tinha sete resources repetindo as mesmas dez linhas: rota por
  * uuid, três métodos de rótulo, grupo de navegação, ordenação padrão,
@@ -39,12 +39,12 @@ use Filament\Tables\Table;
  * saber disso: a conversão é feita aqui, em `modifyUngroupedRecordActionsUsing`,
  * antes de o hook `tableExtras()` declarar as ações.
  *
- * Como criar uma tela nova está documentado no README (seção super admin).
+ * Como criar uma tela nova está documentado em docs/admin-e-dashboards.md.
  */
 abstract class BaseResource extends Resource
 {
     /**
-     * O id interno NUNCA vai para a URL (ADR-010).
+     * O id interno NUNCA vai para a URL: impede enumeração de registros.
      */
     protected static ?string $recordRouteKeyName = 'uuid';
 

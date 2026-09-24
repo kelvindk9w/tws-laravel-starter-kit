@@ -30,9 +30,11 @@ Apenas a branch `producao` e a última tag recebem correções de segurança.
 
 ## O que já está coberto
 
-O README descreve o checklist de segurança do kit (32 itens) e a seção
-*Pendências conhecidas* lista, de forma honesta, o que fica a cargo do
-projeto derivado ou da infraestrutura (WAF, PITR, TOTP, allowlist por chave).
+A pasta `docs/` descreve as proteções de segurança do kit (comece por
+`docs/seguranca.md`) e a seção *Pendências conhecidas* do README lista, de
+forma honesta, o que fica a cargo do projeto derivado ou da infraestrutura
+(WAF/CDN contra ataque distribuído, CSP sem `unsafe-inline`, banco efêmero
+para demo pública, PITR, TOTP, allowlist por chave).
 Cada release passa por: testes automatizados, `composer audit`,
 `npm audit`, CodeQL no JavaScript e Dependabot.
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Logging\Redactor;
 
-// Redaction antes de persistir logs (ADR-004 — LGPD).
+// Redaction antes de persistir logs (LGPD).
 
 it('mascara chaves sensíveis por nome exato, case-insensitive', function (string $key) {
     $redacted = (new Redactor)->redactArray([$key => 'valor-super-secreto']);

@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
 
 /**
- * Histórico de uploads (Fase 5) espalhado no tempo.
+ * Histórico de uploads espalhado no tempo.
  *
  * Sem ele, o gráfico "Entrada por dia" e os cards de volume da variante
  * "Conteúdo & Operação" nascem vazios: a tabela `uploads` só ganha linha
@@ -22,7 +22,7 @@ use Ramsey\Uuid\Uuid;
  * ninguém.
  *
  * O que é semeado é REGISTRO, não arquivo: nada é escrito em disco. O `path`
- * segue a convenção da Fase 5 (uuid + extensão derivada do MIME real, nunca o
+ * segue a convenção do SecureUploadService (uuid + extensão derivada do MIME real, nunca o
  * nome original), o `sha256` é determinístico e o volume por dia cresce
  * levemente com o tempo, para a curva ter forma em vez de ruído.
  *

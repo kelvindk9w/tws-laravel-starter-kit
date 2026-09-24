@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // =============================================================================
-// Expiração de chaves de API por inatividade (ADR-006): diário, em UTC.
+// Expiração de chaves de API por inatividade: diário, em UTC.
 // Aviso prévio por e-mail + desativação — ver ProcessApiKeyInactivity e
 // config/api_keys.php (API_KEYS_INACTIVITY_*). onOneServer/withoutOverlapping
 // evitam execução dupla em deploys com múltiplos schedulers.
@@ -20,10 +20,10 @@ Schedule::command('api-keys:process-inactivity')
     ->onOneServer();
 
 // =============================================================================
-// Backups (Fase 7 — ADR-010): dump lógico do PostgreSQL (pg_dump) em zip
+// Backups: dump lógico do PostgreSQL (pg_dump) em zip
 // criptografado → disco de destino (R2 em produção). O sucesso dispara o
 // webhook da validação cruzada produção→sandbox (BACKUP_WEBHOOK_URL —
-// endpoint receptor no sandbox; contrato no README). Frequências em cron
+// endpoint receptor no sandbox; contrato em docs/backup.md). Frequências em cron
 // (UTC) via .env; backup:clean aplica a retenção e backup:monitor é o
 // health check de idade/tamanho. onOneServer/withoutOverlapping evitam
 // execução dupla em deploys com múltiplos schedulers.

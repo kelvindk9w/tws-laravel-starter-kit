@@ -8,12 +8,12 @@ use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Mail\KitMailable;
 
 /**
- * Aviso PRÉVIO de expiração por inatividade (ADR-006): enviado Y dias antes
+ * Aviso PRÉVIO de expiração por inatividade: enviado Y dias antes
  * da desativação automática (config api_keys.inactivity.warning_days).
  *
  * SEMPRE enfileirado (KitMailable). Contém apenas identificadores públicos
  * da chave (nome, código público, chave pública) — nunca a secreta.
- * Strings via __() (ADR-007): ver lang/{pt_BR,en,es}/mail.php.
+ * Strings via __() (nada hardcoded, três idiomas): ver lang/{pt_BR,en,es}/mail.php.
  */
 final class ApiKeyInactivityWarningMail extends KitMailable
 {

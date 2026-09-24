@@ -7,12 +7,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // =============================================================================
-// Fase 4 — Motor de API Keys (ADR-006) + vínculo N:N com projetos (ADR-005).
+// Motor de API Keys + vínculo N:N com projetos.
 //
 // api_keys:
 // - Par pública/secreta: `public_key` (pk_live_/pk_test_...) é o identificador
 //   indexado; da SECRETA (sk_...) fica SOMENTE o hash (HMAC-SHA256 com pepper
-//   — ver config/api_keys.php). NUNCA plaintext (checklist item 5).
+//   — ver config/api_keys.php). NUNCA plaintext.
 // - `scopes`: jsonb com permissões granulares recurso:ação (padrão: ['*:*']).
 // - `expires_at` nullable: vazio = sem validade (validade 100% do usuário).
 // - `last_used_at`: atualizado de forma throttled pelo ResolveTenant.
@@ -29,14 +29,14 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('codigo_publico', 32)->unique(); // KEY-xxxxxx
-            // Dono da chave = tenant que ela resolve (ADR-010).
+            // Dono da chave = tenant que ela resolve.
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             // Chave pública: identificação/lookup. Indexada e única.
             $table->string('public_key', 64)->unique();
-            // SOMENTE o hash da secreta — nunca a sk_ em claro (checklist 5).
+            // SOMENTE o hash da secreta — nunca a sk_ em claro.
             $table->string('secret_hash', 64);
-            // Permissões granulares recurso:acao (ADR-006). Padrão: ['*:*'].
+            // Permissões granulares recurso:acao. Padrão: ['*:*'].
             $table->jsonb('scopes');
             // Validade opcional definida pelo usuário (vazio = sem validade).
             $table->timestampTz('expires_at')->nullable();
@@ -44,7 +44,7 @@ return new class extends Migration
             $table->timestampTz('last_used_at')->nullable();
             // Flag do aviso prévio de expiração por inatividade (e-mail).
             $table->timestampTz('inactivity_warning_sent_at')->nullable();
-            // Rotação: encadeamento antiga ↔ nova (ADR-006).
+            // Rotação: encadeamento antiga ↔ nova.
             $table->foreignId('rotated_from_id')->nullable()->constrained('api_keys')->nullOnDelete();
             $table->foreignId('rotated_to_id')->nullable()->constrained('api_keys')->nullOnDelete();
             // Morte programada da chave antiga após a rotação (grace period).
@@ -55,7 +55,7 @@ return new class extends Migration
             $table->index(['user_id', 'status']);
         });
 
-        // N:N chaves ↔ projetos (ADR-005/006): liberdade total de organização.
+        // N:N chaves ↔ projetos: liberdade total de organização.
         // Chave SEM vínculo enxerga a conta toda; vinculada restringe.
         Schema::create('api_key_project', function (Blueprint $table) {
             $table->id();

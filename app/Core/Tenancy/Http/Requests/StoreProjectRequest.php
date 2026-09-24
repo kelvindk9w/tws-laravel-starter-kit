@@ -7,7 +7,7 @@ namespace App\Core\Tenancy\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Criação de projeto (ADR-005): nasce SÓ COM NOME.
+ * Criação de projeto: nasce SÓ COM NOME.
  */
 final class StoreProjectRequest extends FormRequest
 {

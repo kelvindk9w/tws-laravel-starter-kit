@@ -6,7 +6,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Support\Platform;
 
-// Landing OFICIAL "Céu" — rota /. Valida CONTEÚDO, não só status (ADR-010).
+// Landing OFICIAL "Céu" — rota /. Valida CONTEÚDO, não só status.
 
 it('responde 200 e renderiza as seções da página', function () {
     $this->get('/')

@@ -28,7 +28,7 @@ use Illuminate\Support\Str;
  *    como voltar a ser uma tag, aconteça o que acontecer a jusante;
  * 5. espaços em branco colapsam e o texto é truncado.
  *
- * A gravação no banco continua CRUA (auditoria — ADR-004/005): quem
+ * A gravação no banco continua CRUA (é evidência de auditoria): quem
  * neutraliza é a exibição, nunca o registro.
  */
 final class SubmissionExcerpt

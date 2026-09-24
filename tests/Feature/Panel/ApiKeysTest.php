@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 // =============================================================================
-// Chaves de API pela UI (Livewire — Fase 6, ADR-006): a tela mais importante.
+// Chaves de API pela UI (Livewire): a tela mais importante.
 // Fluxo completo com ação sensível REAL (senha de transação + código por
 // e-mail — o código é capturado do mailable via Mail::fake) consumindo o
 // ApiKeyService/SensitiveActionService das Fases 3/4 — nada duplicado.
@@ -34,7 +34,7 @@ function latestSentCode(): string
 
 beforeEach(function () {
     Mail::fake();
-    // Sem cooldown de reenvio nos testes (a regra em si é coberta na Fase 3).
+    // Sem cooldown de reenvio nos testes (a regra em si é coberta em SensitiveActionTest).
     config()->set('auth.verification.resend_cooldown_seconds', 0);
 });
 
@@ -94,12 +94,12 @@ it('cria chave pela UI com 2FA completo e exibe a secreta UMA única vez', funct
 
     expect($key->name)->toBe('Integração ERP')
         ->and($key->public_key)->toBe($public)
-        ->and($key->scopes)->toBe(['*:*']) // padrão: tudo habilitado (ADR-006)
+        ->and($key->scopes)->toBe(['*:*']) // padrão: tudo habilitado
         ->and($key->projects->pluck('id')->all())->toBe([$projeto->id])
         // Só o HASH no banco — a secreta em claro nunca toca o banco.
         ->and(app(ApiKeyHasher::class)->verify($secret, (string) $key->secret_hash))->toBeTrue();
 
-    // "Já guardei" → a secreta some e nunca mais é exibida (ADR-006).
+    // "Já guardei" → a secreta some e nunca mais é exibida.
     $component->call('dismissSecret')
         ->assertSet('revealedSecretKey', null);
 });
@@ -257,7 +257,7 @@ it('não vincula projeto de outro tenant a uma chave (anti-IDOR)', function () {
     $alheio = Project::createWithPublicCodeRetry(['user_id' => $outro->id, 'name' => 'Alheio']);
     $key = app(ApiKeyService::class)->create($user, ['name' => 'Chave'])['api_key'];
 
-    // resolveProjectIds (Fase 4) rejeita uuid alheio → erro de validação,
+    // resolveProjectIds rejeita uuid alheio → erro de validação,
     // e o vínculo NÃO é criado.
     Livewire::actingAs($user)
         ->test(Index::class)

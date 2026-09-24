@@ -23,7 +23,7 @@ use Ramsey\Uuid\Uuid;
  * de 90 dias mostrava dois terços de gráfico vazio e todo card dizia "sem base
  * de comparação" — o oposto da primeira impressão que o painel deve dar.
  *
- * Segue as MESMAS regras do módulo de logs (ADR-004/005), sem exceção:
+ * Segue as MESMAS regras do módulo de logs, sem exceção:
  * - APPEND-ONLY: só INSERT, nunca update/delete (o model os proíbe);
  * - REDACTION: o payload passa pelo mesmo Redactor do middleware;
  * - IDEMPOTÊNCIA por correlation_id determinístico (UUID v5), num namespace
@@ -126,7 +126,7 @@ final class RequestLogHistorySeeder extends Seeder
                     continue;
                 }
 
-                // MESMA redaction do middleware (LGPD — ADR-004).
+                // MESMA redaction do middleware (LGPD).
                 $payload = $redactor->redactArray([
                     'query' => [],
                     'body' => $metodo === 'GET' ? [] : ['exemplo' => 'seed'],

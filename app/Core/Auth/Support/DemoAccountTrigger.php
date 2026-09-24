@@ -53,7 +53,11 @@ use Illuminate\Support\Facades\DB;
  *
  * ESCAPE CONTROLADO: `SELECT set_config('tws.demo_guard','off',false)` na
  * sessão — é o que DemoAccountGuard::withoutProtection() faz para os
- * seeders. Fora dos seeders, ninguém deveria precisar disso.
+ * seeders, e o que DemoAccountSession faz em toda conexão da aplicação
+ * quando o modo demo está DESLIGADO. Esse segundo uso é o que mantém o
+ * gatilho alinhado com a flag: uma base que teve o modo demo ligado e passou
+ * a rodar com ele desligado ainda tem o gatilho instalado (a migration que
+ * o instalou já rodou), mas a aplicação deixa de esbarrar nele.
  *
  * SINCRONIA COM O CONFIG: os e-mails são gravados DENTRO da função no
  * momento da instalação. Por isso os seeders demo reinstalam o gatilho a
@@ -87,6 +91,10 @@ final class DemoAccountTrigger
         if (! self::supported()) {
             return;
         }
+
+        // Quem instala declara o estado da aplicação ao banco: a sessão
+        // corrente passa a seguir o modo demo vigente (DemoAccountSession).
+        DemoAccountGuard::syncDatabaseSession();
 
         if (! DemoSurface::loginEnabled()) {
             self::drop();

@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Atualização de projeto (ADR-005): nome e/ou status (active/archived).
+ * Atualização de projeto: nome e/ou status (active/archived).
  */
 final class UpdateProjectRequest extends FormRequest
 {

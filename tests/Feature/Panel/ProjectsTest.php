@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 // =============================================================================
-// Projetos pela UI (Livewire — Fase 6, ADR-005): CRUD só com nome, tudo na
-// mesma tela (criar/editar/excluir inline). Consome o model/invariantes da
-// Fase 4 — nada duplicado.
+// Projetos pela UI (Livewire): CRUD só com nome, tudo na
+// mesma tela (criar/editar/excluir inline). Consome o model/invariantes de
+// Tenancy — nada duplicado.
 // =============================================================================
 
 it('exige autenticação (deny-by-default)', function () {

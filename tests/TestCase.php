@@ -25,7 +25,7 @@ abstract class TestCase extends BaseTestCase
 
         if ($driver !== 'sqlite' && ! str_ends_with($database, '_test')) {
             throw new RuntimeException(sprintf(
-                'Suíte recusada: o banco "%s" (%s) não é de teste. Use um banco cujo nome termine em _test (ver phpunit.pgsql.xml e o README).',
+                'Suíte recusada: o banco "%s" (%s) não é de teste. Use um banco cujo nome termine em _test (ver phpunit.pgsql.xml e docs/testes.md).',
                 $database,
                 $driver,
             ));

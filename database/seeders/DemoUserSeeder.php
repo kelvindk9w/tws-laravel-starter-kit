@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Hash;
  * NUNCA roda em produção, e isso não depende mais de ninguém lembrar de
  * desligar a flag: com APP_ENV=production o seeder LANÇA (DemoSurface). O
  * único jeito de semear a demo em produção é declarar
- * DEMO_ALLOW_IN_PRODUCTION=true — ver .env.prod.example e o README.
+ * DEMO_ALLOW_IN_PRODUCTION=true — ver .env.prod.example e docs/demo.md.
  */
 class DemoUserSeeder extends Seeder
 {

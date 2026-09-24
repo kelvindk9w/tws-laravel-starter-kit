@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Vitrine de produtos (super admin — CRUD demonstrativo do kit).
  *
- * - price: bigint em CENTAVOS (ADR-004 — dinheiro é sempre inteiro; cast
+ * - price: bigint em CENTAVOS (dinheiro é sempre inteiro; cast
  *   MoneyAsCents no model, formatação só na borda via Money::format).
  * - image: caminho no disk public (upload pelo painel) OU URL externa
  *   completa (https://… — usada pelo seeder da demo). O accessor

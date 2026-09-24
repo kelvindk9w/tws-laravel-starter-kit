@@ -7,7 +7,7 @@ use App\Core\Uploads\Models\Upload;
 use Illuminate\Support\Facades\Storage;
 
 // =============================================================================
-// Avatar do perfil (web autenticada — Fase 5): prova o reuso da MESMA função
+// Avatar do perfil (web autenticada): prova o reuso da MESMA função
 // global de upload fora da API. Aqui o vínculo é o user_id da sessão e o
 // destino é restrito a imagens (re-encode GD obrigatório).
 // =============================================================================

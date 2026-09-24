@@ -11,7 +11,7 @@ use Illuminate\Testing\TestResponse;
 // =============================================================================
 // Bug de QA #4 — envelope padronizado de ERRO da API (`api/*`).
 //
-// Contrato (README, seção API):
+// Contrato (docs/api.md, "Contrato de resposta da API"):
 //   {"error": {"code": "…", "message": "…", "correlation_id": "…"}}
 //   422 acrescenta "errors" (campo → lista de mensagens).
 //

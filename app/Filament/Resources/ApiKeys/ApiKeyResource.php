@@ -23,11 +23,11 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 /**
- * Chaves de API — visão GLOBAL de todos os tenants (super admin, Fase 6).
+ * Chaves de API — visão GLOBAL de todos os tenants (super admin).
  *
  * Somente leitura + revogação administrativa (mesma operação do
- * ApiKeyService da Fase 4 — nada duplicado). A secreta NUNCA aparece aqui
- * (no banco só existe o hash — ADR-006). Sem criar/editar: chaves nascem
+ * ApiKeyService — nada duplicado). A secreta NUNCA aparece aqui
+ * (no banco só existe o hash). Sem criar/editar: chaves nascem
  * pelo painel do próprio usuário ou pela API v1.
  */
 final class ApiKeyResource extends BaseResource

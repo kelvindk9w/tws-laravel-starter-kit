@@ -1,4 +1,4 @@
-{{-- Código de verificação (2FA por e-mail — ADR-006). Um único assunto:
+{{-- Código de verificação (2FA por e-mail). Um único assunto:
      o código. Nada de botão, nada de link — quem abre este e-mail já está
      com o formulário aberto do outro lado. --}}
 <x-email::layouts.kit

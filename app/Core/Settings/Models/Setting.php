@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Configuração editável pelo super admin (Fase 6 — ver config/settings.php).
+ * Configuração editável pelo super admin (ver config/settings.php).
  *
  * Somente chaves da whitelist de config/settings.php têm significado para a
  * aplicação; o model em si é um simples chave→valor JSON.

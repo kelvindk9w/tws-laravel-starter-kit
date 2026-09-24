@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
 
 /**
- * Horizon (Fase 7 — ADR-010): supervisor de filas + dashboard /horizon.
+ * Horizon: supervisor de filas + dashboard /horizon.
  *
  * Acesso ao dashboard: SÓ super admin com CONTA ATIVA, o mesmo critério do
- * painel Filament (User::canAccessPanel — ADR-011). A barreira de origem
+ * painel Filament (User::canAccessPanel). A barreira de origem
  * (EnsureAdminIpAllowed) também se aplica às rotas do Horizon — ver
  * config/horizon.php → middleware. Em ambiente local o pacote libera o acesso
  * sem gate (comportamento padrão dele, apenas desenvolvimento).

@@ -29,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Pipeline global — ADR-004/005, nesta ordem:
+        // Pipeline global, nesta ordem:
         // 0º TrustProxies (quem pode dizer QUEM É O CLIENTE — ver abaixo);
         // 1º SecurityHeaders (até respostas de bloqueio/erro carregam os
         //    headers de segurança — inclusive o 400 de host recusado);
@@ -47,7 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // 3º RequestLogging (INICIADA imediato → CONCLUIDA/ERRO no terminate).
         //    Global de propósito: middleware de grupo NÃO executa em rota não
         //    encontrada, e requisições para endpoints inexistentes são exatamente
-        //    o sinal de varredura/ataque que o ADR-010 manda registrar. Cobre
+        //    o sinal de varredura/ataque que precisa ficar registrado. Cobre
         //    API + web autenticada + /admin; exclusões e resumos (assets,
         //    health checks, updates Livewire) em config/security.php.
         //
@@ -100,7 +100,7 @@ return Application::configure(basePath: dirname(__DIR__))
             prepend: ResolveTenant::class,
         );
 
-        // Locale da interface web (ADR-007): usuário logado → preferência da
+        // Locale da interface web: usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
         //
         // Status da conta a cada requisição web (depois do SetLocale, para a
@@ -115,19 +115,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.validation' => SecurityValidation::class,
             'security.headers' => SecurityHeaders::class,
             'request.logging' => RequestLogging::class,
-            // Exige token de ação sensível válido (ADR-006) — uso único.
+            // Exige token de ação sensível válido — uso único.
             'sensitive.token' => RequiresSensitiveActionToken::class,
-            // Tenancy da API (ADR-010): resolve o tenant pela pk_/sk_ no
+            // Tenancy da API: resolve o tenant pela pk_/sk_ no
             // header, vincula o request log e atualiza o last_used_at.
             'resolve.tenant' => ResolveTenant::class,
-            // Autorização por scope da chave (ADR-006): 'scope:recurso:acao'.
+            // Autorização por scope da chave: 'scope:recurso:acao'.
             'scope' => EnsureApiKeyScope::class,
             // Operação de conta (gerenciar chaves, criar projeto): recusa a
-            // chave vinculada a projetos (ADR-005/006).
+            // chave vinculada a projetos.
             'account.key' => EnsureAccountWideApiKey::class,
         ]);
 
-        // Deny-by-default (checklist 13): convidado em rota `auth` vai para
+        // Deny-by-default: convidado em rota `auth` vai para
         // o login; `redirect()->intended()` devolve ao destino original.
         $middleware->redirectGuestsTo(fn (): string => route('login'));
     })
@@ -137,8 +137,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         // Envelope padronizado de erro da API (`api/*`), contrapartida do
-        // envelope de sucesso {"data": …} — ver ApiErrorRenderer e o README
-        // (seção API). Nunca stack trace/caminho de servidor, nem com
+        // envelope de sucesso {"data": …} — ver ApiErrorRenderer e
+        // docs/api.md. Nunca stack trace/caminho de servidor, nem com
         // APP_DEBUG=true: o contrato do cliente é o mesmo em todo ambiente.
         $exceptions->render(fn (Throwable $e, Request $request) => app(ApiErrorRenderer::class)($e, $request));
 

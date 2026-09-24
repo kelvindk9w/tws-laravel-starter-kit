@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Security\PayloadSanitizer;
 
-// Sanitização de payload para persistência (ADR-005): nunca executável.
+// Sanitização de payload para persistência: nunca executável.
 
 it('escapa HTML tornando o payload não executável', function () {
     $sanitized = (new PayloadSanitizer)->sanitize(['comment' => '<script>alert(1)</script>']);

@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Process;
 // Aqui se testa a camada da APLICAÇÃO, incluindo o caminho de instalação de
 // verdade (subprocesso). A camada do shell (o entrypoint que aborta com código
 // 78) e a do Compose (senhas sem fallback funcional) são provadas pelos
-// comandos registrados no README, seção Produção, porque dependem de Docker e
+// comandos registrados em docs/producao.md, porque dependem de Docker e
 // a suíte não pode depender dele.
 // =============================================================================
 

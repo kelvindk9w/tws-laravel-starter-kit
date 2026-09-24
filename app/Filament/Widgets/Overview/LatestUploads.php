@@ -16,7 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Últimos arquivos aceitos pela função global de upload (Fase 5): nome
+ * Últimos arquivos aceitos pela função global de upload (SecureUploadService): nome
  * sanitizado, tipo REAL (magic bytes, nunca o declarado) e tamanho.
  */
 final class LatestUploads extends BaseLatestRecordsWidget

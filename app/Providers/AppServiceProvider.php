@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Core\ApiKeys\Console\ProcessApiKeyInactivity;
 use App\Core\Auth\Console\MakeAdminUser;
+use App\Core\Auth\Support\DemoAccountSession;
 use App\Core\Backup\Console\GuardedBackupCommand;
 use App\Core\Http\TrustedProxies;
 use App\Core\Mail\NonDeliveringMailers;
@@ -32,12 +33,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Configuração centralizada da plataforma (ADR-007) — singleton tipado.
+        // Configuração centralizada da plataforma (nada hardcoded) — singleton tipado.
         $this->app->singleton(Platform::class, fn (): Platform => Platform::fromConfig());
 
-        // Contexto do tenant da requisição (ADR-010) — preenchido pelo
+        // Contexto do tenant da requisição — preenchido pelo
         // middleware ResolveTenant. PHP-FPM garante o ciclo por requisição;
-        // se Octane entrar um dia, resetar entre requisições (checklist 28).
+        // se Octane entrar um dia, resetar entre requisições (senão
+        // o tenant vaza de uma requisição para a outra).
         $this->app->singleton(TenantContext::class);
 
         // `backup:run` com a regra da criptografia na frente: em produção,
@@ -46,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
         // container, então trocar a classe aqui cobre o comando manual, o
         // agendamento e o Artisan::call(). Nada disso roda no boot.
         $this->app->bind(BackupCommand::class, GuardedBackupCommand::class);
+
+        // Gatilho das contas demo alinhado com o modo demo DESTA aplicação:
+        // com o modo desligado, cada conexão com o PostgreSQL desliga a
+        // proteção na própria sessão (ver DemoAccountSession). Fica no
+        // register, e não no boot, para valer também para conexões abertas
+        // por outros providers durante o boot. Não abre conexão nenhuma.
+        DemoAccountSession::register($this->app['events'], $this->app['db']);
     }
 
     /**
@@ -53,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // HTTPS forçado em produção (checklist item 3). O redirect 80→443 e o
+        // HTTPS forçado em produção. O redirect 80→443 e o
         // HSTS na borda são do nginx; aqui garantimos que TODA URL gerada
         // pela aplicação (e-mails, webhooks, links assinados) saia em https.
         if ($this->app->isProduction()) {
@@ -162,7 +171,7 @@ class AppServiceProvider extends ServiceProvider
                 && CriticalSecrets::isProcessingCommand(CriticalSecrets::currentCommand())
             ) {
                 Log::warning(sprintf(
-                    'O mailer padrão (MAIL_MAILER=%s) não entrega e-mail, e em APP_ENV=production todo envio por ele será RECUSADO — cada e-mail da plataforma (código de verificação, redefinição de senha, contato) vai falhar no Horizon. Configure um mailer de verdade (smtp, ses, postmark, resend). Ver App\Core\Mail\NonDeliveringMailers e README, seção Produção.',
+                    'O mailer padrão (MAIL_MAILER=%s) não entrega e-mail, e em APP_ENV=production todo envio por ele será RECUSADO — cada e-mail da plataforma (código de verificação, redefinição de senha, contato) vai falhar no Horizon. Configure um mailer de verdade (smtp, ses, postmark, resend). Ver App\Core\Mail\NonDeliveringMailers e docs/producao.md.',
                     (string) config('mail.default'),
                 ));
             }
@@ -184,7 +193,7 @@ class AppServiceProvider extends ServiceProvider
             ]);
         }
 
-        // Rate limiting (checklist item 10) — valores via config/security.php.
+        // Rate limiting — valores via config/security.php.
         // API: conta pela CHAVE de API (ou pelo tenant, RATE_LIMIT_API_BY)
         // quando a requisição foi autenticada, e por IP quando não foi. As
         // falhas de autenticação têm balde próprio por IP. A regra inteira

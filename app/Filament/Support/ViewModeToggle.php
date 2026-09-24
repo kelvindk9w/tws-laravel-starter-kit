@@ -9,7 +9,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Contracts\HasTable;
 
 /**
- * O alternador TABELA ↔ CARDS das listagens do super admin (ADR-011).
+ * O alternador TABELA ↔ CARDS das listagens do super admin.
  *
  * ONDE ELE FICA (e por quê mudou): antes era um botão com texto no
  * cabeçalho, colado em "Novo usuário". Duas ações de natureza diferente

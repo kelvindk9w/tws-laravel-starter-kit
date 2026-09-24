@@ -1,19 +1,19 @@
 <?php
 
 // =============================================================================
-// Backups (Fase 7 — ADR-010): dump lógico do PostgreSQL (pg_dump via
+// Backups: dump lógico do PostgreSQL (pg_dump via
 // spatie/laravel-backup) em zip CRIPTOGRAFADO (BACKUP_ARCHIVE_PASSWORD,
 // AES-256) enviado ao disco de destino — em produção, o disco `backup`
 // (Cloudflare R2, S3-compatível, ver config/filesystems.php).
 //
-// Camadas da estratégia (detalhes no README, seção Backup):
+// Camadas da estratégia (detalhes em docs/backup.md):
 //   1. Dump lógico agendado (backup:run --only-db) → R2;
 //   2. Webhook de sucesso (BACKUP_WEBHOOK_URL) → validação cruzada
 //      produção→sandbox (backup que não restaura não é backup);
 //   3. backup:monitor = segunda rede de segurança (idade/tamanho);
 //   4. PITR/WAL é camada de INFRA (documentada, fora da aplicação).
 //
-// Todos os valores são ajustáveis por .env — NUNCA hardcodar (ADR-007).
+// Todos os valores são ajustáveis por .env — NUNCA hardcodar.
 // =============================================================================
 
 use Spatie\Backup\Notifications\Notifiable;
@@ -243,9 +243,9 @@ return [
      * the `Spatie\Backup\Notifications\Notifications` classes.
      */
     'notifications' => [
-        // Política de notificações (decisão documentada no README):
+        // Política de notificações (decisão documentada em docs/backup.md):
         //   - SUCESSO do dump → SÓ webhook: é o gatilho da validação cruzada
-        //     produção→sandbox (ADR-010). E-mail de sucesso é ruído.
+        //     produção→sandbox (o backup só vale se restaurar). E-mail de sucesso é ruído.
         //   - FALHAS (dump, limpeza) e backup NÃO SAUDÁVEL → e-mail + webhook.
         //   - Saudável / limpeza ok → silêncio (o monitor diário falando é
         //     o que importa; rotina boa é rotina silenciosa).
@@ -266,7 +266,7 @@ return [
 
         'mail' => [
             // Alertas operacionais de backup (falhas). Padrão: e-mail de
-            // suporte da plataforma (ADR-007 — nada hardcoded).
+            // suporte da plataforma (nada hardcoded).
             // `?:` e não o default do env(): uma variável PRESENTE e VAZIA
             // (`BACKUP_ALERT_EMAIL=` no .env.example) retorna "" e o
             // spatie/laravel-backup recusa "" como e-mail — o que derrubava
@@ -307,8 +307,8 @@ return [
         ],
 
         // Webhook genérico (POST JSON) — gatilho da validação cruzada
-        // produção→sandbox (ADR-010). URL privada do endpoint receptor no
-        // sandbox; VAZIO = webhook desativado. Contrato do payload no README.
+        // produção→sandbox. URL privada do endpoint receptor no
+        // sandbox; VAZIO = webhook desativado. Contrato do payload em docs/backup.md.
         'webhook' => [
             'url' => (string) env('BACKUP_WEBHOOK_URL', ''),
         ],

@@ -13,10 +13,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Endpoint de exemplo da API v1 (Fase 5): POST /api/v1/uploads
+ * Endpoint de exemplo da API v1: POST /api/v1/uploads
  * (scope uploads:create). Prova o reuso da função global única de upload
  * (SecureUploadService) no fluxo tenant — o registro sai vinculado ao
- * tenant_uuid do dono da chave (ADR-010).
+ * tenant_uuid do dono da chave.
  */
 final class UploadController extends Controller
 {

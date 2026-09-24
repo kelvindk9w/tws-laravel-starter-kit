@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// UI strings (en). Every user-facing string goes through __() — ADR-007.
+// UI strings (en). Every user-facing string goes through __().
 
 return [
 

@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * FUNÇÃO GLOBAL ÚNICA de upload (ADR-010): toda parte do sistema usa ela.
+ * FUNÇÃO GLOBAL ÚNICA de upload: toda parte do sistema usa ela.
  *
  * Pipeline:
  *   (a) validação de formulário — DELEGADA ao chamador via Form Request
@@ -84,7 +84,7 @@ final class SecureUploadService
         }
 
         // Nome seguro: uuid + extensão derivada do MIME REAL — o nome
-        // original nunca toca o path (checklist item 14).
+        // original nunca toca o path.
         $path = trim($directory, '/').'/'.Str::uuid()->toString().'.'.$result['extension'];
 
         if (! Storage::disk($disk)->put($path, $result['content'])) {
@@ -146,7 +146,7 @@ final class SecureUploadService
 
     /**
      * Vínculo do registro: na API (ResolveTenant ativo) o tenant_uuid do dono
-     * da chave; na web autenticada, o user_id (ADR-010).
+     * da chave; na web autenticada, o user_id.
      *
      * @return array{tenant_uuid: string|null, user_id: int|null}
      */

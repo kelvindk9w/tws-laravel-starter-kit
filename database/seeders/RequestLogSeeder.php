@@ -18,7 +18,7 @@ use Ramsey\Uuid\Uuid;
  * /admin nasce vazio em toda instalação nova e a tela de auditoria não tem
  * o que filtrar.
  *
- * Compatível com as regras do módulo de logs (ADR-004/005):
+ * Compatível com as regras do módulo de logs:
  * - APPEND-ONLY: só INSERT. Nada de update/delete (o model os proíbe), e
  *   por isso a idempotência é por firstOrCreate com correlation_id
  *   DETERMINÍSTICO (mesma semente ⇒ mesmas linhas ⇒ nenhuma duplicata);
@@ -131,7 +131,7 @@ class RequestLogSeeder extends Seeder
                 continue;
             }
 
-            // MESMA redaction do middleware (LGPD — ADR-004).
+            // MESMA redaction do middleware (LGPD).
             $payload = $redactor->redactArray([
                 'query' => [],
                 'body' => $linha['metodo'] === 'GET' ? [] : ['exemplo' => 'seed'],

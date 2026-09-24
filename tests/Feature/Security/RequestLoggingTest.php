@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
-// Pipeline de logs de requisição (ADR-004/010): INICIADA imediato →
+// Pipeline de logs de requisição: INICIADA imediato →
 // CONCLUIDA/ERRO no terminate, correlation_id propagado, append-only.
 
 beforeEach(function () {
@@ -36,7 +36,7 @@ it('registra INICIADA→CONCLUÍDA e propaga o correlation_id na resposta', func
         ->and($log->method)->toBe('POST')
         ->and($log->endpoint)->toBe('api/_test/echo')
         ->and($log->payload['nome'])->toBe('Kelvin')
-        ->and($log->tenant_uuid)->toBeNull(); // tenancy chega na Fase 4
+        ->and($log->tenant_uuid)->toBeNull(); // o tenant só é vinculado quando uma chave de API válida é resolvida
 });
 
 it('NUNCA adota o X-Correlation-Id de entrada como id da trilha', function () {
@@ -109,7 +109,7 @@ it('corta o X-Correlation-Id gigante no limite configurado', function () {
         ->toBe((int) config('security.request_logging.client_correlation_max_length'));
 });
 
-it('registra requisição para endpoint inexistente (sinal de varredura — ADR-010)', function () {
+it('registra requisição para endpoint inexistente (sinal de varredura)', function () {
     $response = $this->get('/api/endpoint-que-nao-existe');
 
     $response->assertNotFound();
@@ -162,7 +162,7 @@ it('não registra assets estáticos nem health checks (config excluded_paths)', 
     Route::get('/storage/_test/avatar.png', fn () => response('img', 200, ['Content-Type' => 'image/png']));
 
     $this->get('/build/_test/app.css')->assertOk();
-    // /storage/* é rota assinada da Fase 5 (403 sem assinatura) — o que
+    // /storage/* é rota assinada dos uploads (403 sem assinatura) — o que
     // importa aqui é a ausência de log, não o status.
     $this->get('/storage/_test/avatar.png');
     $this->get('/up');
@@ -212,7 +212,7 @@ it('marca ERRO com a mensagem quando a rota lança exceção', function () {
         ->and($log->duration_ms)->not->toBeNull();
 });
 
-it('mascara segredos, CPF e e-mail antes de persistir (LGPD — ADR-004)', function () {
+it('mascara segredos, CPF e e-mail antes de persistir (LGPD)', function () {
     $this->postJson('/api/_test/echo', [
         'password' => 'senha-super-secreta',
         'webhook_token' => 'tok_live_123456',

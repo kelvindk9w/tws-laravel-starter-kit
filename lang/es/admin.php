@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas del super admin (Filament — ADR-011). Siempre via __().
+// Cadenas del super admin (Filament). Siempre via __().
 
 return [
 
@@ -168,7 +168,7 @@ return [
         'plural' => 'Logs de petición',
         'tenant' => 'Tenant',
         'orphan' => 'SIN TENANT',
-        'orphan_hint' => 'Logs sin tenant = posible ataque/intento de evasión (ADR-010).',
+        'orphan_hint' => 'Logs sin tenant = posible ataque/intento de evasión.',
         'endpoint' => 'Endpoint',
         'response_status' => 'HTTP',
         'duration' => 'Duración',

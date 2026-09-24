@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\IpUtils;
  * A REGRA da allowlist de IP das superfícies administrativas, em um lugar só.
  *
  * PROBLEMA: o kit prometia em três lugares (`.env.prod.example`,
- * `config/security.php` e o AdminPanelProvider, com o ADR-011 repetindo) que a
+ * `config/security.php` e o AdminPanelProvider) que a
  * allowlist de IP do `/admin` e do `/horizon` é OBRIGATÓRIA em produção — e
  * nada verificava isso em runtime. O middleware lia a lista e, quando ela
  * estava vazia, deixava passar todo mundo; e vazia era justamente o padrão,

@@ -8,7 +8,7 @@ use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
 use Illuminate\Support\Facades\Mail;
 
-// Expiração por inatividade (ADR-006): job diário desativa chaves sem uso
+// Expiração por inatividade: job diário desativa chaves sem uso
 // há X meses (config) e envia e-mail de AVISO PRÉVIO Y dias antes — uma
 // única vez por ciclo (flag inactivity_warning_sent_at).
 

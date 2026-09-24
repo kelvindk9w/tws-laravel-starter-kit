@@ -7,7 +7,7 @@ namespace App\Core\Auth\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Passo 2 da ação sensível (ADR-006): confirma o código de 6 dígitos
+ * Passo 2 da ação sensível: confirma o código de 6 dígitos
  * recebido por e-mail e emite o token de ação sensível.
  */
 final class ConfirmSensitiveCodeRequest extends FormRequest

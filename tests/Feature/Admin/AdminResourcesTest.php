@@ -18,7 +18,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use Livewire\Livewire;
 
 // =============================================================================
-// Resources do super admin (Filament — Fase 6): listagens com conteúdo,
+// Resources do super admin (Filament): listagens com conteúdo,
 // ações administrativas (bloquear usuário, revogar chave) e consulta de
 // auditoria de request logs com filtros.
 // =============================================================================

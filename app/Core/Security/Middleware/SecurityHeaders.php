@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Headers HTTP de segurança (OWASP Secure Headers — checklist item 20).
+ * Headers HTTP de segurança (OWASP Secure Headers).
  *
  * Aplicados na camada da aplicação (defesa em profundidade: o nginx de
  * produção também envia os principais). Valores via config/security.php,
@@ -49,7 +49,7 @@ final class SecurityHeaders
             }
         }
 
-        // Horizon (/horizon — Fase 7): o dashboard é uma SPA Vue com template
+        // Horizon (/horizon): o dashboard é uma SPA Vue com template
         // in-DOM (precisa de 'unsafe-eval' no script-src) e carrega fontes do
         // fonts.bunny.net (style-src/font-src). Somente nas rotas do Horizon
         // (restritas a is_admin + IP allowlist); o resto segue estrito.

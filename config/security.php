@@ -3,15 +3,15 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Segurança HTTP e pipeline de logs de requisição (ADR-004/005/010).
+// Segurança HTTP e pipeline de logs de requisição.
 //
 // Todos os valores são ajustáveis por .env — NUNCA hardcodar no código
-// (ADR-007). Referência: checklist de segurança da pesquisa de stack (§3).
+// (segredos só no .env).
 // =============================================================================
 
 return [
 
-    // --- Headers HTTP de segurança (OWASP Secure Headers — item 20) -----------
+    // --- Headers HTTP de segurança (OWASP Secure Headers) ---------------------
     'headers' => [
         'enabled' => env('SECURITY_HEADERS_ENABLED', true),
 
@@ -39,7 +39,7 @@ return [
         // Vazio = CSP padrão + 'unsafe-eval' automático no script-src.
         'content_security_policy_admin' => env('SECURITY_CSP_ADMIN', ''),
 
-        // CSP do Horizon (/horizon — Fase 7): a SPA Vue do dashboard usa
+        // CSP do Horizon (/horizon): a SPA Vue do dashboard usa
         // template in-DOM ('unsafe-eval') e fontes do fonts.bunny.net.
         // Vazio = CSP base + derivações automáticas (ver SecurityHeaders).
         // Aplica-se SOMENTE às rotas do Horizon (is_admin + IP allowlist).
@@ -209,7 +209,7 @@ return [
         'allowed_origins' => array_filter(array_map('trim', explode(',', (string) env('SECURITY_REDIRECT_ALLOWED_ORIGINS', '')))),
     ],
 
-    // --- Rate limiting (item 10) — requisições por minuto ----------------------
+    // --- Rate limiting — requisições por minuto -------------------------------
     // Aplicado por usuário autenticado ou, na ausência, por IP.
     'rate_limit' => [
         // Limite da API por minuto (grupo api inteiro). Requisição AUTENTICADA
@@ -287,8 +287,7 @@ return [
     // decisões estão em App\Core\Security\AdminIpAllowlist; aqui ficam apenas
     // os valores que a operação ajusta.
     'admin' => [
-        // Origens permitidas no /admin e no /horizon (ADR-011, checklist item
-        // 25). Lista separada por vírgula em ADMIN_ALLOWED_IPS, aceitando IP
+        // Origens permitidas no /admin e no /horizon (allowlist de IP). Lista separada por vírgula em ADMIN_ALLOWED_IPS, aceitando IP
         // exato, faixa CIDR IPv4 (`198.51.100.0/24`) e IPv6 com ou sem prefixo
         // (`2001:db8::1`, `2001:db8::/32`). Espaços em volta de cada item são
         // aparados: `10.0.0.1, 10.0.0.2` é como uma pessoa escreve uma lista, e
@@ -322,7 +321,7 @@ return [
     // formulário. O filtro é defesa em profundidade e TELEMETRIA — ele detecta
     // padrões de ataque em query, corpo (formulário/JSON, chaves inclusive),
     // metadados de upload, cabeçalhos e caminho. Ver App\Core\Security\
-    // ValidationMode e o README (seção "Filtro de ataques").
+    // ValidationMode e docs/seguranca.md ("Filtro de ataques").
     //
     // Delegação (vitrine de segurança do /ui): caminhos/componentes cuja
     // detecção é feita pela PRÓPRIA camada da aplicação, que segue em qualquer
@@ -382,7 +381,7 @@ return [
         'max_inspected_bytes' => (int) env('SECURITY_VALIDATION_MAX_INSPECTED_BYTES', 1048576),
     ],
 
-    // --- Pipeline de logs de requisição (ADR-004) ------------------------------
+    // --- Pipeline de logs de requisição ----------------------------------------
     'request_logging' => [
         // Rotas excluídas do log pesado em banco: health checks barulhentos e
         // assets estáticos (em produção o nginx serve direto; em dev local o
@@ -414,7 +413,7 @@ return [
         // maiores na configuração são limitados a ele.
         'client_correlation_max_length' => (int) env('REQUEST_LOG_CLIENT_CORRELATION_MAX_LENGTH', 128),
 
-        // Contenção do tráfego de VARREDURA na trilha em banco (Lote 2): de
+        // Contenção do tráfego de VARREDURA na trilha em banco: de
         // cada cliente (IP ou prefixo IPv6), só a PRIMEIRA requisição a rota
         // inexistente (404/405) e a PRIMEIRA recusa do limite da borda (429)
         // por janela vão para `request_logs`; as demais 404/405 ficam só no

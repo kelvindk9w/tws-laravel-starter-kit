@@ -1,7 +1,7 @@
 <?php
 
 // =============================================================================
-// Configuração centralizada da plataforma (ADR-007 — regra inegociável)
+// Configuração centralizada da plataforma (nada hardcoded — regra inegociável)
 //
 // TODOS os dados institucionais (nome, logo, URLs, contatos, CNPJ) vêm daqui,
 // sempre lidos do .env. É PROIBIDO hardcodar qualquer um desses valores em
@@ -54,10 +54,10 @@ return [
     // cookie e usuários logados persistem a preferência na conta (users.locale).
     'available_locales' => array_values(array_filter(explode(',', (string) env('PLATFORM_AVAILABLE_LOCALES', 'pt_BR,en,es')))),
 
-    // Timezone de EXIBIÇÃO (borda). Internamente tudo é UTC (ADR-010).
+    // Timezone de EXIBIÇÃO (borda). Internamente tudo é UTC.
     'display_timezone' => env('PLATFORM_DISPLAY_TIMEZONE', 'America/Sao_Paulo'),
 
-    // Moeda padrão da plataforma (multi-moeda preparado: valor + moeda — ADR-004).
+    // Moeda padrão da plataforma (multi-moeda preparado: valor + moeda).
     'currency' => env('PLATFORM_CURRENCY', 'BRL'),
 
 ];

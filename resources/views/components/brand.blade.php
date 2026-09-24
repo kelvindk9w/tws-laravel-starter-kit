@@ -5,7 +5,7 @@
 
 {{-- Marca da plataforma (logo + nome) — <x-brand /> ou <x-brand :href="url('/')" />.
 
-     Branding 100% via platform() (ADR-007): nome e logo vêm do .env. Sem logo,
+     Branding 100% via platform(): nome e logo vêm do .env. Sem logo,
      o quadrado da cor da marca é a assinatura monocromática do kit.
 
      Existe para que cabeçalho do site, rodapé e telas de auth mostrem a MESMA

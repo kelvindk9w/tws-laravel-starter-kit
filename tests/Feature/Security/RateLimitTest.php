@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 
-// Rate limiting (checklist item 10): global na API + estrito em rotas
+// Rate limiting: global na API + estrito em rotas
 // sensíveis. Valores via config/security.php (ajustáveis por .env).
 
 it('aplica o limite global da API e responde 429 após o limite', function () {

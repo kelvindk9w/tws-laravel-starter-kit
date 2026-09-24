@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings de la landing oficial (ruta /) — español (ADR-007).
+// Strings de la landing oficial (ruta /) — español.
 //
 // Decisión: el kit promete i18n COMPLETA en los tres idiomas (pt-BR, en, es) y
 // tiene un test de paridad de claves. Dejar el inglés aquí como «fallback»

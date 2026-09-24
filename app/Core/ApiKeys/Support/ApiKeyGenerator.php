@@ -7,14 +7,14 @@ namespace App\Core\ApiKeys\Support;
 use Illuminate\Support\Str;
 
 /**
- * Geração do par de chaves de API (ADR-006).
+ * Geração do par de chaves de API (pública identifica, secreta autentica).
  *
  * - Pública: `pk_{env}_<32 chars>` — identificação/lookup (indexada, única).
  * - Secreta: `sk_{env}_<48 chars>` — credencial. Só o hash vai ao banco; o
  *   valor em claro é retornado UMA única vez (criação/rotação).
  *
  * Ambas usam Str::random(), que é criptograficamente seguro (random_bytes).
- * O prefixo de ambiente (live/test) vem de config/api_keys.php (ADR-007).
+ * O prefixo de ambiente (live/test) vem de config/api_keys.php (nada hardcoded).
  */
 final class ApiKeyGenerator
 {
@@ -50,7 +50,7 @@ final class ApiKeyGenerator
     }
 
     /**
-     * Ambiente das chaves (live/test) — nunca hardcoded (ADR-007).
+     * Ambiente das chaves (live/test) — nunca hardcoded.
      */
     private function environment(): string
     {

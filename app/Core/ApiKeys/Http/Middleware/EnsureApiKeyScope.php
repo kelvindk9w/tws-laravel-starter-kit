@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Autorização por SCOPE da chave de API (ADR-006 — menor privilégio).
+ * Autorização por SCOPE da chave de API (menor privilégio).
  *
  * Uso em rotas (SEMPRE depois de resolve.tenant):
  *

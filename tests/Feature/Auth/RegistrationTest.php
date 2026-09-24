@@ -7,7 +7,8 @@ use App\Core\Auth\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
-// Registro de usuário — Fase 3 (ADR-006/010, checklist itens 4/9/12/22).
+// Registro de usuário: senha forte, validação no servidor, dados
+// pessoais criptografados em repouso e cookie de sessão seguro.
 
 it('exibe o formulário de registro', function () {
     $this->get('/register')
@@ -29,17 +30,17 @@ it('registra um usuário válido, autentica e redireciona ao painel', function (
 
     $user = User::query()->where('email', 'fulano@example.com')->sole();
 
-    // Identificadores externos (ADR-010): uuid + código público USR-xxxxxx.
+    // Identificadores externos: uuid + código público USR-xxxxxx.
     expect($user->uuid)->not->toBeNull()
         ->and($user->codigo_publico)->toStartWith('USR-')
         ->and($user->status)->toBe(UserStatus::Active)
         ->and($user->transaction_password)->toBeNull();
 
-    // Hash Argon2id (checklist 4) — nunca plaintext.
+    // Hash Argon2id — nunca plaintext.
     expect($user->password)->toStartWith('$argon2id$')
         ->and(password_verify('SenhaForte123', $user->password))->toBeTrue();
 
-    // Nome criptografado em repouso (checklist 12): no banco NÃO é legível,
+    // Nome criptografado em repouso: no banco NÃO é legível,
     // mas o cast devolve o valor em claro na aplicação.
     $rawName = DB::table('users')->where('id', $user->id)->value('name');
 
@@ -82,7 +83,7 @@ it('rejeita e-mail já cadastrado', function () {
     expect(User::query()->count())->toBe(1);
 });
 
-it('redige credenciais de auth no request log da API (LGPD — ADR-004)', function () {
+it('redige credenciais de auth no request log da API (LGPD)', function () {
     Route::post('/api/_test/redaction', fn () => response()->json(['ok' => true]));
 
     $this->postJson('/api/_test/redaction', [

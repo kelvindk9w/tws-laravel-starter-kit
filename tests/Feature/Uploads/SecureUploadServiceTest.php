@@ -9,7 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 // =============================================================================
-// SecureUploadService diretamente (Fase 5): exercita a camada de SEGURANÇA do
+// SecureUploadService diretamente: exercita a camada de SEGURANÇA do
 // arquivo sem passar pela camada de formulário (que tem seus próprios cortes
 // e esconderia estes caminhos — ex.: o Form Request já barra ELF pelo MIME
 // sniffado antes do serviço). Defesa em profundidade testada de verdade.

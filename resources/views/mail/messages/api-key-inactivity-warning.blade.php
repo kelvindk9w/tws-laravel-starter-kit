@@ -1,4 +1,4 @@
-{{-- Aviso prévio de desativação de chave de API por inatividade (ADR-006).
+{{-- Aviso prévio de desativação de chave de API por inatividade.
      Só identificadores PÚBLICOS da chave — a secreta nunca sai do momento da
      criação. --}}
 <x-email::layouts.kit

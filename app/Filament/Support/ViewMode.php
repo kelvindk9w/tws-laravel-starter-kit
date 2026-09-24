@@ -6,9 +6,9 @@ namespace App\Filament\Support;
 
 /**
  * Modo de exibição de uma listagem do super admin: tabela clássica ou grade
- * de cards (ADR-011).
+ * de cards.
  *
- * DECISÃO DE PERSISTÊNCIA (documentada no README): a escolha vive na
+ * DECISÃO DE PERSISTÊNCIA (documentada em docs/admin-e-dashboards.md): a escolha vive na
  * SESSÃO, com uma chave por RECURSO. Motivos:
  *
  * - a sessão já é por usuário — não precisa de coluna nova, migration nem

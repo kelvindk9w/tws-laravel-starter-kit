@@ -19,12 +19,12 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 /**
- * Perfil do usuário (Fase 6): dados, senha de login, senha de transação e
- * avatar — tudo na MESMA tela (ADR-005: simplicidade máxima, sem labirinto).
+ * Perfil do usuário: dados, senha de login, senha de transação e
+ * avatar — tudo na MESMA tela (simplicidade máxima, sem labirinto).
  *
  * Reuso (sem duplicar lógica):
- * - Senha de transação → TransactionPasswordService (mesma regra da Fase 3).
- * - Avatar → SecureUploadService (função global de upload da Fase 5: valida
+ * - Senha de transação → TransactionPasswordService (mesma regra do fluxo de autenticação).
+ * - Avatar → SecureUploadService (função global de upload: valida
  *   o CONTEÚDO do arquivo e faz re-encode GD antes de persistir).
  */
 final class Profile extends Component
@@ -113,7 +113,7 @@ final class Profile extends Component
 
     /**
      * Define/altera a senha de TRANSAÇÃO — delega ao TransactionPasswordService
-     * (regra única da Fase 3: hash separado, ≠ senha de login, atual exigida).
+     * (regra única: hash separado, ≠ senha de login, atual exigida).
      */
     public function updateTransactionPassword(TransactionPasswordService $service): void
     {
@@ -154,7 +154,7 @@ final class Profile extends Component
     }
 
     /**
-     * Avatar: mesma função global de upload seguro da Fase 5 (validação por
+     * Avatar: mesma função global de upload seguro (validação por
      * conteúdo + re-encode GD). O registro fica vinculado ao perfil.
      */
     public function updateAvatar(SecureUploadService $uploads): void

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
- * Log de requisição — trilha de auditoria/segurança (ADR-004/010).
+ * Log de requisição — trilha de auditoria/segurança, append-only.
  *
  * Finalidades: segurança/auditoria, validação de transação e detecção de bugs.
  *
@@ -21,12 +21,12 @@ use InvalidArgumentException;
  *   Eloquent lançam AppendOnlyViolationException.
  * - As ÚNICAS mutações permitidas são as transições de ciclo de vida:
  *   markFinished() (INICIADA → CONCLUIDA/ERRO) e bindTenant() (vincula o
- *   tenant quando resolvido — Fase 4). UPDATE/DELETE direto no banco fica
+ *   tenant quando o ResolveTenant o identifica). UPDATE/DELETE direto no banco fica
  *   restrito a operações de DBA (revogar permissões da role da app em
- *   produção — ver README).
+ *   produção — ver docs/logs-lgpd.md).
  * - Sem updated_at: a linha tem apenas created_at.
  *
- * tenant_uuid é nullable por desenho (ADR-010): o log é gravado ANTES da
+ * tenant_uuid é nullable por desenho: o log é gravado ANTES da
  * identificação do cliente. Log que permanece sem tenant = possível
  * ataque/tentativa de burla.
  */
@@ -134,7 +134,7 @@ class RequestLog extends Model
 
     /**
      * Vincula o tenant ao log quando ele é resolvido DEPOIS da gravação
-     * imediata (ADR-010 — tenancy chega na Fase 4; o gancho já existe).
+     * imediata (quem chama é o ResolveTenant, depois de autenticar a chave).
      */
     public function bindTenant(string $tenantUuid): void
     {

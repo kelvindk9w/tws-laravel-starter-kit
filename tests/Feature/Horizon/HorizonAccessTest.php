@@ -6,7 +6,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 
 // =============================================================================
-// Acesso ao dashboard do Horizon (/horizon — Fase 7, ADR-010/011): SÓ
+// Acesso ao dashboard do Horizon (/horizon): SÓ
 // is_admin (gate viewHorizon), com a MESMA IP allowlist do /admin
 // (EnsureAdminIpAllowed nas rotas do Horizon). Em ambiente local o pacote
 // libera geral (apenas desenvolvimento); aqui o ambiente é `testing`, então
@@ -60,6 +60,6 @@ it('supervisores do Horizon configurados para local e produção', function () {
     expect(config('horizon.environments.production.supervisor-1.maxProcesses'))->toBeInt()
         ->and(config('horizon.environments.local.supervisor-1.maxProcesses'))->toBeInt()
         ->and(config('horizon.environments.testing.supervisor-1.maxProcesses'))->toBe(1)
-        // Fintech: tries baixo por padrão — nunca retry cego (checklist §7.9).
+        // Fintech: tries baixo por padrão — nunca retry cego.
         ->and(config('horizon.defaults.supervisor-1.tries'))->toBe(1);
 });

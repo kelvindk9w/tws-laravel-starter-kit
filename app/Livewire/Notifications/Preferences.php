@@ -9,8 +9,8 @@ use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
 /**
- * Preferências de notificação (Fase 6 — esqueleto preparado para as
- * notificações de pagamento do gatPay, ADR-009).
+ * Preferências de notificação (esqueleto preparado para as notificações
+ * do projeto que herdar o kit — ex.: pagamentos).
  *
  * Catálogo de toggles: config/notifications.php (defaults + flags 'locked').
  * A escolha do usuário fica no JSON users.notification_preferences; a leitura

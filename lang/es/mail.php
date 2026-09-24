@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-// Cadenas de correos transaccionales (es). Toda cadena pasa por __() — ADR-007.
+// Cadenas de correos transaccionales (es). Toda cadena pasa por __().
 // El cuerpo de los correos vive en resources/views/mail/messages/**, sobre el
-// layout único <x-email::layouts.kit>. Ver README, "Correos transaccionales".
+// layout único <x-email::layouts.kit>. Ver docs/emails.md.
 
 return [
 
@@ -15,7 +15,7 @@ return [
         'cnpj' => 'CNPJ',
     ],
 
-    // Aviso previo de expiración de clave de API por inactividad (ADR-006).
+    // Aviso previo de expiración de clave de API por inactividad.
     'api_key_inactivity' => [
         'subject' => ':platform — Tu clave de API se desactivará por inactividad',
         'preheader' => 'Una clave sin uso se desactivará en :days días.',
@@ -30,7 +30,7 @@ return [
         'ignore' => 'Si no reconoces esta clave, revócala de inmediato y cambia tus credenciales.',
     ],
 
-    // Código de verificación (2FA por correo — ADR-006).
+    // Código de verificación (2FA por correo).
     'verification_code' => [
         'subject' => ':platform — Tu código de verificación',
         'preheader' => 'Tu código expira en :minutes minutos.',

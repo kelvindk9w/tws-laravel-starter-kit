@@ -11,7 +11,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Http\UploadedFile;
 
 /**
- * A validação de SEGURANÇA de arquivo (ADR-010) como regra de validação,
+ * A validação de SEGURANÇA de arquivo (conteúdo real, não extensão) como regra de validação,
  * para os formulários que não são Form Request — hoje, os do Filament.
  *
  * Por que existe: o SecureUploadService recusa o arquivo malicioso de

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Formulario de contacto de la landing (/) — es (ADR-007).
+// Formulario de contacto de la landing (/) — es.
 
 return [
 

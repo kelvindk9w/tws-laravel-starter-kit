@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
 // =============================================================================
-// BLINDAGEM DAS CONTAS DEMO (DemoAccountGuard) — README, "Contas demo são
-// intocáveis".
+// BLINDAGEM DAS CONTAS DEMO (DemoAccountGuard) — docs/demo.md, "Contas
+// demo são intocáveis".
 //
 // Antes, só a UI do Filament recusava. Um `php artisan tinker` com três
 // linhas trocava a senha da conta demo e derrubava a demonstração para todo

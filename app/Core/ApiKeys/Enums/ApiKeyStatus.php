@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\ApiKeys\Enums;
 
 /**
- * Status da chave de API (ADR-006).
+ * Status da chave de API.
  *
  * - Active: utilizável (sujeita ainda a expires_at, grace_ends_at e inatividade).
  * - Revoked: revogada manualmente pelo dono (irreversível).

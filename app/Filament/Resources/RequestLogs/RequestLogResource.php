@@ -31,7 +31,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Request Logs — consulta de auditoria (super admin, Fase 6; ADR-004/010).
+ * Request Logs — consulta de auditoria (super admin).
  *
  * ESTRITAMENTE read-only: a tabela é append-only por lei (o model bloqueia
  * update/delete fora do ciclo de vida). Filtros: status, tentativa de
@@ -60,7 +60,7 @@ final class RequestLogResource extends BaseResource
     }
 
     /**
-     * Label traduzido de um status do ciclo de vida (ADR-004).
+     * Label traduzido de um status do ciclo de vida (INICIADA → resultado).
      */
     public static function statusLabel(RequestLogStatus $status): string
     {
@@ -188,7 +188,7 @@ final class RequestLogResource extends BaseResource
     {
         return TextColumn::make('tenant_uuid')
             ->label(__('admin.request_logs.tenant'))
-            // ÓRFÃO destacado: log sem tenant = sinal de ataque (ADR-010).
+            // ÓRFÃO destacado: log sem tenant = sinal de ataque (tudo legítimo é vinculado a um tenant).
             // A linha inteira também fica vermelha (recordClasses).
             ->placeholder(__('admin.request_logs.orphan'))
             ->badge()

@@ -16,7 +16,7 @@ use Filament\Support\Icons\Heroicon;
 /**
  * Tráfego da plataforma no período, com a linha de ERRO por cima: é o gráfico
  * que responde "está tudo bem?" antes de qualquer outro. Fonte: request_logs
- * (a trilha de auditoria do ADR-004), o dado mais pronto do kit — o
+ * (a trilha de auditoria append-only), o dado mais pronto do kit — o
  * RequestLogSeeder já semeia 30 dias realistas.
  */
 final class RequestsTrendChart extends BaseTimeSeriesWidget

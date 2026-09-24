@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Preferências de notificação do usuário (Fase 6 — esqueleto preparado para
-// as notificações de pagamento do gatPay, ADR-009).
+// Preferências de notificação do usuário (esqueleto preparado para as
+// notificações do projeto que herdar o kit — ex.: pagamentos).
 //
 // Cada chave é um toggle de e-mail na tela de preferências do painel. Os
 // valores aqui são os DEFAULTS (usuário sem escolha gravada); a escolha fica
@@ -16,9 +16,9 @@ declare(strict_types=1);
 return [
 
     'preferences' => [
-        // Pagamento confirmado (futuro motor de cobranças — ADR-009).
+        // Pagamento confirmado (futuro motor de cobranças).
         'payment_confirmed' => ['default' => true],
-        // E-mail ao CLIENTE FINAL do vendedor (ADR-009 — padrão ATIVO).
+        // E-mail ao CLIENTE FINAL do vendedor (padrão ATIVO).
         'final_customer_receipt' => ['default' => true],
         // Eventos de chaves de API (criação, rotação, aviso de inatividade).
         'api_key_events' => ['default' => true],

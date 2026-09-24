@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Últimos produtos cadastrados, com miniatura e preço.
  *
- * O preço vem em CENTAVOS do banco (ADR-004: dinheiro é sempre inteiro) e é
+ * O preço vem em CENTAVOS do banco (dinheiro é sempre inteiro) e é
  * formatado só aqui, na borda — pelo mesmo helper de moeda do resto do kit.
  */
 final class LatestProducts extends BaseLatestRecordsWidget

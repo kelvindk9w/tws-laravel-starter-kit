@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 
 // =============================================================================
-// Uploads Seguros — endpoint da API v1 (Fase 5 — ADR-010, checklist item 14).
+// Uploads Seguros — endpoint da API v1.
 //
 // Todos os testes usam arquivos com CONTEÚDO REAL gerado programaticamente
 // (tests/Fixtures/uploads.php): a validação é por magic bytes, não extensão.
@@ -23,7 +23,7 @@ beforeEach(function () {
 });
 
 /**
- * POST autenticado como tenant (par de chaves — ResolveTenant, Fase 4).
+ * POST autenticado como tenant (par de chaves — ResolveTenant).
  *
  * @return TestResponse
  */
@@ -58,7 +58,7 @@ it('aceita PDF legítimo: retorno padronizado + registro com tenant correto', fu
     expect($path)->not->toContain('contrato-social')
         ->and(basename($path))->toMatch('/^[0-9a-f-]{36}\.pdf$/');
 
-    // Registro em banco vinculado ao TENANT (uuid do dono da chave — ADR-010).
+    // Registro em banco vinculado ao TENANT (uuid do dono da chave).
     $upload = Upload::query()->sole();
     expect($upload->tenant_uuid)->toBe((string) $user->uuid)
         ->and($upload->user_id)->toBeNull()

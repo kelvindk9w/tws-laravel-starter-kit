@@ -16,20 +16,20 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Resolve o TENANT a partir das credenciais de API no header (ADR-010).
+ * Resolve o TENANT a partir das credenciais de API no header.
  *
- * Par de credenciais (documentado no README):
+ * Par de credenciais (documentado em docs/api.md):
  * - `X-Api-Key: pk_live_...`        → chave PÚBLICA (lookup).
  * - `Authorization: Bearer sk_live_...` → chave SECRETA (verificação).
  *
  * Pipeline: existência da pk_ → verificação timing-safe da sk_ (hash_equals,
- * checklist item 5) → status/validade/grace/inatividade → usuário ativo →
+ * nunca comparação comum) → status/validade/grace/inatividade → usuário ativo →
  * registra o tenant no container (tenant()/tenantKey()) e no user resolver
  * da request → vincula o request log ao tenant (tenant_uuid = uuid do dono)
  * → last_used_at throttled.
  *
  * Credencial inválida: 401 padronizado e o request log permanece SEM tenant
- * — exatamente o sinal de ataque/tentativa de burla definido no ADR-010
+ * — exatamente o sinal de ataque/tentativa de burla que a trilha precisa mostrar
  * (o RequestLogging grava INICIADA antes desta camada, sem vincular tenant).
  */
 final class ResolveTenant
@@ -100,8 +100,8 @@ final class ResolveTenant
     }
 
     /**
-     * 401 padronizado. O request log fica SEM tenant (sinal de ataque —
-     * ADR-010); nenhum detalhe do motivo é exposto (não oracular). Toda
+     * 401 padronizado. O request log fica SEM tenant (sinal de ataque);
+     * nenhum detalhe do motivo é exposto (não oracular). Toda
      * recusa alimenta os baldes de falhas (ApiRateLimit).
      */
     private function deny(Request $request): never
@@ -112,7 +112,7 @@ final class ResolveTenant
     }
 
     /**
-     * Vincula o request log ao tenant (ADR-010). O log foi gravado como
+     * Vincula o request log ao tenant. O log foi gravado como
      * INICIADA pelo RequestLogging (camada anterior); aqui ganha o
      * tenant_uuid do dono da chave. Falha de persistência NÃO derruba a
      * requisição — segue na trilha de arquivo (canal request_log).

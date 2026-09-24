@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas de interfaz (es). Toda cadena visible pasa por __() — ADR-007.
+// Cadenas de interfaz (es). Toda cadena visible pasa por __().
 
 return [
 

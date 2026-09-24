@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas de la landing "El Rastro" (/v2) — español (ADR-007). Los fragmentos
+// Cadenas de la landing "El Rastro" (/v2) — español. Los fragmentos
 // de código NO viven aquí: el código no es un idioma, y duplicarlo en tres
 // archivos serían tres verdades que mantener — vienen de LandingV2Controller.
 

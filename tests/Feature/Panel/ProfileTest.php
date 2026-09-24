@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 // =============================================================================
-// Perfil (Livewire — Fase 6): dados, senha de login, senha de transação
-// (TransactionPasswordService da Fase 3) e avatar (função global de upload
-// da Fase 5). Tudo na mesma tela (ADR-005).
+// Perfil (Livewire): dados, senha de login, senha de transação
+// (TransactionPasswordService) e avatar (função global de upload
+// seguro). Tudo na mesma tela.
 // =============================================================================
 
 beforeEach(function () {
@@ -74,7 +74,7 @@ it('rejeita troca de senha com a senha atual errada', function () {
     expect(Hash::check('SenhaAtual123', (string) $user->fresh()->password))->toBeTrue();
 });
 
-it('define a senha de transação (hash separado — ADR-006)', function () {
+it('define a senha de transação (hash separado)', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)
@@ -115,7 +115,7 @@ it('rejeita senha de transação igual à senha de login', function () {
     expect($user->fresh()->hasTransactionPassword())->toBeFalse();
 });
 
-it('faz upload do avatar pela função global de upload seguro (Fase 5)', function () {
+it('faz upload do avatar pela função global de upload seguro', function () {
     $user = User::factory()->create();
 
     Livewire::actingAs($user)

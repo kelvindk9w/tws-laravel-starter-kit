@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 /**
  * GET /api/health — verificação de saúde da aplicação.
  *
- * Decisão documentada (README): a rota é EXCLUÍDA do request log em banco
+ * Decisão documentada (docs/logs-lgpd.md): a rota é EXCLUÍDA do request log em banco
  * (health checks são barulhentos) mas continua passando pela validação de
  * segurança, headers de segurança e rate limit global da API, além do
  * access log do nginx.

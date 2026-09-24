@@ -20,7 +20,7 @@ use Filament\Support\Icons\Heroicon;
 use Livewire\Livewire;
 
 // =============================================================================
-// Alternador tabela/cards das listagens do super admin (ADR-011).
+// Alternador tabela/cards das listagens do super admin.
 //
 // O que estes testes protegem:
 // - o botão existe e troca de verdade o layout da listagem (contentGrid);

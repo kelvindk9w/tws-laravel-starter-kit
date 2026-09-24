@@ -8,7 +8,7 @@ use App\Core\Auth\PasswordPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Redefinição de senha com token recebido por e-mail (checklist item 9).
+ * Redefinição de senha com token recebido por e-mail (validação server-side via Form Request).
  */
 final class ResetPasswordRequest extends FormRequest
 {

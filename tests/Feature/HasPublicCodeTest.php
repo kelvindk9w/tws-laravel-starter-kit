@@ -9,7 +9,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-// Testes do código público legível (ADR-010): PREFIXO-XXXXXX, sem ambiguidade,
+// Testes do código público legível: PREFIXO-XXXXXX, sem ambiguidade,
 // unicidade garantida por constraint UNIQUE + retry de colisão.
 
 class PublicCodeProbe extends Model

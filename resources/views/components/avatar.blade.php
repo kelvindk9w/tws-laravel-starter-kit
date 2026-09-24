@@ -11,8 +11,7 @@
      um ícone genérico: num menu de conta, o boneco cinza é a mesma imagem para
      todo mundo, e o que o usuário precisa reconhecer ali é a própria conta.
 
-     Fonte da foto: User::avatarUrl() (URL assinada do upload validado —
-     Fase 5). Sem `alt` decorativo: o nome já é texto no menu, e um alt
+     Fonte da foto: User::avatarUrl() (URL assinada do upload validado). Sem `alt` decorativo: o nome já é texto no menu, e um alt
      repetido é ruído para o leitor de tela.
 
      Tamanhos: sm (32px, cabeçalho) · md (40px) · lg (64px, perfil). --}}

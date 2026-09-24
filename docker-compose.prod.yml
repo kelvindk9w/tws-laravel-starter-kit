@@ -10,7 +10,7 @@
 #   - app PHP-FPM com OPcache (imagem imutável: código+vendor+assets dentro);
 #   - postgres e redis SEM porta publicada no host (rede interna apenas);
 #   - migrate (one-shot), worker de fila e scheduler como containers dedicados;
-#   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco — ADR-010).
+#   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco).
 #
 # CONFIGURAÇÃO: as variáveis PROD_* abaixo podem ser definidas num arquivo
 # .env.prod (ver .env.prod.example) ou no ambiente do shell. Onde a variável
@@ -67,7 +67,7 @@ x-app-env: &app-env
   # Use para domínio com e sem www, ou domínio de staging na mesma instalação.
   # Ver App\Core\Http\TrustedHosts.
   TRUSTED_HOSTS: ${PROD_TRUSTED_HOSTS:-}
-  # Origens permitidas no /admin e no /horizon (ADR-011).
+  # Origens permitidas no /admin e no /horizon.
   #
   # O fallback VAZIO aqui é deliberado e não é mais fail-open: quem recusa é a
   # aplicação, no middleware da rota — com APP_ENV=production e sem allowlist
@@ -191,7 +191,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # SEM `ports:` — banco inacessível fora da rede interna (ADR-010).
+    # SEM `ports:` — banco inacessível fora da rede interna.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PROD_POSTGRES_USER:-tws} -d ${PROD_POSTGRES_DB:-tws_starter}"]
       interval: 5s
@@ -211,7 +211,7 @@ services:
     networks:
       - backend
 
-  # Filas em produção = Horizon (Fase 7): supervisor que gerencia os
+  # Filas em produção = Horizon: supervisor que gerencia os
   # workers com balanceamento, métricas e retry — dashboard em /horizon
   # (restrito a is_admin + IP allowlist). Substitui o queue:work simples.
   horizon:

@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Route;
 
 // Landing oficial do kit — a direção "Céu" venceu e virou a home. Página
 // pública, sem estado e sem formulário próprio: uma view basta. Os números que
-// ela exibe vêm de config/landing.php (ADR-007), as strings de
+// ela exibe vêm de config/landing.php (nada hardcoded), as strings de
 // lang/*/landing.php e os bundles próprios estão registrados no vite.config.js.
 Route::view('/', 'landing')->name('landing');
 
@@ -44,7 +44,7 @@ Route::post('contato', [ContactController::class, 'store'])
     ->middleware('throttle:sensitive')
     ->name('contact.store');
 
-// Troca de idioma (ADR-007): visitante → cookie; logado → também persiste
+// Troca de idioma: visitante → cookie; logado → também persiste
 // na conta. Whitelist: platform()->availableLocales (fora dela = 404).
 Route::get('locale/{locale}', LocaleController::class)->name('locale.switch');
 
@@ -77,12 +77,12 @@ Route::post('ui/form-demo', [ShowcaseFormDemoController::class, 'store'])
     ->name('ui.form-demo');
 
 // =============================================================================
-// Autenticação web (sessão) — Fase 3 (ADR-006/010).
+// Autenticação web (sessão).
 //
 // Implementação própria enxuta (sem Breeze/Jetstream/Fortify). CSRF é nativo
-// do grupo `web` (checklist 23); rotas sensíveis passam por `throttle:sensitive`
-// (config/security.php — checklist 10). Tudo protegido por `auth` exceto o
-// explicitamente público (deny-by-default — checklist 13).
+// do grupo `web`; rotas sensíveis passam por `throttle:sensitive`
+// (config/security.php). Tudo protegido por `auth` exceto o
+// explicitamente público (deny-by-default).
 // =============================================================================
 
 Route::middleware('guest')->group(function (): void {
@@ -109,7 +109,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     // =====================================================================
-    // Painel do usuário (Livewire 4 — Fase 6, ADR-005/011).
+    // Painel do usuário (Livewire 4).
     // UI direta: tudo se resolve na mesma tela, modais em vez de navegação.
     // =====================================================================
     Route::get('dashboard', Dashboard::class)->name('dashboard');
@@ -123,8 +123,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('settings/theme', ThemePreferenceController::class)
         ->name('settings.theme');
 
-    // Senha de transação (hash separado da senha de login — ADR-006).
-    // Rota standalone mantida da Fase 3; o painel Livewire (Perfil) usa o
+    // Senha de transação (hash separado da senha de login).
+    // Rota standalone mantida; o painel Livewire (Perfil) usa o
     // MESMO TransactionPasswordService.
     Route::get('settings/transaction-password', [TransactionPasswordController::class, 'edit'])
         ->name('transaction-password.edit');
@@ -141,7 +141,7 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:sensitive')
         ->name('sensitive-actions.confirm');
 
-    // Avatar do perfil (Fase 5): mesma função global de upload seguro da API
+    // Avatar do perfil: mesma função global de upload seguro da API
     // (SecureUploadService), restrita a imagens — re-encode GD antes de gravar.
     Route::post('settings/avatar', [AvatarController::class, 'update'])
         ->middleware('throttle:sensitive')

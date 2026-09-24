@@ -19,7 +19,7 @@ use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
 use Spatie\DbDumper\Compressors\GzipCompressor;
 
 // =============================================================================
-// Configuração de backups (Fase 7 — ADR-010): dump lógico criptografado →
+// Configuração de backups: dump lógico criptografado →
 // disco de destino, notificações (webhook = validação cruzada), health
 // check e agendamentos. Testes de CONFIG — sem chamadas reais ao R2.
 // =============================================================================

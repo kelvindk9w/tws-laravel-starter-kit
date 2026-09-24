@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Auth\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-// Senha de transação (ADR-006/010): hash SEPARADO da senha de login,
+// Senha de transação: hash SEPARADO da senha de login,
 // regras fortes via config, nunca igual à senha de login.
 
 it('exige autenticação para definir a senha de transação (deny-by-default)', function () {
@@ -27,7 +27,7 @@ it('define a senha de transação na primeira vez', function () {
 
     $user->refresh();
 
-    // Hash SEPARADO e Argon2id (checklist 4) — nunca plaintext.
+    // Hash SEPARADO e Argon2id — nunca plaintext.
     expect($user->hasTransactionPassword())->toBeTrue()
         ->and($user->transaction_password)->toStartWith('$argon2id$')
         ->and($user->transaction_password)->not->toBe($user->password)

@@ -9,7 +9,7 @@ use Filament\Support\Icons\Heroicon;
 
 /**
  * Semântica visual das ações de registro no MODO CARDS das listagens do
- * super admin (ADR-011).
+ * super admin.
  *
  * O problema: no card, uma fileira de links de texto ("Visualizar",
  * "Editar", "Bloquear", "Excluir") come metade do rodapé, quebra em duas

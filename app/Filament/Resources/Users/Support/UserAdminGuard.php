@@ -8,7 +8,7 @@ use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
 
 /**
- * Guardas do CRUD de usuários do /admin (ADR-011).
+ * Guardas do CRUD de usuários do /admin.
  *
  * Regras — todas verificadas no SERVIDOR, não só escondendo botão:
  * 1. Conta demo é intocável (um visitante não quebra a demo dos outros);

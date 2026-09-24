@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings da landing "O Rastro" (/v2) — pt-BR (ADR-007). NUNCA texto fixo
+// Strings da landing "O Rastro" (/v2) — pt-BR. NUNCA texto fixo
 // em views. Os TRECHOS DE CÓDIGO não moram aqui: código não é idioma, e
 // duplicá-lo em três arquivos seria três verdades para manter — eles vêm do
 // LandingV2Controller.

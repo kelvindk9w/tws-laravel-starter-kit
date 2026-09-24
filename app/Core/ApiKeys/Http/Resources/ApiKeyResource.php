@@ -9,11 +9,11 @@ use App\Core\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
 
 /**
- * Serialização da chave de API (ADR-010 — nunca expor campos internos).
+ * Serialização da chave de API (nunca expor campos internos).
  *
  * NUNCA inclui secret_hash nem qualquer forma da secreta. A sk_ em claro só
  * sai na resposta de criação/rotação, fora deste Resource (campo avulso
- * `secret_key` no envelope — exibição única, ADR-006).
+ * `secret_key` no envelope — exibição única).
  *
  * @mixin ApiKey
  */

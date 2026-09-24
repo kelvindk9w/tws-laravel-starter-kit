@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  * Duas correções sobre o padrão do Filament:
  *
  * 1. FOTO DE PERFIL. Quem já subiu avatar no painel do usuário (Upload
- *    validado da Fase 5) vê a própria foto no super admin — antes o painel
+ *    validado pelo SecureUploadService) vê a própria foto no super admin — antes o painel
  *    ignorava a foto e desenhava iniciais para todo mundo. A resolução
  *    acontece AQUI, e não com um `getFilamentAvatarUrl()` no model User,
  *    porque o painel não deveria obrigar o model de domínio a conhecer o

@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // =============================================================================
-// Fase 6 — Configurações editáveis pelo super admin (sem tocar no .env).
+// Configurações editáveis pelo super admin (sem tocar no .env).
 //
 // Tabela chave→valor (JSON). Somente as chaves da WHITELIST de
 // config/settings.php podem ser escritas/lidas pela UI — elas sobrescrevem

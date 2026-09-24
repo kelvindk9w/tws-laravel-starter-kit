@@ -8,12 +8,12 @@ use Filament\Tables\Columns\TextColumn;
 
 /**
  * Colunas que TODA listagem do super admin repetia palavra por palavra
- * (ADR-010/011). Cada fábrica devolve a coluna já configurada e ainda
+ * do super admin. Cada fábrica devolve a coluna já configurada e ainda
  * encadeável — o recurso só ajusta o que for específico dele.
  *
  * Regras embutidas aqui, uma vez só:
  * - código público: rótulo comum, pesquisável e copiável (o id interno
- *   NUNCA aparece — ADR-010);
+ *   NUNCA aparece: impede enumeração de registros);
  * - data: sempre no fuso de EXIBIÇÃO da plataforma (platform()
  *   ->displayTimezone), nunca no fuso do banco.
  */

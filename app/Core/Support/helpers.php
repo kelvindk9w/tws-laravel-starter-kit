@@ -16,7 +16,7 @@ use Illuminate\Support\ViewErrorBag;
 
 if (! function_exists('platform')) {
     /**
-     * Acesso global tipado à configuração da plataforma (ADR-007).
+     * Acesso global tipado à configuração da plataforma (nada hardcoded).
      *
      * Ex.: platform()->name, platform()->officialUrl, platform()->supportEmail
      */
@@ -40,7 +40,7 @@ if (! function_exists('setting')) {
 
 if (! function_exists('tenant')) {
     /**
-     * Tenant da requisição corrente (usuário dono da chave de API — ADR-010).
+     * Tenant da requisição corrente (usuário dono da chave de API).
      * Null fora de rotas protegidas pelo middleware resolve.tenant.
      */
     function tenant(): ?User

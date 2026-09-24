@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings do showcase de componentes (/ui) — pt-BR (ADR-007). NUNCA texto fixo em views.
+// Strings do showcase de componentes (/ui) — pt-BR. NUNCA texto fixo em views.
 
 return [
 

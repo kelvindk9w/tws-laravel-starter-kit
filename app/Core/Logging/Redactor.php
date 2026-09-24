@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Logging;
 
 /**
- * Redaction de dados sensíveis antes de persistir logs (ADR-004 — LGPD).
+ * Redaction de dados sensíveis antes de persistir logs (LGPD: log nunca guarda dado sensível).
  *
  * Regras:
  * - Chaves sensíveis (senhas, tokens, segredos, chaves de API, dados de

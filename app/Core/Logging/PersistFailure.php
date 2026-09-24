@@ -8,7 +8,7 @@ use Illuminate\Database\QueryException;
 use Throwable;
 
 /**
- * Classificação da falha de gravação da trilha de auditoria (ADR-004).
+ * Classificação da falha de gravação da trilha de auditoria.
  *
  * A gravação do request log é deliberadamente resiliente: se o banco falhar,
  * a requisição NÃO é derrubada — a exceção vira uma linha `critical` no canal

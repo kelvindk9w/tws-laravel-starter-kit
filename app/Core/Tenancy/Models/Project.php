@@ -17,13 +17,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Projeto — camada ORGANIZACIONAL da conta (ADR-005).
+ * Projeto — camada ORGANIZACIONAL da conta.
  *
  * 1 login (pessoa) gerencia N projetos. Por ora o projeto nasce SÓ COM NOME
- * (pode existir sem empresa — ex.: pessoa antes de abrir CNPJ). No MVP é
+ * (pode existir sem empresa — ex.: pessoa antes de abrir CNPJ). Hoje é
  * metadado para separar dados e visões; a custódia segue uma por conta.
  *
- * Identificadores (3 camadas — ADR-010): `id` nunca exposto; `uuid` externo;
+ * Identificadores (3 camadas — anti-enumeração): `id` nunca exposto; `uuid` externo;
  * `codigo_publico` legível PRJ-xxxxxx.
  */
 #[Fillable(['user_id', 'name', 'status'])]
@@ -32,7 +32,7 @@ class Project extends Model
     use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
-     * Prefixo do código público legível (ADR-010): PRJ-xxxxxx.
+     * Prefixo do código público legível: PRJ-xxxxxx.
      */
     protected const PUBLIC_CODE_PREFIX = 'PRJ';
 
@@ -77,7 +77,7 @@ class Project extends Model
     }
 
     /**
-     * Projetos que a CHAVE DE API enxerga (ADR-005/006): sempre só os do dono
+     * Projetos que a CHAVE DE API enxerga: sempre só os do dono
      * da chave; se a chave é restrita, só os vinculados a ela — inclusive
      * nenhum, quando todos os vinculados foram excluídos (fail-closed).
      *
@@ -95,7 +95,7 @@ class Project extends Model
     }
 
     /**
-     * Chaves de API vinculadas ao projeto (N:N — ADR-006).
+     * Chaves de API vinculadas ao projeto (N:N).
      *
      * @return BelongsToMany<ApiKey, $this>
      */

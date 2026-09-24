@@ -34,10 +34,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? platform()->name }}</title>
 
-    {{-- Branding 100% via platform() (ADR-007/010): nome, logo e cor primária
+    {{-- Branding 100% via platform(): nome, logo e cor primária
          vêm do .env (config/platform.php). Nada hardcoded. --}}
     {{-- Override de marca opcional (.env PLATFORM_PRIMARY_COLOR). Vazio =
-         identidade monocromática dos tokens (theme.css) — ver README. --}}
+         identidade monocromática dos tokens (theme.css) — ver docs/interface.md. --}}
     @if (platform()->primaryColor !== null)
         <style>:root { --brand: {{ platform()->primaryColor }}; }</style>
     @endif

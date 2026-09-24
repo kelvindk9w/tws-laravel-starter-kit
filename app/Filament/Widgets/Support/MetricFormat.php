@@ -8,7 +8,7 @@ use Illuminate\Support\Number;
 
 /**
  * Como o número de uma métrica é ESCRITO no card. Formatar na borda (e nunca
- * no cálculo) é a mesma regra do dinheiro do kit (ADR-004): o widget guarda
+ * no cálculo) é a mesma regra do dinheiro do kit: o widget guarda
  * float, a tela mostra texto no idioma do usuário.
  */
 enum MetricFormat

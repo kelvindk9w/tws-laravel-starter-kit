@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-// Transactional email strings (en). Every string goes through __() — ADR-007.
+// Transactional email strings (en). Every string goes through __().
 // Message bodies live in resources/views/mail/messages/**, on the single
-// <x-email::layouts.kit> layout. See the README, "Transactional emails".
+// <x-email::layouts.kit> layout. See docs/emails.md.
 
 return [
 
@@ -15,7 +15,7 @@ return [
         'cnpj' => 'Company ID',
     ],
 
-    // Advance warning of API key expiration by inactivity (ADR-006).
+    // Advance warning of API key expiration by inactivity.
     'api_key_inactivity' => [
         'subject' => ':platform — Your API key will be deactivated due to inactivity',
         'preheader' => 'An unused key will be deactivated in :days days.',
@@ -30,7 +30,7 @@ return [
         'ignore' => 'If you do not recognize this key, revoke it immediately and rotate your credentials.',
     ],
 
-    // Verification code (email 2FA — ADR-006).
+    // Verification code (email 2FA).
     'verification_code' => [
         'subject' => ':platform — Your verification code',
         'preheader' => 'Your code expires in :minutes minutes.',

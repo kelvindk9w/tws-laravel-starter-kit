@@ -9,7 +9,7 @@ use App\Filament\Pages\Settings;
 use Livewire\Livewire;
 
 // =============================================================================
-// Settings editáveis pelo super admin (Fase 6): tabela settings sobrescreve
+// Settings editáveis pelo super admin: tabela settings sobrescreve
 // o .env em runtime, sem editar arquivo. Somente a whitelist de
 // config/settings.php é gravável.
 // =============================================================================

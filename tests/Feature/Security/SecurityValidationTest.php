@@ -6,7 +6,7 @@ use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Route;
 
-// Validação de segurança global (ADR-005) no modo `block`: payload malicioso
+// Validação de segurança global no modo `block`: payload malicioso
 // é bloqueado, registrado SANITIZADO/escapado (nunca executável) +
 // metadados, e a resposta não revela o que foi detectado. O modo padrão
 // (`observe`) está em ObserveModeTest.
@@ -27,7 +27,7 @@ it('bloqueia payload XSS com 422, sem devolver script executável', function () 
         ->and($response->json('message'))->not->toContain('xss');
 });
 
-it('registra a tentativa XSS sanitizada/escapada com metadados (ADR-005)', function () {
+it('registra a tentativa XSS sanitizada/escapada com metadados', function () {
     $this->postJson('/api/_test/echo', ['comment' => '<script>alert(1)</script>']);
 
     $log = RequestLog::query()->sole();

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Resource base da API (ADR-010 — padronização de respostas).
+ * Resource base da API (padronização de respostas: nunca model cru).
  *
  * CONVENÇÃO OBRIGATÓRIA:
  * - NENHUM endpoint retorna modelo Eloquent cru. Toda entidade tem seu
@@ -21,7 +21,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 abstract class BaseResource extends JsonResource
 {
     /**
-     * Identificadores públicos padrão de qualquer entidade (ADR-010):
+     * Identificadores públicos padrão de qualquer entidade:
      * uuid (externo seguro) + codigo_publico (legível). O `id` do banco
      * NUNCA é exposto.
      *
@@ -36,7 +36,7 @@ abstract class BaseResource extends JsonResource
     }
 
     /**
-     * Timestamp em ISO 8601 UTC (internamente tudo é UTC — ADR-010;
+     * Timestamp em ISO 8601 UTC (internamente tudo é UTC;
      * conversão para America/Sao_Paulo acontece apenas na borda de exibição).
      */
     protected function isoTimestamp(mixed $value): ?string

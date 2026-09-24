@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Definição/alteração da senha de TRANSAÇÃO (ADR-006) — lógica única,
- * consumida pelo controller web (Fase 3) e pelo painel Livewire (Fase 6).
+ * Definição/alteração da senha de TRANSAÇÃO (separada da de login) — lógica única,
+ * consumida pelo controller web e pelo painel Livewire (sem regra duplicada).
  *
  * Regras:
  * - Hash SEPARADO da senha de login (cast 'hashed' → Argon2id).

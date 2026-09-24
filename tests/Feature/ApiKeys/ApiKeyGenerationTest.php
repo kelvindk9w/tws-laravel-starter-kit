@@ -7,7 +7,7 @@ use App\Core\ApiKeys\Support\ApiKeyGenerator;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Auth\Models\User;
 
-// Geração do par pk_/sk_ e hash da secreta (ADR-006, checklist item 5):
+// Geração do par pk_/sk_ e hash da secreta:
 // aleatoriedade criptográfica, prefixo por ambiente, só hash no banco.
 
 it('gera par com prefixos do ambiente configurado e parte aleatória segura', function () {

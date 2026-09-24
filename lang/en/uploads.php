@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Secure Uploads module strings (en — ADR-007). Always via __().
+// Secure Uploads module strings (en). Always via __().
 
 return [
 

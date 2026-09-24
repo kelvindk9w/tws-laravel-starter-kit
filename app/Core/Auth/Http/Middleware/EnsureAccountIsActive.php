@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Status da conta vale A CADA REQUISIÇÃO web, não só no login (checklist 13).
+ * Status da conta vale A CADA REQUISIÇÃO web, não só no login (deny-by-default).
  *
  * O login já recusava conta não ativa, mas era a única verificação do lado
  * web: uma conta bloqueada DEPOIS de logada mantinha a sessão e seguia

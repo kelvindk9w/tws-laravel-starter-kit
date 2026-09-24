@@ -7,7 +7,7 @@ namespace App\Core\ApiKeys\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Rotação de chave de API (ADR-006). Sempre combinado com resolve.tenant +
+ * Rotação de chave de API. Sempre combinado com resolve.tenant +
  * scope:api-keys:rotate + sensitive.token (rota).
  *
  * grace_period_minutes: escolha do usuário sobre a morte da chave antiga —

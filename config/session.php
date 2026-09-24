@@ -169,8 +169,8 @@ return [
     |
     */
 
-    // Checklist item 22: cookie Secure por padrão em produção (HTTPS é
-    // forçado — item 3). Em dev local (HTTP) fica desligado; para ligar
+    // Cookie Secure por padrão em produção (HTTPS é
+    // forçado). Em dev local (HTTP) fica desligado; para ligar
     // explicitamente, defina SESSION_SECURE_COOKIE=true no .env.
     'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 

@@ -1,4 +1,4 @@
-{{-- Seletor de idioma do kit (ADR-007). <x-locale-switcher />
+{{-- Seletor de idioma do kit. <x-locale-switcher />
 
      Era um <select> NATIVO com bandeira em emoji, ao lado de dois botões
      desenhados: a lista de opções era renderizada pelo sistema operacional

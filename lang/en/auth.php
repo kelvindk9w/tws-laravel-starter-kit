@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Authentication strings (en). Every UI string goes through __() — ADR-007.
+// Authentication strings (en). Every UI string goes through __().
 
 return [
 
@@ -26,7 +26,7 @@ return [
     'registered' => 'Account created successfully. Welcome!',
     'logged_out' => 'Signed out successfully.',
 
-    // Transaction password (ADR-006 — separate from the login password).
+    // Transaction password (separate from the login password).
     'transaction_password' => [
         'invalid' => 'The provided transaction password is incorrect.',
         'current_invalid' => 'The current transaction password is incorrect.',
@@ -42,7 +42,7 @@ return [
         'resend_cooldown' => 'Please wait :seconds seconds before requesting a new code.',
     ],
 
-    // Sensitive action token (single use, short-lived — ADR-006/010).
+    // Sensitive action token (single use, short-lived).
     'sensitive_action' => [
         'token_issued' => 'Sensitive action authorized. Use the token immediately — it is single-use.',
         'invalid_token' => 'Missing, invalid or expired sensitive action token. Please confirm the action again.',
@@ -51,7 +51,7 @@ return [
     // UI strings (authentication forms/screens).
     // Demo account hardening (DemoAccountGuard): messages for anything that
     // tries to touch them outside the super admin UI — tinker, artisan
-    // command, job. See the README, "Demo accounts are untouchable".
+    // command, job. See docs/demo.md, "Contas demo são intocáveis".
     'demo_account' => [
         'update_blocked' => 'Protected demo account: ":email" does not accept changes to :fields. Name, photo, language and theme remain editable.',
         'delete_blocked' => 'Protected demo account: ":email" cannot be deleted.',

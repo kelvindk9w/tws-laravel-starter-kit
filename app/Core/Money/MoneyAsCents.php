@@ -8,7 +8,7 @@ use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Cast de valores monetários (ADR-004/005).
+ * Cast de valores monetários (inteiro no banco, nunca float).
  *
  * - Banco: bigint com o valor na menor unidade da moeda (centavos em BRL).
  * - Model: sempre int (menor unidade). NUNCA float.

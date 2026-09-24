@@ -9,7 +9,7 @@ use App\Core\Uploads\Models\Upload;
 use Illuminate\Http\Request;
 
 /**
- * Retorno padronizado do upload (ADR-010): uuid, código público, path,
+ * Retorno padronizado do upload (sempre via Resource, nunca o model cru): uuid, código público, path,
  * url temporária assinada, MIME REAL, tamanho e hash sha256 do conteúdo
  * persistido. O `id` interno nunca sai.
  *

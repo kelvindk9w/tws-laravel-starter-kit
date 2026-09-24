@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // =============================================================================
-// E2E do painel do usuário (Fase 6 — ADR-011): login → dashboard, telas
+// E2E do painel do usuário: login → dashboard, telas
 // Livewire e gating do super admin.
 //
 // Sessão: o global-setup (tests/e2e/global-setup.js) autentica UMA vez e
@@ -79,7 +79,7 @@ test.describe('autenticado', () => {
         await expect(page.getByRole('button', { name: 'Nova chave' }).first()).toBeVisible();
     });
 
-    test('chaves de API: formulário de criação abre na mesma tela (ADR-005)', async ({ page }) => {
+    test('chaves de API: formulário de criação abre na mesma tela', async ({ page }) => {
         await page.goto('/api-keys');
         await page.getByRole('button', { name: 'Nova chave' }).first().click();
 
@@ -88,7 +88,7 @@ test.describe('autenticado', () => {
         await expect(page.getByText('Permissões (scopes)')).toBeVisible();
         await expect(page.getByText('Todas as permissões')).toBeVisible();
 
-        // Toggle de escopos granulares (ADR-006: padrão tudo, granular opcional).
+        // Toggle de escopos granulares (padrão tudo, granular opcional).
         await page.getByText('Todas as permissões').click();
         await expect(page.getByText('Selecione somente o que a integração precisa.')).toBeVisible();
     });

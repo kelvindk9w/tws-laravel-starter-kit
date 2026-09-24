@@ -24,7 +24,7 @@
     @endif
 
     {{-- =====================================================================
-         VISUALIZAÇÃO ÚNICA DA SECRETA (ADR-006): exibida 1x, sem recuperação.
+         VISUALIZAÇÃO ÚNICA DA SECRETA: exibida 1x, sem recuperação.
          O peso visual é proposital — é a única tela do kit em que perder a
          atenção do usuário custa uma credencial.
          ==================================================================== --}}
@@ -74,7 +74,7 @@
     @endif
 
     {{-- =====================================================================
-         FORMULÁRIO DE CRIAÇÃO (inline — mesma tela, ADR-005)
+         FORMULÁRIO DE CRIAÇÃO (inline — mesma tela)
          ==================================================================== --}}
     @if ($showCreateForm)
         <x-card :title="__('panel.api_keys.create_heading')">
@@ -276,7 +276,7 @@
     </div>
 
     {{-- =====================================================================
-         MODAL: rotação (escolha do grace period — ADR-006)
+         MODAL: rotação (escolha do grace period)
 
          `! $pendingAction` fecha ESTE modal quando a confirmação de segurança
          abre: os dois ficavam empilhados na tela, o de trás visível através

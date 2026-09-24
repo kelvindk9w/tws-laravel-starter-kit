@@ -66,7 +66,7 @@
         </div>
     </x-card>
 
-    {{-- Avatar (função global de upload da Fase 5) --------------------------- --}}
+    {{-- Avatar (função global de upload seguro) ------------------------------- --}}
     <x-card :title="__('panel.profile.avatar_heading')" :description="__('panel.profile.avatar_hint')">
         @if (session('avatar_status'))
             <x-alert type="success" class="mb-4">{{ session('avatar_status') }}</x-alert>
@@ -122,7 +122,7 @@
         </form>
     </x-card>
 
-    {{-- Senha de transação (ADR-006 — hash separado) --------------------------- --}}
+    {{-- Senha de transação (hash separado) --------------------------- --}}
     <x-card :title="__('panel.profile.transaction_password_heading')" :description="__('panel.profile.transaction_password_hint')">
         <x-slot:actions>
             <x-badge :color="$user->hasTransactionPassword() ? 'green' : 'yellow'">

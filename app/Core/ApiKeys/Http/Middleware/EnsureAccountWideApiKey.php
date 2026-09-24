@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Operação de CONTA exige chave de conta toda (ADR-005/006).
+ * Operação de CONTA exige chave de conta toda.
  *
  * Uma chave vinculada a projetos é, por definição, uma credencial de alcance
  * menor que a conta. Deixá-la fazer operação de conta anularia o vínculo:

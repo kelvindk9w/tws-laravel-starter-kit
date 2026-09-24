@@ -16,7 +16,7 @@ namespace App\Core\Mail;
  * mudou o token lá, muda o hex aqui, e os quatro e-mails mudam juntos.
  *
  * A marca segue monocromática (quase-preto no claro, quase-branco no escuro,
- * como no theme.css). O override opcional PLATFORM_PRIMARY_COLOR (ADR-007)
+ * como no theme.css). O override opcional PLATFORM_PRIMARY_COLOR
  * vale para os dois temas, exatamente como na web.
  */
 final class MailTheme

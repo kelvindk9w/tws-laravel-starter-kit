@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Definição/alteração da senha de TRANSAÇÃO (ADR-006).
+ * Definição/alteração da senha de TRANSAÇÃO (separada da de login).
  *
  * Regras:
  * - Hash SEPARADO da senha de login (cast 'hashed' → Argon2id).
@@ -42,7 +42,7 @@ final class TransactionPasswordController
         $validated = $request->validated();
 
         // Lógica única no TransactionPasswordService (compartilhada com o
-        // painel Livewire — Fase 6).
+        // painel Livewire).
         $this->transactionPasswords->update(
             $user,
             $validated['transaction_password'],

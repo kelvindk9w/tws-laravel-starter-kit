@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Landing (/) contact form — en (ADR-007).
+// Landing (/) contact form — en.
 
 return [
 

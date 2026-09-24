@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Logging\Models\RequestLog;
 
-// GET /api/health — saúde da aplicação via BaseResource (ADR-010).
+// GET /api/health — saúde da aplicação via BaseResource.
 // Decisão: EXCLUÍDO do request log em banco para não poluir a trilha
 // (health checks são barulhentos); segue no access log do nginx e passa
 // por validação de segurança, headers e rate limit.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings for the "The Trace" landing (/v2) — English (ADR-007). Code samples
+// Strings for the "The Trace" landing (/v2) — English. Code samples
 // do NOT live here: code is not a language, and duplicating it across three
 // files would be three truths to maintain — they come from LandingV2Controller.
 

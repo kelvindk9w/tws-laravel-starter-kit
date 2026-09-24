@@ -15,7 +15,7 @@ use Illuminate\Support\HtmlString;
  * herda a cor do painel e funciona nos dois temas com um arquivo só.
  *
  * O arquivo `public/img/brand-mark.svg` continua existindo para uso externo
- * (favicon, e-mail, README). ADR-007 continua valendo: definir
+ * (favicon, e-mail, README). Nada é hardcoded: definir
  * PLATFORM_LOGO_URL no .env sobrepõe esta marca.
  */
 final class BrandMark

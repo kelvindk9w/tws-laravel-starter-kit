@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
 /**
- * Gerenciador das configurações editáveis pelo super admin (Fase 6).
+ * Gerenciador das configurações editáveis pelo super admin.
  *
  * Leitura/escrita restrita à WHITELIST de config/settings.php. Os valores
  * gravados sobrescrevem em runtime os configs vindos do .env (ver

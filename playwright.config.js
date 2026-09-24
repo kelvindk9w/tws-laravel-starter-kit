@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // =============================================================================
-// Playwright — testes E2E (ADR-010: testes validam CONTEÚDO, não só status).
+// Playwright — testes E2E (testes validam CONTEÚDO, não só status).
 //
 // Pré-requisito: stack de dev no ar (`docker compose up -d`).
 // Rodar local (Node instalado):  npx playwright test

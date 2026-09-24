@@ -19,8 +19,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 /**
- * Uploads — visão global (super admin, Fase 6). Somente leitura: todo
- * registro aqui passou pela validação de segurança da Fase 5 (rejeitados
+ * Uploads — visão global (super admin). Somente leitura: todo
+ * registro aqui passou pela validação de segurança do SecureUploadService (rejeitados
  * não tocam o banco). Abrir arquivo = URL assinada de curta duração.
  */
 final class UploadResource extends BaseResource

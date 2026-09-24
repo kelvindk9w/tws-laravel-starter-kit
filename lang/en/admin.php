@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Super admin strings (Filament — ADR-011). Always via __().
+// Super admin strings (Filament). Always via __().
 
 return [
 
@@ -168,7 +168,7 @@ return [
         'plural' => 'Request logs',
         'tenant' => 'Tenant',
         'orphan' => 'NO TENANT',
-        'orphan_hint' => 'Logs without a tenant = possible attack/bypass attempt (ADR-010).',
+        'orphan_hint' => 'Logs without a tenant = possible attack/bypass attempt.',
         'endpoint' => 'Endpoint',
         'response_status' => 'HTTP',
         'duration' => 'Duration',

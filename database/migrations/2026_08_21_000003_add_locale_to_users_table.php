@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Preferência de idioma do usuário (ADR-007): usada pelo middleware
+ * Preferência de idioma do usuário: usada pelo middleware
  * SetLocale (interface) e pelos e-mails transacionais (locale do
  * destinatário). Null = padrão da plataforma (platform()->locale).
  */

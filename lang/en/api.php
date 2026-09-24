@@ -2,7 +2,7 @@
 
 // =============================================================================
 // API error envelope (`api/*`) — see App\Core\Http\Exceptions\ApiErrorRenderer
-// and the "API" section of the README.
+// and docs/api.md ("Contrato de resposta da API").
 //
 // `message` is human and translated; `code` is stable and NOT translated
 // (that is what API clients branch on).

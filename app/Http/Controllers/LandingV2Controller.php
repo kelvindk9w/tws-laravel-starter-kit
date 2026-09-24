@@ -16,7 +16,7 @@ use Symfony\Component\Finder\Finder;
  *
  * O conceito da página é que todo sistema seguro é um que se lembra: a tela
  * inteira é um log de auditoria e o scroll é a linha do tempo. Por isso
- * NADA aqui é número inventado no Blade (ADR-007):
+ * NADA aqui é número inventado no Blade:
  *
  * - a contagem de testes é lida da suíte Pest real (arquivos de tests/);
  * - a licença sai do composer.json;

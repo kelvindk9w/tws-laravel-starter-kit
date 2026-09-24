@@ -7,7 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // =============================================================================
-// Fase 5 — Uploads Seguros (ADR-010 + checklist item 14).
+// Uploads Seguros.
 //
 // uploads: registro de TODO arquivo aceito pela função global de upload.
 // Arquivo rejeitado NUNCA vira registro (só log). O `path` é uuid + extensão
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
 // do dono da chave, mesma convenção do request log); `user_id` quando veio
 // da web autenticada.
 //
-// Identificadores (3 camadas — ADR-010): `id` interno nunca exposto; `uuid`
+// Identificadores (3 camadas, anti-enumeração): `id` interno nunca exposto; `uuid`
 // externo; `codigo_publico` legível UPL-xxxxxx (UNIQUE — a unicidade é do banco).
 // =============================================================================
 return new class extends Migration

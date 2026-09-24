@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas del showcase de componentes (/ui) — es (ADR-007). NUNCA texto fijo en views.
+// Cadenas del showcase de componentes (/ui) — es. NUNCA texto fijo en views.
 
 return [
 

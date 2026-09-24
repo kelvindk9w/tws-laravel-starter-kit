@@ -22,7 +22,7 @@
         <x-alert type="success">{{ session('projects_status') }}</x-alert>
     @endif
 
-    {{-- Criação inline (mesma tela — ADR-005) --}}
+    {{-- Criação inline (mesma tela) --}}
     @if ($showCreateForm)
         <x-card :title="__('panel.projects.new')">
             <form wire:submit="create" class="flex flex-wrap items-end gap-3">

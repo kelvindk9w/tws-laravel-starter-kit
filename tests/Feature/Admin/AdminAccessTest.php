@@ -6,7 +6,7 @@ use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
 
 // =============================================================================
-// Acesso ao super admin Filament (/admin — Fase 6, ADR-011): SÓ is_admin +
+// Acesso ao super admin Filament (/admin): SÓ is_admin +
 // conta ativa. Demais = 403; guest = redirect ao login do painel. A flag só
 // muda pelo comando `user:make-admin`.
 // =============================================================================

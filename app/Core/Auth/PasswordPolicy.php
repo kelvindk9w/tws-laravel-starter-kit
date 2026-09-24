@@ -7,7 +7,7 @@ namespace App\Core\Auth;
 use Illuminate\Validation\Rules\Password;
 
 /**
- * Política da senha de LOGIN, num lugar só (ADR-007: nada hardcoded).
+ * Política da senha de LOGIN, num lugar só (nada hardcoded).
  *
  * Todo ponto que valida senha de login — registro público, reset por
  * e-mail, troca no perfil e criação/edição de usuário no /admin — chama

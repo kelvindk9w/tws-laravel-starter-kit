@@ -10,7 +10,7 @@ use Illuminate\Routing\Router;
 use Throwable;
 
 /**
- * Assinatura do endpoint gravada na trilha de auditoria (ADR-004/005/010).
+ * Assinatura do endpoint gravada na trilha de auditoria.
  *
  * PROBLEMA: o caminho REAL da URL é dado do usuário e pode carregar segredo
  * posicional. O link de recuperação de senha leva o token no PATH
@@ -24,7 +24,7 @@ use Throwable;
  *
  * Por que casar a rota aqui: os middlewares de log são GLOBAIS de propósito
  * (precisam registrar também as rotas inexistentes, que é o sinal de
- * varredura do ADR-010). Middleware global roda ANTES do roteamento, então
+ * varredura). Middleware global roda ANTES do roteamento, então
  * `$request->route()` ainda é nulo — a rota é casada contra a coleção sem
  * despachar nada. Se o middleware for usado por alias dentro de um grupo,
  * a rota já está resolvida e o casamento nem acontece.

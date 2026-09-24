@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Identificadores de correlação da requisição (ADR-004).
+ * Identificadores de correlação da requisição.
  *
  * São DOIS, com donos diferentes — e essa separação é de segurança:
  *

@@ -9,7 +9,7 @@ use App\Filament\Support\InitialsAvatarProvider;
 use Filament\Facades\Filament;
 
 // =============================================================================
-// Menu do usuário do /admin (ADR-011): avatar (foto ou iniciais), perfil,
+// Menu do usuário do /admin: avatar (foto ou iniciais), perfil,
 // alternador de tema claro/escuro/sistema, voltar ao site e sair.
 //
 // O seletor de IDIOMA continua na topbar, fora deste menu (decisão do dono) —

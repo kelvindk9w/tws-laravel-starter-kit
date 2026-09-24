@@ -22,7 +22,7 @@ use Throwable;
 
 /**
  * Validação de segurança de entrada — PRIMEIRO middleware de payload da
- * cadeia global (web e api), conforme ADR-004/005.
+ * cadeia global (web e api).
  *
  * Pipeline: receber → validação de segurança → sanitização/redaction → persistir.
  *
@@ -42,7 +42,7 @@ use Throwable;
  * - `block`: NUNCA bloqueia silenciosamente — grava request log com status
  *   BLOQUEADA, payload sanitizado + metadados da tentativa (IP, endpoint,
  *   tipo), registra `security.blocked` no log de arquivo e responde 422
- *   genérico (não revela o que foi detectado — item 32 do checklist) com
+ *   genérico (não revela o que foi detectado) com
  *   X-Correlation-Id.
  *
  * É também quem resolve o correlation_id da requisição (primeira peça da
@@ -241,7 +241,7 @@ final class SecurityValidation
 
     /**
      * Persiste a tentativa de ataque: payload sanitizado/escapado + redigido
-     * (dupla camada — ADR-005), com os metadados da tentativa.
+     * (dupla camada), com os metadados da tentativa.
      *
      * @param  array<string, mixed>|null  $summary  payload já resumido (usado
      *                                              quando o corpo NÃO deve ser
@@ -285,7 +285,7 @@ final class SecurityValidation
             ]);
         } catch (Throwable $exception) {
             // Falha de banco NÃO pode impedir o bloqueio nem apagar a evidência:
-            // a trilha de arquivo sobrevive à falha do banco (pesquisa §2.3).
+            // a trilha de arquivo sobrevive à falha do banco.
             Log::channel('request_log')->critical('security.blocked.persist_failed', [
                 ...$context,
                 ...PersistFailure::describe($exception),

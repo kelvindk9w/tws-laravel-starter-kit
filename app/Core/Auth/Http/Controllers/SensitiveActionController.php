@@ -11,7 +11,7 @@ use App\Core\Auth\Services\SensitiveActionService;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Fluxo de confirmação de ação sensível (ADR-006/010):
+ * Fluxo de confirmação de ação sensível:
  *
  *   POST /sensitive-actions/code    — senha de transação → código por e-mail
  *   POST /sensitive-actions/confirm — código válido → token de ação sensível
@@ -19,8 +19,8 @@ use Illuminate\Http\JsonResponse;
  * O token retornado autoriza UMA operação sensível (uso único, curta duração)
  * em rotas protegidas pelo middleware `sensitive.token`.
  *
- * Respostas JSON: os formulários do painel (fase Livewire) consomem estes
- * endpoints via fetch com o token CSRF da sessão (checklist 23).
+ * Respostas JSON: endpoints para consumo via fetch com o token CSRF da
+ * sessão (o painel Livewire chama o SensitiveActionService direto).
  */
 final class SensitiveActionController
 {

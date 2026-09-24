@@ -24,7 +24,7 @@ use Throwable;
 /**
  * Limite de requisições da BORDA — por cliente (IP, ou prefixo IPv6), para
  * TODA requisição que chega ao PHP: páginas, updates do Livewire, /admin,
- * /up, a API e as rotas que nem existem (Lote 2 da auditoria).
+ * /up, a API e as rotas que nem existem.
  *
  * POR QUE GLOBAL, E NÃO `throttle:` NO GRUPO `web`: middleware de grupo não
  * roda em rota inexistente — e o flood de 404 de varredura era justamente
@@ -60,7 +60,7 @@ use Throwable;
  *
  * Sem chave para desligar: quem precisa de mais folga (NAT corporativo,
  * escola, operadora com CGNAT) aumenta RATE_LIMIT_WEB. O valor padrão foi
- * medido — ver a seção de rate limit no README.
+ * medido — ver docs/seguranca.md, "Limite de requisições".
  */
 final class EdgeRateLimit
 {

@@ -7,7 +7,7 @@ namespace App\Core\Uploads\Exceptions;
 use RuntimeException;
 
 /**
- * Upload REJEITADO pela validação de segurança do arquivo (ADR-010).
+ * Upload REJEITADO pela validação de segurança do arquivo.
  *
  * Carrega o MOTIVO interno (chave estável, para logs/telemetria) e a
  * mensagem traduzida exibida ao cliente. O motivo detalhado nunca vaza

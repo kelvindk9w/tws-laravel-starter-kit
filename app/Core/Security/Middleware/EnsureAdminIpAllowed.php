@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Barreira de ORIGEM das superfícies administrativas — `/admin` (Filament) e
- * `/horizon` (dashboard de filas). ADR-011, checklist item 25.
+ * `/horizon` (dashboard de filas).
  *
  * É a SEGUNDA barreira: a primeira é `is_admin` + conta ativa. Esta responde a
  * uma pergunta diferente — "de onde esta requisição está vindo" — e é a que
@@ -81,7 +81,7 @@ final class EnsureAdminIpAllowed
             .'allowlist na aplicação (IP dinâmico, ou segunda barreira na rede: VPN, Cloudflare '
             .'Access, WAF), declare ADMIN_ALLOW_ANY_IP=true — a liberação passa a ser uma '
             .'decisão registrada, com aviso no log a cada boot, em vez de um esquecimento. '
-            .'Detalhes em App\Core\Security\AdminIpAllowlist e no README, seção Produção.'
+            .'Detalhes em App\Core\Security\AdminIpAllowlist e em docs/admin-e-dashboards.md (barreira de origem do /admin).'
         );
     }
 

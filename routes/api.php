@@ -9,11 +9,11 @@ use App\Core\Uploads\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 // Saúde da aplicação (excluída do request log em banco — ver config/security.php
-// e README). Passa por validação de segurança, headers e rate limit global.
+// e docs/logs-lgpd.md). Passa por validação de segurança, headers e rate limit global.
 Route::get('/health', HealthController::class)->name('api.health');
 
 // =============================================================================
-// API v1 — Motor de API Keys + Tenancy (Fase 4 — ADR-005/006/010).
+// API v1 — Motor de API Keys + Tenancy.
 //
 // Autenticação (middleware resolve.tenant): par de credenciais no header —
 //   X-Api-Key: pk_live_...            (chave pública)
@@ -21,8 +21,8 @@ Route::get('/health', HealthController::class)->name('api.health');
 // O tenant (dono da chave) é resolvido e vinculado ao request log; cada rota
 // exige ainda o scope granular da chave (middleware scope:recurso:acao).
 //
-// Criação e rotação de chave são AÇÕES SENSÍVEIS (ADR-010): exigem o token
-// de curta duração emitido pela Fase 3 (senha de transação + 2FA por e-mail),
+// Criação e rotação de chave são AÇÕES SENSÍVEIS: exigem o token
+// de curta duração emitido pela confirmação sensível (senha de transação + 2FA por e-mail),
 // enviado no header X-Sensitive-Action-Token.
 // =============================================================================
 Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(function (): void {
@@ -57,7 +57,7 @@ Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(functi
             ->name('api-keys.rotate');
     });
 
-    // --- Projetos (camada organizacional — ADR-005) ---------------------------
+    // --- Projetos (camada organizacional) -------------------------------------
     // Chave vinculada a projetos só enxerga os vinculados (404 nos demais) e
     // não cria projeto (operação de conta — account.key).
     Route::get('projects', [ProjectController::class, 'index'])
@@ -80,7 +80,7 @@ Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(functi
         ->middleware('scope:projects:delete')
         ->name('projects.destroy');
 
-    // --- Uploads seguros (Fase 5 — ADR-010, checklist item 14) -----------------
+    // --- Uploads seguros ------------------------------------------------------
     // Função global única: validação de formulário (Form Request) → validação
     // de segurança do arquivo (magic bytes, polyglot, PDF c/ script) → upload.
     Route::post('uploads', [UploadController::class, 'store'])

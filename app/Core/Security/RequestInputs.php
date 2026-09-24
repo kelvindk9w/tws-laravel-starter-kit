@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
  * Extração padronizada dos inputs da requisição para o pipeline de
- * segurança e logs (ADR-005: receber → validar → sanitizar → persistir).
+ * segurança e logs (receber → validar → sanitizar → persistir).
  *
  * Arquivos enviados NUNCA têm conteúdo lido aqui — apenas metadados
  * (nome, MIME declarado, tamanho). O nome original do arquivo também é

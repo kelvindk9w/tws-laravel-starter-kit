@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
  * Super admin de demonstração (/admin): credenciais conhecidas pré-preenchidas
  * no login do Filament quando config('ui.demo_login.enabled') — padrão APENAS
  * em APP_ENV=local. is_admin é concedido via forceFill (a flag NUNCA é
- * mass-assignable — ADR-011).
+ * mass-assignable).
  *
  * A semeadura roda dentro de DemoAccountGuard::withoutProtection(): é o
  * único lugar legítimo que grava senha e is_admin de conta demo — a

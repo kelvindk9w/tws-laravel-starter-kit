@@ -11,7 +11,7 @@ use App\Livewire\Profile;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
-// i18n (ADR-007): middleware SetLocale, rota de troca e preferência no perfil.
+// i18n: middleware SetLocale, rota de troca e preferência no perfil.
 // Prioridade: conta logada → cookie do visitante → padrão da plataforma.
 
 it('visitante sem cookie vê o padrão da plataforma (pt-BR)', function () {

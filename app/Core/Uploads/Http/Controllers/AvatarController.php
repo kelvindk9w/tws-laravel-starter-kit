@@ -37,7 +37,7 @@ final class AvatarController extends Controller
             ]);
         }
 
-        // Vincula o upload validado como avatar do perfil (Fase 6).
+        // Vincula o upload validado como avatar do perfil.
         $request->user()->forceFill(['avatar_upload_id' => $upload->id])->save();
 
         return UploadResource::make($upload)

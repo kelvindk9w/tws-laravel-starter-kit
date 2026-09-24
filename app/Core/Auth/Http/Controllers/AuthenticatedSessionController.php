@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Sessão web (login/logout) — checklist itens 10, 13, 22, 23.
+ * Sessão web (login/logout).
  *
  * - Bloqueio por tentativas: throttle + contador via RateLimiter, chaveado
  *   por e-mail + IP, com decay configurável (config auth.login).
@@ -65,7 +65,7 @@ final class AuthenticatedSessionController
         /** @var User $user */
         Auth::login($user, $request->boolean('remember'));
 
-        // Prevenção de session fixation (checklist 22).
+        // Prevenção de session fixation.
         $request->session()->regenerate();
 
         // O destino original passa pelo SafeRedirect, e não por

@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Exige um token de ação sensível válido (ADR-006) para prosseguir.
+ * Exige um token de ação sensível válido para prosseguir.
  *
  * Uso em rotas de operações sensíveis (saque, criação/rotação de chave de
  * API, alterações críticas), SEMPRE combinado com `auth`:

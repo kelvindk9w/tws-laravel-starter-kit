@@ -50,7 +50,7 @@ final class MissingApplicationKeyException extends RuntimeException
             .'container, que é descartado no restart. Chave gerada na subida é diferente em '
             .'cada container: dado com cast `encrypted` deixa de descriptografar, o usuário é '
             .'deslogado ao cair noutro container e as chaves de API param de verificar. '
-            .'Detalhes no README, seção Produção.'
+            .'Detalhes em docs/producao.md.'
         );
     }
 
@@ -69,7 +69,7 @@ final class MissingApplicationKeyException extends RuntimeException
             .'`php artisan key:generate --show` e entregue o MESMO valor a todos os serviços '
             .'PHP pelo ambiente. ATENÇÃO: se esta instalação já gravou dado com a chave atual, '
             .'declare a chave antiga em APP_PREVIOUS_KEYS antes de trocar — sem ela o dado '
-            .'criptografado é irrecuperável. Detalhes no README, seção Produção.'
+            .'criptografado é irrecuperável. Detalhes em docs/producao.md.'
         );
     }
 }

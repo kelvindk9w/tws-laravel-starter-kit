@@ -17,7 +17,7 @@ use Illuminate\Mail\MailManager;
  * a ser GRAVADO INTEIRO no arquivo de log: o código de verificação da ação
  * sensível (2FA), o link de redefinição de senha com o token, a mensagem do
  * formulário de contato com nome e e-mail de quem escreveu. É o mesmo
- * vazamento que a correção do token de reset no log (A1) fechou, reaberto por
+ * vazamento que a correção do token de reset no log fechou, reaberto por
  * outra porta, e sem nenhum sintoma: o usuário só nota que "o e-mail não
  * chegou".
  *

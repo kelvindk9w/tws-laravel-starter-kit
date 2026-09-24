@@ -17,15 +17,15 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 /**
- * Chaves de API — a tela mais importante do painel (ADR-006, Fase 6).
+ * Chaves de API — a tela mais importante do painel.
  *
- * Tudo na MESMA tela (ADR-005): listar, criar (scopes + vínculo N:N com
+ * Tudo na MESMA tela: listar, criar (scopes + vínculo N:N com
  * projetos), visualização ÚNICA da secreta, rotacionar (com grace period),
  * revogar e editar vínculos de projetos.
  *
  * ZERO lógica duplicada: criação/rotação/revogação/vínculos delegam ao
- * ApiKeyService (Fase 4) e a confirmação sensível ao SensitiveActionService
- * (Fase 3: senha de transação → código por e-mail → token de uso único,
+ * ApiKeyService e a confirmação sensível ao SensitiveActionService
+ * (senha de transação → código por e-mail → token de uso único,
  * consumido aqui via validateToken — mesmo contrato do middleware da API).
  */
 final class Index extends Component
@@ -37,7 +37,7 @@ final class Index extends Component
 
     public ?string $expiresAt = null;
 
-    /** Toggle "todas as permissões" (padrão — ADR-006). */
+    /** Toggle "todas as permissões" (padrão). */
     public bool $allScopes = true;
 
     /** @var list<string> Seleção granular "recurso:acao" (quando allScopes off). */
@@ -46,7 +46,7 @@ final class Index extends Component
     /** @var list<string> UUIDs de projetos vinculados (vazio = conta toda). */
     public array $selectedProjectUuids = [];
 
-    // --- Visualização ÚNICA da secreta (ADR-006) ------------------------------
+    // --- Visualização ÚNICA da secreta ---------------------------------------
     public ?string $revealedPublicKey = null;
 
     public ?string $revealedSecretKey = null;
@@ -117,7 +117,7 @@ final class Index extends Component
 
     /**
      * Passo 1 da criação: valida o formulário e abre a confirmação sensível
-     * (criação de chave é ação sensível — ADR-006).
+     * (criação de chave é ação sensível).
      */
     public function requestCreate(): void
     {
@@ -134,7 +134,7 @@ final class Index extends Component
     }
 
     // =========================================================================
-    // Rotação (ADR-006: herda nome/scopes/projetos; morte da antiga escolhida
+    // Rotação (herda nome/scopes/projetos; morte da antiga escolhida
     // pelo usuário — imediata ou grace period).
     // =========================================================================
 
@@ -192,7 +192,7 @@ final class Index extends Component
     }
 
     // =========================================================================
-    // Vínculo N:N chave ↔ projetos (lista vazia = conta toda — ADR-005/006)
+    // Vínculo N:N chave ↔ projetos (lista vazia = conta toda)
     // =========================================================================
 
     public function startEditProjects(string $uuid): void
@@ -217,7 +217,7 @@ final class Index extends Component
             'editingProjectsSelection.*' => ['uuid'],
         ]);
 
-        // resolveProjectIds garante que os projetos pertencem ao dono (Fase 4);
+        // resolveProjectIds garante que os projetos pertencem ao dono;
         // uuid de outro tenant vira erro de validação (nunca 500 nem vínculo).
         try {
             $projectIds = $apiKeys->resolveProjectIds($this->user(), $this->editingProjectsSelection);
@@ -236,7 +236,7 @@ final class Index extends Component
 
     // =========================================================================
     // Fluxo de ação sensível: senha de transação → código por e-mail → executa
-    // (consome o SensitiveActionService da Fase 3 — nada duplicado).
+    // (consome o SensitiveActionService — nada duplicado).
     // =========================================================================
 
     public function sendSensitiveCode(SensitiveActionService $sensitive): void
@@ -294,7 +294,7 @@ final class Index extends Component
 
     // =========================================================================
     // Tela de visualização única: o usuário confirma que guardou a secreta —
-    // as propriedades são limpas e o valor NUNCA mais é exibido (ADR-006).
+    // as propriedades são limpas e o valor NUNCA mais é exibido (no banco só fica o hash).
     // =========================================================================
 
     public function dismissSecret(): void
@@ -318,7 +318,7 @@ final class Index extends Component
 
     /**
      * Validação do formulário de chave — MESMAS regras do StoreApiKeyRequest
-     * da API v1 (Fase 4), para UI e API se comportarem igual.
+     * da API v1, para UI e API se comportarem igual.
      */
     private function validateKeyForm(): void
     {
@@ -378,7 +378,7 @@ final class Index extends Component
 
     /**
      * Busca chave do PRÓPRIO usuário por UUID — uuid de outro tenant = 404
-     * (checklist itens 11/31, mesmo padrão dos controllers da API).
+     * (anti-enumeração, mesmo padrão dos controllers da API).
      */
     private function findOwnedKey(string $uuid): ApiKey
     {

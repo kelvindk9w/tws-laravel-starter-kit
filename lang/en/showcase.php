@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Component showcase (/ui) strings — en (ADR-007). NEVER hardcoded text in views.
+// Component showcase (/ui) strings — en. NEVER hardcoded text in views.
 
 return [
 

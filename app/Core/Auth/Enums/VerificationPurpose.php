@@ -10,6 +10,6 @@ namespace App\Core\Auth\Enums;
  */
 enum VerificationPurpose: string
 {
-    /** Confirmação de ação sensível (saque, rotação de chave etc. — ADR-006). */
+    /** Confirmação de ação sensível (saque, rotação de chave etc.). */
     case SensitiveAction = 'sensitive_action';
 }

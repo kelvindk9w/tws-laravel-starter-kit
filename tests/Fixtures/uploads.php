@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Illuminate\Http\UploadedFile;
 
 // =============================================================================
-// Fixtures programáticas da suíte de Uploads (Fase 5) — geradas em bytes,
+// Fixtures programáticas da suíte de Uploads — geradas em bytes,
 // sem arquivos binários no repositório. Cada gerador produz o MÍNIMO
 // necessário para o finfo classificar o conteúdo (magic bytes reais).
 // =============================================================================
@@ -24,7 +24,7 @@ function fixtureBytesPdf(): string
 
 /**
  * PDF válido, porém com JavaScript embutido (/S/JavaScript + /JS) e ação
- * automática (/OpenAction) — política: REJEITADO (ADR-010).
+ * automática (/OpenAction) — política: REJEITADO.
  */
 function fixtureBytesPdfComJavaScript(): string
 {

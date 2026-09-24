@@ -10,7 +10,7 @@ use Filament\Pages\Dashboard as FilamentDashboard;
  * Quem lê config/dashboards.php. É o ÚNICO ponto do painel que sabe quais
  * variantes existem, qual delas é a home do /admin e em que ordem aparecem
  * no menu — o AdminPanelProvider e as próprias páginas perguntam aqui
- * (ADR-007: nada de lista de dashboards hardcodada em código).
+ * (nada de lista de dashboards hardcodada em código).
  *
  * Desligar uma variante em DASHBOARD_ENABLED remove a PÁGINA do painel: some
  * do menu e a rota deixa de existir (404), porque a classe nem chega a ser

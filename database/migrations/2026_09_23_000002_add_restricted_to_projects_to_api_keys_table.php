@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 
 // =============================================================================
 // A restrição a projetos passa a ser um ESTADO DA CHAVE, não uma consequência
-// da lista de vínculos (ADR-005/006).
+// da lista de vínculos.
 //
 // Antes, "chave sem vínculo = conta toda" era deduzido da tabela pivô vazia.
 // Efeito colateral: excluir o último projeto vinculado apagava (em cascata) o

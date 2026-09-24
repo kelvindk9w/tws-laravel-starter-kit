@@ -38,7 +38,7 @@ use Throwable;
  *   (Product::imageUrl / pass-through de URL do ImageColumn).
  * - Valor: inteiro em centavos no banco (MoneyAsCents); o campo aceita o
  *   formato brasileiro e converte na borda via Money::parse — NUNCA float.
- * - Rotas e buscas usam o uuid (o id interno nunca é exposto — ADR-010).
+ * - Rotas e buscas usam o uuid (o id interno nunca é exposto: anti-enumeração).
  * - Paginação: 10/página; página e filtros refletidos na query string
  *   (#[Url] na página de listagem — ver ListProducts).
  */

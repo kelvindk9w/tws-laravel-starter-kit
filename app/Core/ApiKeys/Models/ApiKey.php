@@ -18,13 +18,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Chave de API — motor de acesso programático (ADR-006/010).
+ * Chave de API — motor de acesso programático.
  *
  * Par pública/secreta:
  * - `public_key` (pk_live_/pk_test_...): identificador público, indexado.
  * - Da SECRETA (sk_...) existe SOMENTE o hash (`secret_hash`, HMAC-SHA256 com
  *   pepper). A sk_ em claro é exibida UMA única vez (criação/rotação) e nunca
- *   toca o banco (checklist item 5).
+ *   toca o banco; a verificação é timing-safe.
  *
  * Scopes (jsonb): permissões granulares "recurso:acao" (ex.: customers:read,
  * pix:create, withdrawals:*). Padrão na criação: ['*:*'] (tudo habilitado).
@@ -45,7 +45,7 @@ class ApiKey extends Model
     use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
-     * Prefixo do código público legível (ADR-010): KEY-xxxxxx.
+     * Prefixo do código público legível: KEY-xxxxxx.
      */
     protected const PUBLIC_CODE_PREFIX = 'KEY';
 
@@ -86,7 +86,7 @@ class ApiKey extends Model
     }
 
     /**
-     * Dono da chave = o tenant que ela resolve (ADR-010).
+     * Dono da chave = o tenant que ela resolve.
      *
      * @return BelongsTo<User, $this>
      */
@@ -96,7 +96,7 @@ class ApiKey extends Model
     }
 
     /**
-     * Projetos vinculados (N:N — ADR-005/006). Quem decide se a chave é
+     * Projetos vinculados (N:N). Quem decide se a chave é
      * restrita é `restricted_to_projects`, não esta lista — ver
      * isRestrictedToProjects().
      *

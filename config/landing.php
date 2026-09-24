@@ -5,7 +5,7 @@ declare(strict_types=1);
 // =============================================================================
 // Landing oficial do kit (rota /).
 //
-// ADR-007: NADA hardcoded na view. Os números que a página exibe como PROVA
+// NADA hardcoded na view. Os números que a página exibe como PROVA
 // (quantos clonaram, quantos testes a suíte tem, quantas horas de trabalho
 // já estão feitas) são fatos do projeto, não texto de marketing — por isso
 // vivem aqui, lidos do .env, e não no lang/*/landing.php (onde teriam de ser

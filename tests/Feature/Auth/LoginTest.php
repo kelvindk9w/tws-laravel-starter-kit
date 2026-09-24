@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
 
-// Login (sessão web) — checklist itens 10/13/22: bloqueio por tentativas,
+// Login (sessão web): bloqueio por tentativas,
 // deny-by-default, sessão regenerada e cookie seguro.
 
 it('exibe o formulário de login', function () {
@@ -120,7 +120,7 @@ it('regenera o ID da sessão no login (prevenção de fixation)', function () {
     expect(session()->getId())->not->toBe($sessionIdAntes);
 });
 
-it('define o cookie de sessão com HttpOnly e SameSite (checklist 22)', function () {
+it('define o cookie de sessão com HttpOnly e SameSite', function () {
     $user = User::factory()->create(['password' => 'LoginForte123']);
 
     $response = $this->post('/login', [

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Job diário de expiração por INATIVIDADE (ADR-006 — scheduler, ver
+ * Job diário de expiração por INATIVIDADE (scheduler, ver
  * routes/console.php). Dois passes, sempre em UTC:
  *
  * 1. AVISO PRÉVIO: chave ativa cuja última atividade (last_used_at ou
@@ -25,13 +25,13 @@ use Illuminate\Support\Facades\Mail;
  * 2. DESATIVAÇÃO: chave ativa sem atividade há X meses vira
  *    expired_inactivity (irreversível pelo usuário — cria-se/rotaciona-se).
  *
- * Limites vêm de config/api_keys.php (API_KEYS_INACTIVITY_*) — ADR-007.
+ * Limites vêm de config/api_keys.php (API_KEYS_INACTIVITY_*) — nada hardcoded.
  */
 final class ProcessApiKeyInactivity extends Command
 {
     protected $signature = 'api-keys:process-inactivity';
 
-    protected $description = 'Avisa (e-mail) e desativa chaves de API inativas há mais que o limite configurado (ADR-006).';
+    protected $description = 'Avisa (e-mail) e desativa chaves de API inativas há mais que o limite configurado.';
 
     public function handle(): int
     {
@@ -80,7 +80,7 @@ final class ProcessApiKeyInactivity extends Command
                         continue;
                     }
 
-                    // Locale do DESTINATÁRIO (ADR-007): o aviso sai no idioma
+                    // Locale do DESTINATÁRIO: o aviso sai no idioma
                     // preferido do usuário, não no locale da requisição CLI.
                     Mail::to($key->owner)
                         ->locale($key->owner->preferredLocale())
@@ -119,7 +119,7 @@ final class ProcessApiKeyInactivity extends Command
 
     /**
      * Última atividade (last_used_at ?? created_at) anterior ao limite —
-     * somente bindings, portável (sqlite/pgsql), sem concatenação (item 7).
+     * somente bindings, portável (sqlite/pgsql), sem concatenação de SQL.
      */
     private function lastActivityBefore(Builder $query, CarbonInterface $limit): void
     {

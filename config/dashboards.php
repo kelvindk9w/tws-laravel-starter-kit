@@ -6,7 +6,7 @@ use App\Filament\Dashboards\GrowthDashboard;
 use App\Filament\Dashboards\OverviewDashboard;
 
 // =============================================================================
-// Variantes de DASHBOARD do super admin (/admin — ADR-007/011).
+// Variantes de DASHBOARD do super admin (/admin).
 //
 // O kit entrega três dashboards NOMEADOS (como os temas de admin clássicos
 // fazem com "Analytics / SaaS / E-commerce"): o desenvolvedor abre as três,

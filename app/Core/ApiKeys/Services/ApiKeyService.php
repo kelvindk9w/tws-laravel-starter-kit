@@ -15,11 +15,11 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
- * Casos de uso do motor de API keys (ADR-006): criação, rotação e revogação.
+ * Casos de uso do motor de API keys: criação, rotação e revogação.
  *
  * Invariantes:
  * - A secreta em claro NUNCA toca o banco: o service a retorna uma única vez
- *   junto com a chave persistida (só o hash é gravado — checklist item 5).
+ *   junto com a chave persistida (só o hash é gravado).
  * - Scopes: padrão = tudo habilitado (config api_keys.default_scopes, ['*:*']);
  *   o usuário pode restringir por recurso:ação (menor privilégio).
  * - Rotação: nova chave herda nome, scopes e projetos da antiga; o dono escolhe
@@ -70,7 +70,7 @@ final class ApiKeyService
      *
      * @param  int|null  $gracePeriodMinutes  Morte da antiga: nulo/0 = imediata;
      *                                        positivo = janela de coexistência
-     *                                        (escolha do usuário — ADR-006).
+     *                                        (escolha do usuário).
      * @return array{api_key: ApiKey, secret_key: string} Nova chave + secreta
      *                                                    em claro (exibida UMA vez).
      *
@@ -134,7 +134,7 @@ final class ApiKeyService
      * Define o vínculo chave ↔ projetos — o ÚNICO ponto que muda a restrição.
      *
      * Lista com projetos = chave restrita a eles. Lista vazia = chave de conta
-     * toda (ADR-005): é a ação explícita de quem gerencia a conta. Os ids já
+     * toda: é a ação explícita de quem gerencia a conta. Os ids já
      * devem ter passado por resolveProjectIds() (projetos do dono).
      *
      * A restrição NÃO é recalculada quando um projeto é excluído — a cascata
@@ -153,7 +153,7 @@ final class ApiKeyService
 
     /**
      * Resolve os UUIDs de projetos (N:N) garantindo que pertencem ao dono —
-     * nunca vincula projeto de outro tenant (checklist itens 11/31).
+     * nunca vincula projeto de outro tenant.
      *
      * @param  list<string>|null  $projectUuids
      * @return list<int>

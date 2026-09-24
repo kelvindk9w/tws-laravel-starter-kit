@@ -7,11 +7,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tabela append-only de logs de requisição (ADR-004/010).
+ * Tabela append-only de logs de requisição.
  *
  * - Sem updated_at: a linha nasce no recebimento (status INICIADA) e só
  *   sofre as transições controladas de ciclo de vida (ver model RequestLog).
- * - tenant_uuid nullable: preenchido quando o tenant é resolvido (Fase 4);
+ * - tenant_uuid nullable: preenchido quando o tenant é resolvido (ResolveTenant);
  *   log sem tenant = possível ataque.
  * - payload: JSON já sanitizado/redigido (LGPD) — NUNCA dado sensível cru.
  * - Em produção, complementar com REVOKE UPDATE/DELETE da role da aplicação
@@ -23,7 +23,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('request_logs', function (Blueprint $table) {
-            // Identificadores (ADR-010): id interno nunca exposto; uuid externo.
+            // Identificadores: id interno nunca exposto; uuid externo.
             $table->id();
             $table->uuid('uuid')->unique();
             $table->uuid('correlation_id')->unique();

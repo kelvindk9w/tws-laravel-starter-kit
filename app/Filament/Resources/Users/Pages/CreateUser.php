@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Criação de usuário pelo super admin.
  *
- * `status` e `is_admin` NÃO são mass-assignable (ADR-011: a flag de admin
+ * `status` e `is_admin` NÃO são mass-assignable (a flag de admin
  * nunca entra por atribuição em massa) — por isso a criação é feita com
  * forceFill explícito em vez do create() padrão do Filament.
  */

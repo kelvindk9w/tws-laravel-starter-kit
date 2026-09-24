@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-// Strings do painel do usuário (Livewire — Fase 6, ADR-005/011).
-// Toda string exibida passa por __() — ADR-007. NUNCA texto fixo em views.
+// Strings do painel do usuário (Livewire).
+// Toda string exibida passa por __(). NUNCA texto fixo em views.
 
 return [
 
@@ -60,7 +60,7 @@ return [
         'new_project' => 'Criar projeto',
         'manage_profile' => 'Meu perfil',
 
-        // Métricas e tráfego real da conta (request_logs — ADR-004/010).
+        // Métricas e tráfego real da conta (request_logs).
         'summary_requests' => 'Requisições (:days dias)',
         'summary_last_key_use' => 'Último uso de chave',
         'last_key_use_empty' => 'Nenhuma chamada autenticada ainda.',
@@ -108,7 +108,7 @@ return [
         'save_transaction_password' => 'Alterar senha de transação',
     ],
 
-    // Projetos (ADR-005 — camada organizacional, só nome).
+    // Projetos (camada organizacional, só nome).
     'projects' => [
         'title' => 'Projetos',
         'subtitle' => 'Projetos organizam sua conta: vincule chaves de API a eles para separar dados e visões.',
@@ -129,7 +129,7 @@ return [
         'keys_column' => 'Chaves',
     ],
 
-    // Chaves de API (ADR-006 — a tela mais importante).
+    // Chaves de API (a tela mais importante).
     'api_keys' => [
         'title' => 'Chaves de API',
         'subtitle' => 'Pares de chave pública + secreta para a sua integração. A secreta é exibida UMA única vez.',
@@ -139,7 +139,7 @@ return [
         'last_used' => 'Último uso',
         'expires_at' => 'Validade',
         'no_expiration' => 'Sem validade',
-        'expires_hint' => 'Vazio = sem validade. O sistema nunca impõe prazo (ADR-006).',
+        'expires_hint' => 'Vazio = sem validade. O sistema nunca impõe prazo.',
         'grace_hint' => 'A chave antiga pode morrer imediatamente ou continuar válida por um período, evitando downtime na troca.',
 
         'scopes_heading' => 'Permissões (scopes)',
@@ -168,7 +168,7 @@ return [
         'revoked' => 'Chave revogada com sucesso.',
         'projects_saved' => 'Vínculos de projetos atualizados.',
 
-        // Tela de visualização única da secreta (ADR-006).
+        // Tela de visualização única da secreta.
         'secret_heading' => 'Guarde sua chave secreta',
         'secret_warning' => 'Esta é a ÚNICA vez que a chave secreta é exibida. Não há recuperação: se perder, rotacione ou crie uma nova.',
         'copy' => 'Copiar',
@@ -209,7 +209,7 @@ return [
         'scope_action_assign' => 'vincular projetos',
     ],
 
-    // Preferências de notificação (esqueleto — ADR-009).
+    // Preferências de notificação (esqueleto).
     'notifications' => [
         'title' => 'Notificações',
         'subtitle' => 'Escolha quais e-mails você quer receber. Alertas de segurança são sempre enviados.',

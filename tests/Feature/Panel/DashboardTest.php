@@ -16,8 +16,8 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 // =============================================================================
-// Dashboard do painel do usuário (Livewire — Fase 6, ADR-005/011).
-// Testes validam CONTEÚDO (ADR-010), não só status HTTP.
+// Dashboard do painel do usuário (Livewire).
+// Testes validam CONTEÚDO, não só status HTTP.
 // =============================================================================
 
 it('exige autenticação (deny-by-default)', function () {
@@ -34,7 +34,7 @@ it('renderiza com saudação e código público do usuário', function () {
         ->assertSee($user->codigo_publico);
 });
 
-it('página completa carrega o branding via platform() no layout (ADR-007)', function () {
+it('página completa carrega o branding via platform() no layout', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -85,7 +85,7 @@ it('mostra os contadores de chaves ativas e projetos do próprio usuário', func
 });
 
 // =============================================================================
-// Tráfego real da conta (request_logs — ADR-004/010). O dashboard mostra o que
+// Tráfego real da conta (request_logs). O dashboard mostra o que
 // o kit JÁ COLETA: métricas, série diária e as últimas chamadas da API.
 // Os logs são criados aqui por INSERT direto (o model é append-only e nasce
 // pelo middleware, não por factory).
@@ -150,7 +150,7 @@ it('lista as 5 últimas chamadas da API com endpoint e status', function () {
 
     expect($component->viewData('recentCalls'))->toHaveCount(5);
 
-    // Conteúdo, não só contagem (ADR-010): a chamada mais recente aparece na
+    // Conteúdo, não só contagem: a chamada mais recente aparece na
     // tela; a sexta mais antiga, não.
     $component->assertSee('/api/v1/uploads/1')
         ->assertSee('201')

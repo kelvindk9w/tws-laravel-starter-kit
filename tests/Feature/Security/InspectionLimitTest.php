@@ -8,7 +8,7 @@ use App\Core\Security\AttackDetector;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 
-// Teto de bytes inspecionados pelo AttackDetector (Lote 2): a detecção roda
+// Teto de bytes inspecionados pelo AttackDetector: a detecção roda
 // antes da autenticação, então sem teto qualquer anônimo comprava regex sobre
 // o corpo inteiro a cada requisição. O excedente é RECUSADO (413) e gravado
 // como BLOQUEADA — nunca aceito sem inspeção.

@@ -9,7 +9,7 @@ use App\Core\Auth\Models\User;
 use Illuminate\Console\Command;
 
 /**
- * Promoção/rebaixamento de super admin (acesso ao /admin — ADR-011).
+ * Promoção/rebaixamento de super admin (acesso ao /admin).
  *
  * A flag is_admin NUNCA é mass-assignable nem editável por telas: a única
  * porta de entrada é este comando (trilha de quem rodou = log do SO/CI).

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings de autenticação (pt-BR). Toda string de UI passa por __() — ADR-007.
+// Strings de autenticação (pt-BR). Toda string de UI passa por __().
 
 return [
 
@@ -26,7 +26,7 @@ return [
     'registered' => 'Conta criada com sucesso. Bem-vindo(a)!',
     'logged_out' => 'Sessão encerrada com sucesso.',
 
-    // Senha de transação (ADR-006 — separada da senha de login).
+    // Senha de transação (separada da senha de login).
     'transaction_password' => [
         'invalid' => 'A senha de transação informada está incorreta.',
         'current_invalid' => 'A senha de transação atual está incorreta.',
@@ -34,7 +34,7 @@ return [
         'saved' => 'Senha de transação salva com sucesso.',
     ],
 
-    // Código de verificação (2FA por e-mail — checklist item 24).
+    // Código de verificação (2FA por e-mail).
     'verification_code' => [
         'sent' => 'Enviamos um código de verificação para o seu e-mail.',
         'invalid' => 'O código informado é inválido.',
@@ -42,7 +42,7 @@ return [
         'resend_cooldown' => 'Aguarde :seconds segundos para solicitar um novo código.',
     ],
 
-    // Token de ação sensível (uso único, curta duração — ADR-006/010).
+    // Token de ação sensível (uso único, curta duração).
     'sensitive_action' => [
         'token_issued' => 'Ação sensível autorizada. Use o token imediatamente — ele é de uso único.',
         'invalid_token' => 'Token de ação sensível ausente, inválido ou expirado. Confirme a ação novamente.',
@@ -51,7 +51,7 @@ return [
     // Strings de interface (formulários/telas de autenticação).
     // Blindagem das contas de demonstração (DemoAccountGuard): mensagens de
     // quem tentou mexer nelas fora da UI do super admin — tinker, comando
-    // artisan, job. Ver README, "Contas demo são intocáveis".
+    // artisan, job. Ver docs/demo.md, "Contas demo são intocáveis".
     'demo_account' => [
         'update_blocked' => 'Conta de demonstração protegida: ":email" não aceita alteração de :fields. Nome, foto, idioma e tema continuam liberados.',
         'delete_blocked' => 'Conta de demonstração protegida: ":email" não pode ser excluída.',

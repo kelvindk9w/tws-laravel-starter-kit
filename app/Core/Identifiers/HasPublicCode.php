@@ -9,7 +9,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
 
 /**
- * Gera o `codigo_publico` legível da entidade (ex.: `CLI-9F4K2Q`) — ADR-010.
+ * Gera o `codigo_publico` legível da entidade (ex.: `CLI-9F4K2Q`) — sequencial nunca, para não permitir enumeração.
  *
  * Regras:
  * - Formato: PREFIXO-XXXXXX (prefixo definido por entidade + sufixo aleatório

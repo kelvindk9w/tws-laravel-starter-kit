@@ -8,7 +8,7 @@ use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
 
 /**
- * Contexto do tenant da requisição corrente (ADR-010).
+ * Contexto do tenant da requisição corrente.
  *
  * Preenchido pelo middleware ResolveTenant após autenticar a secret key:
  * o TENANT é o usuário dono da chave. Acesso global via helpers tenant() e
@@ -17,7 +17,7 @@ use App\Core\Auth\Models\User;
  * Registrado como singleton no container — o ciclo de vida "por requisição"
  * é garantido pelo PHP-FPM (shared-nothing). SE Octane/worker mode for
  * adotado um dia, este estado DEVE ser resetado entre requisições
- * (checklist item 28 — worker-safety).
+ * (worker-safety: senão o tenant de uma vaza para a próxima).
  */
 final class TenantContext
 {

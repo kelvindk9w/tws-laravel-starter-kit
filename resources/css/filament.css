@@ -5,7 +5,7 @@
    produtos de duas empresas — tipografia, primária e superfícies
    diferentes. Este arquivo é a ponte: o preset do Filament 5 + OS MESMOS
    tokens de identidade do resto do kit (resources/css/theme.css), de modo
-   que rebranding continue sendo "1 arquivo + .env" (ADR-007).
+   que rebranding continue sendo "1 arquivo + .env".
 
    Registrado no vite.config.js e apontado por ->viteTheme() no
    AdminPanelProvider.
@@ -151,7 +151,7 @@
 }
 
 /* =============================================================================
-   Listagens do /admin: barra da tabela e rodapé dos cards (ADR-011).
+   Listagens do /admin: barra da tabela e rodapé dos cards.
 
    Duas correções de layout que o Filament não expõe por API — por isso
    vivem aqui, no tema, e não em PHP:

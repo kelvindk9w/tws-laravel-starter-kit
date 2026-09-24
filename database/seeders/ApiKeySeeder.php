@@ -15,7 +15,7 @@ use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
 
 /**
- * Chaves de API de demonstração (ADR-006).
+ * Chaves de API de demonstração.
  *
  * SEGURANÇA (a parte que importa neste arquivo): nenhuma chave secreta é
  * gerada, gravada ou exibida. A coluna `secret_hash` recebe um hash
@@ -102,7 +102,7 @@ final class ApiKeySeeder extends Seeder
             ])->save();
 
             // Vínculo com um projeto do MESMO dono, quando houver: chave sem
-            // vínculo enxerga a conta inteira (ADR-005/006) — as duas
+            // vínculo enxerga a conta inteira — as duas
             // situações aparecem na demo.
             $projetos = $projetosPorDono->get($dono);
 

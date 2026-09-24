@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * Troca de idioma (seletor da landing/showcase/painel — ADR-007).
+ * Troca de idioma (seletor da landing/showcase/painel).
  *
  * Visitante: grava o cookie `locale` (1 ano). Usuário autenticado: também
  * persiste a preferência na conta (users.locale) — usada pela interface e

@@ -15,12 +15,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * CRUD de projetos da API v1 (ADR-005 — camada organizacional).
+ * CRUD de projetos da API v1 (camada organizacional).
  *
  * Isolamento: TODA consulta passa por Project::visibleToApiKey() — os projetos
  * do dono da chave e, se a chave é vinculada a projetos, só os vinculados.
  * Projeto de outro tenant, ou do mesmo dono fora do vínculo da chave = 404
- * uniforme (checklist itens 11/31). Criar projeto é operação de conta: a rota
+ * uniforme (não revela existência). Criar projeto é operação de conta: a rota
  * exige chave sem vínculo (middleware account.key).
  */
 final class ProjectController extends Controller
@@ -99,7 +99,7 @@ final class ProjectController extends Controller
     /**
      * Localiza o projeto pelo UUID entre os que a chave enxerga — 404
      * uniforme para projeto de outro tenant, fora do vínculo da chave ou
-     * inexistente (anti-IDOR/BOLA, checklist item 11).
+     * inexistente (anti-IDOR/BOLA: não revela que o recurso existe).
      */
     private function findOwned(string $uuid): Project
     {

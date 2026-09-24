@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings do super admin (Filament — Fase 6, ADR-011). Sempre via __().
+// Strings do super admin (Filament). Sempre via __().
 
 return [
 
@@ -168,7 +168,7 @@ return [
         'plural' => 'Logs de requisição',
         'tenant' => 'Tenant',
         'orphan' => 'SEM TENANT',
-        'orphan_hint' => 'Logs sem tenant = possível ataque/tentativa de burla (ADR-010).',
+        'orphan_hint' => 'Logs sem tenant = possível ataque/tentativa de burla.',
         'endpoint' => 'Endpoint',
         'response_status' => 'HTTP',
         'duration' => 'Duração',

@@ -9,7 +9,7 @@ use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Support\Facades\Mail;
 
-// Endpoints do motor de chaves da API v1 (ADR-006/010): criar (ação
+// Endpoints do motor de chaves da API v1: criar (ação
 // sensível), listar, revogar, rotacionar (ação sensível + grace period)
 // e vínculo N:N com projetos. Isolamento de tenant em tudo.
 
@@ -70,7 +70,7 @@ it('cria chave com token de ação sensível e exibe a secreta UMA única vez', 
     expect($publicKey)->toStartWith("pk_{$ambiente}_")
         ->and($secretKey)->toStartWith("sk_{$ambiente}_")
         ->and($response->json('data.codigo_publico'))->toStartWith('KEY-')
-        // A secreta NUNCA vai para o banco — só o hash HMAC (checklist 5).
+        // A secreta NUNCA vai para o banco — só o hash HMAC.
         ->and(app(ApiKeyHasher::class)->verify($secretKey, ApiKey::query()->where('public_key', $publicKey)->sole()->secret_hash))->toBeTrue();
 
     expect(ApiKey::query()->where('public_key', $publicKey)->sole()->secret_hash)->not->toBe($secretKey);
@@ -197,7 +197,7 @@ it('rotaciona COM grace period: antiga convive até o fim da janela escolhida', 
     $novaSegredo = $response->json('secret_key');
     $nova = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
 
-    // Antiga segue ATIVA durante o grace (sem downtime na troca — ADR-006).
+    // Antiga segue ATIVA durante o grace (sem downtime na troca).
     expect($antiga->refresh()->status)->toBe(ApiKeyStatus::Active)
         ->and($antiga->grace_ends_at->isFuture())->toBeTrue();
 
@@ -278,7 +278,7 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
         'project_uuids',
     );
 
-    // Lista vazia = sem vínculo (a chave volta a enxergar a conta toda — ADR-005).
+    // Lista vazia = sem vínculo (a chave volta a enxergar a conta toda).
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
         'project_uuids' => [],
     ], headersApi($gestora, $secret))->assertOk();

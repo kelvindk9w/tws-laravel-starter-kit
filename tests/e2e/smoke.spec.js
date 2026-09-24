@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Teste de fumaça E2E: a landing pública sobe e exibe o nome da plataforma
-// (que vem da config centralizada — ADR-007, nunca hardcoded no código).
+// (que vem da config centralizada, nunca hardcoded no código).
 
 test('landing responde e exibe o hero com o nome da plataforma', async ({ page }) => {
     const response = await page.goto('/');

@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 // =============================================================================
 // Global setup E2E: autentica UMA vez e grava o storageState reutilizado
 // pelos testes autenticados. Necessário porque o login tem rate limit
-// agressivo (throttle:sensitive — checklist item 10): um login por teste
+// agressivo (throttle:sensitive): um login por teste
 // estouraria o limite e invalidaria a suíte.
 // =============================================================================
 

@@ -12,7 +12,7 @@
     a cada execução e nunca pode apontar para o banco de desenvolvimento do
     .env. A tests/TestCase.php recusa qualquer banco cujo nome não termine
     em _test. Para criar o banco de teste no Postgres do docker de dev, ver
-    o README ("Testes contra o PostgreSQL").
+    docs/testes.md ("Testes contra o PostgreSQL").
 
         docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
 -->

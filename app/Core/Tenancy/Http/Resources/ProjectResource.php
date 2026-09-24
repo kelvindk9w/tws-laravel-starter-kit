@@ -9,7 +9,7 @@ use App\Core\Tenancy\Models\Project;
 use Illuminate\Http\Request;
 
 /**
- * Serialização do projeto (ADR-010 — nunca expor o `id` interno).
+ * Serialização do projeto (nunca expor o `id` interno).
  *
  * @mixin Project
  */

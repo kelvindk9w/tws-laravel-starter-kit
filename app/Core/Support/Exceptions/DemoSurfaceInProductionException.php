@@ -22,7 +22,7 @@ use RuntimeException;
  *
  * O aviso silencioso fica para o AGREGADOR (DatabaseSeeder), que é o que um
  * script de deploy roda: ali a recusa precisa ser visível sem derrubar o
- * deploy. Ver DemoSurface e README, seção "Superfície de demonstração".
+ * deploy. Ver DemoSurface e docs/demo.md, "Superfície de demonstração".
  */
 final class DemoSurfaceInProductionException extends RuntimeException
 {

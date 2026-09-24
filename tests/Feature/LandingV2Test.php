@@ -8,8 +8,8 @@ use App\Core\Support\Platform;
 use Symfony\Component\Finder\Finder;
 
 // =============================================================================
-// Landing alternativa "O Rastro" (/v2) — valida CONTEÚDO, não só status
-// (ADR-010). A página inteira argumenta que nada nela é inventado: os testes
+// Landing alternativa "O Rastro" (/v2) — valida CONTEÚDO, não só status.
+// A página inteira argumenta que nada nela é inventado: os testes
 // são o que impede essa afirmação de virar mentira com o tempo.
 // =============================================================================
 

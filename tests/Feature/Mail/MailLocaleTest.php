@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // =============================================================================
-// IDIOMA DOS E-MAILS (ADR-007)
+// IDIOMA DOS E-MAILS
 //
 // O bug de QA #9 foi exatamente isto: o e-mail de recuperação de senha chegava
 // em inglês para uma conta em pt-BR, porque a notificação nativa monta o texto

@@ -24,7 +24,7 @@ abstract class BaseStatsWidget extends StatsOverviewWidget
     protected int|string|array $columnSpan = 'full';
 
     /**
-     * Quatro KPIs por linha: o limite de densidade do checklist premium
+     * Quatro KPIs por linha: o limite de densidade de um dashboard legível
      * (4–6 números na primeira dobra).
      *
      * @return int|array<string, ?int>|null

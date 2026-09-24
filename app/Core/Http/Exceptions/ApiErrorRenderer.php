@@ -20,7 +20,7 @@ use Throwable;
 
 /**
  * Envelope padronizado de ERRO da API (`api/*`) — contrapartida do envelope
- * de sucesso `{"data": …}` dos Resources (ADR-010).
+ * de sucesso `{"data": …}` dos Resources.
  *
  * Formato (sempre):
  *

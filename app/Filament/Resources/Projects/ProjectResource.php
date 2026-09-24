@@ -20,8 +20,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 /**
- * Projetos — visão global (super admin, Fase 6). Somente leitura: projetos
- * são gerenciados pelo próprio usuário no painel (ADR-005).
+ * Projetos — visão global (super admin). Somente leitura: projetos
+ * são gerenciados pelo próprio usuário no painel.
  */
 final class ProjectResource extends BaseResource
 {

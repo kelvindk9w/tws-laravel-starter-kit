@@ -62,7 +62,7 @@
     {{-- PLANO DA FRENTE — a promessa e a ação. --}}
     <div class="relative z-10 mx-auto max-w-6xl px-4 text-center" data-sky-layer="front">
         {{-- PROVA SOCIAL. O número em âmbar é a única cor de destaque da
-             página. Quando o .env traz quantos já clonaram (ADR-007), é esse
+             página. Quando o .env traz quantos já clonaram, é esse
              o número; enquanto ninguém clonou, a prova que o kit TEM é a
              suíte verde — um fato do projeto, não uma estimativa. Nunca um
              número inventado. --}}

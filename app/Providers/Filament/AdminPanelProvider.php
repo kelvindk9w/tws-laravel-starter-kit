@@ -32,16 +32,16 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
- * Super admin Filament (/admin — ADR-011, Fase 6).
+ * Super admin Filament (/admin).
  *
  * - Acesso: SÓ usuários com is_admin + conta ativa (User::canAccessPanel —
  *   os demais recebem 403). Promoção exclusiva via `php artisan user:make-admin`.
- * - Branding 100% via platform() (ADR-007/010): nome, logo e cor primária
+ * - Branding 100% via platform(): nome, logo e cor primária
  *   vêm do .env — nada hardcoded.
  * - Barreira de ORIGEM: EnsureAdminIpAllowed, o PRIMEIRO middleware da pilha
  *   (config security.admin.allowed_ips, ADMIN_ALLOWED_IPS). Lista vazia libera
  *   fora de produção; em produção sem allowlist declarada o painel RECUSA (403)
- *   — checklist item 25, regra e justificativa em
+ *   — regra e justificativa em
  *   App\Core\Security\AdminIpAllowlist.
  */
 class AdminPanelProvider extends PanelProvider
@@ -56,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
             // quando o login demo está habilitado (só em local).
             ->login(Login::class)
             ->brandName(platform()->name)
-            // Marca: o .env sempre vence (ADR-007); sem ele, o kit tem uma
+            // Marca: o .env sempre vence; sem ele, o kit tem uma
             // marca monocromática própria em vez de um quadrado preto.
             ->brandLogo(fn () => filled(platform()->logoUrl)
                 ? (string) platform()->logoUrl
@@ -124,12 +124,12 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => view('filament.dashboard-motion')->render(),
             )
             // Avatar do menu do usuário: foto de perfil de quem já subiu uma
-            // (Upload validado da Fase 5) e, sem foto, iniciais desenhadas
+            // (upload validado pelo SecureUploadService) e, sem foto, iniciais desenhadas
             // localmente em SVG. O provider de fábrica chama a ui-avatars.com
             // — CDN externa no caminho de toda página do painel só para
             // desenhar duas letras. Ver InitialsAvatarProvider.
             ->defaultAvatarProvider(InitialsAvatarProvider::class)
-            // Menu do usuário (ADR-011): perfil, alternador de tema
+            // Menu do usuário: perfil, alternador de tema
             // (claro/escuro/sistema — o Filament o injeta entre os itens de
             // sort negativo e os demais), voltar ao site e sair (o "Sair" é
             // acrescentado pelo próprio Filament no fim da lista).
@@ -150,7 +150,7 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => url('/'))
                     ->icon(Heroicon::OutlinedArrowLeftOnRectangle),
             ])
-            // Barreira de ORIGEM (ADR-011) — PRIMEIRA da pilha de propósito:
+            // Barreira de ORIGEM — PRIMEIRA da pilha de propósito:
             // requisição de origem não permitida é recusada antes de a sessão
             // ser aberta, o CSRF processado ou o painel montado. Ela estava no
             // FIM da lista, o que fazia um IP barrado ainda ganhar cookie de
@@ -187,7 +187,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                // Locale do painel (ADR-007): mesma resolução do app —
+                // Locale do painel: mesma resolução do app —
                 // preferência da conta → cookie → padrão da plataforma.
                 SetLocale::class,
             ])

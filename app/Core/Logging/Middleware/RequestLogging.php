@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Pipeline de logs de requisição (ADR-004/010) — segundo middleware da
+ * Pipeline de logs de requisição — segundo middleware da
  * cadeia global, logo após a validação de segurança. Cobre TODAS as rotas:
  * API, navegação web autenticada, super admin (/admin) e até rotas
  * inexistentes (sinal de varredura — middleware de grupo não executa em 404,
@@ -34,8 +34,9 @@ use Throwable;
  *   (HTTP >= 500), com duração, status HTTP e mensagem de erro redigida.
  * - Um log que permanece INICIADA = requisição que não chegou ao fim
  *   (bug, timeout, queda, ataque) → investigar.
- * - tenant_uuid fica NULL até a Fase 4 (tenancy); log sem tenant = possível
- *   ataque (ADR-010). O gancho RequestLog::bindTenant() já existe.
+ * - tenant_uuid nasce NULL (o log é gravado antes da identificação); o
+ *   ResolveTenant o preenche via RequestLog::bindTenant() quando a chave de
+ *   API é válida. Log que termina sem tenant = possível ataque.
  *
  * Exclusões e resumos (config security.request_logging):
  * - excluded_paths: health checks (/up, /api/health), assets estáticos
@@ -46,7 +47,7 @@ use Throwable;
  *   payload RESUMIDO (só os nomes dos componentes) — o snapshot serializado
  *   é enorme, repetitivo e sem valor de auditoria.
  *
- * Contenção do tráfego de varredura (Lote 2): requisição para rota
+ * Contenção do tráfego de varredura: requisição para rota
  * INEXISTENTE (404/405 — por construção anônima, porque sem rota não há
  * sessão nem chave de API) só vai ao banco na primeira ocorrência de cada
  * cliente por janela; as seguintes ficam no log de arquivo
@@ -233,7 +234,7 @@ final class RequestLogging
      *   (/up, /api/health) e assets estáticos (build/*, storage/*, favicon).
      *
      * Todo o resto é auditado: API, navegação web autenticada, super admin
-     * e rotas inexistentes (varredura/ataque — ADR-010).
+     * e rotas inexistentes (varredura/ataque).
      */
     private function isExcluded(Request $request): bool
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings of the official landing (route /) — English (ADR-007).
+// Strings of the official landing (route /) — English.
 // Numbers (clones, tests, hours) live in config/landing.php, not here.
 //
 // `nav.*` and the institutional half of `footer.*` are also used by the product

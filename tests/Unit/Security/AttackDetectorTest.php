@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Core\Security\AttackDetector;
 
-// Detector de padrões maliciosos (ADR-005): XSS, SQLi, null byte, path traversal.
+// Detector de padrões maliciosos: XSS, SQLi, null byte, path traversal.
 
 it('detecta payloads XSS', function (string $payload) {
     expect((new AttackDetector)->detectInString($payload))->toBe('xss');

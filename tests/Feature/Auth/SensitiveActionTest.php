@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
-// Fluxo completo de AÇÃO SENSÍVEL (ADR-006/010, checklist 24):
+// Fluxo completo de AÇÃO SENSÍVEL (senha de transação + código por e-mail):
 // senha de transação + código de 6 dígitos por e-mail → token de ação
 // sensível (curta duração, USO ÚNICO, só hash no banco).
 

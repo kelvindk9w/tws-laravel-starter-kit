@@ -6,15 +6,16 @@ use App\Core\Auth\Models\User;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use App\Core\Tenancy\Models\Project;
 
-// CRUD de projetos da API v1 (ADR-005): camada organizacional, nasce só com
-// nome. Isolamento de tenant em TODAS as operações (checklist itens 11/31).
+// CRUD de projetos da API v1: camada organizacional, nasce só com
+// nome. Isolamento de tenant em TODAS as operações (o tenant A nunca
+// enxerga dados do tenant B).
 
 it('executa o ciclo completo: criar, listar, detalhar, atualizar e remover', function () {
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
     $headers = headersApi($key, $secret);
 
-    // Criar — só com nome (ADR-005).
+    // Criar — só com nome.
     $response = $this->postJson('/api/v1/projects', ['name' => 'Loja Virtual'], $headers);
 
     $response->assertCreated()

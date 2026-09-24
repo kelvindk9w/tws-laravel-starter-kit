@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Core\Auth\Models\User;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 
-// Logout e proteção CSRF (checklist item 23 — painel web usa sessão/cookie).
+// Logout e proteção CSRF (painel web usa sessão/cookie).
 // Laravel 13: o grupo web usa PreventRequestForgery (token + validação de
 // origem via Sec-Fetch-Site/Origin).
 
@@ -34,7 +34,7 @@ it('exige autenticação para o logout', function () {
     $this->post('/logout')->assertRedirect(route('login'));
 });
 
-it('rejeita POST sem token CSRF no grupo web (checklist 23)', function () {
+it('rejeita POST sem token CSRF no grupo web', function () {
     $this->app->bind(PreventRequestForgery::class, EnforcedCsrfToken::class);
 
     $user = User::factory()->create();

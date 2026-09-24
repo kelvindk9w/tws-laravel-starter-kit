@@ -7,9 +7,8 @@ namespace App\Core\Auth\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Solicitação de link de redefinição de senha (checklist item 9).
- * A resposta é SEMPRE a mesma, existindo ou não o e-mail (anti-enumeração —
- * checklist item 11).
+ * Solicitação de link de redefinição de senha (validação server-side via Form Request).
+ * A resposta é SEMPRE a mesma, existindo ou não o e-mail (anti-enumeração).
  */
 final class ForgotPasswordRequest extends FormRequest
 {

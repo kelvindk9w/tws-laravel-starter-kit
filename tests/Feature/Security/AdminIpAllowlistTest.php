@@ -200,7 +200,7 @@ it('sem endereço de origem nenhuma allowlist é satisfeita', function (): void 
 });
 
 // -----------------------------------------------------------------------------
-// ITEM 4 — como o IP do cliente é obtido (TrustProxies é Lote 2)
+// ITEM 4 — como o IP do cliente é obtido (ver TrustedProxies)
 // -----------------------------------------------------------------------------
 
 it('sem proxies confiáveis o header de proxy é ignorado: não há bypass por X-Forwarded-For', function (): void {
@@ -211,7 +211,7 @@ it('sem proxies confiáveis o header de proxy é ignorado: não há bypass por X
 
     // Cliente em 198.51.100.5 alegando ser o IP permitido. O Laravel só olha
     // X-Forwarded-For quando há proxy confiável declarado — e o kit ainda não
-    // declara nenhum (TrustProxies é Lote 2).
+    // declara nenhum (ver TrustedProxies).
     $this->actingAs($admin)
         ->withServerVariables(['REMOTE_ADDR' => '198.51.100.5'])
         ->get('/admin', ['X-Forwarded-For' => '203.0.113.10'])

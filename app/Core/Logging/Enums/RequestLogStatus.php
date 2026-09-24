@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Logging\Enums;
 
 /**
- * Ciclo de vida do log de requisição (ADR-004).
+ * Ciclo de vida do log de requisição (registrado antes de qualquer validação).
  *
  * INICIADA  → gravada no RECEBIMENTO da requisição, antes de qualquer
  *             processamento de negócio. Um log que permanece INICIADA é

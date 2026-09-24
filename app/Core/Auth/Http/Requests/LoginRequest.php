@@ -7,7 +7,7 @@ namespace App\Core\Auth\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Login (checklist item 9). O bloqueio por tentativas acontece no controller
+ * Login (validação server-side via Form Request). O bloqueio por tentativas acontece no controller
  * (throttle + contador via RateLimiter — config auth.login).
  */
 final class LoginRequest extends FormRequest

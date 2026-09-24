@@ -18,7 +18,7 @@ use RuntimeException;
  *
  * Quem trata: a UI do Filament nem chega aqui (UserAdminGuard recusa antes,
  * com mensagem amigável) e os comandos do kit convertem a exceção em erro
- * de console legível. Ver README, seção "Contas demo são intocáveis".
+ * de console legível. Ver docs/demo.md, "Contas demo são intocáveis".
  */
 final class DemoAccountProtectedException extends RuntimeException
 {

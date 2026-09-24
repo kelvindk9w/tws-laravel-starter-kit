@@ -145,7 +145,7 @@ return [
             'handler' => NullHandler::class,
         ],
 
-        // Trilha técnica das requisições (ADR-004) — JSON estruturado,
+        // Trilha técnica das requisições — JSON estruturado,
         // uma linha por evento (request.started / request.finished /
         // security.blocked). Sobrevive a falha do banco: é a segunda
         // camada do pipeline (a primeira é a tabela request_logs).

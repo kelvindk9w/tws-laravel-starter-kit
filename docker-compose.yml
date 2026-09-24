@@ -7,7 +7,7 @@
 #   docker compose up -d --build
 #   docker compose exec app php artisan migrate
 #
-# Banco e Redis usam VOLUMES NOMEADOS persistentes (ADR-010): reiniciar ou
+# Banco e Redis usam VOLUMES NOMEADOS persistentes: reiniciar ou
 # derrubar os containers NUNCA apaga os dados (só `down -v`, proibido aqui).
 # =============================================================================
 
@@ -71,7 +71,7 @@ services:
 
   redis:
     image: redis:8.10-alpine
-    # AOF ligado: reduz a janela de perda de jobs em reinício (ADR-010).
+    # AOF ligado: reduz a janela de perda de jobs em reinício.
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data

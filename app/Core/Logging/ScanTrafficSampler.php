@@ -11,7 +11,7 @@ use Throwable;
 
 /**
  * Amostragem do tráfego ANÔNIMO DE VARREDURA na trilha de auditoria em banco
- * (ADR-004/010 — Lote 2 da auditoria).
+ * (a trilha continua registrando varredura, sem gravar cada requisição).
  *
  * O PROBLEMA: toda requisição gerava INSERT + UPDATE em `request_logs`,
  * inclusive a rota inexistente de um robô procurando `/wp-login.php` e
@@ -26,7 +26,7 @@ use Throwable;
  * cliente por janela por tipo.
  *
  * Por que amostrar e não simplesmente não gravar: a primeira sondagem de um
- * IP é exatamente o sinal que o ADR-010 manda registrar ("esse endereço
+ * IP é exatamente o sinal que a trilha existe para registrar ("esse endereço
  * começou a varrer às 03:12"), e o /admin precisa enxergá-la. Por que não
  * agregar numa contagem: a linha amostrada é uma linha normal da trilha
  * (mesmo formato, mesmo ciclo, mesmo payload redigido), sem tabela nova nem

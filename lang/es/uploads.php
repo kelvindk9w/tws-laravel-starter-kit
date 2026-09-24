@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cadenas del módulo de Uploads Seguros (es — ADR-007). Siempre via __().
+// Cadenas del módulo de Uploads Seguros (es). Siempre via __().
 
 return [
 

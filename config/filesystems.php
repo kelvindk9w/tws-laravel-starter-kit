@@ -60,7 +60,7 @@ return [
             'report' => false,
         ],
 
-        // Destino dos backups (Fase 7 — ADR-010): Cloudflare R2
+        // Destino dos backups: Cloudflare R2
         // (S3-compatível). Reutiliza as credenciais AWS_* da seção R2 do
         // .env; bucket dedicado opcional via BACKUP_R2_BUCKET (recomendado:
         // separar backups dos uploads em buckets distintos).

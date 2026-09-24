@@ -4,6 +4,6 @@
 -- não termine em _test).
 --
 -- O Postgres só executa este diretório na PRIMEIRA subida, com o volume vazio.
--- Volume já existente: criar à mão (comando no README, "Testes contra o
--- PostgreSQL").
+-- Volume já existente: criar à mão (comando em docs/testes.md, "Testes
+-- contra o PostgreSQL").
 CREATE DATABASE tws_starter_test;

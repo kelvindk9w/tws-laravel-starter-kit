@@ -4,4 +4,4 @@
 
 - [ ] Pint, Pest e build verdes
 - [ ] Strings novas nos 3 idiomas
-- [ ] README atualizado se o comportamento documentado mudou
+- [ ] README/docs atualizados se o comportamento documentado mudou

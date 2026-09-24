@@ -116,11 +116,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Políticas de autenticação do starter kit (ADR-006/010)
+    | Políticas de autenticação do starter kit
     |--------------------------------------------------------------------------
     |
     | Seções próprias do kit (não fazem parte do config padrão do Laravel).
-    | Todos os valores são ajustáveis por .env — NUNCA hardcodar (ADR-007).
+    | Todos os valores são ajustáveis por .env — NUNCA hardcodar.
     |
     */
 
@@ -145,7 +145,7 @@ return [
         'uncompromised' => (bool) env('AUTH_PASSWORD_UNCOMPROMISED', false),
     ],
 
-    // Bloqueio por tentativas de login (throttle + contador — checklist 10).
+    // Bloqueio por tentativas de login (throttle + contador).
     'login' => [
         // Tentativas consecutivas antes do bloqueio.
         'max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
@@ -153,12 +153,12 @@ return [
         'lockout_minutes' => (int) env('AUTH_LOGIN_LOCKOUT_MINUTES', 15),
     ],
 
-    // Senha de TRANSAÇÃO (separada da senha de login — ADR-006/010).
+    // Senha de TRANSAÇÃO (separada da senha de login).
     'transaction_password' => [
         'min_length' => (int) env('AUTH_TRANSACTION_PASSWORD_MIN', 8),
     ],
 
-    // Código de verificação (2FA por e-mail — checklist 24; canais futuros:
+    // Código de verificação (2FA por e-mail; canais futuros:
     // TOTP/WhatsApp via drivers de VerificationChannel).
     'verification' => [
         // Canal padrão de envio do código.

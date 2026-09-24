@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Strings da landing oficial (/) — pt-BR (ADR-007). NUNCA texto fixo na view.
+// Strings da landing oficial (/) — pt-BR. NUNCA texto fixo na view.
 // Os NÚMEROS (clones, testes, horas) não moram aqui: vêm de config/landing.php,
 // porque um fato do projeto repetido em três idiomas envelhece em três lugares.
 //

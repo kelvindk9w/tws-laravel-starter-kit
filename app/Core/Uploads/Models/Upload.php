@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
- * Registro de upload (Fase 5 — ADR-010).
+ * Registro de upload (só arquivo aprovado pela validação de segurança).
  *
  * Só existe registro para arquivo que PASSOU pela validação de segurança
  * (rejeitados não tocam o banco nem o disco — só o log). O `path` é sempre
@@ -27,7 +27,7 @@ use Throwable;
  * Vínculo: na API, `tenant_uuid` (uuid do dono da chave, via ResolveTenant);
  * na web, `user_id` do usuário autenticado.
  *
- * Identificadores (3 camadas — ADR-010): `id` interno nunca exposto; `uuid`
+ * Identificadores (3 camadas — anti-enumeração): `id` interno nunca exposto; `uuid`
  * externo; `codigo_publico` legível UPL-xxxxxx (UNIQUE no banco).
  */
 #[Fillable(['tenant_uuid', 'user_id', 'disk', 'path', 'original_name', 'mime', 'size', 'sha256', 'status'])]
@@ -36,7 +36,7 @@ class Upload extends Model
     use HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
-     * Prefixo do código público legível (ADR-010): UPL-xxxxxx.
+     * Prefixo do código público legível: UPL-xxxxxx.
      */
     protected const PUBLIC_CODE_PREFIX = 'UPL';
 

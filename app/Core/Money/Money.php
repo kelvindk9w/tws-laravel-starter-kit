@@ -7,7 +7,7 @@ namespace App\Core\Money;
 use NumberFormatter;
 
 /**
- * Funções globais de conversão monetária (ADR-004/005 — regra inegociável).
+ * Funções globais de conversão monetária (regra inegociável: dinheiro nunca é float).
  *
  * - Dinheiro é SEMPRE inteiro (menor unidade: centavos em BRL) no banco
  *   (bigint) e internamente. NUNCA float em nenhuma etapa.
@@ -83,7 +83,7 @@ final class Money
     }
 
     /**
-     * Retorna os dois formatos para resposta de API (ADR-004):
+     * Retorna os dois formatos para resposta de API:
      * inteiro canônico + string formatada.
      *
      * @return array{amount: int, formatted: string, currency: string}

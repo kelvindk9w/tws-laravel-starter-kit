@@ -31,7 +31,7 @@ final class NonDeliveringMailerInProductionException extends RuntimeException
             .'Configure um mailer de verdade em MAIL_MAILER (smtp, ses, postmark, resend…) com as credenciais dele — '
             .'no docker-compose.prod.yml, PROD_MAIL_MAILER, PROD_MAIL_HOST, PROD_MAIL_PORT e MAIL_USERNAME/MAIL_PASSWORD no .env.prod — '
             .'e reinicie app e horizon. Instalação descartável sem servidor de e-mail: '
-            .'MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION=true (grava aviso a cada boot). Ver README, seção Produção.',
+            .'MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION=true (grava aviso a cada boot). Ver docs/producao.md.',
             $transport,
             $consequence,
         ));

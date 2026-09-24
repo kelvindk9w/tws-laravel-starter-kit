@@ -61,7 +61,6 @@ playwright.config.js
 playwright-report
 test-results
 shots
-lv2-*.mjs
 .playwright-mcp
 .impeccable
 docker/data

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-// User dashboard strings (Livewire — ADR-005/011).
-// Every displayed string goes through __() — ADR-007. NEVER hardcoded text in views.
+// User dashboard strings (Livewire).
+// Every displayed string goes through __(). NEVER hardcoded text in views.
 
 return [
 
@@ -60,7 +60,7 @@ return [
         'new_project' => 'Create project',
         'manage_profile' => 'My profile',
 
-        // Métricas e tráfego real da conta (request_logs — ADR-004/010).
+        // Métricas e tráfego real da conta (request_logs).
         'summary_requests' => 'Requests (:days days)',
         'summary_last_key_use' => 'Last key use',
         'last_key_use_empty' => 'No authenticated call yet.',
@@ -108,7 +108,7 @@ return [
         'save_transaction_password' => 'Change transaction password',
     ],
 
-    // Projects (ADR-005 — organizational layer, name only).
+    // Projects (organizational layer, name only).
     'projects' => [
         'title' => 'Projects',
         'subtitle' => 'Projects organize your account: link API keys to them to separate data and views.',
@@ -129,7 +129,7 @@ return [
         'keys_column' => 'Keys',
     ],
 
-    // API keys (ADR-006 — the most important screen).
+    // API keys (the most important screen).
     'api_keys' => [
         'title' => 'API Keys',
         'subtitle' => 'Public + secret key pairs for your integration. The secret is shown only ONCE.',
@@ -139,7 +139,7 @@ return [
         'last_used' => 'Last used',
         'expires_at' => 'Expiration',
         'no_expiration' => 'No expiration',
-        'expires_hint' => 'Empty = no expiration. The system never imposes a deadline (ADR-006).',
+        'expires_hint' => 'Empty = no expiration. The system never imposes a deadline.',
         'grace_hint' => 'The old key can die immediately or stay valid for a period, avoiding downtime during the swap.',
 
         'scopes_heading' => 'Permissions (scopes)',
@@ -168,7 +168,7 @@ return [
         'revoked' => 'Key revoked successfully.',
         'projects_saved' => 'Project links updated.',
 
-        // One-time secret display screen (ADR-006).
+        // One-time secret display screen.
         'secret_heading' => 'Store your secret key',
         'secret_warning' => 'This is the ONLY time the secret key is displayed. There is no recovery: if you lose it, rotate it or create a new one.',
         'copy' => 'Copy',
@@ -209,7 +209,7 @@ return [
         'scope_action_assign' => 'assign projects',
     ],
 
-    // Notification preferences (skeleton — ADR-009).
+    // Notification preferences (skeleton).
     'notifications' => [
         'title' => 'Notifications',
         'subtitle' => 'Choose which emails you want to receive. Security alerts are always sent.',
