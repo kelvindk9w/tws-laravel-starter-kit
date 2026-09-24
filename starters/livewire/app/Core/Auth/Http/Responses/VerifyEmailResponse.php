@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Core\Auth\Http\Responses;
 
 use App\Core\Auth\Contracts\Responses\VerifyEmailResponse as VerifyEmailResponseContract;
-use App\Core\Http\SafeRedirect;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Twstec\Kit\Foundation\Http\SafeRedirect;
 
 /**
  * Padrão: volta ao destino original guardado antes do login (pelo

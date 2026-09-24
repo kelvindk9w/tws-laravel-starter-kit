@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
 use App\Core\Tenancy\Queries\AccountOverview;
 use App\Core\Tenancy\Queries\AccountOverviewQuery;
 use App\Core\Tenancy\Services\ProjectService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 
 // =============================================================================
 // AccountOverviewQuery — os números da visão geral da conta, fora da tela.

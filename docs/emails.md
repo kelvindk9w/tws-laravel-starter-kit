@@ -9,14 +9,19 @@ mensagens da mesma plataforma chegavam com três caras diferentes.
 
 | Caminho | Papel |
 | --- | --- |
-| `resources/views/mail/layouts/kit.blade.php` | O esqueleto único (`<x-email::layouts.kit>`): `<head>`, pré-header, cabeçalho da marca, corpo e rodapé |
-| `resources/views/mail/*.blade.php` | Os componentes: `<x-email::heading>`, `::text`, `::button`, `::code`, `::notice`, `::panel`, `::field`, `::rule` |
-| `resources/views/mail/messages/*.blade.php` | O corpo de cada e-mail (só conteúdo, zero HTML de layout) |
-| `resources/views/mail/text/auto.blade.php` | A versão em texto puro — **gerada** do HTML, não escrita à mão |
-| `app/Core/Mail/KitMailable.php` | Base dos Mailables: fila, assunto traduzido e texto puro automático |
-| `app/Core/Mail/KitMailMessage.php` | O mesmo, para **notificações** (`MailMessage`) |
-| `app/Core/Mail/MailTheme.php` | Os tokens do `theme.css` traduzidos para hex — o único ponto de tradução |
-| `lang/{pt_BR,en,es}/mail.php` | Todas as strings (nada de texto fixo no template) |
+| `packages/foundation/resources/views/mail/layouts/kit.blade.php` | O esqueleto único (`<x-email::layouts.kit>`): `<head>`, pré-header, cabeçalho da marca, corpo e rodapé |
+| `packages/foundation/resources/views/mail/*.blade.php` | Os componentes: `<x-email::heading>`, `::text`, `::button`, `::code`, `::notice`, `::panel`, `::field`, `::rule` |
+| `packages/foundation/resources/views/mail/text/auto.blade.php` | A versão em texto puro — **gerada** do HTML, não escrita à mão |
+| `packages/foundation/src/Mail/KitMailable.php` | Base dos Mailables: fila, assunto traduzido e texto puro automático |
+| `packages/foundation/src/Mail/KitMailMessage.php` | O mesmo, para **notificações** (`MailMessage`) |
+| `packages/foundation/src/Mail/MailTheme.php` | Os tokens do `theme.css` traduzidos para hex — o único ponto de tradução |
+| `packages/foundation/lang/{pt_BR,en,es}/mail.php` | As strings comuns a todos os e-mails (o rodapé) |
+| `starters/livewire/resources/views/mail/messages/*.blade.php` | O corpo de cada e-mail (só conteúdo, zero HTML de layout) |
+| `starters/livewire/lang/{pt_BR,en,es}/mail.php` | As strings de cada e-mail (nada de texto fixo no template) |
+
+O esqueleto, os componentes e o texto puro vêm do pacote `twstec/kit-foundation`
+e continuam com os mesmos nomes (`<x-email::…>`, `mail.text.auto`). Um arquivo de
+mesmo nome em `resources/views/mail/` do aplicativo prevalece sobre o do pacote.
 
 **As regras que o layout materializa** (não são gosto, são compatibilidade):
 tabela em vez de flex/grid (o Outlook do Windows renderiza com o motor do
@@ -34,7 +39,7 @@ consulta; por isso a paleta clara já evita extremos, para sobreviver à
 inversão forçada.
 
 **Texto puro**: sai automaticamente do HTML renderizado
-(`App\Core\Mail\PlainText`). Um e-mail só-HTML tem cara de phishing para os
+(`Twstec\Kit\Foundation\Mail\PlainText`). Um e-mail só-HTML tem cara de phishing para os
 filtros de spam, e manter um `.txt` por mensagem garante que um dia os dois
 divirjam. A conversão preserva a **URL dos botões** por extenso e descarta o
 pré-header e o bloco VML do Outlook.
@@ -56,11 +61,11 @@ pré-header e o bloco VML do Outlook.
    </x-email::layouts.kit>
    ```
 
-3. **Mailable** estendendo `App\Core\Mail\KitMailable` — só o assunto, a view
+3. **Mailable** estendendo `Twstec\Kit\Foundation\Mail\KitMailable` — só o assunto, a view
    e os dados; fila e texto puro vêm de graça (numa **notificação**, use
    `KitMailMessage::make($assunto, $view, $dados)`).
 4. **Catálogo**: registre o e-mail na galeria com `MailPreview::register($slug, $fabrica)`,
-   no arquivo de previews do PRÓPRIO módulo (ex.: `app/Core/Auth/Mail/previews.php`,
+   no arquivo de previews do PRÓPRIO módulo (ex.: `app/Core/Auth/Mail/previews.php` no starter,
    carregado pelo `autoload.files` do `composer.json`), com dados de exemplo. O
    módulo de e-mail não conhece os e-mails dos outros — cada um se registra. Os
    testes de `tests/Feature/Mail` iteram o catálogo — o e-mail novo já entra
@@ -85,7 +90,7 @@ lado do HTML. `?format=html` abre o e-mail sozinho na janela e `?format=text`
 mostra só o texto.
 
 É ferramenta de **desenvolvimento do produto**. Quem abre a galeria é o
-`App\Core\Mail\Contracts\MailPreviewGate` registrado: no produto puro, a flag
+`Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate` registrado: no produto puro, a flag
 `MAIL_PREVIEW_ENABLED` (padrão: só em `APP_ENV=local`); com a demonstração
 instalada, a **mesma flag do login demo** (`DEMO_LOGIN_ENABLED`). Nos dois
 casos vale o fail-closed de produção: em `APP_ENV=production` responde

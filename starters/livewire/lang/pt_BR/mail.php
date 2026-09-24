@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 // Strings de e-mails transacionais (pt-BR). Toda string passa por __().
 // O corpo dos e-mails vive em resources/views/mail/messages/**, sobre o layout
-// único <x-email::layouts.kit>. Ver docs/emails.md.
+// único <x-email::layouts.kit>. Ver docs/emails.md. O rodapé comum a todos
+// (mail.footer.*) vem do pacote twstec/kit-foundation.
 
 return [
-
-    // Rodapé COMUM a todos os e-mails (o layout monta o resto com platform()).
-    'footer' => [
-        'transactional' => 'Este é um e-mail automático relacionado à sua conta — não é divulgação, e por isso não tem link de descadastro.',
-        'rights' => '© :year :company. Todos os direitos reservados.',
-        'cnpj' => 'CNPJ',
-    ],
 
     // Aviso prévio de expiração de chave de API por inatividade.
     'api_key_inactivity' => [

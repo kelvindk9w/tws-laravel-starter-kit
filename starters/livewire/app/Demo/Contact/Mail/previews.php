@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Mail\MailPreview;
 use App\Demo\Contact\Mail\ContactMessageMail;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 // =============================================================================
 // E-mail do formulário de contato na galeria /mail-preview (ver
-// App\Core\Mail\MailPreview). Carregado via composer.json → autoload.files.
+// Twstec\Kit\Foundation\Mail\MailPreview). Carregado via composer.json → autoload.files.
 // =============================================================================
 
 MailPreview::register('contact-message', static fn (): ContactMessageMail => new ContactMessageMail(

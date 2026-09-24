@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\RequestLogs;
 
-use App\Core\Audit\Models\AuditEvent;
-use App\Core\Identifiers\UuidColumn;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\AuditEvents\AuditEventResource;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
 use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
@@ -31,6 +27,10 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
+use Twstec\Kit\Foundation\Identifiers\UuidColumn;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Request Logs — consulta de auditoria (super admin).

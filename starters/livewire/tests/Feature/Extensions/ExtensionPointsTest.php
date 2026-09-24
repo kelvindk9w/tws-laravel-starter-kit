@@ -8,8 +8,6 @@ use App\Core\Auth\Exceptions\AccountProtectedException;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Support\LoginPrefill;
 use App\Core\Auth\Support\ProtectedAccounts;
-use App\Core\Mail\Contracts\MailPreviewGate;
-use App\Core\Mail\Support\ConfiguredMailPreviewGate;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Support\AdminAudit;
 use App\Filament\Support\AttackLabel;
@@ -21,6 +19,8 @@ use App\Filament\Widgets\Overview\RequestsTrendChart;
 use App\Livewire\Support\Navigation;
 use App\Livewire\Support\SiteLinks;
 use Database\Seeders\DatabaseSeeder;
+use Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate;
+use Twstec\Kit\Foundation\Mail\Support\ConfiguredMailPreviewGate;
 
 // =============================================================================
 // PONTOS DE EXTENSÃO DO PRODUTO — o comportamento SEM extensão registrada.

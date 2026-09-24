@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Demo\Database\Seeders;
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Logging\Redactor;
 use App\Demo\Support\DemoSurface;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Logging\Redactor;
 
 /**
  * ~30 dias de request_logs realistas: sem eles o gráfico do dashboard do

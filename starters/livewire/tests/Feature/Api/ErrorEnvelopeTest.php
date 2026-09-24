@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\CorrelationId;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Foundation\Logging\CorrelationId;
 
 // =============================================================================
 // Bug de QA #4 — envelope padronizado de ERRO da API (`api/*`).

@@ -5,16 +5,16 @@
    Acesso tipado via helper global `platform()` (ex.: `platform()->name`).
    Nunca texto institucional/URL fixa em código ou views.
 2. **Dinheiro é inteiro** (float erra centavo): centavos em `bigint` no banco, cast
-   `App\Core\Money\MoneyAsCents` no model. NUNCA float. Conversões só via
-   `App\Core\Money\Money` (`Money::format()`, `Money::parse()`,
+   `Twstec\Kit\Foundation\Money\MoneyAsCents` no model. NUNCA float. Conversões só via
+   `Twstec\Kit\Foundation\Money\Money` (`Money::format()`, `Money::parse()`,
    `Money::toApiResponse()` — API retorna inteiro canônico + formatado).
 3. **Identificadores em 3 camadas** (anti-enumeração): `id` interno nunca exposto;
    `uuid` (trait nativa `HasUuids`, UUID v7) nas APIs; `codigo_publico`
-   legível (`PREFIXO-XXXXXX`) via `App\Core\Identifiers\HasPublicCode` —
+   legível (`PREFIXO-XXXXXX`) via `Twstec\Kit\Foundation\Identifiers\HasPublicCode` —
    alfabeto sem ambiguidade, constraint UNIQUE + retry
    (`createWithPublicCodeRetry()`).
 4. **Respostas de API** (nunca vaza coluna interna): sempre via Resources
-   (`App\Core\Http\Resources\BaseResource`) — nunca modelo Eloquent cru.
+   (`Twstec\Kit\Foundation\Http\Resources\BaseResource`) — nunca modelo Eloquent cru.
 5. **Logs de requisição:** append-only, status
    INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
 6. **i18n:** locale padrão `pt_BR`; TODA string de UI via `__()`.

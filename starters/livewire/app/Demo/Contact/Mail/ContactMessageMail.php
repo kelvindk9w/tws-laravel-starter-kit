@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Demo\Contact\Mail;
 
-use App\Core\Mail\KitMailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Envelope;
+use Twstec\Kit\Foundation\Mail\KitMailable;
 
 /**
  * Mensagem do formulário de contato da landing → e-mail do time

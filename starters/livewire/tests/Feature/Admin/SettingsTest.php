@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Settings\Models\Setting;
-use App\Core\Settings\SettingsManager;
 use App\Filament\Pages\Settings;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Settings\Models\Setting;
+use Twstec\Kit\Foundation\Settings\SettingsManager;
 
 // =============================================================================
 // Settings editáveis pelo super admin: tabela settings sobrescreve

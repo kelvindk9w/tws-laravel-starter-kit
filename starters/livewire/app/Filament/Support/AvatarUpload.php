@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\Support;
 
 use App\Core\Auth\Models\User;
-use App\Core\Identifiers\UuidColumn;
 use App\Core\Uploads\Exceptions\UploadRejectedException;
 use App\Core\Uploads\Models\Upload;
 use App\Core\Uploads\Rules\SafeFile;
 use App\Core\Uploads\Services\SecureUploadService;
 use Filament\Forms\Components\FileUpload;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Twstec\Kit\Foundation\Identifiers\UuidColumn;
 
 /**
  * Campo de FOTO DE PERFIL do super admin, em um lugar só (cadastro de

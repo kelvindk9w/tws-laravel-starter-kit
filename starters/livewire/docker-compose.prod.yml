@@ -12,6 +12,11 @@
 #   - migrate (one-shot), worker de fila e scheduler como containers dedicados;
 #   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco).
 #
+# MONOREPO: a imagem do app instala os pacotes do kit a partir de
+# ../../packages (contexto de build nomeado `packages`, ver
+# docker/php/Dockerfile), então este arquivo é usado de dentro do repositório
+# completo. Requer Docker Compose 2.17 ou mais novo (additional_contexts).
+#
 # CONFIGURAÇÃO: as variáveis PROD_* abaixo podem ser definidas num arquivo
 # .env.prod (ver .env.prod.example) ou no ambiente do shell. Onde a variável
 # carrega SEGREDO não existe valor de fallback: `${VAR:?...}` faz o Compose se
@@ -27,7 +32,7 @@
 # A APP_KEY segue o mesmo princípio, num lugar diferente: ela chega pelo
 # env_file (.env.prod), então quem a exige é o entrypoint da imagem, que aborta
 # com código 78 quando ela falta em produção — ver docker/php/entrypoint-prod.sh
-# e App\Core\Support\CriticalSecrets.
+# e Twstec\Kit\Foundation\Support\CriticalSecrets.
 #
 # ATENÇÃO: o Compose SEMPRE usa o .env da raiz para interpolar ${VAR} — por
 # isso aqui só existem nomes PROD_* (nunca presentes no .env de dev).
@@ -42,7 +47,7 @@ x-app-env: &app-env
   PLATFORM_NAME: ${PROD_PLATFORM_NAME:-TWS Starter Kit}
   PLATFORM_LOGO_URL: ${PROD_PLATFORM_LOGO_URL:-}
   PLATFORM_PRIMARY_COLOR: ${PROD_PLATFORM_PRIMARY_COLOR:-#0284C7}
-  # Quem pode dizer QUEM É O CLIENTE (ver App\Core\Http\TrustedProxies).
+  # Quem pode dizer QUEM É O CLIENTE (ver Twstec\Kit\Foundation\Http\TrustedProxies).
   #
   # O PADRÃO É VAZIO — nenhum proxy confiável, `X-Forwarded-*` ignorado. Não há
   # valor que o kit possa assumir pela topologia de quem instala, e o silêncio
@@ -65,7 +70,7 @@ x-app-env: &app-env
   # Hosts aceitos ALÉM do host da APP_URL (que já entra sozinho, com os
   # subdomínios dele). Vazio NÃO significa "qualquer host": significa a APP_URL.
   # Use para domínio com e sem www, ou domínio de staging na mesma instalação.
-  # Ver App\Core\Http\TrustedHosts.
+  # Ver Twstec\Kit\Foundation\Http\TrustedHosts.
   TRUSTED_HOSTS: ${PROD_TRUSTED_HOSTS:-}
   # Origens permitidas no /admin e no /horizon.
   #
@@ -110,7 +115,7 @@ x-app-env: &app-env
   # (código 2FA, link de redefinição de senha, dados pessoais) no arquivo de
   # log. A stack sobe normalmente; o que falha, com a instrução do conserto, é
   # cada job de e-mail no Horizon. Configure PROD_MAIL_* (e MAIL_USERNAME /
-  # MAIL_PASSWORD no .env.prod). Ver App\Core\Mail\NonDeliveringMailers.
+  # MAIL_PASSWORD no .env.prod). Ver Twstec\Kit\Foundation\Mail\NonDeliveringMailers.
   MAIL_MAILER: ${PROD_MAIL_MAILER:-log}
   MAIL_HOST: ${PROD_MAIL_HOST:-}
   MAIL_PORT: ${PROD_MAIL_PORT:-2525}
@@ -122,6 +127,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      # Pacotes do kit (path repository), copiados para o vendor/ da imagem.
+      additional_contexts:
+        packages: ../../packages
     env_file:
       - path: .env.prod
         required: false
@@ -169,6 +177,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      # Pacotes do kit (path repository), copiados para o vendor/ da imagem.
+      additional_contexts:
+        packages: ../../packages
     env_file:
       - path: .env.prod
         required: false
@@ -219,6 +230,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      # Pacotes do kit (path repository), copiados para o vendor/ da imagem.
+      additional_contexts:
+        packages: ../../packages
     env_file:
       - path: .env.prod
         required: false
@@ -237,6 +251,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
+      # Pacotes do kit (path repository), copiados para o vendor/ da imagem.
+      additional_contexts:
+        packages: ../../packages
     env_file:
       - path: .env.prod
         required: false

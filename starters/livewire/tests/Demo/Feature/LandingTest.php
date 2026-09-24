@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Localization\Middleware\SetLocale;
-use App\Core\Support\Platform;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
+use Twstec\Kit\Foundation\Support\Platform;
 
 // Landing OFICIAL "Céu" — rota /. Valida CONTEÚDO, não só status.
 

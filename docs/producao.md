@@ -74,10 +74,17 @@ sessões, cache, logs — a estrutura vazia é recriada no Dockerfile); testes,
 Conferir numa imagem construída:
 
 ```bash
-docker build -f docker/php/Dockerfile --target prod -t tws-app:prod .
+docker build --build-context packages=../../packages -f docker/php/Dockerfile --target prod -t tws-app:prod .
 docker run --rm --entrypoint sh tws-app:prod -c \
   'id; ls -A /var/www/html; find /var/www/html/storage -type f | wc -l; ls -A /var/www/html/.env* 2>&1'
 ```
+
+O `--build-context packages=../../packages` entrega à imagem a pasta `packages/` da raiz do
+repositório: o estágio do Composer instala dali os pacotes do kit (`twstec/kit-foundation`),
+**copiando** cada um para `vendor/` (`COMPOSER_MIRROR_PATH_REPOS=1`) — a imagem final não tem link
+para fora dela nem a pasta `/packages`. O `packages/.dockerignore` deixa de fora o que é de
+desenvolvimento do pacote (`vendor/`, `tests/`, `composer.lock`, `phpunit.xml`). O
+`docker-compose.prod.yml` já passa esse contexto (`additional_contexts`, Compose 2.17+).
 
 Esperado: `uid=82(www-data)`; na raiz só `app artisan bootstrap composer.json
 composer.lock config database demo lang package*.json public resources routes
@@ -95,7 +102,7 @@ mensagem de contato com nome e e-mail — sem nenhum erro. O `array` é o irmão
 silencioso: descarta tudo.
 
 Com `APP_ENV=production`, os transportes `log` e `array` **recusam o envio**
-(`App\Core\Mail\NonDeliveringMailers`): o job de e-mail falha com uma mensagem
+(`Twstec\Kit\Foundation\Mail\NonDeliveringMailers`): o job de e-mail falha com uma mensagem
 que diz o que configurar e aparece como falho no `/horizon`, e nada da mensagem
 chega ao log. Vale também para o último recurso do mailer `failover`, que é o
 `log`. A subida do `horizon`/`queue:work`/`schedule:run` avisa no log quando o
@@ -132,7 +139,7 @@ silenciosa de dado é pior que serviço que não sobe, então hoje:
 | Camada | Comportamento em `APP_ENV=production` |
 | --- | --- |
 | `docker/php/entrypoint-prod.sh` | Chave **ausente** → aborta com código **78** (`EX_CONFIG`) e imprime como gerar e onde colocar. Nunca escreve chave em arquivo. |
-| `App\Core\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`) nos processos que **servem tráfego ou processam trabalho**; nos comandos de instalação e manutenção, avisa em voz alta (log + stderr) e deixa passar. |
+| `Twstec\Kit\Foundation\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`) nos processos que **servem tráfego ou processam trabalho**; nos comandos de instalação e manutenção, avisa em voz alta (log + stderr) e deixa passar. |
 | `docker-compose.prod.yml` | `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
 
 Fora de produção o entrypoint continua conveniente: gera uma chave efêmera,

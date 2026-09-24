@@ -44,7 +44,7 @@ com erro, grava o motivo no log e dispara o evento de falha de backup — o
 mesmo que já manda e-mail + webhook quando o dump quebra; nenhum dump é
 gerado. **Em dev/local o backup roda** com um aviso no console: o dump é do
 banco de desenvolvimento e vai para o disco `local`. A regra mora no comando
-(`App\Core\Backup\BackupEncryption`), nunca no boot — `composer install`,
+(`Twstec\Kit\Foundation\Backup\BackupEncryption`), nunca no boot — `composer install`,
 `package:discover` e o php-fpm não fazem backup e não são afetados.
 Opt-out consciente (confidencialidade garantida por outra camada — bucket
 cifrado **e** de acesso restrito): `BACKUP_ALLOW_UNENCRYPTED_IN_PRODUCTION=true`,

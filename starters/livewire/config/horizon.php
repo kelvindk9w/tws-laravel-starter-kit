@@ -9,9 +9,9 @@
 // serviço `horizon` do docker-compose.prod.yml (php artisan horizon).
 // =============================================================================
 
-use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Http\Middleware\Authenticate;
+use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 return [
 
@@ -148,7 +148,7 @@ return [
     // payload, que é o que o dashboard /horizon exibe.
     //
     // O payload dos jobs de e-mail e notificação do kit sai CRIPTOGRAFADO com a
-    // APP_KEY (ShouldBeEncrypted em App\Core\Mail\KitMailable e na
+    // APP_KEY (ShouldBeEncrypted em Twstec\Kit\Foundation\Mail\KitMailable e na
     // ResetPasswordNotification): código de verificação, token de redefinição
     // de senha, destinatário e mensagem do formulário de contato ficam
     // ilegíveis aqui. Job NOVO que carregue dado pessoal ou segredo deve fazer o

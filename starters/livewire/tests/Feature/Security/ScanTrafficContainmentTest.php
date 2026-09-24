@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // Contenção da amplificação de escrita em `request_logs`: cada 404 de varredura anônima gerava INSERT + UPDATE. Agora, de
 // cada cliente, só a PRIMEIRA requisição a rota inexistente por janela vai ao

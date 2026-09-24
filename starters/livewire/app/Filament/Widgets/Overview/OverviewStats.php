@@ -7,7 +7,6 @@ namespace App\Filament\Widgets\Overview;
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Models\RequestLog;
 use App\Core\Tenancy\Models\Project;
 use App\Filament\Widgets\Support\BaseStatsWidget;
 use App\Filament\Widgets\Support\Metric;
@@ -15,6 +14,7 @@ use App\Filament\Widgets\Support\MetricStat;
 use App\Filament\Widgets\Support\Period;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Os quatro números de abertura do painel: tamanho da base, movimento da API,

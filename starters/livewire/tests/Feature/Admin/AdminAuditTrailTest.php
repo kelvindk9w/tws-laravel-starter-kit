@@ -3,14 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
-use App\Core\Audit\Enums\AuditContext;
-use App\Core\Audit\Enums\AuditOutcome;
-use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Models\RequestLog;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
@@ -27,12 +23,16 @@ use Filament\Support\Exceptions\Cancel;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
+use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // =============================================================================
 // Trilha de auditoria de AÇÕES do /admin (tabela `audit_events`).
 //
 // Decisão do dono: toda ação de admin fica registrada no BANCO. A captura é
-// central (App\Filament\Support\AdminAudit + App\Core\Audit\AuditTrail): cada
+// central (App\Filament\Support\AdminAudit + Twstec\Kit\Foundation\Audit\AuditTrail): cada
 // teste aqui dispara a ação pela tela, como o operador faria, e confere a
 // linha — ação estável, quem, qual registro, o antes/depois redigido e a
 // origem. As tentativas RECUSADAS pelas guardas também ficam (`denied`).

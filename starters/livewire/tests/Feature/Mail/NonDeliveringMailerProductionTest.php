@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Mail\Exceptions\NonDeliveringMailerInProductionException;
-use App\Core\Mail\NonDeliveringMailers;
-use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Process;
+use Twstec\Kit\Foundation\FoundationServiceProvider;
+use Twstec\Kit\Foundation\Mail\Exceptions\NonDeliveringMailerInProductionException;
+use Twstec\Kit\Foundation\Mail\NonDeliveringMailers;
 
 // =============================================================================
 // MAILER QUE NÃO ENTREGA, EM PRODUÇÃO
@@ -152,7 +152,7 @@ it('o opt-out ligado grava aviso a cada boot', function (): void {
     config()->set('security.mail.allow_non_delivering_in_production', true);
     Log::spy();
 
-    app()->getProvider(AppServiceProvider::class)->boot();
+    app()->getProvider(FoundationServiceProvider::class)->boot();
 
     Log::shouldHaveReceived('warning')
         ->withArgs(fn (string $mensagem): bool => str_contains($mensagem, 'MAIL_ALLOW_NON_DELIVERING_IN_PRODUCTION'))
@@ -168,7 +168,7 @@ it('avisa na subida do worker quando o mailer padrão não entrega, e só nele',
     Log::spy();
 
     try {
-        app()->getProvider(AppServiceProvider::class)->boot();
+        app()->getProvider(FoundationServiceProvider::class)->boot();
     } finally {
         $_SERVER['argv'] = $argvOriginal;
     }

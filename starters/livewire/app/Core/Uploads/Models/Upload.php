@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Core\Uploads\Models;
 
-use App\Core\Identifiers\HasPublicCode;
-use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Enums\UploadStatus;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -14,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Registro de upload (só arquivo aprovado pela validação de segurança).

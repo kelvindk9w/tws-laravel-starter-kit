@@ -6,8 +6,6 @@ namespace App\Core\Tenancy\Models;
 
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
-use App\Core\Identifiers\HasPublicCode;
-use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Tenancy\Enums\ProjectStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +13,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Projeto — camada ORGANIZACIONAL da conta.

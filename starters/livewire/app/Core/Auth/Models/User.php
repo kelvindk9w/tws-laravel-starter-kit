@@ -8,8 +8,6 @@ use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
 use App\Core\Auth\Notifications\VerifyEmailNotification;
 use App\Core\Auth\Support\ProtectedAccounts;
-use App\Core\Identifiers\HasPublicCode;
-use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Concerns\HasAvatar;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -23,6 +21,8 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Usuário da plataforma.

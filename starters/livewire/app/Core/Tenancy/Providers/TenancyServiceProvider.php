@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy\Providers;
 
-use App\Core\Security\Contracts\RateLimitSubjectResolver;
 use App\Core\Tenancy\Support\TenantRateLimitSubject;
 use App\Core\Tenancy\TenantContext;
 use Illuminate\Support\ServiceProvider;
+use Twstec\Kit\Foundation\Security\Contracts\RateLimitSubjectResolver;
 
 /**
  * Serviços do módulo de Tenancy.

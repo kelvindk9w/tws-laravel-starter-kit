@@ -8,7 +8,7 @@
 // `472.***.***-15` enquanto ela digita é prova.
 //
 // HONESTIDADE DAS REGRAS. CNPJ, CPF, e-mail e número de cartão são as regras
-// de App\Core\Logging\Redactor::redactString (mesmas expressões, mesma
+// de Twstec\Kit\Foundation\Logging\Redactor::redactString (mesmas expressões, mesma
 // máscara; o cartão, como no kit, só é mascarado se passar no Luhn). A regra
 // `chave: valor` sensível é a isSensitiveKey() do mesmo Redactor, aplicada ao
 // par que a pessoa digitar. Simplificação da demo: o kit também procura o

@@ -8,6 +8,20 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml  # Pest contra Po
 npx playwright test                                             # E2E (ver abaixo como rodar em container)
 ```
 
+E a suíte de cada **pacote** (`packages/<pacote>`), isolada do aplicativo, com
+Orchestra Testbench:
+
+```bash
+docker compose exec -w /var/packages/foundation app ./vendor/bin/pest   # pacote twstec/kit-foundation
+```
+
+Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
+ataques, redação LGPD, balde de cliente, dinheiro, sanitização), a ordem da
+pilha global de segurança, os apelidos de compatibilidade, a fiação do provider
+e a arquitetura do pacote. Os testes de ponta a ponta dessas peças (rotas,
+painel, banco) continuam na suíte do starter. Como instalar as dependências do
+pacote está em [`packages/README.md`](../packages/README.md).
+
 Os testes validam **conteúdo** das respostas, não só o status HTTP. Cada
 módulo descreve o que a sua suíte cobre na seção *Testes* do próprio
 documento: [autenticação](autenticacao.md#testes), [API e chaves](api.md#testes),

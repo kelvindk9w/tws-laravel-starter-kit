@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Core\Settings\SettingsManager;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -16,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
+use Twstec\Kit\Foundation\Settings\SettingsManager;
 
 /**
  * Configurações do sistema (super admin): ajustes operacionais

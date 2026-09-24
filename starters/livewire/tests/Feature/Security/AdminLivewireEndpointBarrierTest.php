@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
-use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Tenancy\Models\Project;
 use Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware;
+use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 // =============================================================================
 // BARREIRAS DO /admin TAMBÉM NO ENDPOINT DE ATUALIZAÇÃO DO LIVEWIRE

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Growth;
 
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Widgets\Support\BaseCompositionWidget;
 use App\Filament\Widgets\Support\ChartSlice;
 use App\Filament\Widgets\Support\Period;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Str;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Ranking dos endpoints mais chamados no período (barras horizontais).

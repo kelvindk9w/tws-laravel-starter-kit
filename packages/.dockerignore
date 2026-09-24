@@ -1,0 +1,14 @@
+# =============================================================================
+# Contexto de build `packages` da imagem de produção (ver
+# starters/livewire/docker/php/Dockerfile): o que dos pacotes NUNCA vai para a
+# imagem. O Composer copia o pacote inteiro para vendor/, então tudo o que é
+# de desenvolvimento do pacote fica de fora aqui.
+# =============================================================================
+*/vendor
+*/composer.lock
+*/tests
+*/phpunit.xml
+*/.phpunit.cache
+*/.phpunit.result.cache
+*/.gitignore
+*/.gitattributes

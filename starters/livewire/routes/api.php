@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Http\Controllers\ApiKeyController;
-use App\Core\Http\Controllers\HealthController;
 use App\Core\Tenancy\Http\Controllers\ProjectController;
 use App\Core\Uploads\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Http\Controllers\HealthController;
 
 // Saúde da aplicação (excluída do request log em banco — ver config/security.php
 // e docs/logs-lgpd.md). Passa por validação de segurança, headers e rate limit global.

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Identifiers\HasPublicCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
 
 // Testes do código público legível: PREFIXO-XXXXXX, sem ambiguidade,
 // unicidade garantida por constraint UNIQUE + retry de colisão.

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Security\ValidationMode;
 use App\Demo\Contact\Mail\ContactMessageMail;
 use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Security\ValidationMode;
 
 // Modo `observe` do filtro de ataques (R4 — padrão): a tentativa é detectada
 // e gravada na trilha com o tipo e o payload NEUTRALIZADO, e a requisição

@@ -31,7 +31,7 @@
 # deixar rastro de chave em disco nem no caminho de produção) e a subida avisa
 # em voz alta que aquela chave morre com o container.
 #
-# DIVISÃO DE TRABALHO com o guard da aplicação (App\Core\Support\CriticalSecrets):
+# DIVISÃO DE TRABALHO com o guard da aplicação (Twstec\Kit\Foundation\Support\CriticalSecrets):
 # aqui só se verifica AUSÊNCIA, porque é tudo que o shell precisa saber para
 # parar antes de subir o php-fpm. Chave presente mas de EXEMPLO/placeholder, e
 # senhas de infraestrutura com valor de placeholder, são reconhecidas no boot da

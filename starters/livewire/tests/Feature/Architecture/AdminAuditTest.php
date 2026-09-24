@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Audit\AuditTrail;
-use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Models\User;
 use App\Demo\Catalog\Models\Product;
 use App\Filament\AuditFixture\NewAdminScreen;
@@ -19,6 +17,8 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Livewire;
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
 // =============================================================================
 // ARQUITETURA da trilha de auditoria do /admin — decisão do dono: toda ação

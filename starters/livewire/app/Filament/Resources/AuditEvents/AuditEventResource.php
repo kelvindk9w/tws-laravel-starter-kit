@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\AuditEvents;
 
-use App\Core\Audit\AuditTrail;
-use App\Core\Audit\Enums\AuditContext;
-use App\Core\Audit\Enums\AuditOutcome;
-use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Models\User;
-use App\Core\Identifiers\UuidColumn;
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Resources\AuditEvents\Pages\ListAuditEvents;
 use App\Filament\Resources\AuditEvents\Pages\ViewAuditEvent;
 use App\Filament\Resources\RequestLogs\RequestLogResource;
@@ -43,6 +37,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
+use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
+use Twstec\Kit\Foundation\Identifiers\UuidColumn;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Auditoria — a trilha de AÇÕES (super admin). ESTRITAMENTE somente leitura:

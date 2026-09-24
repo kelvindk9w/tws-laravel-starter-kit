@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Backup\BackupEncryption;
-use App\Core\Backup\Console\GuardedBackupCommand;
-use App\Core\Backup\Exceptions\UnencryptedBackupRefusedException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -13,9 +10,12 @@ use Illuminate\Support\Facades\Storage;
 use Spatie\Backup\Config\BackupConfig;
 use Spatie\Backup\Config\Config;
 use Spatie\Backup\Events\BackupHasFailed;
+use Twstec\Kit\Foundation\Backup\BackupEncryption;
+use Twstec\Kit\Foundation\Backup\Console\GuardedBackupCommand;
+use Twstec\Kit\Foundation\Backup\Exceptions\UnencryptedBackupRefusedException;
 
 // =============================================================================
-// BACKUP SEM CRIPTOGRAFIA EM SILÊNCIO (App\Core\Backup\BackupEncryption).
+// BACKUP SEM CRIPTOGRAFIA EM SILÊNCIO (Twstec\Kit\Foundation\Backup\BackupEncryption).
 //
 // Com BACKUP_ARCHIVE_PASSWORD vazia o pacote monta o zip em claro e ninguém
 // fica sabendo — em produção, é o dump do banco inteiro indo para o R2.

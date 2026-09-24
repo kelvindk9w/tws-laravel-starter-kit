@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Logging\Exceptions\AppendOnlyViolationException;
-use App\Core\Logging\Models\RequestLog;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
@@ -20,6 +18,8 @@ use App\Demo\Database\Seeders\UploadSeeder;
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // =============================================================================
 // O histórico que faz os dashboards nascerem CHEIOS em qualquer instalação.

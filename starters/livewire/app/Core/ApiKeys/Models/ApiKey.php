@@ -6,8 +6,6 @@ namespace App\Core\ApiKeys\Models;
 
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\Auth\Models\User;
-use App\Core\Identifiers\HasPublicCode;
-use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -16,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Chave de API — motor de acesso programático.

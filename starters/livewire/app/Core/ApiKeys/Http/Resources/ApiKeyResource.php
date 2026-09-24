@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Core\ApiKeys\Http\Resources;
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Http\Resources\BaseResource;
 
 /**
  * Serialização da chave de API (nunca expor campos internos).

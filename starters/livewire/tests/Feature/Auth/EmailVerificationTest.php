@@ -6,7 +6,6 @@ use App\Core\Auth\Models\User;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
 use App\Core\Auth\Notifications\VerifyEmailNotification;
 use App\Core\Auth\Support\EmailVerification;
-use App\Core\Localization\Middleware\SetLocale;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -15,6 +14,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // =============================================================================
 // VERIFICAÇÃO DE E-MAIL NO CADASTRO

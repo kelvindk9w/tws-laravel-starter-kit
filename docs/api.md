@@ -50,7 +50,7 @@ Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 ## Contrato de resposta da API (sucesso e erro)
 
 **Sucesso** — sempre envelopado em `data`, via Resources
-(`App\Core\Http\Resources\BaseResource`); listagens paginadas acrescentam
+(`Twstec\Kit\Foundation\Http\Resources\BaseResource`); listagens paginadas acrescentam
 `links` e `meta` do Laravel:
 
 ```json
@@ -58,7 +58,7 @@ Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 ```
 
 **Erro** — contrapartida simétrica, em `error`
-(`App\Core\Http\Exceptions\ApiErrorRenderer`, registrado em
+(`Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer`, registrado em
 `bootstrap/app.php`). Vale para TODA rota `api/*`:
 
 ```json

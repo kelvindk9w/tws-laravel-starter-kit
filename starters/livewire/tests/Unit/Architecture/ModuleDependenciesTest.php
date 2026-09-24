@@ -12,6 +12,14 @@ use Symfony\Component\Finder\Finder;
 // ABAIXO dele: foundation não conhece ninguém; auth conhece foundation;
 // accounts conhece auth e foundation; uploads conhece os três.
 //
+// A camada foundation JÁ SAIU de app/Core: é o pacote twstec/kit-foundation
+// (packages/foundation), e a trava dela — não conhecer nada do aplicativo nem
+// das camadas de cima — mora na suíte do próprio pacote. Aqui ficam as regras
+// dos módulos que ainda moram em app/Core, e mais uma: o código do aplicativo
+// usa os nomes NOVOS das classes da base (Twstec\Kit\Foundation\…); os nomes
+// antigos (App\Core\<Módulo da base>\…) existem só como apelidos de
+// compatibilidade para o que está gravado fora do código.
+//
 // A DEMONSTRAÇÃO do kit (App\Demo, em app/Demo e demo/) fica no topo, FORA de
 // app/Core: ela pode usar qualquer peça do produto, e NENHUMA peça do produto
 // pode usar a demo — nem app/Core, nem as telas (app/Filament, app/Livewire),
@@ -40,12 +48,10 @@ use Symfony\Component\Finder\Finder;
 /**
  * Camadas, de baixo para cima, e os módulos de cada uma.
  *
- * Audit entra em foundation: a trilha de auditoria de ações é usada pelas
- * configurações editáveis (Settings, foundation) e por comandos de todos os
- * módulos — não pode depender de nenhum deles.
+ * A camada foundation não aparece: ela é o pacote twstec/kit-foundation, e
+ * usar classe dele é sempre descer na hierarquia.
  */
 const CORE_LAYERS = [
-    'foundation' => ['Identifiers', 'Money', 'Http', 'Security', 'Logging', 'Localization', 'Settings', 'Mail', 'Support', 'Backup', 'Audit'],
     'auth' => ['Auth'],
     'accounts' => ['Tenancy', 'ApiKeys'],
     'uploads' => ['Uploads'],
@@ -55,14 +61,20 @@ const CORE_LAYERS = [
  * Grupos coesos: ciclos aceitos porque os módulos vão juntos para o MESMO
  * pacote. Qualquer outro ciclo reprova.
  *
- *   Segurança ↔ trilha de requisições ↔ HTTP (+ idioma, que usa o
- *   redirecionamento seguro do HTTP e é usado pelo limite da borda) → foundation.
  *   Projetos ↔ chaves de API → accounts.
+ *
+ * (O grupo segurança ↔ trilha ↔ HTTP ↔ idioma foi junto com a base para o
+ * pacote twstec/kit-foundation; a suíte dele confere esse grupo.)
  */
 const CORE_COHESIVE_CYCLES = [
-    ['Http', 'Localization', 'Logging', 'Security'],
     ['ApiKeys', 'Tenancy'],
 ];
+
+/**
+ * Módulos que saíram de app/Core para o pacote twstec/kit-foundation. O nome
+ * antigo App\Core\<Módulo>\… de qualquer um deles não pode voltar ao código.
+ */
+const FOUNDATION_MOVED_MODULES = ['Identifiers', 'Money', 'Http', 'Security', 'Logging', 'Localization', 'Settings', 'Mail', 'Support', 'Backup', 'Audit'];
 
 /**
  * Imports que sobem na hierarquia e ainda não puderam sair: arquivo => classes.
@@ -430,4 +442,38 @@ it('mantém a demonstração fora de app/Core', function (): void {
 
     // A pasta app/Demo pode nem existir: o produto não exige a demo.
     expect($demoInCore)->toBe([]);
+});
+
+it('usa os nomes novos das classes da base, nunca os apelidos App\\Core\\<Módulo da base>', function (): void {
+    // Os apelidos de compatibilidade (packages/foundation/src/Compat) existem
+    // para o que está gravado FORA do código — payload de fila antigo, config
+    // publicada por quem ainda não atualizou. Código novo que usa o nome
+    // antigo prenderia o kit a eles e impediria de removê-los na 3.0.
+    $pattern = '/^App\\\\Core\\\\('.implode('|', FOUNDATION_MOVED_MODULES).')\\\\/';
+    $violations = [];
+
+    foreach (['app', 'bootstrap', 'config', 'database', 'routes', 'demo', 'tests'] as $directory) {
+        if (! is_dir(base_path($directory))) {
+            continue;
+        }
+
+        foreach ((new Finder)->files()->in(base_path($directory))->name('*.php') as $file) {
+            $path = str_replace(base_path().'/', '', $file->getRealPath());
+
+            foreach (appReferencesIn($file->getContents()) as $name) {
+                if (preg_match($pattern, $name) === 1) {
+                    $violations[] = "{$path} usa {$name}";
+                }
+            }
+        }
+    }
+
+    // E nenhum módulo da base voltou a morar em app/Core.
+    foreach (FOUNDATION_MOVED_MODULES as $module) {
+        if (is_dir(base_path("app/Core/{$module}"))) {
+            $violations[] = "app/Core/{$module} existe de novo (o módulo é do pacote twstec/kit-foundation)";
+        }
+    }
+
+    expect($violations)->toBe([]);
 });

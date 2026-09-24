@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Audit\AuditTrail;
-use App\Core\Audit\Enums\AuditContext;
-use App\Core\Audit\Enums\AuditOutcome;
-use App\Core\Audit\Models\AuditEvent;
 use App\Core\Auth\Models\User;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
@@ -18,6 +14,10 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
+use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
 // =============================================================================
 // Ação de suporte "Marcar e-mail como verificado" no /admin (listagem, cards e

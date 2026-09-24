@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Support;
 
-use App\Core\Http\SafeRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Http\SafeRedirect;
 
 /**
  * Para onde a pessoa vai depois de entrar — a mesma resposta para o login

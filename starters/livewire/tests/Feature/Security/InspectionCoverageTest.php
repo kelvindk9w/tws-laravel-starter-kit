@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Security\AttackDetector;
-use App\Core\Security\RequestInputs;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Security\AttackDetector;
+use Twstec\Kit\Foundation\Security\RequestInputs;
 
 // Cobertura da inspeção (R4): cada fonte que a aplicação pode LER precisa ser
 // inspecionada. Os testes rodam no modo `block` porque nele um buraco de

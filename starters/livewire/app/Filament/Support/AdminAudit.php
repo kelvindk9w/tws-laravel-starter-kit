@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
-use App\Core\Audit\AuditScope;
-use App\Core\Audit\AuditTrail;
-use App\Core\Audit\Enums\AuditContext;
 use Filament\Notifications\Notification;
 use Filament\Pages\SimplePage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Throwable;
+use Twstec\Kit\Foundation\Audit\AuditScope;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 
 use function Livewire\on;
 

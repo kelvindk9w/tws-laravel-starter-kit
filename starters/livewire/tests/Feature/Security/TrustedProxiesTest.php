@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Http\TrustedProxies;
-use App\Core\Security\AdminIpAllowlist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Http\TrustedProxies;
+use Twstec\Kit\Foundation\Security\AdminIpAllowlist;
 
 // =============================================================================
 // QUEM PODE DIZER QUEM É O CLIENTE (proxies confiáveis)

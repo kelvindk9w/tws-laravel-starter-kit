@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
-use App\Core\Localization\Middleware\SetLocale;
-use App\Core\Security\Middleware\EnsureAdminIpAllowed;
-use App\Core\Security\Middleware\UseEvalBundleForAdmin;
-use App\Core\Support\BrandMark;
 use App\Filament\Auth\EmailCodeAuthentication;
 use App\Filament\Dashboards\DashboardRegistry;
 use App\Filament\Pages\Auth\Login;
@@ -32,6 +28,10 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
+use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
+use Twstec\Kit\Foundation\Security\Middleware\UseEvalBundleForAdmin;
+use Twstec\Kit\Foundation\Support\BrandMark;
 
 /**
  * Super admin Filament (/admin).
@@ -44,7 +44,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
  *   (config security.admin.allowed_ips, ADMIN_ALLOWED_IPS). Lista vazia libera
  *   fora de produção; em produção sem allowlist declarada o painel RECUSA (403)
  *   — regra e justificativa em
- *   App\Core\Security\AdminIpAllowlist.
+ *   Twstec\Kit\Foundation\Security\AdminIpAllowlist.
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -70,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
             // É o que faz a trilha de auditoria falhar FECHADA: a linha de
             // `audit_events` é gravada dentro da mesma transação da mudança,
             // e se ela não puder ser gravada a mudança é desfeita (ver
-            // App\Core\Audit\AuditTrail). Halt/Cancel (recusa de guarda)
+            // Twstec\Kit\Foundation\Audit\AuditTrail). Halt/Cancel (recusa de guarda)
             // confirmam a transação — a tentativa recusada fica registrada.
             ->databaseTransactions()
             // Verificação em duas etapas no login, pelo mecanismo de MFA do

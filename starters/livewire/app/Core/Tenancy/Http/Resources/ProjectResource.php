@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy\Http\Resources;
 
-use App\Core\Http\Resources\BaseResource;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Http\Resources\BaseResource;
 
 /**
  * Serialização do projeto (nunca expor o `id` interno).

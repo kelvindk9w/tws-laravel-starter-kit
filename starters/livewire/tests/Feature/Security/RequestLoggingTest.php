@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Exceptions\AppendOnlyViolationException;
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // Pipeline de logs de requisição: INICIADA imediato →
 // CONCLUIDA/ERRO no terminate, correlation_id propagado, append-only.

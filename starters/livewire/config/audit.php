@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 use App\Core\Auth\Models\SensitiveActionToken;
 use App\Core\Auth\Models\VerificationCode;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Settings\Models\Setting;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Settings\Models\Setting;
 
 // =============================================================================
 // Trilha de auditoria de AÇÕES (`audit_events`) — quem fez o quê, em qual
-// registro, mudando o quê. Ver App\Core\Audit\AuditTrail e docs/logs-lgpd.md.
+// registro, mudando o quê. Ver Twstec\Kit\Foundation\Audit\AuditTrail e docs/logs-lgpd.md.
 // =============================================================================
 
 return [

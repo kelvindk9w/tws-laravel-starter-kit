@@ -1,6 +1,7 @@
 # Atualizações automáticas de dependências, agrupadas por ecossistema, uma
 # vez por semana, abrindo PR contra a branch de trabalho.
-# Composer e npm apontam para o starter Livewire (starters/livewire).
+# Composer e npm apontam para o starter Livewire (starters/livewire); o
+# pacote twstec/kit-foundation (packages/foundation) tem entrada própria.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -13,6 +14,23 @@ updates:
     groups:
       laravel:
         patterns: ['laravel/*', 'livewire/*', 'filament/*', 'spatie/*']
+      dev:
+        dependency-type: development
+  # Pacote (biblioteca, sem composer.lock): `widen` ALARGA a restrição para
+  # aceitar a versão nova sem largar a antiga (ex.: ^11.0 → ^11.0 || ^12.0) —
+  # quem instala o pacote continua podendo ficar na versão atual, e o CI prova
+  # que a nova também funciona.
+  - package-ecosystem: composer
+    directory: /packages/foundation
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    versioning-strategy: widen
+    groups:
+      laravel:
+        patterns: ['laravel/*', 'spatie/*']
       dev:
         dependency-type: development
   - package-ecosystem: npm

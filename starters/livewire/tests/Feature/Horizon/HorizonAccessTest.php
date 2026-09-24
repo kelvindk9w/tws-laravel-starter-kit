@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Security\Middleware\EnsureAdminIpAllowed;
+use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 // =============================================================================
 // Acesso ao dashboard do Horizon (/horizon): SÓ

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Http\TrustedHosts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Http\TrustedHosts;
 
 // =============================================================================
 // QUAIS VALORES DE `Host` A APLICAÇÃO ACEITA

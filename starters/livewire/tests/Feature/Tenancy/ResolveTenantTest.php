@@ -6,9 +6,9 @@ use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // Middleware ResolveTenant: par pk_/sk_ no header → resolve o
 // tenant (dono da chave), vincula o request log, atualiza last_used_at

@@ -203,7 +203,7 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
     aqui. **Nunca** ponha o IP do load balancer na lista: todas as requisições
     chegam com ele e a barreira fica aberta para a internet inteira, parecendo
     configurada. A aplicação reconhece esse erro e avisa no log a cada boot.
-  - Regra, decisões e justificativas: `App\Core\Security\AdminIpAllowlist`.
+  - Regra, decisões e justificativas: `Twstec\Kit\Foundation\Security\AdminIpAllowlist`.
     Middleware: `EnsureAdminIpAllowed`.
 
 ## Dashboards: escolhendo e adaptando a sua variante

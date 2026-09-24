@@ -9,7 +9,7 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 
 // =============================================================================
-// LIMITE DA API POR CHAVE, NÃO POR IP (App\Core\Security\ApiRateLimit).
+// LIMITE DA API POR CHAVE, NÃO POR IP (Twstec\Kit\Foundation\Security\ApiRateLimit).
 //
 // Antes, o `throttle:api` rodava antes do `resolve.tenant` e contava sempre
 // por IP: duas integrações atrás do mesmo NAT dividiam o orçamento, e a mesma

@@ -13,8 +13,8 @@ declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
-use App\Core\Mail\MailPreview;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 it('traduz o assunto de todo e-mail nos três idiomas', function (string $slug): void {
     $subjects = collect(['pt_BR', 'en', 'es'])

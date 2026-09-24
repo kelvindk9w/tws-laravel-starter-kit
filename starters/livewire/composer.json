@@ -12,7 +12,8 @@
         "laravel/horizon": "^5.48",
         "laravel/tinker": "^3.0",
         "livewire/livewire": "^4.4",
-        "spatie/laravel-backup": "^10.3"
+        "spatie/laravel-backup": "^10.3",
+        "twstec/kit-foundation": "2.x-dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -32,8 +33,6 @@
             "Database\\Seeders\\": "database/seeders/"
         },
         "files": [
-            "app/Core/Support/helpers.php",
-            "app/Core/Settings/helpers.php",
             "app/Core/Tenancy/helpers.php",
             "app/Core/Auth/Mail/previews.php",
             "app/Core/ApiKeys/Mail/previews.php",
@@ -105,6 +104,18 @@
             "php": "8.4.24"
         }
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../../packages/foundation",
+            "options": {
+                "versions": {
+                    "twstec/kit-foundation": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        }
+    ],
     "minimum-stability": "stable",
     "prefer-stable": true
 }

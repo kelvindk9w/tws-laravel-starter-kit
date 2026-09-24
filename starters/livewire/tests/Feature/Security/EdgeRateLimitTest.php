@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // Limite de requisições da BORDA: antes, só o grupo
 // `api` tinha throttle — 20 de 20 `GET /` davam 200 e um flood anônimo de 404

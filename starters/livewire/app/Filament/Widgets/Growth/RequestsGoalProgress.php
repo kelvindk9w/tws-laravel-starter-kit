@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Growth;
 
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Widgets\Support\InteractsWithDashboardPeriod;
 use App\Filament\Widgets\Support\MetricFormat;
 use App\Filament\Widgets\Support\StatusPalette;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Meta do MÊS de requisições — a "progress metric" que todo dashboard de SaaS

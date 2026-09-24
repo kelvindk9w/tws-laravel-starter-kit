@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Money\Money;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Database\Seeders\ProductSeeder;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
@@ -13,6 +12,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Money\Money;
 
 use function Pest\Livewire\livewire;
 

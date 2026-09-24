@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Demo\Http\Controllers;
 
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Redactor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Redactor;
 
 /**
  * Landing "O Rastro" (/v2) — versão alternativa da home, para comparação

@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Filament\Widgets\Content\ContentStats;
 use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
@@ -19,6 +17,8 @@ use App\Filament\Widgets\Support\MetricStat;
 use App\Filament\Widgets\Support\Period;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // =============================================================================
 // A BASE reutilizável dos dashboards (app/Filament/Widgets/Support):

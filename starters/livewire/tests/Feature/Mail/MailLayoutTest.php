@@ -11,7 +11,7 @@ declare(strict_types=1);
 // catálogo é obrigado a passar pelo mesmo esqueleto.
 // =============================================================================
 
-use App\Core\Mail\MailPreview;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 it('renderiza todo e-mail do catálogo com o cabeçalho e o rodapé do kit', function (string $slug): void {
     $email = MailPreview::render($slug, 'pt_BR');

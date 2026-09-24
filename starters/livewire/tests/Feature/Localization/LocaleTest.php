@@ -6,10 +6,10 @@ use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Verification\Drivers\EmailVerificationDriver;
-use App\Core\Localization\Middleware\SetLocale;
 use App\Livewire\Profile;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // i18n: middleware SetLocale, rota de troca e preferência no perfil.
 // Prioridade: conta logada → cookie do visitante → padrão da plataforma.

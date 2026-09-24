@@ -9,10 +9,10 @@ use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyGenerator;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Auth\Models\User;
-use App\Core\Identifiers\UuidColumn;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Twstec\Kit\Foundation\Identifiers\UuidColumn;
 
 /**
  * Casos de uso do motor de API keys: criação, rotação e revogação.

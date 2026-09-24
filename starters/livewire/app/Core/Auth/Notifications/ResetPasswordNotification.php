@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Notifications;
 
-use App\Core\Mail\KitMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Twstec\Kit\Foundation\Mail\KitMailMessage;
 
 /**
  * E-mail de recuperação de senha (bug de QA #9).
@@ -32,7 +32,7 @@ use Illuminate\Notifications\Notification;
  * do job CRIPTOGRAFADO (ShouldBeEncrypted): o token de redefinição viaja
  * dentro dele, e o Horizon guarda payload de job concluído e falho no Redis (e
  * o exibe no /horizon), além da tabela `failed_jobs`. Um token em claro ali é
- * uma conta tomável por quem ler a fila. Ver App\Core\Mail\KitMailable.
+ * uma conta tomável por quem ler a fila. Ver Twstec\Kit\Foundation\Mail\KitMailable.
  */
 final class ResetPasswordNotification extends Notification implements ShouldBeEncrypted, ShouldQueue
 {

@@ -14,8 +14,8 @@ declare(strict_types=1);
 
 use App\Core\Auth\Enums\VerificationPurpose;
 use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Mail\MailPreview;
-use App\Core\Mail\PlainText;
+use Twstec\Kit\Foundation\Mail\MailPreview;
+use Twstec\Kit\Foundation\Mail\PlainText;
 
 it('gera uma versão em texto puro para todo e-mail do catálogo', function (string $slug): void {
     $email = MailPreview::render($slug, 'pt_BR');

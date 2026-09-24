@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Core\Auth\Console;
 
-use App\Core\Audit\AuditScope;
-use App\Core\Audit\AuditTrail;
 use App\Core\Auth\Exceptions\AccountProtectedException;
 use App\Core\Auth\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Twstec\Kit\Foundation\Audit\AuditScope;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
 
 /**
  * Promoção/rebaixamento de super admin (acesso ao /admin).

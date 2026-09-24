@@ -1,6 +1,6 @@
 # Segurança
 
-## A cadeia (bootstrap/app.php)
+## A cadeia (pacote foundation + bootstrap/app.php)
 
 Toda requisição atravessa, nesta ordem:
 
@@ -8,18 +8,23 @@ Toda requisição atravessa, nesta ordem:
 TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityValidation → RequestLogging → (api: resolve.tenant → throttle:api) → rota
 ```
 
-0. **TrustProxies** (`app/Core/Http/Middleware/`) — quem é o cliente. É a mais externa **de
+Os seis primeiros são a pilha global de segurança do pacote `twstec/kit-foundation`: o provider
+dele (`FoundationServiceProvider::GLOBAL_MIDDLEWARE`) os coloca **na frente** de toda a pilha
+global, nesta ordem, em qualquer aplicação que instale o pacote — o `bootstrap/app.php` do starter
+não os declara. A ordem é conferida por teste na suíte do pacote.
+
+0. **TrustProxies** (`packages/foundation/src/Http/Middleware/`) — quem é o cliente. É a mais externa **de
    propósito**: o `ip()` que o `RequestLogging` grava na trilha de auditoria e o que o
    `SecurityValidation` registra numa tentativa de ataque têm de ser o do cliente, não o do proxy.
    Logo depois do `SecurityHeaders` vem o **TrustHosts**, que recusa com 400 um `Host` fora da lista
    antes de qualquer coisa ler o host (e o 400 já sai com os headers de segurança). Ver *Proxies
    confiáveis e host confiável*, abaixo.
 
-1. **SecurityHeaders** (`app/Core/Security/Middleware/SecurityHeaders.php`) — o mais externo dos middlewares de segurança:
+1. **SecurityHeaders** (`packages/foundation/src/Security/Middleware/SecurityHeaders.php`) — o mais externo dos middlewares de segurança:
    `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP básica
    e HSTS (só sob HTTPS com `SECURITY_HSTS_ENABLED=true`, padrão em produção). Como é o primeiro,
    até respostas de bloqueio/erro saem com os headers. Valores em `config/security.php`.
-1b. **EdgeRateLimit** (`app/Core/Security/Middleware/EdgeRateLimit.php`) — **teto de requisições
+1b. **EdgeRateLimit** (`packages/foundation/src/Security/Middleware/EdgeRateLimit.php`) — **teto de requisições
    por cliente** para TUDO que chega ao PHP: páginas, updates do Livewire, `/admin`, `/up`, API e
    rotas inexistentes. Ver *Limite de requisições (rate limit)*, abaixo. Roda antes de todo trabalho
    caro (validação de host, varredura de ataque sobre o corpo, escrita na trilha): acima do limite,
@@ -41,7 +46,7 @@ TrustProxies → SecurityHeaders → EdgeRateLimit → TrustHosts → SecurityVa
      Acima do teto a requisição é **recusada com 413** e gravada como **BLOQUEADA** (`attack_type` =
      `payload_too_large`, payload só com o tamanho). O excedente não é aceito sem inspeção —
      inspecionar só o começo deixaria o ataque escondido no fim do corpo.
-3. **RequestLogging** (`app/Core/Logging/Middleware/RequestLogging.php`):
+3. **RequestLogging** (`packages/foundation/src/Logging/Middleware/RequestLogging.php`):
    - **No recebimento**: gera/propaga o `correlation_id` (UUID v7, **sempre gerado pelo
      servidor**; o `X-Correlation-Id` de entrada vai saneado para a coluna separada
      `client_correlation_id`) e grava o log **INICIADA imediatamente**, antes de qualquer
@@ -101,7 +106,7 @@ SECURITY_VALIDATION_MODE=block   # no .env; recrie os containers para o compose 
 Valor desconhecido (erro de digitação) é tratado como `block` — quem escreveu algo diferente do
 padrão pediu mudança, e o lado estreito é o seguro. O teto de inspeção (413) vale nos dois modos.
 
-**O que é inspecionado** (`App\Core\Security\RequestInputs`): query e corpo **separados** — a
+**O que é inspecionado** (`Twstec\Kit\Foundation\Security\RequestInputs`): query e corpo **separados** — a
 visão mesclada de `input()` deixava o corpo esconder a query de mesmo nome —, JSON aninhado e
 nomes de campo, nome e MIME declarados de cada arquivo (o conteúdo nunca é lido; o texto que
 acompanha um arquivo no mesmo array também é inspecionado), corpo não estruturado (texto puro,
@@ -182,11 +187,11 @@ de falha, a janela (`RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS`); a marca de cl
 requisição). A chave pública entra na chave do cache como impressão curta (hash), nunca o valor
 que o cliente mandou. **`/api/health`**, a rota da API sem autenticação, conta por IP no
 `throttle:api` (60/min), além da borda. A regra inteira está
-em `App\Core\Security\ApiRateLimit`.
+em `Twstec\Kit\Foundation\Security\ApiRateLimit`.
 
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
 a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
-(`App\Core\Security\ClientBucket`).
+(`Twstec\Kit\Foundation\Security\ClientBucket`).
 
 **A resposta.** Web: página 429 **traduzida** (pt-BR/en/es — cookie de idioma do visitante,
 depois `Accept-Language`, depois o padrão da plataforma), autossuficiente (sem CSS/JS do build,
@@ -220,7 +225,8 @@ anônimo virava escrita no banco na velocidade da rede. Agora:
   `EdgeRateLimit` que limita quantas linhas de tentativa um único cliente consegue gerar. Dentro do
   limite, todo ataque é detectado e gravado.
 
-Também: HTTPS forçado em produção (`URL::forceHttps()` no `AppServiceProvider`), CORS restritivo
+Também: HTTPS forçado em produção (`URL::forceHttps()` nas guardas de produção do pacote foundation —
+`ProductionHardening`, aplicadas pelo `FoundationServiceProvider` sem depender do aplicativo), CORS restritivo
 (`config/cors.php` — nenhuma origem liberada por padrão; `CORS_ALLOWED_ORIGINS` no `.env`).
 
 ## Na borda (nginx): só o `index.php` executa, e nenhuma versão é anunciada
@@ -265,7 +271,7 @@ proxy, e quatro coisas quebram de uma vez, em silêncio:
 significa *ninguém é confiável*: os headers de encaminhamento são ignorados e `ip()` é o endereço
 da conexão TCP. Pode estar **errado** atrás de proxy, mas não é **inseguro** — ninguém consegue se
 declarar outra pessoa. Por isso, ao contrário da allowlist do `/admin`, aqui a ausência **não**
-recusa o boot. A regra e o porquê de cada decisão estão em `app/Core/Http/TrustedProxies.php`.
+recusa o boot. A regra e o porquê de cada decisão estão em `packages/foundation/src/Http/TrustedProxies.php`.
 
 Vocabulário aceito: IP exato, faixa CIDR IPv4/IPv6, `private` (faixas privadas + loopback),
 `REMOTE_ADDR` (confia em quem conectar) e `*` (confia em qualquer origem — é **opt-out declarado**,
@@ -288,7 +294,7 @@ e grava aviso no log a cada boot em produção).
 # 2. Acesse qualquer página DE FORA (navegador/celular), não do servidor.
 # 3. Veja o que a aplicação entendeu da SUA requisição:
 docker compose exec app php artisan tinker
->>> \App\Core\Logging\Models\RequestLog::latest()->first()->only(['ip', 'endpoint'])
+>>> \Twstec\Kit\Foundation\Logging\Models\RequestLog::latest()->first()->only(['ip', 'endpoint'])
 ```
 
 O `ip` tem de ser o **seu IP público**. Se vier um endereço privado (`172.x`, `10.x`) ou o mesmo
@@ -348,7 +354,7 @@ nome (IP do WSL, `kit.test`), declare-o em `TRUSTED_HOSTS`.
 loopback: todo visitante leva 400, e a primeira recusa grava no log a causa e o conserto. É
 fail-closed de propósito — a instalação já está quebrada (todo link de e-mail aponta para
 localhost), e aceitar o host que o cliente mandar é justamente a vulnerabilidade fechada aqui. A
-regra está em `app/Core/Http/TrustedHosts.php`.
+regra está em `packages/foundation/src/Http/TrustedHosts.php`.
 
 *Se todo mundo levar 400 depois de um deploy*: a `APP_URL` não bate com o endereço que os visitantes
 usam. Corrija-a (ou declare `TRUSTED_HOSTS`) e reinicie os serviços PHP; o `/up` continua

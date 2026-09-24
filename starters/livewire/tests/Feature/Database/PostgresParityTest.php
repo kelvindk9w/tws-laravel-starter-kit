@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Services\ApiKeyService;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use App\Core\Tenancy\Models\Project;
 use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
@@ -20,6 +18,8 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // =============================================================================
 // PARIDADE COM O POSTGRESQL (banco de produção).

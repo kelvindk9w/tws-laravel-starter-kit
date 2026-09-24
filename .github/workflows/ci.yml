@@ -21,6 +21,12 @@
 # dentro (defaults.run.working-directory) e as imagens são construídas com
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
+#
+# PACOTES: o starter instala os pacotes de packages/ por path repository. A
+# suíte de cada pacote (isolada, com Orchestra Testbench) roda como PASSOS
+# dentro dos jobs de teste — não é check novo —, e o Pint confere o pacote no
+# mesmo job que confere o starter. A imagem do app recebe a pasta packages/
+# como contexto de build nomeado (`packages`).
 name: CI
 
 on:
@@ -95,6 +101,20 @@ jobs:
       - name: Estilo (Pint)
         run: ./vendor/bin/pint --test
 
+      # Pacote twstec/kit-foundation: é biblioteca, sem composer.lock — a suíte
+      # roda contra as versões mais novas que as restrições dele aceitam.
+      - name: Pacote foundation · dependências
+        working-directory: packages/foundation
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote foundation · estilo (Pint)
+        working-directory: packages/foundation
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote foundation · testes (Pest)
+        working-directory: packages/foundation
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -160,6 +180,14 @@ jobs:
       - name: Testes (Pest · SQLite)
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote foundation · dependências
+        working-directory: packages/foundation
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote foundation · testes (Pest)
+        working-directory: packages/foundation
+        run: ./vendor/bin/pest --ci
+
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
   #
@@ -191,8 +219,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           # Contexto = o starter; o Dockerfile da matriz é relativo a ele.
+          # A pasta packages/ entra como contexto nomeado: o estágio do
+          # composer da imagem do app instala os pacotes do kit a partir dela.
           context: starters/livewire
           file: starters/livewire/${{ matrix.dockerfile }}
+          build-contexts: |
+            packages=packages
           target: prod
           push: false
           load: ${{ matrix.image == 'app' }}
@@ -213,5 +245,12 @@ jobs:
               if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
             done
             test -z "$(find /var/www/html/storage -type f)"
+            # Pacote do kit COPIADO para o vendor (nunca link para fora da
+            # imagem) e sem o que é de desenvolvimento dele.
+            test -d vendor/twstec/kit-foundation/src
+            test ! -L vendor/twstec/kit-foundation
+            for proibido in tests vendor composer.lock phpunit.xml; do
+              if [ -e "vendor/twstec/kit-foundation/$proibido" ]; then echo "no pacote: $proibido"; exit 1; fi
+            done
             php artisan --version
           '

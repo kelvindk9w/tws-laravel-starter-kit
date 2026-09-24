@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes do kit. Vazia por enquanto: os pacotes entram nas próximas fases. |
+| [`packages/`](packages) | Os pacotes de backend do kit. Já extraído: [`foundation`](packages/foundation) (`twstec/kit-foundation`). Os demais entram nas próximas fases. |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -62,8 +62,12 @@ Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
 git clone <repo> meu-projeto && cd meu-projeto/starters/livewire
 cp .env.example .env
 
-# 1) Dependências PHP (roda em container, nada local)
-docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app composer:latest composer install --no-interaction
+# 1) Dependências PHP (roda em container, nada local). Monta a RAIZ do
+#    repositório: o starter instala os pacotes de packages/ por path
+#    repository (../../packages/…). A imagem do Composer não tem as extensões
+#    pcntl, intl e bcmath; quem confere as extensões de verdade é o build da
+#    imagem de produção (composer check-platform-reqs contra o PHP dela).
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(cd ../.. && pwd):/repo -w /repo/starters/livewire composer:latest composer install --no-interaction --ignore-platform-req=ext-pcntl --ignore-platform-req=ext-intl --ignore-platform-req=ext-bcmath
 
 # 2) Subir a stack
 #    Os containers de dev rodam com o uid/gid do SEU usuário (padrão 1000),
@@ -208,7 +212,10 @@ herdar o kit ou para a infraestrutura em volta dele:
 ```
 docker-compose.yml       # DESENVOLVIMENTO (raiz do monorepo)
 docs/                    # documentação por assunto (ver a tabela acima)
-packages/                # pacotes do kit (entram nas próximas fases)
+packages/                # pacotes do kit (ver packages/README.md):
+  foundation/            # twstec/kit-foundation — segurança, trilhas de
+                         # requisição e auditoria, e-mail, idioma, dinheiro,
+                         # identificadores, configs editáveis, plataforma
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
@@ -220,10 +227,9 @@ starters/livewire/       # o aplicativo:
   config/platform.php      # config centralizada da plataforma (nada hardcoded)
   lang/{pt_BR,en,es}/      # traduções (pt-BR é o idioma padrão)
   app/
-    Core/    # tudo que é genérico e reutilizável: Auth, ApiKeys, Tenancy,
-             # Security, Logging, Uploads, Money, Identifiers, Http/Resources,
-             # Settings (configs editáveis pelo admin), Support (Platform +
-             # helpers globais)
+    Core/    # módulos de backend que ainda não viraram pacote: Auth,
+             # ApiKeys, Tenancy, Uploads (a base — segurança, trilhas,
+             # e-mail, Settings, Support… — já é o pacote foundation)
     Livewire/   # painel do usuário
     Filament/   # super admin /admin
     Domain/  # regras de negócio do projeto filho

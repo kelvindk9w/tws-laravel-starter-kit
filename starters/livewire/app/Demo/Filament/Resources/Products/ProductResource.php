@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Resources\Products;
 
-use App\Core\Money\Money;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
@@ -29,6 +28,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
+use Twstec\Kit\Foundation\Money\Money;
 
 /**
  * Produtos (super admin — vitrine demonstrativa do CRUD do kit).

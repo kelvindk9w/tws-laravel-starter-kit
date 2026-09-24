@@ -246,8 +246,6 @@ return [
         'filter_from' => 'De',
         'filter_until' => 'Até',
         'view_actions' => 'Ações auditadas desta requisição',
-        'prune_disabled' => 'Poda da trilha de auditoria desligada (AUDIT_RETENTION_DAYS=0).',
-        'pruned' => ':count evento(s) de auditoria com mais de :days dias removido(s).',
         'type_user' => 'Usuário',
         'type_api_key' => 'Chave de API',
         'type_project' => 'Projeto',

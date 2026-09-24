@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\Auth\Mail;
 
 use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Mail\KitMailable;
+use Twstec\Kit\Foundation\Mail\KitMailable;
 
 /**
  * E-mail com o código de verificação (2FA por e-mail).

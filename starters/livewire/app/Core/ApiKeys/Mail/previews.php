@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use App\Core\ApiKeys\Mail\ApiKeyInactivityWarningMail;
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Mail\MailPreview;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 // =============================================================================
 // E-mails do módulo de chaves de API na galeria /mail-preview (ver
-// App\Core\Mail\MailPreview). Carregado via composer.json → autoload.files.
+// Twstec\Kit\Foundation\Mail\MailPreview). Carregado via composer.json → autoload.files.
 //
 // A chave de exemplo NÃO é salva: é pré-visualização, não seed.
 // =============================================================================

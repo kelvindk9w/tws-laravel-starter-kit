@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Core\Auth\Contracts\AccountProtection;
 use App\Core\Auth\Contracts\LoginPrefillProvider;
 use App\Core\Auth\Models\User;
-use App\Core\Mail\Contracts\MailPreviewGate;
 use App\Demo\Accounts\DemoAccountProtection;
 use App\Demo\Accounts\DemoLoginPrefill;
 use App\Demo\Database\Seeders\DemoSeeder;
@@ -27,6 +26,7 @@ use Filament\Resources\Resource;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate;
 
 // =============================================================================
 // A FRONTEIRA DA DEMONSTRAÇÃO, vista do lado da demo.

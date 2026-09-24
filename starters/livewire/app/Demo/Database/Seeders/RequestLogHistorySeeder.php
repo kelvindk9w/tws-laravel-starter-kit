@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Demo\Database\Seeders;
 
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Logging\Redactor;
 use App\Demo\Support\DemoSurface;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Logging\Redactor;
 
 /**
  * O passado ANTERIOR aos 30 dias do RequestLogSeeder (que este arquivo NÃO

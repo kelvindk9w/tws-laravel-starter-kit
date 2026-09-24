@@ -2,7 +2,7 @@
 
 ## Redaction (LGPD)
 
-`App\Core\Logging\Redactor` mascara antes de persistir:
+`Twstec\Kit\Foundation\Logging\Redactor` mascara antes de persistir:
 
 - chaves sensíveis por nome exato (`password`, `token`, `api_key`, `secret`, `authorization`,
   `card_number`, `cvv`...) ou sufixo (`_token`, `_secret`, `_password`, `_api_key`) → `[REDACTED]`;
@@ -83,7 +83,7 @@ ESTA ação (`action`).
 **Como a gravação é central.** `App\Filament\Support\AdminAudit` se pendura no gancho `call` do
 Livewire: toda chamada de componente do painel (o "Criar"/"Salvar" das páginas, toda Action de
 tabela, cabeçalho ou modal) roda com um escopo de auditoria aberto — contexto, quem está logado,
-correlação, IP e User-Agent. Enquanto ele está aberto, `App\Core\Audit\AuditTrail` grava cada
+correlação, IP e User-Agent. Enquanto ele está aberto, `Twstec\Kit\Foundation\Audit\AuditTrail` grava cada
 `created`/`updated`/`deleted` de model Eloquent. Um resource novo, portanto, já nasce auditado,
 sem nenhuma linha de código de auditoria. O verbo sai do nome da Action (`block` → `blocked`,
 `revoke` → `revoked`; nome fora do mapa vira snake_case) ou, no CRUD, do evento do model. O teste
@@ -106,7 +106,7 @@ fluxo de confirmação (o que se audita é o resultado, ex.: `user.two_factor_en
 fora o que não é ação do painel: a troca de idioma (rota própria, preferência da própria conta) e
 as telas de login.
 
-**Redação do `changes` (LGPD).** `App\Core\Audit\AuditChanges`:
+**Redação do `changes` (LGPD).** `Twstec\Kit\Foundation\Audit\AuditChanges`:
 
 - **segredo → `[REDACTED]`**: todo campo que o Redactor trata como segredo (`password`, `token`,
   `code`, `api_key`...), todo campo cujo nome contenha `password`/`secret`/`token`/`hash`/`pepper`/

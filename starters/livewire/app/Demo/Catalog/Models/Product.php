@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Demo\Catalog\Models;
 
-use App\Core\Identifiers\RoutesByUuid;
-use App\Core\Money\MoneyAsCents;
 use App\Demo\Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
+use Twstec\Kit\Foundation\Money\MoneyAsCents;
 
 /**
  * Produto da vitrine (CRUD demonstrativo do super admin).
  *
  * - price: inteiro em centavos (cast MoneyAsCents — NUNCA float; formatar
- *   só na borda com App\Core\Money\Money::format).
+ *   só na borda com Twstec\Kit\Foundation\Money\Money::format).
  * - image: caminho no disk public (upload do painel) ou URL externa
  *   completa — imageUrl() resolve os dois. Rotas e buscas usam o uuid.
  */

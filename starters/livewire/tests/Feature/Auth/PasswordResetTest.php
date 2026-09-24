@@ -121,7 +121,7 @@ it('renderiza o e-mail de reset no idioma da conta', function (string $locale, s
 
     expect($mail->subject)->toBe(__('mail.password_reset.subject', ['platform' => platform()->name]));
 
-    // O corpo agora é a view do layout único do kit (App\Core\Mail), e não
+    // O corpo agora é a view do layout único do kit (Twstec\Kit\Foundation\Mail), e não
     // mais as linhas montadas pelo MailMessage do framework: o texto sai do
     // HTML renderizado.
     $texto = view($mail->view[0], $mail->viewData)->render();

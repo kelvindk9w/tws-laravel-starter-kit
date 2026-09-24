@@ -246,8 +246,6 @@ return [
         'filter_from' => 'Desde',
         'filter_until' => 'Hasta',
         'view_actions' => 'Acciones auditadas de esta solicitud',
-        'prune_disabled' => 'La depuración del registro de auditoría está desactivada (AUDIT_RETENTION_DAYS=0).',
-        'pruned' => ':count evento(s) de auditoría con más de :days días eliminado(s).',
         'type_user' => 'Usuario',
         'type_api_key' => 'Clave de API',
         'type_project' => 'Proyecto',

@@ -5,7 +5,7 @@
      da esquerda para a direita e, atrás dela, o valor volta JÁ REDIGIDO.
 
      O que aparece não é uma imitação: os payloads são mocados, mas passaram
-     pelo App\Core\Logging\Redactor DE VERDADE no controller — é a saída da
+     pelo Twstec\Kit\Foundation\Logging\Redactor DE VERDADE no controller — é a saída da
      classe que roda em produção. Por isso a legenda consegue dizer QUAL regra
      agiu em cada campo: quem decidiu foi o código, não o designer.
 

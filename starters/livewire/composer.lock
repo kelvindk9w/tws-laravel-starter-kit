@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "40869fa3aa1c5816845097eb8eb9639f",
+    "content-hash": "3aee7d1f322a466c6db90f695f1d41a5",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8467,6 +8467,75 @@
             "time": "2025-12-02T11:56:42+00:00"
         },
         {
+            "name": "twstec/kit-foundation",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/foundation",
+                "reference": "bb5012f4d5aa2ff178d8681bea118e6713d4ee53"
+            },
+            "require": {
+                "ext-bcmath": "*",
+                "ext-mbstring": "*",
+                "laravel/framework": "^13.17",
+                "php": "^8.4",
+                "spatie/laravel-backup": "^10.3"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Foundation\\FoundationServiceProvider",
+                        "Twstec\\Kit\\Foundation\\Audit\\Providers\\AuditServiceProvider",
+                        "Twstec\\Kit\\Foundation\\Mail\\Providers\\MailServiceProvider",
+                        "Twstec\\Kit\\Foundation\\Settings\\Providers\\SettingsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Foundation\\": "src/"
+                },
+                "files": [
+                    "src/Compat/legacy-aliases.php",
+                    "src/Support/helpers.php",
+                    "src/Settings/helpers.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Foundation\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Base de segurança e infraestrutura do TWS Laravel Starter Kit: filtro de ataques, limites, cabeçalhos, hosts e proxies, trilha de requisições e de auditoria com redação LGPD, identificadores, dinheiro, idioma, configurações no banco, e-mail e guarda de segredos e de backup.",
+            "keywords": [
+                "audit",
+                "laravel",
+                "lgpd",
+                "security",
+                "starter-kit"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "ueberdosis/tiptap-php",
             "version": "2.2.0",
             "source": {
@@ -12202,7 +12271,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "twstec/kit-foundation": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Demo\Showcase\Models;
 
-use App\Core\Identifiers\RoutesByUuid;
 use App\Demo\Database\Factories\FormSubmissionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Submissão de formulário (forms demo do /ui + contato real da landing).

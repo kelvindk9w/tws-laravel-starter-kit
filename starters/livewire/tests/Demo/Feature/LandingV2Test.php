@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Redactor;
-use App\Core\Support\Platform;
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Redactor;
+use Twstec\Kit\Foundation\Support\Platform;
 
 // =============================================================================
 // Landing alternativa "O Rastro" (/v2) — valida CONTEÚDO, não só status.

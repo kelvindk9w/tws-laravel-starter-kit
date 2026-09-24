@@ -7,6 +7,12 @@
 # starters/livewire e é montado por volume; o .env dele é o
 # starters/livewire/.env. A porta 8181 fica reservada para o starter React.
 #
+# Os PACOTES do kit (packages/) são montados em /var/packages nos containers
+# PHP (app, queue, scheduler): o composer.json do starter os instala por path
+# repository, `../../packages/<pacote>`, e o vendor/ guarda um link para lá —
+# que, visto de /var/www/html, é exatamente /var/packages. Edição no pacote
+# vale na hora, sem reinstalar.
+#
 #   export UID GID=$(id -g)
 #   docker compose up -d --build
 #   docker compose exec app php artisan migrate
@@ -41,6 +47,9 @@ services:
     env_file: ./starters/livewire/.env
     volumes:
       - ./starters/livewire:/var/www/html
+      # Pacotes do kit: o starter os instala por path repository
+      # (`../../packages/…` a partir de /var/www/html = /var/packages).
+      - ./packages:/var/packages
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,6 +127,9 @@ services:
     command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
     volumes:
       - ./starters/livewire:/var/www/html
+      # Pacotes do kit: o starter os instala por path repository
+      # (`../../packages/…` a partir de /var/www/html = /var/packages).
+      - ./packages:/var/packages
     depends_on:
       - app
       - redis
@@ -139,6 +151,9 @@ services:
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
       - ./starters/livewire:/var/www/html
+      # Pacotes do kit: o starter os instala por path repository
+      # (`../../packages/…` a partir de /var/www/html = /var/packages).
+      - ./packages:/var/packages
     depends_on:
       - app
     networks:

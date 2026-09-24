@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\CardNumberMaskingFormatter;
-use App\Core\Logging\MaskCardNumbersInLogs;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Support\Platform;
 use App\Demo\Contact\Mail\ContactMessageMail;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Demo\Showcase\Support\FormSubmissionGuard;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Foundation\Logging\CardNumberMaskingFormatter;
+use Twstec\Kit\Foundation\Logging\MaskCardNumbersInLogs;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Support\Platform;
 
 // Número de cartão (PAN) nunca é persistido em claro (PCI DSS req. 3): nem
 // na trilha (request_logs), nem em form_submissions, nem no e-mail/fila do

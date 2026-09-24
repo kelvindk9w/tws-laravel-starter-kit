@@ -6,12 +6,12 @@ namespace App\Core\Auth\Notifications;
 
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Support\EmailVerification;
-use App\Core\Mail\KitMailMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Twstec\Kit\Foundation\Mail\KitMailMessage;
 
 /**
  * E-mail de verificação do cadastro.

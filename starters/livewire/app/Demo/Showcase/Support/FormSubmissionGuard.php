@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Demo\Showcase\Support;
 
-use App\Core\Logging\Redactor;
-use App\Core\Security\AttackDetector;
 use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Log;
+use Twstec\Kit\Foundation\Logging\Redactor;
+use Twstec\Kit\Foundation\Security\AttackDetector;
 
 /**
  * Guarda da camada de formulário dos forms demo do /ui (vitrine de

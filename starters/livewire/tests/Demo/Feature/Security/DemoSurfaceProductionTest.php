@@ -14,8 +14,8 @@ use App\Demo\Database\Seeders\RequestLogSeeder;
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Demo\Support\DemoSurface;
 use App\Demo\Support\Exceptions\DemoSurfaceInProductionException;
-use App\Providers\AppServiceProvider;
 use Database\Seeders\DatabaseSeeder;
+use Twstec\Kit\Foundation\FoundationServiceProvider;
 
 // =============================================================================
 // SUPERFÍCIE DE DEMONSTRAÇÃO — FAIL-CLOSED EM PRODUÇÃO
@@ -168,7 +168,7 @@ it('o login do super admin não pré-preenche credenciais demo em produção', f
     // Produção BEM CONFIGURADA: o que está sob teste aqui são as credenciais
     // demo na tela, não a barreira de origem. Sem allowlist declarada, o
     // /admin recusa antes de renderizar qualquer tela (ver
-    // App\Core\Security\AdminIpAllowlist e AdminIpAllowlistTest) — e então
+    // Twstec\Kit\Foundation\Security\AdminIpAllowlist e AdminIpAllowlistTest) — e então
     // este teste passaria por um 403, provando outra coisa.
     config()->set('security.admin.allowed_ips', ['127.0.0.1']);
 
@@ -275,7 +275,7 @@ it('força APP_DEBUG desligado quando o ambiente é produção', function (): vo
     simulaProducao();
     config()->set('app.debug', true);
 
-    (new AppServiceProvider(app()))->boot();
+    (new FoundationServiceProvider(app()))->boot();
 
     expect(config('app.debug'))->toBeFalse();
 });

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Uploads\Http\Resources;
 
-use App\Core\Http\Resources\BaseResource;
 use App\Core\Uploads\Models\Upload;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Http\Resources\BaseResource;
 
 /**
  * Retorno padronizado do upload (sempre via Resource, nunca o model cru): uuid, código público, path,

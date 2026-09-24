@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // GET /api/health — saúde da aplicação via BaseResource.
 // Decisão: EXCLUÍDO do request log em banco para não poluir a trilha

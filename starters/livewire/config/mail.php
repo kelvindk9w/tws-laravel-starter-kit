@@ -123,7 +123,7 @@ return [
     | Ferramenta de DESENVOLVIMENTO: mostra cada e-mail transacional nos três
     | idiomas, claro/escuro, em HTML e texto. Padrão ligado só em
     | APP_ENV=local; em produção a galeria responde 404 mesmo com a flag
-    | ligada (App\Core\Mail\Support\ConfiguredMailPreviewGate).
+    | ligada (Twstec\Kit\Foundation\Mail\Support\ConfiguredMailPreviewGate).
     |
     */
 

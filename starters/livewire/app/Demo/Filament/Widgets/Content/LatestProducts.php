@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Widgets\Content;
 
-use App\Core\Money\Money;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\ProductResource;
 use App\Filament\Widgets\Support\BaseLatestRecordsWidget;
@@ -15,6 +14,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Twstec\Kit\Foundation\Money\Money;
 
 /**
  * Últimos produtos cadastrados, com miniatura e preço.

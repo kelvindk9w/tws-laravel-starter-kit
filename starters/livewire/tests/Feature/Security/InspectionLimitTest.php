@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Security\AttackDetector;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Security\AttackDetector;
 
 // Teto de bytes inspecionados pelo AttackDetector: a detecção roda
 // antes da autenticação, então sem teto qualquer anônimo comprava regex sobre

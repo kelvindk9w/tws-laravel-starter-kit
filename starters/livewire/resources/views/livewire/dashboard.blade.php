@@ -1,5 +1,5 @@
 @php
-    use App\Core\Logging\Enums\RequestLogStatus;
+    use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 
     $timezone = platform()->displayTimezone;
 @endphp

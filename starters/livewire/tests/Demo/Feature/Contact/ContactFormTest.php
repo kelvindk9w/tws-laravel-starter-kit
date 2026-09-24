@@ -3,13 +3,13 @@
 declare(strict_types=1);
 
 use App\Core\Auth\Models\User;
-use App\Core\Localization\Middleware\SetLocale;
-use App\Core\Support\Platform;
 use App\Demo\Contact\Mail\ContactMessageMail;
 use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
+use Twstec\Kit\Foundation\Support\Platform;
 
 // Formulário de contato da landing: validação server-side, honeypot,
 // rate limit (throttle:sensitive) e e-mail enfileirado (Mailpit em dev).

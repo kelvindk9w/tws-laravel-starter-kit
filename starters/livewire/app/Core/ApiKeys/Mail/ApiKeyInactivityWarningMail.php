@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Core\ApiKeys\Mail;
 
 use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Mail\KitMailable;
+use Twstec\Kit\Foundation\Mail\KitMailable;
 
 /**
  * Aviso PRÉVIO de expiração por inatividade: enviado Y dias antes

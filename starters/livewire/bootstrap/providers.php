@@ -1,9 +1,6 @@
 <?php
 
-use App\Core\Audit\Providers\AuditServiceProvider;
 use App\Core\Auth\Providers\AuthServiceProvider;
-use App\Core\Mail\Providers\MailServiceProvider;
-use App\Core\Settings\Providers\SettingsServiceProvider;
 use App\Core\Tenancy\Providers\TenancyServiceProvider;
 use App\Demo\Providers\DemoServiceProvider;
 use App\Providers\AppServiceProvider;
@@ -11,10 +8,10 @@ use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
 
 return [
-    AuditServiceProvider::class,
+    // Os providers da base do kit (auditoria, e-mail, configurações
+    // editáveis e a pilha de segurança) vêm do pacote twstec/kit-foundation,
+    // pela descoberta automática de pacotes do Laravel.
     AuthServiceProvider::class,
-    MailServiceProvider::class,
-    SettingsServiceProvider::class,
     TenancyServiceProvider::class,
     AppServiceProvider::class,
     AdminPanelProvider::class,

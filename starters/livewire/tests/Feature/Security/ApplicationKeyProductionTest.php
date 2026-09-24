@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Core\Support\CriticalSecrets;
-use App\Core\Support\Exceptions\MissingApplicationKeyException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Twstec\Kit\Foundation\Support\CriticalSecrets;
+use Twstec\Kit\Foundation\Support\Exceptions\MissingApplicationKeyException;
 
 // =============================================================================
 // CHAVE DA APLICAÇÃO E SEGREDOS DE PLACEHOLDER — FAIL-CLOSED EM PRODUÇÃO

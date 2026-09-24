@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Overview;
 
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Widgets\Support\BaseCompositionWidget;
 use App\Filament\Widgets\Support\ChartSlice;
 use App\Filament\Widgets\Support\Period;
 use App\Filament\Widgets\Support\StatusPalette;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * De que é feito o tráfego do período: sucesso, redirecionamento, erro do

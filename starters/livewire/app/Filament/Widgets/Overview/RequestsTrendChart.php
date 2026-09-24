@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Overview;
 
-use App\Core\Logging\Models\RequestLog;
 use App\Filament\Widgets\Support\BaseTimeSeriesWidget;
 use App\Filament\Widgets\Support\ChartSeries;
 use App\Filament\Widgets\Support\Metric;
@@ -12,6 +11,7 @@ use App\Filament\Widgets\Support\Period;
 use App\Filament\Widgets\Support\StatusPalette;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Tráfego da plataforma no período, com a linha de ERRO por cima: é o gráfico

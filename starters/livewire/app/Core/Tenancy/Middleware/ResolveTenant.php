@@ -7,14 +7,14 @@ namespace App\Core\Tenancy\Middleware;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
 use App\Core\Auth\Support\EmailVerification;
-use App\Core\Logging\Models\RequestLog;
-use App\Core\Security\ApiRateLimit;
 use App\Core\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Foundation\Security\ApiRateLimit;
 
 /**
  * Resolve o TENANT a partir das credenciais de API no header.

@@ -246,8 +246,6 @@ return [
         'filter_from' => 'From',
         'filter_until' => 'Until',
         'view_actions' => 'Audited actions of this request',
-        'prune_disabled' => 'Audit trail pruning is disabled (AUDIT_RETENTION_DAYS=0).',
-        'pruned' => ':count audit event(s) older than :days days removed.',
         'type_user' => 'User',
         'type_api_key' => 'API key',
         'type_project' => 'Project',

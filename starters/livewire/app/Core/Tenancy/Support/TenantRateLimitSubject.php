@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy\Support;
 
-use App\Core\Security\ApiRateLimit;
-use App\Core\Security\Contracts\RateLimitSubjectResolver;
 use App\Core\Tenancy\TenantContext;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Security\ApiRateLimit;
+use Twstec\Kit\Foundation\Security\Contracts\RateLimitSubjectResolver;
 
 /**
  * O sujeito do limite da API numa requisição autenticada pelo

@@ -7,6 +7,25 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Alterado
+- **Primeiro pacote: `twstec/kit-foundation`** (`packages/foundation`). A base
+  de segurança e infraestrutura — filtro de ataques, limites, cabeçalhos,
+  hosts e proxies, trilhas de requisição e de auditoria, e-mail, idioma,
+  dinheiro, identificadores, configurações editáveis, guarda de segredos e de
+  backup — saiu de `app/Core` para o pacote, que o starter instala por path
+  repository. O comportamento é o mesmo: a pilha de segurança continua na
+  frente de tudo, na mesma ordem (agora instalada pelo provider do pacote), e
+  as migrations mantêm os nomes, então nenhum banco vê migration pendente.
+  As classes passam a `Twstec\Kit\Foundation\<Módulo>\…`; os nomes antigos
+  `App\Core\<Módulo>\…` continuam resolvendo até a 3.0 (tabela em
+  `packages/foundation/README.md`). Mensagens de log e de erro que citam uma
+  classe da base passam a citar o nome novo.
+- As guardas de produção (recusa sem `APP_KEY`, HTTPS, `APP_DEBUG` desligado,
+  avisos dos opt-outs) e os limitadores `api` e `sensitive` passam a ser
+  aplicados pelo pacote sozinho, em qualquer aplicação que o instale; saíram
+  do `AppServiceProvider`. Desligar é opt-out explícito
+  (`SECURITY_PRODUCTION_GUARDS=false`, `RATE_LIMIT_DEFINE_LIMITERS=false`), com
+  aviso no log em produção. Nas traduções, o `lang/` do aplicativo vence o do
+  pacote na mesma chave.
 - **O repositório virou monorepo.** O aplicativo foi para `starters/livewire/`
   (histórico preservado); a raiz guarda o CI, a documentação (`docs/`), o
   `docker-compose.yml` de desenvolvimento e `packages/`, que recebe os pacotes
@@ -31,6 +50,12 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
    clone com outro nome de pasta, defina `COMPOSE_PROJECT_NAME` com o nome
    antigo para reaproveitar os volumes.
 4. `php artisan migrate` (há uma migration nova da demo) e `npm run build`.
+5. Instalar as dependências PHP de novo, montando a **raiz** do repositório no
+   container do Composer (o starter instala `packages/foundation` por path
+   repository — ver o README) e subir com `docker compose up -d --build` (os
+   containers PHP passam a montar `packages/` em `/var/packages`). Quem tinha
+   código próprio usando `App\Core\<Módulo da base>\…` continua funcionando
+   pelos apelidos; troque os `use` antes da 3.0.
 
 ## [1.1.0] — 2026-09-25
 

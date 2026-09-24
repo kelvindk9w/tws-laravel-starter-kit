@@ -7,10 +7,10 @@ namespace App\Core\Tenancy\Queries;
 use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Models\RequestLog;
 use App\Core\Tenancy\Models\Project;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Visão geral da conta (o dashboard do cliente): chaves, projetos e o

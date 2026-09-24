@@ -7,12 +7,12 @@ use App\Core\Auth\Mail\VerificationCodeMail;
 use App\Core\Auth\Models\User;
 use App\Core\Auth\Notifications\ResetPasswordNotification;
 use App\Core\Auth\Notifications\VerifyEmailNotification;
-use App\Core\Mail\MailPreview;
 use Illuminate\Notifications\Messages\MailMessage;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 // =============================================================================
 // E-mails do módulo de autenticação na galeria /mail-preview (ver
-// App\Core\Mail\MailPreview). Carregado via composer.json → autoload.files.
+// Twstec\Kit\Foundation\Mail\MailPreview). Carregado via composer.json → autoload.files.
 //
 // Os modelos de exemplo NÃO são salvos: é pré-visualização, não seed.
 // =============================================================================

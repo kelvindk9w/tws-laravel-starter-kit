@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 use App\Core\Auth\Enums\UserStatus;
 use App\Core\Auth\Models\User;
-use App\Core\Security\AdminIpAllowlist;
-use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Http\Middleware\Authenticate;
+use Twstec\Kit\Foundation\Security\AdminIpAllowlist;
+use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 // =============================================================================
 // BARREIRA DE ORIGEM DAS SUPERFÍCIES ADMINISTRATIVAS (/admin e /horizon)

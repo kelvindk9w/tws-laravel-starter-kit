@@ -7,20 +7,14 @@ use App\Core\ApiKeys\Http\Middleware\EnsureApiKeyScope;
 use App\Core\Auth\Http\Middleware\EnsureAccountIsActive;
 use App\Core\Auth\Http\Middleware\EnsureEmailIsVerified;
 use App\Core\Auth\Http\Middleware\RequiresSensitiveActionToken;
-use App\Core\Http\Exceptions\ApiErrorRenderer;
-use App\Core\Http\Middleware\TrustHosts;
-use App\Core\Http\Middleware\TrustProxies;
-use App\Core\Localization\Middleware\SetLocale;
-use App\Core\Logging\Middleware\RequestLogging;
-use App\Core\Security\Middleware\EdgeRateLimit;
-use App\Core\Security\Middleware\SecurityHeaders;
-use App\Core\Security\Middleware\SecurityValidation;
 use App\Core\Tenancy\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer;
+use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,59 +24,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Pipeline global, nesta ordem:
-        // 0º TrustProxies (quem pode dizer QUEM É O CLIENTE — ver abaixo);
-        // 1º SecurityHeaders (até respostas de bloqueio/erro carregam os
-        //    headers de segurança — inclusive o 400 de host recusado);
-        // 1ºb EdgeRateLimit (TETO de requisições por cliente — IP ou prefixo
-        //    IPv6 — para TUDO que chega ao PHP: páginas, Livewire, /admin, /up,
-        //    API e rotas inexistentes). Vem depois do TrustProxies (precisa do
-        //    IP real) e do SecurityHeaders (o 429 sai com os headers), e ANTES
-        //    de todo trabalho caro: host, varredura de ataque sobre o corpo e
-        //    INSERT/UPDATE na trilha. Acima do limite o corpo nem é lido. Ver
-        //    App\Core\Security\Middleware\EdgeRateLimit;
-        // 1ºc TrustHosts (quais valores de `Host` são aceitos — ver abaixo);
-        // 2º SecurityValidation (PRIMEIRA validação de payload: rejeita
-        //    conteúdo malicioso antes de qualquer outro processamento,
-        //    registrando a tentativa);
-        // 3º RequestLogging (INICIADA imediato → CONCLUIDA/ERRO no terminate).
-        //    Global de propósito: middleware de grupo NÃO executa em rota não
-        //    encontrada, e requisições para endpoints inexistentes são exatamente
-        //    o sinal de varredura/ataque que precisa ficar registrado. Cobre
-        //    API + web autenticada + /admin; exclusões e resumos (assets,
-        //    health checks, updates Livewire) em config/security.php.
-        //
-        // TrustProxies e TrustHosts entram JUNTAS de propósito: declarar proxy
-        // confiável é o que faz o `X-Forwarded-Host` (e, atrás de CDN, o próprio
-        // `Host`) virar open redirect real — a validação de host é o que tranca
-        // o que passava por ali. Toda a regra e a justificativa moram em
-        // App\Core\Http\TrustedProxies e App\Core\Http\TrustedHosts.
-        //
-        // TrustProxies É A MAIS EXTERNA DE TODAS. Na posição padrão do
-        // framework ela rodaria DEPOIS dos middlewares do kit, e aí o `ip()` que
-        // o RequestLogging grava na trilha de auditoria e o que o
-        // SecurityValidation registra numa tentativa de ataque ainda seriam o
-        // endereço do PROXY. Ela também precisa vir antes do TrustHosts, porque
-        // é ela que decide se um `X-Forwarded-Host` entra no host validado, e
-        // antes do SecurityHeaders, que só envia HSTS sob HTTPS detectado.
-        //
-        // TrustHosts vem logo depois do SecurityHeaders (para o 400 sair com os
-        // headers) e ANTES de tudo que lê o host — SecurityValidation,
-        // RequestLogging, sessão, rotas: a requisição com host forjado para ali.
-        $middleware->prepend(RequestLogging::class);
-        $middleware->prepend(SecurityValidation::class);
-        $middleware->prepend(TrustHosts::class);
-        $middleware->prepend(EdgeRateLimit::class);
-        $middleware->prepend(SecurityHeaders::class);
-        $middleware->prepend(TrustProxies::class);
-
-        // As duas são subclasses do middleware do framework porque a
-        // declaração precisa ser LIDA DE CONFIGURAÇÃO, e este closure roda antes
-        // de a configuração existir (`config()` aqui estoura) — por isso não se
-        // usa `trustProxies(at:)`/`trustHosts(at:)`. Ver o docblock de
-        // App\Core\Http\Middleware\TrustProxies. O `replace` impede que a
-        // versão do framework rode também (ela está na lista global padrão).
-        $middleware->replace(Illuminate\Http\Middleware\TrustProxies::class, TrustProxies::class);
+        // A PILHA GLOBAL DE SEGURANÇA (TrustProxies → SecurityHeaders →
+        // EdgeRateLimit → TrustHosts → SecurityValidation → RequestLogging, na
+        // frente de todo o resto) é instalada pelo pacote twstec/kit-foundation,
+        // com a ordem e o porquê de cada posição documentados em
+        // Twstec\Kit\Foundation\FoundationServiceProvider::GLOBAL_MIDDLEWARE.
+        // Os aliases `security.validation`, `security.headers` e
+        // `request.logging` também vêm de lá. Aqui fica só a composição do
+        // aplicativo: API, prioridade, grupo web e os aliases dos outros módulos.
 
         // Cadeia da API: rate limiting (valores em config/security.php).
         $middleware->api(prepend: ['throttle:api']);
@@ -95,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // já está nela: pôr o ResolveTenant logo antes dele garante a ordem
         // em toda rota que usar os dois, sem depender de como a rota foi
         // declarada. Chave inválida não escapa por ficar antes: o próprio
-        // ResolveTenant limita as falhas por IP (App\Core\Security\ApiRateLimit).
+        // ResolveTenant limita as falhas por IP (Twstec\Kit\Foundation\Security\ApiRateLimit).
         $middleware->prependToPriorityList(
             before: ThrottleRequests::class,
             prepend: ResolveTenant::class,
@@ -113,9 +62,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Aliases para uso explícito em rotas/grupos.
         $middleware->alias([
-            'security.validation' => SecurityValidation::class,
-            'security.headers' => SecurityHeaders::class,
-            'request.logging' => RequestLogging::class,
             // Exige token de ação sensível válido — uso único.
             'sensitive.token' => RequiresSensitiveActionToken::class,
             // Painel só com e-mail confirmado (AUTH_EMAIL_VERIFICATION_REQUIRED).

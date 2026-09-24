@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Core\Tenancy\Queries;
 
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Database\Eloquent\Collection;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
  * Números e listas da visão geral da conta — o resultado de

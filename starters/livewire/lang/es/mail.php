@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 // Cadenas de correos transaccionales (es). Toda cadena pasa por __().
 // El cuerpo de los correos vive en resources/views/mail/messages/**, sobre el
-// layout único <x-email::layouts.kit>. Ver docs/emails.md.
+// layout único <x-email::layouts.kit>. Ver docs/emails.md. El pie común a
+// todos (mail.footer.*) viene del paquete twstec/kit-foundation.
 
 return [
-
-    // Pie COMÚN a todos los correos (el layout arma el resto con platform()).
-    'footer' => [
-        'transactional' => 'Este es un correo automático sobre tu cuenta — no es publicidad, por eso no tiene enlace para darse de baja.',
-        'rights' => '© :year :company. Todos los derechos reservados.',
-        'cnpj' => 'CNPJ',
-    ],
 
     // Aviso previo de expiración de clave de API por inactividad.
     'api_key_inactivity' => [

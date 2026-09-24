@@ -1,11 +1,11 @@
 <?php
 
-use App\Core\Logging\MaskCardNumbersInLogs;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Twstec\Kit\Foundation\Logging\MaskCardNumbersInLogs;
 
 return [
 

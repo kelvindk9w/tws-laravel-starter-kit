@@ -11,7 +11,7 @@ declare(strict_types=1);
 // a ligada.
 // =============================================================================
 
-use App\Core\Mail\MailPreview;
+use Twstec\Kit\Foundation\Mail\MailPreview;
 
 it('lista os e-mails quando a flag de dev está ligada', function (): void {
     config()->set('ui.demo_login.enabled', true);

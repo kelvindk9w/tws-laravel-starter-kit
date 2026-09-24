@@ -6,6 +6,11 @@
 #   dev   → desenvolvimento (código montado via volume bind)
 #   prod  → produção (código, vendor e assets DENTRO da imagem — imutável)
 #
+# O target prod precisa do contexto de build nomeado `packages` (a pasta
+# packages/ da raiz), além do contexto principal (o starter):
+#   docker build --build-context packages=../../packages --target prod \
+#     -f docker/php/Dockerfile .
+#
 # Base pinada: php:8.4.24-fpm-alpine (nunca usar `latest`).
 # Extensões: pgsql, redis, intl, bcmath, gd, zip, opcache, pcntl (filas).
 # As dependências PHP de produção são instaladas SOBRE este mesmo base (estágio
@@ -120,6 +125,20 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 WORKDIR /app
 
 COPY . .
+
+# PACOTES DO KIT. O composer.json instala os pacotes por path repository
+# (`../../packages/<pacote>`), que visto de /app é /packages/<pacote>. Eles
+# chegam por um CONTEXTO DE BUILD NOMEADO, `packages` (a pasta packages/ da
+# raiz do repositório — ver docker-compose.prod.yml e o CI), porque o
+# contexto principal é o starter e não enxerga a pasta de cima. O
+# packages/.dockerignore deixa de fora o que é de desenvolvimento do pacote
+# (vendor, testes, lock).
+#
+# COMPOSER_MIRROR_PATH_REPOS=1: em produção o pacote é COPIADO para
+# vendor/, nunca um link — a imagem final não leva /packages, e o vendor/
+# precisa ser autossuficiente.
+COPY --from=packages . /packages/
+ENV COMPOSER_MIRROR_PATH_REPOS=1
 
 # O `.dockerignore` deixa o `storage/` inteiro de fora (uploads, backups e
 # sessões da máquina de quem fez o build nunca entram na imagem). A estrutura

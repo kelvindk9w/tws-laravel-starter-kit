@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Logging\Enums\RequestLogStatus;
-use App\Core\Logging\Models\RequestLog;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
+use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // Validação de segurança global no modo `block`: payload malicioso
 // é bloqueado, registrado SANITIZADO/escapado (nunca executável) +

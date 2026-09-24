@@ -4,16 +4,10 @@ declare(strict_types=1);
 
 // Transactional email strings (en). Every string goes through __().
 // Message bodies live in resources/views/mail/messages/**, on the single
-// <x-email::layouts.kit> layout. See docs/emails.md.
+// <x-email::layouts.kit> layout. See docs/emails.md. The footer shared by
+// every email (mail.footer.*) comes from the twstec/kit-foundation package.
 
 return [
-
-    // Footer shared by every email (the layout fills the rest from platform()).
-    'footer' => [
-        'transactional' => 'This is an automated message about your account — not marketing, which is why there is no unsubscribe link.',
-        'rights' => '© :year :company. All rights reserved.',
-        'cnpj' => 'Company ID',
-    ],
 
     // Advance warning of API key expiration by inactivity.
     'api_key_inactivity' => [

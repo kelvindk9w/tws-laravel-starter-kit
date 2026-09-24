@@ -2,15 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Core\Audit\AuditChanges;
-use App\Core\Audit\AuditScope;
-use App\Core\Audit\AuditTrail;
-use App\Core\Audit\Enums\AuditContext;
-use App\Core\Audit\Enums\AuditOutcome;
-use App\Core\Audit\Models\AuditEvent;
-use App\Core\Audit\Support\AuditEventTrigger;
 use App\Core\Auth\Models\User;
-use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use App\Demo\Catalog\Models\Product;
 use App\Filament\Resources\Users\Pages\EditUser;
 use Illuminate\Console\Scheduling\Schedule;
@@ -19,9 +11,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
+use Twstec\Kit\Foundation\Audit\AuditChanges;
+use Twstec\Kit\Foundation\Audit\AuditScope;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
+use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
+use Twstec\Kit\Foundation\Audit\Support\AuditEventTrigger;
+use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
 
 // =============================================================================
-// Núcleo da trilha de auditoria de ações (App\Core\Audit): append-only nas
+// Núcleo da trilha de auditoria de ações (Twstec\Kit\Foundation\Audit): append-only nas
 // três camadas, redação do resumo de mudanças, escopo que não vaza, falha
 // fechada, console (`user:make-admin`) e a poda por idade.
 // =============================================================================
