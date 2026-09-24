@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Core\Uploads\Models;
 
-use App\Core\Auth\Models\User;
 use App\Core\Identifiers\HasPublicCode;
 use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Uploads\Enums\UploadStatus;
@@ -71,11 +70,15 @@ class Upload extends Model
     /**
      * Dono do upload na web (sessão). Na API o vínculo é o tenant_uuid.
      *
-     * @return BelongsTo<User, $this>
+     * O model do usuário é o configurado na autenticação
+     * (`auth.providers.users.model`): o módulo de Uploads não importa o
+     * módulo de autenticação.
+     *
+     * @return BelongsTo<Model, $this>
      */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo((string) config('auth.providers.users.model'), 'user_id');
     }
 
     /**

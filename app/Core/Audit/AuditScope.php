@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Core\Audit;
 
 use App\Core\Audit\Enums\AuditContext;
-use App\Core\Auth\Models\User;
 use App\Core\Logging\CorrelationId;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -47,10 +46,15 @@ final class AuditScope
         $request ??= request();
         $actor = auth()->user();
 
+        // O ator conta quando é o usuário da plataforma — o model configurado
+        // na autenticação (a trilha não importa o módulo de autenticação).
+        $userModel = (string) config('auth.providers.users.model');
+        $isUser = $actor !== null && $userModel !== '' && $actor instanceof $userModel;
+
         return new self(
             context: $context,
-            actorUuid: $actor instanceof User ? $actor->uuid : null,
-            actorIsAdmin: $actor instanceof User ? (bool) $actor->is_admin : null,
+            actorUuid: $isUser ? $actor->uuid : null,
+            actorIsAdmin: $isUser ? (bool) $actor->is_admin : null,
             correlationId: CorrelationId::resolve($request),
             ip: $request->ip(),
             userAgent: Str::limit((string) $request->userAgent(), self::USER_AGENT_MAX, '') ?: null,

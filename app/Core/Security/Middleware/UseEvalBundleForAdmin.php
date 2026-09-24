@@ -24,7 +24,11 @@ final class UseEvalBundleForAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        config()->set('livewire.csp_safe', false);
+        // O QUE trocar mora na configuração (security.admin.runtime_config);
+        // padrão: `livewire.csp_safe` => false.
+        foreach ((array) config('security.admin.runtime_config', []) as $key => $value) {
+            config()->set((string) $key, $value);
+        }
 
         return $next($request);
     }

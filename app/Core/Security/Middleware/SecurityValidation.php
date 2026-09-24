@@ -204,8 +204,12 @@ final class SecurityValidation
             return true;
         }
 
-        // Livewire 4 ofusca o path do update (livewire-<hash>/update).
-        if (! $request->is('livewire/*', 'livewire-*', 'admin/livewire/*')) {
+        // Endpoint de atualização de componentes (config: Livewire 4 ofusca o
+        // path do update — livewire-<hash>/update — e o /admin tem o seu).
+        /** @var list<string> $componentPaths */
+        $componentPaths = (array) config('security.validation.livewire_paths', []);
+
+        if ($componentPaths === [] || ! $request->is(...$componentPaths)) {
             return false;
         }
 

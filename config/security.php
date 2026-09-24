@@ -56,6 +56,21 @@ return [
         // Hosts liberados no connect-src da landing alternativa (/v2).
         'landing_alt_connect_src' => array_filter(explode(',', (string) env('SECURITY_LANDING_ALT_CONNECT_SRC', 'https://api.github.com'))),
 
+        // SUPERFÍCIES com CSP própria: padrões de caminho (a sintaxe de
+        // `Request::is()`) em que cada CSP acima vale no lugar da base. O
+        // middleware de cabeçalhos não conhece os caminhos do painel, do
+        // Horizon nem da landing — eles moram aqui, com os valores de sempre.
+        //   admin       → content_security_policy_admin (Filament em /admin).
+        //   horizon     → content_security_policy_horizon. Segue o mesmo
+        //                 HORIZON_PATH do config/horizon.php; caminho vazio =
+        //                 nenhuma rota.
+        //   landing_alt → content_security_policy_landing_alt (/v2).
+        'surfaces' => [
+            'admin' => ['admin*'],
+            'horizon' => (static fn (string $path): array => $path === '' ? [] : [$path.'*'])(trim((string) env('HORIZON_PATH', 'horizon'), '/')),
+            'landing_alt' => ['v2'],
+        ],
+
         // HSTS: só enviado sob HTTPS e quando habilitado (padrão: produção).
         'hsts_enabled' => env('SECURITY_HSTS_ENABLED', env('APP_ENV') === 'production'),
     ],
@@ -313,6 +328,15 @@ return [
         // acima tem conteúdo, ela VENCE: esta variável responde só "o que
         // significa uma lista vazia em produção".
         'allow_any_ip' => (bool) env('ADMIN_ALLOW_ANY_IP', false),
+
+        // Configuração trocada SÓ nas páginas do painel administrativo, pelo
+        // middleware UseEvalBundleForAdmin (que o painel aplica). Padrão: o
+        // Livewire serve o bundle JavaScript normal em vez do CSP-safe, porque
+        // o Filament 5 usa expressões Alpine que o build sem eval não executa
+        // (a CSP dessas rotas ganha 'unsafe-eval' — ver `headers.surfaces`).
+        'runtime_config' => [
+            'livewire.csp_safe' => false,
+        ],
     ],
 
     // --- Filtro de ataques (SecurityValidation + AttackDetector) --------------
@@ -362,6 +386,12 @@ return [
         // de um /livewire/update estão nesta lista, a detecção é delegada a
         // eles (o form demo Livewire roda o AttackDetector no send()).
         'delegated_components' => array_filter(explode(',', (string) env('SECURITY_VALIDATION_DELEGATED_COMPONENTS', 'contact-form'))),
+
+        // Caminhos (sintaxe de `Request::is()`) do endpoint de atualização de
+        // componentes — onde vale a delegação por componente acima. O Livewire
+        // 4 ofusca o path do update (`livewire-<hash>/update`), e o painel
+        // /admin tem o seu próprio.
+        'livewire_paths' => ['livewire/*', 'livewire-*', 'admin/livewire/*'],
 
         // TETO de bytes que a detecção de ataque inspeciona por requisição
         // (soma de chaves e valores de texto de query + corpo, mais um custo

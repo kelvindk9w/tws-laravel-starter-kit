@@ -12,7 +12,7 @@ use App\Core\Auth\Models\User;
  *
  * Preenchido pelo middleware ResolveTenant após autenticar a secret key:
  * o TENANT é o usuário dono da chave. Acesso global via helpers tenant() e
- * tenantKey() (app/Core/Support/helpers.php).
+ * tenantKey() (app/Core/Tenancy/helpers.php).
  *
  * Registrado como singleton no container — o ciclo de vida "por requisição"
  * é garantido pelo PHP-FPM (shared-nothing). SE Octane/worker mode for

@@ -370,4 +370,8 @@ normal do Livewire (middleware `UseEvalBundleForAdmin`, com assets
 publicados em `public/vendor/livewire` via `post-install-cmd`) e (2) ganham
 `'unsafe-eval'` no `script-src` (SecurityHeaders, configurável por
 `SECURITY_CSP_ADMIN`). Mitigação: /admin é painel interno, atrás de
-`is_admin` + IP allowlist em produção.
+`is_admin` + IP allowlist em produção. Os caminhos de cada superfície com CSP
+própria (`admin*`, o do Horizon, `v2`) ficam em `security.headers.surfaces`, a
+configuração trocada no /admin em `security.admin.runtime_config`, e os caminhos
+do endpoint de atualização do Livewire em `security.validation.livewire_paths` —
+o módulo de segurança não traz esses caminhos escritos no código.

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
-use App\Core\Tenancy\TenantContext;
+use App\Core\Security\Contracts\RateLimitSubjectResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
@@ -113,20 +113,22 @@ final class ApiRateLimit
      * QUEM está sendo contado: a chave (ou o tenant) quando a requisição foi
      * autenticada pelo `resolve.tenant`; o IP quando não foi.
      *
+     * Quem sabe se a requisição foi autenticada, e por quem, é o módulo que
+     * autentica — ele se apresenta registrando um RateLimitSubjectResolver no
+     * container. Sem nenhum registrado (ou sem sujeito nesta requisição),
+     * conta pelo IP.
+     *
      * Os prefixos separam os espaços de nome — um IP nunca colide com o uuid
      * de uma chave.
      */
     public static function subject(Request $request): string
     {
-        $context = app(TenantContext::class);
-        $apiKey = $context->apiKey();
+        $subject = app()->bound(RateLimitSubjectResolver::class)
+            ? app(RateLimitSubjectResolver::class)->resolve($request)
+            : null;
 
-        if ($context->resolved() && $apiKey !== null) {
-            if (self::countsByTenant()) {
-                return 'tenant:'.(string) $context->user()?->uuid;
-            }
-
-            return 'key:'.(string) $apiKey->uuid;
+        if (is_string($subject) && $subject !== '') {
+            return $subject;
         }
 
         return 'ip:'.ClientBucket::for($request);

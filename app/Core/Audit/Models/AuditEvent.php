@@ -7,7 +7,6 @@ namespace App\Core\Audit\Models;
 use App\Core\Audit\Enums\AuditContext;
 use App\Core\Audit\Enums\AuditOutcome;
 use App\Core\Audit\Support\AuditEventTrigger;
-use App\Core\Auth\Models\User;
 use App\Core\Identifiers\RoutesByUuid;
 use App\Core\Logging\Exceptions\AppendOnlyViolationException;
 use Carbon\CarbonInterface;
@@ -118,11 +117,15 @@ class AuditEvent extends Model
     /**
      * Quem agiu (pelo uuid — a conta pode já ter sido excluída; a linha fica).
      *
-     * @return BelongsTo<User, $this>
+     * O model do usuário é o configurado na autenticação
+     * (`auth.providers.users.model`): a trilha não importa o módulo de
+     * autenticação.
+     *
+     * @return BelongsTo<Model, $this>
      */
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_uuid', 'uuid');
+        return $this->belongsTo((string) config('auth.providers.users.model'), 'actor_uuid', 'uuid');
     }
 
     protected static function booted(): void

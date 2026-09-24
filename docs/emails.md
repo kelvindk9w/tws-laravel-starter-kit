@@ -59,9 +59,12 @@ pré-header e o bloco VML do Outlook.
 3. **Mailable** estendendo `App\Core\Mail\KitMailable` — só o assunto, a view
    e os dados; fila e texto puro vêm de graça (numa **notificação**, use
    `KitMailMessage::make($assunto, $view, $dados)`).
-4. **Catálogo**: acrescente o slug em `App\Core\Mail\MailPreview` com dados de
-   exemplo. Os testes de `tests/Feature/Mail` iteram o catálogo — o e-mail
-   novo já entra coberto (layout, três idiomas, texto puro).
+4. **Catálogo**: registre o e-mail na galeria com `MailPreview::register($slug, $fabrica)`,
+   no arquivo de previews do PRÓPRIO módulo (ex.: `app/Core/Auth/Mail/previews.php`,
+   carregado pelo `autoload.files` do `composer.json`), com dados de exemplo. O
+   módulo de e-mail não conhece os e-mails dos outros — cada um se registra. Os
+   testes de `tests/Feature/Mail` iteram o catálogo — o e-mail novo já entra
+   coberto (layout, três idiomas, texto puro).
 
 Envie sempre no idioma do DESTINATÁRIO: `Mail::to($user)->locale($user->preferredLocale())`
 (o `User` implementa `HasLocalePreference`, então notificações já fazem isso

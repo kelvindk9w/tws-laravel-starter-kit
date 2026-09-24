@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace App\Core\Mail;
 
-use App\Core\ApiKeys\Mail\ApiKeyInactivityWarningMail;
-use App\Core\ApiKeys\Models\ApiKey;
-use App\Core\Auth\Enums\VerificationPurpose;
-use App\Core\Auth\Mail\VerificationCodeMail;
-use App\Core\Auth\Models\User;
-use App\Core\Auth\Notifications\ResetPasswordNotification;
-use App\Core\Auth\Notifications\VerifyEmailNotification;
-use App\Core\Contact\Mail\ContactMessageMail;
+use Closure;
 use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\App;
+use InvalidArgumentException;
 
 /**
  * Catálogo dos e-mails transacionais com dados de exemplo — a matéria-prima
@@ -26,11 +20,42 @@ use Illuminate\Support\Facades\App;
  * Mailpit — e por isso, na prática, ninguém confere. Aqui os e-mails
  * aparecem lado a lado, nos três idiomas e nos dois temas.
  *
- * Cuidado ao acrescentar: os modelos abaixo NÃO são salvos (new User, new
+ * É um REGISTRO: o módulo de e-mail não conhece os e-mails de ninguém. Cada
+ * módulo que envia e-mail registra os seus, com dados de exemplo, no próprio
+ * arquivo de previews (ex.: app/Core/Auth/Mail/previews.php), carregado pelo
+ * autoload do Composer (`autoload.files`). A ordem da galeria é a ordem de
+ * registro.
+ *
+ * Por que no autoload, e não no service provider do módulo: o catálogo
+ * precisa existir ANTES de a aplicação subir — os testes montam os datasets
+ * com MailPreview::slugs() no carregamento do arquivo, quando ainda não há
+ * container. Registrar é só guardar uma closure; nada é montado até o e-mail
+ * ser renderizado.
+ *
+ * Cuidado ao acrescentar: os modelos de exemplo NÃO são salvos (new User, new
  * ApiKey). É pré-visualização, não seed.
  */
 final class MailPreview
 {
+    /**
+     * E-mails registrados, na ordem de registro: slug => fábrica que recebe o
+     * idioma da pré-visualização (já aplicado ao App) e devolve o Mailable ou,
+     * para Notification, a MailMessage.
+     *
+     * @var array<string, Closure(string): (Mailable|MailMessage)>
+     */
+    private static array $previews = [];
+
+    /**
+     * Registra (ou substitui, mantendo a posição) um e-mail na galeria.
+     *
+     * @param  Closure(string): (Mailable|MailMessage)  $factory
+     */
+    public static function register(string $slug, Closure $factory): void
+    {
+        self::$previews[$slug] = $factory;
+    }
+
     /**
      * Slugs de todos os e-mails do catálogo.
      *
@@ -38,7 +63,7 @@ final class MailPreview
      */
     public static function slugs(): array
     {
-        return ['email-verification', 'verification-code', 'login-code', 'password-reset', 'api-key-inactivity', 'contact-message'];
+        return array_keys(self::$previews);
     }
 
     /**
@@ -53,20 +78,12 @@ final class MailPreview
             App::setLocale($locale);
 
             try {
-                return match ($slug) {
-                    'verification-code' => self::fromMailable($slug, new VerificationCodeMail('482913', VerificationPurpose::SensitiveAction)),
-                    'login-code' => self::fromMailable($slug, new VerificationCodeMail('570264', VerificationPurpose::LoginChallenge)),
-                    'api-key-inactivity' => self::fromMailable($slug, new ApiKeyInactivityWarningMail(self::sampleApiKey(), 7)),
-                    'contact-message' => self::fromMailable($slug, new ContactMessageMail(
-                        'Marina Duarte',
-                        'marina.duarte@example.com',
-                        'suggestion',
-                        "Olá!\n\nUsei o kit para subir um piloto interno e a parte de chaves de API me economizou uma semana.\n\nUma sugestão: um exemplo de webhook assinado no README ajudaria bastante.",
-                    )),
-                    'password-reset' => self::passwordReset($locale),
-                    'email-verification' => self::emailVerification($locale),
-                    default => throw new \InvalidArgumentException("E-mail de pré-visualização desconhecido: {$slug}"),
-                };
+                $factory = self::$previews[$slug] ?? throw new InvalidArgumentException("E-mail de pré-visualização desconhecido: {$slug}");
+                $message = $factory($locale);
+
+                return $message instanceof Mailable
+                    ? self::fromMailable($slug, $message)
+                    : self::fromNotification($slug, $message);
             } finally {
                 App::setLocale($previous);
             }
@@ -89,43 +106,6 @@ final class MailPreview
     }
 
     /**
-     * A recuperação de senha é uma Notification, não um Mailable: o corpo é a
-     * mesma view do layout único, montada pelo KitMailMessage.
-     *
-     * @return array{slug: string, subject: string, html: string, text: string}
-     */
-    private static function passwordReset(string $locale): array
-    {
-        $message = (new ResetPasswordNotification(str_repeat('a1b2c3d4', 8)))->toMail(self::sampleUser($locale));
-
-        return self::fromNotification('password-reset', $message);
-    }
-
-    /**
-     * A verificação de e-mail também é Notification. O usuário de exemplo
-     * ganha um uuid fixo porque o link assinado é montado com ele.
-     *
-     * @return array{slug: string, subject: string, html: string, text: string}
-     */
-    private static function emailVerification(string $locale): array
-    {
-        $user = self::sampleUser($locale);
-        $user->uuid = '01990000-0000-7000-8000-000000000000';
-
-        return self::fromNotification('email-verification', (new VerifyEmailNotification)->toMail($user));
-    }
-
-    private static function sampleUser(string $locale): User
-    {
-        $user = new User;
-        $user->name = 'Marina Duarte';
-        $user->email = 'marina.duarte@example.com';
-        $user->locale = $locale;
-
-        return $user;
-    }
-
-    /**
      * @return array{slug: string, subject: string, html: string, text: string}
      */
     private static function fromNotification(string $slug, MailMessage $message): array
@@ -140,15 +120,5 @@ final class MailPreview
             'html' => $html,
             'text' => PlainText::fromHtml($html),
         ];
-    }
-
-    private static function sampleApiKey(): ApiKey
-    {
-        $key = new ApiKey;
-        $key->name = 'Integração — faturamento';
-        $key->codigo_publico = 'AK-7F3D-9K2M';
-        $key->public_key = 'pk_live_3f9a2c81b7d4e6520a1c8f37';
-
-        return $key;
     }
 }

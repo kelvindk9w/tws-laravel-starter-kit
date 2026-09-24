@@ -38,8 +38,9 @@ final class SecurityHeaders
         // Super admin (/admin — Filament): 'unsafe-eval' é exigido pelo
         // Alpine do Filament 5 (ver config/security.php →
         // content_security_policy_admin, decisão documentada). Somente nas
-        // rotas /admin*; o resto da aplicação segue com a CSP estrita.
-        if ($request->is('admin*')) {
+        // rotas da superfície `admin` (security.headers.surfaces, padrão
+        // `admin*`); o resto da aplicação segue com a CSP estrita.
+        if (self::onSurface($request, 'admin')) {
             $adminCsp = config('security.headers.content_security_policy_admin');
 
             if (is_string($adminCsp) && $adminCsp !== '') {
@@ -54,10 +55,8 @@ final class SecurityHeaders
         // fonts.bunny.net (style-src/font-src). Somente nas rotas do Horizon
         // (restritas a is_admin + IP allowlist); o resto segue estrito.
         // CSP própria configurável por SECURITY_CSP_HORIZON (vazio = deriva
-        // da CSP base, como acima).
-        $horizonPath = trim((string) config('horizon.path', 'horizon'), '/');
-
-        if ($horizonPath !== '' && $request->is($horizonPath.'*')) {
+        // da CSP base, como acima). Caminhos: superfície `horizon`.
+        if (self::onSurface($request, 'horizon')) {
             $horizonCsp = config('security.headers.content_security_policy_horizon');
 
             if (is_string($horizonCsp) && $horizonCsp !== '') {
@@ -78,7 +77,8 @@ final class SecurityHeaders
         // nessa rota. Tudo o mais (script-src, style-src, font-src) segue a
         // CSP base: nenhum script de CDN entra na página. A landing oficial
         // (/) não faz requisição externa nenhuma e fica na CSP base.
-        if ($request->is('v2')) {
+        // Caminhos: superfície `landing_alt`.
+        if (self::onSurface($request, 'landing_alt')) {
             $landingCsp = config('security.headers.content_security_policy_landing_alt');
 
             if (is_string($landingCsp) && $landingCsp !== '') {
@@ -101,5 +101,21 @@ final class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * A requisição está numa superfície com CSP própria? Os caminhos de cada
+     * uma vêm de security.headers.surfaces; superfície sem caminho = nenhuma
+     * rota.
+     */
+    private static function onSurface(Request $request, string $surface): bool
+    {
+        /** @var list<string> $patterns */
+        $patterns = array_values(array_filter(
+            (array) config("security.headers.surfaces.{$surface}", []),
+            static fn (mixed $pattern): bool => is_string($pattern) && $pattern !== '',
+        ));
+
+        return $patterns !== [] && $request->is(...$patterns);
     }
 }

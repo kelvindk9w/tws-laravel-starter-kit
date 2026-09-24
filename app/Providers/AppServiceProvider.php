@@ -17,7 +17,6 @@ use App\Core\Security\Middleware\EnsureAdminIpAllowed;
 use App\Core\Support\CriticalSecrets;
 use App\Core\Support\DemoSurface;
 use App\Core\Support\Platform;
-use App\Core\Tenancy\TenantContext;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -38,11 +37,8 @@ class AppServiceProvider extends ServiceProvider
         // Configuração centralizada da plataforma (nada hardcoded) — singleton tipado.
         $this->app->singleton(Platform::class, fn (): Platform => Platform::fromConfig());
 
-        // Contexto do tenant da requisição — preenchido pelo
-        // middleware ResolveTenant. PHP-FPM garante o ciclo por requisição;
-        // se Octane entrar um dia, resetar entre requisições (senão
-        // o tenant vaza de uma requisição para a outra).
-        $this->app->singleton(TenantContext::class);
+        // O contexto do tenant da requisição é registrado pelo próprio módulo
+        // (App\Core\Tenancy\Providers\TenancyServiceProvider).
 
         // `backup:run` com a regra da criptografia na frente: em produção,
         // backup que sairia sem criptografia é RECUSADO (ver

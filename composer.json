@@ -32,7 +32,13 @@
             "Database\\Seeders\\": "database/seeders/"
         },
         "files": [
-            "app/Core/Support/helpers.php"
+            "app/Core/Support/helpers.php",
+            "app/Core/Settings/helpers.php",
+            "app/Core/Tenancy/helpers.php",
+            "app/Core/Auth/Mail/previews.php",
+            "app/Core/ApiKeys/Mail/previews.php",
+            "app/Core/Contact/Mail/previews.php",
+            "app/Support/ui-helpers.php"
         ]
     },
     "autoload-dev": {

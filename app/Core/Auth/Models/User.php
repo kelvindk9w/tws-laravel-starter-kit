@@ -11,7 +11,7 @@ use App\Core\Auth\Notifications\VerifyEmailNotification;
 use App\Core\Auth\Support\DemoAccountGuard;
 use App\Core\Identifiers\HasPublicCode;
 use App\Core\Identifiers\RoutesByUuid;
-use App\Core\Uploads\Models\Upload;
+use App\Core\Uploads\Concerns\HasAvatar;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -22,7 +22,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -45,13 +44,16 @@ use Illuminate\Notifications\Notifiable;
  * Verificação de e-mail (MustVerifyEmail): conta nova só opera depois de
  * confirmar o e-mail, quando a exigência está ligada — a regra mora em
  * App\Core\Auth\Support\EmailVerification.
+ *
+ * Foto de perfil (`avatar()`, `avatarUrl()`): trait HasAvatar, do módulo de
+ * Uploads.
  */
 #[Fillable(['name', 'email', 'password', 'locale'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, HasLocalePreference, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPublicCode, HasUuids, MustVerifyEmailBehavior, Notifiable, RoutesByUuid;
+    use HasAvatar, HasFactory, HasPublicCode, HasUuids, MustVerifyEmailBehavior, Notifiable, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: USR-xxxxxx.
@@ -149,24 +151,6 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
             'is_admin' => 'boolean',
             'notification_preferences' => 'array',
         ];
-    }
-
-    /**
-     * Avatar do perfil (upload validado pela função global de upload, SecureUploadService).
-     *
-     * @return BelongsTo<Upload, $this>
-     */
-    public function avatar(): BelongsTo
-    {
-        return $this->belongsTo(Upload::class, 'avatar_upload_id');
-    }
-
-    /**
-     * URL (assinada) do avatar, ou null quando não definido.
-     */
-    public function avatarUrl(): ?string
-    {
-        return $this->avatar?->url();
     }
 
     /**
