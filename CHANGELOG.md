@@ -56,7 +56,7 @@ foram gravadas com pepper vazio: acrescente
 `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true` para que continuem autenticando (e
 migrem no primeiro uso), ou recrie-as.
 
-## [1.1.0] — 2026-09-25
+## [1.1.0] — 2026-09-24
 
 ### Adicionado
 - `/admin` → Usuários: ação de suporte **Marcar e-mail como verificado**
