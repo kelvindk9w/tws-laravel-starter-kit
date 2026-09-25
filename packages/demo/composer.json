@@ -1,0 +1,116 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "twstec/kit-demo",
+    "description": "Demonstração do TWS Laravel Starter Kit, para o ambiente de DESENVOLVIMENTO: as landings (/ e /v2), a vitrine de componentes (/ui), o formulário de contato, o catálogo de produtos e a caixa de submissões de exemplo no /admin, as contas demo de credenciais públicas (protegidas contra alteração, inclusive no banco) e os seeders de dado fictício. Instale só em require-dev — nunca numa instalação com dado real.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "demo",
+        "starter-kit"
+    ],
+    "require": {
+        "php": "^8.4",
+        "fakerphp/faker": "^1.23",
+        "filament/filament": "^5.7",
+        "laravel/framework": "^13.17",
+        "livewire/livewire": "^4.4",
+        "twstec/kit-accounts": "2.x-dev",
+        "twstec/kit-admin": "2.x-dev",
+        "twstec/kit-auth": "2.x-dev",
+        "twstec/kit-foundation": "2.x-dev",
+        "twstec/kit-uploads": "2.x-dev"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Twstec\\Kit\\Demo\\": "src/"
+        },
+        "files": [
+            "src/Contact/Mail/previews.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Twstec\\Kit\\Demo\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Twstec\\Kit\\Demo\\DemoServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "lint": "pint --test"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../accounts",
+            "options": {
+                "versions": {
+                    "twstec/kit-accounts": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../admin",
+            "options": {
+                "versions": {
+                    "twstec/kit-admin": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../auth",
+            "options": {
+                "versions": {
+                    "twstec/kit-auth": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../foundation",
+            "options": {
+                "versions": {
+                    "twstec/kit-foundation": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../uploads",
+            "options": {
+                "versions": {
+                    "twstec/kit-uploads": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        }
+    ],
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "platform": {
+            "php": "8.4.24"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

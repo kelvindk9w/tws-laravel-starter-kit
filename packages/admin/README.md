@@ -124,8 +124,8 @@ novo (`admin.faturas`, por exemplo) vai no `lang/admin.php` do aplicativo.
    `withoutEvents()` não geram linha) e **recuse com
    `AdminAudit::denied($motivo, $record)`** (registra a tentativa como
    `denied` e mostra a notificação numa chamada só). O teste de arquitetura
-   do pacote cobra as duas no código dele; o starter cobra no dele e no da
-   demonstração.
+   do pacote cobra as duas no código dele; o starter cobra no dele, e a suíte
+   da demonstração (twstec/kit-demo) no dela.
 
 ## O que ele liga sozinho
 

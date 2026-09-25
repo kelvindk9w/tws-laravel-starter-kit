@@ -21,20 +21,24 @@ sua IA não precisa gerar"*. O argumento não é prazo, é **token e retrabalho*
 auth, 2FA, API keys, logs com LGPD, uploads, painel e admin já prontos e
 testados, para o tempo de geração ir só no que é do produto.
 
-A landing é da **demonstração** do kit (ver [demo.md](demo.md)). Arquivos:
-`demo/resources/views/landing.blade.php` + `demo/resources/views/landing/*`,
-`demo/resources/css/landing.css`, `demo/resources/js/landing.js` (+
-`demo/resources/js/landing/`), capturas em `public/img/landing/`. Strings em
-`lang/*/landing.php` + `demo/lang/*/contact.php`; branding via `platform()`.
+A landing é da **demonstração** do kit, o pacote `twstec/kit-demo` (ver
+[demo.md](demo.md)). Arquivos, em `packages/demo`:
+`resources/views/landing.blade.php` + `resources/views/landing/*`,
+`resources/css/landing.css`, `resources/js/landing.js` (+
+`resources/js/landing/`), capturas em `resources/img/landing/` (servidas
+pelo build do Vite, `Vite::asset()`). Strings em `lang/*/landing.php` e
+`lang/*/contact.php` do pacote (as chaves do cabeçalho e do rodapé do
+produto ficam no `lang/*/landing.php` do aplicativo); branding via
+`platform()`.
 
-**Números vêm do `.env`, nunca da view** (`demo/config/landing.php`):
+**Números vêm do `.env`, nunca da view** (`config/landing.php` do pacote):
 `LANDING_CLONES` (prova social; 0 troca a frase pela suíte verde),
 `LANDING_TESTS`, `LANDING_HOURS_SAVED` (0 esconde a faixa inteira) e
 `LANDING_WEBGL` (desliga o 3D e cai no fallback em CSS). Nenhum número
 inventado no Blade.
 
 **Documento próprio, não `<x-layouts.site>`**: só esta página carrega o bundle
-dela (`landing.css` / `landing.js`, registrados no `vite.config.js`). GSAP,
+dela (`landing.css` / `landing.js`, registrados pelo `vite.js` do pacote, que o `vite.config.js` do starter carrega só com a demo instalada). GSAP,
 Lenis e Three.js entram por `import()` dinâmico — nenhuma outra tela do produto
 baixa um byte disso. Cabeçalho e rodapé são os componentes do kit em variantes
 aditivas: `<x-site-header variant="floating">` (a cápsula que flutua sobre o
@@ -45,9 +49,9 @@ céu e **pousa** — vira superfície opaca do kit — quando o céu acaba) e
 real de cada tecnologia (Laravel, PHP, PostgreSQL, Redis, Docker, Livewire,
 Filament, Tailwind), em SVG **inline no repositório** — nenhum CDN. Uma única
 fonte de verdade: o desenho e a cor da marca moram em
-`demo/resources/views/landing/tech-mark.blade.php` (que é o fallback em CSS quando
+`resources/views/landing/tech-mark.blade.php` do pacote (que é o fallback em CSS quando
 não há WebGL) e o Three.js **levanta esse mesmo SVG do DOM** para virar
-decalque (`demo/resources/js/landing/marks.js`). A tinta do decalque é calculada
+decalque (`resources/js/landing/marks.js` do pacote). A tinta do decalque é calculada
 pela luminância da cor da marca: branco na maioria, quase-preto sobre esmalte
 claro (o âmbar do Filament). As marcas são de seus donos e aparecem em uso
 nominativo, sem deformação e sem caixa.
@@ -84,7 +88,7 @@ apelido de `<x-layouts.site>` para as views públicas.
   showcase, 3 idiomas) e `node tests/e2e/shots-panel.js <pasta>` (telas
   autenticadas + login, desktop/mobile × claro/escuro) — saída em
   `test-results/`.
-- **Capturas do herói**: `public/img/landing/*.webp` (commitadas) — as quatro
+- **Capturas do herói**: `packages/demo/resources/img/landing/*.webp` (commitadas) — as quatro
   telas reais do kit (painel, super admin, showcase, login) em claro e escuro,
   720w e 1440w, mais a tabela do split-screen. São capturas do produto rodando
   (viewport 1440×900, login demo, um arquivo por tema), exportadas para WebP
@@ -261,7 +265,7 @@ Blade puro é redundante com o Livewire):
 2. **Livewire (AJAX)** — `wire:submit` + `wire:model`, validação server-side
    sem reload, estado preservado (não existe `old()` no Livewire). Para
    interações ricas no painel. Referência viva: telas do painel e o form demo
-   em versão Livewire no `/ui` (`App\Demo\Livewire\ContactForm`).
+   em versão Livewire no `/ui` (`Twstec\Kit\Demo\Livewire\ContactForm`).
 
 **Os 2 forms demo do `/ui` gravam de verdade** (campos: apelido, assunto,
 mensagem + honeypot invisível): cada submissão vira uma linha em

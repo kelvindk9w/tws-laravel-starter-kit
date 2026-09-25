@@ -54,7 +54,9 @@ return [
         'challenge_expired' => 'The verification expired. Sign in again with your password.',
         'locked' => 'Too many incorrect codes. For your security, wait :minutes minute(s) and sign in again.',
         'unavailable' => 'Two-step verification is not available on this installation.',
-        'demo_blocked' => 'Not available on the demo account: turning on two-step verification would lock the demo for the next visitors.',
+        'account_protected' => 'Not available on this account: it is protected, and two-step verification cannot be turned on for it.',
+        // Old name (up to 2.x), same text: removed in 3.0.
+        'demo_blocked' => 'Not available on this account: it is protected, and two-step verification cannot be turned on for it.',
         'requires_transaction_password' => 'Set your transaction password first: turning two-step verification on and off are sensitive actions.',
     ],
     'sensitive_action' => [

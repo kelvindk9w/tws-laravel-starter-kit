@@ -11,7 +11,8 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
-        <!-- Demonstração do kit (App\Demo): sai junto com a demo. -->
+        <!-- Demonstração do kit (twstec/kit-demo, require-dev): sem ela
+             instalada, os testes do grupo `demo` pulam (tests/TestCase.php). -->
         <testsuite name="Demo">
             <directory>tests/Demo</directory>
         </testsuite>

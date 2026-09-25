@@ -9,8 +9,8 @@ declare(strict_types=1);
 
 namespace App\Filament\AuditFixture;
 
-use App\Demo\Catalog\Models\Product;
 use Livewire\Component;
+use Twstec\Kit\Demo\Catalog\Models\Product;
 
 final class NewAdminScreen extends Component
 {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Demo\Accounts\DemoAccountGuard;
 use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Demo\Accounts\DemoAccountGuard;
 
 // Proteção das contas demo (login demo + super admin demo): NÃO podem ser
 // bloqueadas/desbloqueadas por ações do super admin — senão um visitante
@@ -38,7 +38,7 @@ it('recusa bloquear o usuário demo, com notification explicando', function () {
 
     Livewire::test(ListUsers::class)
         ->callTableAction('block', $demo)
-        ->assertNotified(__('admin.users.demo_protected'));
+        ->assertNotified(__('admin.users.account_protected'));
 
     expect($demo->fresh()->status)->toBe(UserStatus::Active);
 });
@@ -48,7 +48,7 @@ it('recusa bloquear o super admin demo', function () {
 
     Livewire::test(ListUsers::class)
         ->callTableAction('block', $demoAdmin)
-        ->assertNotified(__('admin.users.demo_protected'));
+        ->assertNotified(__('admin.users.account_protected'));
 
     expect($demoAdmin->fresh()->status)->toBe(UserStatus::Active);
 });
@@ -61,7 +61,7 @@ it('recusa desbloquear conta demo (caminho reverso também protegido)', function
 
     Livewire::test(ListUsers::class)
         ->callTableAction('unblock', $demo)
-        ->assertNotified(__('admin.users.demo_protected'));
+        ->assertNotified(__('admin.users.account_protected'));
 
     expect($demo->fresh()->status)->toBe(UserStatus::Blocked);
 });

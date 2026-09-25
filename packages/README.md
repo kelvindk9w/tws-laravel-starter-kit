@@ -12,6 +12,7 @@ própria, com a suíte de testes verde antes e depois.
 | [`accounts`](accounts) | `twstec/kit-accounts` | Contas e API sem telas: projetos, chaves de API (par pública/secreta, hash com pepper, escopos, vínculo com projetos, rotação com graça, expiração por inatividade), a autenticação e os limites da API, o envelope de erro e a API v1 | foundation, auth |
 | [`uploads`](uploads) | `twstec/kit-uploads` | Uploads seguros sem telas: validação pelo conteúdo real, limite por tipo, re-encode de imagem, nome seguro, entrega por URL assinada, foto de perfil e o `POST /api/v1/uploads` | foundation, auth, accounts |
 | [`admin`](admin) | `twstec/kit-admin` | O painel de super admin como plugin do Filament 5: usuários, chaves de API, projetos, uploads, logs de requisição, trilha de auditoria e configurações, login com segundo fator por e-mail, variantes de dashboard, trilha de auditoria de toda ação (falha fechada) e as proteções de acesso ligadas pelo pacote | foundation, auth, accounts, uploads, Filament |
+| [`demo`](demo) | `twstec/kit-demo` | A **demonstração** do kit, só para o ambiente de desenvolvimento (`require-dev` do starter): landings, vitrine `/ui`, contato, catálogo e submissões no `/admin`, contas demo protegidas e seeders de dado fictício. O produto não a nomeia — ela entra pela descoberta de pacotes e pelos pontos de extensão | foundation, auth, accounts, uploads, admin, Filament (e o starter, pelos pontos de extensão dele) |
 
 ## Como o starter usa os pacotes
 
@@ -24,6 +25,9 @@ caminho `../../packages` aponta, visto de `/var/www/html`).
 
 Na imagem de produção o pacote é **copiado** para `vendor/` (ver
 `starters/livewire/docker/php/Dockerfile` e o `.dockerignore` desta pasta).
+A demonstração (`demo`) é `require-dev`: a imagem de produção
+(`composer install --no-dev`) não a instala, e o `.dockerignore` desta pasta a
+deixa fora do contexto do build.
 
 A publicação no Packagist (e os repositórios somente leitura de cada pacote)
 chega numa fase futura; até lá, o path repository é o caminho.
@@ -45,13 +49,15 @@ docker compose exec -w /var/packages/uploads app ./vendor/bin/pest
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pint --test
 docker compose exec -w /var/packages/admin app ./vendor/bin/pest
 docker compose exec -w /var/packages/admin app ./vendor/bin/pint --test
+docker compose exec -w /var/packages/demo app ./vendor/bin/pest
+docker compose exec -w /var/packages/demo app ./vendor/bin/pint --test
 ```
 
 As dependências de desenvolvimento do pacote (`packages/<pacote>/vendor`, fora
 do git) são instaladas com o Composer em container, da raiz do repositório
-(troque `foundation` pelo pacote; o `auth`, o `accounts`, o `uploads` e o
-`admin` acham os irmãos de que dependem pelos path repositories do próprio
-`composer.json`; no `uploads` e no `admin`, acrescente
+(troque `foundation` pelo pacote; o `auth`, o `accounts`, o `uploads`, o
+`admin` e o `demo` acham os irmãos de que dependem pelos path repositories do
+próprio `composer.json`; no `uploads`, no `admin` e no `demo`, acrescente
 `--ignore-platform-req=ext-gd`, porque a imagem do Composer não traz a GD — a
 suíte roda no container do app, que traz):
 

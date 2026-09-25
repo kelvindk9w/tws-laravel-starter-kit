@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Filament\Widgets\Content\ContentStats;
-use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
-use App\Demo\Filament\Widgets\Overview\LatestSubmissions;
-use App\Demo\Showcase\Models\FormSubmission;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -16,6 +12,10 @@ use Twstec\Kit\Admin\Widgets\Support\Metric;
 use Twstec\Kit\Admin\Widgets\Support\MetricFormat;
 use Twstec\Kit\Admin\Widgets\Support\MetricStat;
 use Twstec\Kit\Admin\Widgets\Support\Period;
+use Twstec\Kit\Demo\Filament\Widgets\Content\ContentStats;
+use Twstec\Kit\Demo\Filament\Widgets\Content\UploadsPerDayChart;
+use Twstec\Kit\Demo\Filament\Widgets\Overview\LatestSubmissions;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Uploads\Models\Upload;

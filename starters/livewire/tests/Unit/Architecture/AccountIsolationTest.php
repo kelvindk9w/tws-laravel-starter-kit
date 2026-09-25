@@ -58,9 +58,9 @@ const ISOLATION_SYSTEM_MODE_REVIEWED = [
     // db:seed grava em várias contas.
     'database/seeders/DatabaseSeeder.php' => 1,
     // Seeders da demonstração, também quando rodados sozinhos (--class).
-    'app/Demo/Database/Seeders/ProjectSeeder.php' => 1,
-    'app/Demo/Database/Seeders/ApiKeySeeder.php' => 1,
-    'app/Demo/Database/Seeders/UploadSeeder.php' => 1,
+    'vendor/twstec/kit-demo/src/Database/Seeders/ProjectSeeder.php' => 1,
+    'vendor/twstec/kit-demo/src/Database/Seeders/ApiKeySeeder.php' => 1,
+    'vendor/twstec/kit-demo/src/Database/Seeders/UploadSeeder.php' => 1,
 ];
 
 /**

@@ -14,7 +14,8 @@ use Twstec\Kit\Auth\Support\UserModel;
  * Guardas do CRUD de usuários do /admin.
  *
  * Regras — todas verificadas no SERVIDOR, não só escondendo botão:
- * 1. Conta demo é intocável (um visitante não quebra a demo dos outros);
+ * 1. conta protegida (AccountProtection — com a demonstração do kit
+ *    instalada, as contas demo) é intocável;
  * 2. o admin não se exclui nem se bloqueia (não existe "me tranquei fora");
  * 3. o último admin ATIVO não perde a flag, não é bloqueado e não é
  *    excluído — o painel ficaria sem dono e só o comando `user:make-admin`
@@ -32,19 +33,19 @@ final class UserAdminGuard
      */
     public static function editDenial(Model&AuthUser $record): ?string
     {
-        return $record->isReservedAccount() ? __('admin.users.demo_protected') : null;
+        return $record->isReservedAccount() ? __('admin.users.account_protected') : null;
     }
 
     /**
      * Pode marcar o e-mail deste registro como verificado (ação de suporte)?
      *
-     * Conta demo fica de fora como nas demais ações: ela já conta como
-     * verificada enquanto a blindagem vale (User::hasVerifiedEmail) e não é
+     * Conta protegida fica de fora como nas demais ações: ela já conta como
+     * verificada enquanto a proteção vale (User::hasVerifiedEmail) e não é
      * o suporte quem mexe nela.
      */
     public static function verifyEmailDenial(Model&AuthUser $record): ?string
     {
-        return $record->isReservedAccount() ? __('admin.users.demo_protected') : null;
+        return $record->isReservedAccount() ? __('admin.users.account_protected') : null;
     }
 
     /**
@@ -53,7 +54,7 @@ final class UserAdminGuard
     public static function deleteDenial(Model&AuthUser $record, (Model&AuthUser)|null $actor): ?string
     {
         if ($record->isReservedAccount()) {
-            return __('admin.users.demo_protected');
+            return __('admin.users.account_protected');
         }
 
         if ($actor !== null && $actor->getKey() === $record->getKey()) {
@@ -75,7 +76,7 @@ final class UserAdminGuard
     public static function blockDenial(Model&AuthUser $record, (Model&AuthUser)|null $actor): ?string
     {
         if ($record->isReservedAccount()) {
-            return __('admin.users.demo_protected');
+            return __('admin.users.account_protected');
         }
 
         if ($actor !== null && $actor->getKey() === $record->getKey()) {
@@ -97,7 +98,7 @@ final class UserAdminGuard
     public static function updateDenial(Model&AuthUser $record, array $data, (Model&AuthUser)|null $actor): ?string
     {
         if ($record->isReservedAccount()) {
-            return __('admin.users.demo_protected');
+            return __('admin.users.account_protected');
         }
 
         $viraNaoAdmin = array_key_exists('is_admin', $data) && ! $data['is_admin'];

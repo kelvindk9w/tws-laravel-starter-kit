@@ -16,7 +16,7 @@ use Twstec\Kit\Auth\Exceptions\AccountProtectedException;
  * questão. Sem implementação registrada no container, nenhuma conta é
  * protegida e todas as perguntas respondem "não".
  *
- * Quem implementa hoje: a demonstração do kit (App\Demo), que blinda as contas
+ * Quem implementa hoje: a demonstração do kit (twstec/kit-demo), que blinda as contas
  * de credenciais públicas. Quem pergunta: Twstec\Kit\Auth\Support\ProtectedAccounts.
  */
 interface AccountProtection

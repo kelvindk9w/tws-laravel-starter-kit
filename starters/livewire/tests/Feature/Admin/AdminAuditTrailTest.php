@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
-use App\Demo\Filament\Resources\Products\Pages\EditProduct;
-use App\Demo\Filament\Resources\Products\Pages\ListProducts;
 use App\Models\User;
 use Filament\Support\Exceptions\Cancel;
 use Illuminate\Support\Facades\Mail;
@@ -23,6 +19,10 @@ use Twstec\Kit\Admin\Support\ViewModeToggle;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\CreateProduct;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\EditProduct;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\ListProducts;
 use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
@@ -140,13 +140,13 @@ it('tentativa RECUSADA de bloquear conta demo fica registrada como denied, sem m
 
     Livewire::test(ListUsers::class)
         ->callTableAction('block', $demo)
-        ->assertNotified(__('admin.users.demo_protected'));
+        ->assertNotified(__('admin.users.account_protected'));
 
     $evento = auditRow('user.blocked', $demo->uuid);
 
     expect($demo->fresh()->status)->toBe(UserStatus::Active)
         ->and($evento->outcome)->toBe(AuditOutcome::Denied)
-        ->and($evento->reason)->toBe(__('admin.users.demo_protected'))
+        ->and($evento->reason)->toBe(__('admin.users.account_protected'))
         ->and($evento->changes)->toBeNull()
         ->and($evento->actor_uuid)->toBe($this->admin->uuid);
 })->group('demo');

@@ -47,7 +47,9 @@ return [
         'unblock_heading' => 'Desbloquear usuário',
         'blocked_success' => 'Usuário bloqueado.',
         'unblocked_success' => 'Usuário desbloqueado.',
-        'demo_protected' => 'Conta de demonstração protegida: usuários demo não podem ser bloqueados, editados ou excluídos.',
+        'account_protected' => 'Conta protegida: esta conta não pode ser bloqueada, editada ou excluída.',
+        // Nome antigo (até a 2.x), com o mesmo texto: sai na 3.0.
+        'demo_protected' => 'Conta protegida: esta conta não pode ser bloqueada, editada ou excluída.',
         'transaction_password' => 'Senha de transação definida',
         'created_at' => 'Cadastrado em',
         // CRUD completo (criar/editar/excluir) — ver UserResource e UserAdminGuard.
@@ -253,9 +255,9 @@ return [
 
     'profile' => [
         'heading' => 'Meu perfil',
-        'email_readonly_note' => 'O e-mail não pode ser alterado nesta demonstração — mudar o login da conta demo quebraria o acesso dos próximos visitantes.',
+        'email_readonly_note' => 'O e-mail de acesso não pode ser alterado por esta tela.',
         'password_section' => 'Senha',
-        'password_note' => 'Troca de senha indisponível na demo. Esta seção é uma prévia da interface — nenhum campo é enviado.',
+        'password_note' => 'Troca de senha indisponível por esta tela. Esta seção é uma prévia da interface — nenhum campo é enviado.',
         'current_password' => 'Senha atual',
         'saved' => 'Perfil atualizado.',
     ],
@@ -289,7 +291,9 @@ return [
         'user_not_found' => 'Usuário não encontrado.',
         'admin_granted' => 'Acesso de super admin concedido a :email.',
         'admin_removed' => 'Acesso de super admin revogado de :email.',
-        'demo_protected' => 'Conta de demonstração protegida: o comando não altera :email.',
+        'account_protected' => 'Conta protegida: o comando não altera :email.',
+        // Nome antigo (até a 2.x), com o mesmo texto: sai na 3.0.
+        'demo_protected' => 'Conta protegida: o comando não altera :email.',
     ],
 
     // -------------------------------------------------------------------------

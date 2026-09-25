@@ -28,7 +28,8 @@
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "^4.7",
         "pestphp/pest-plugin-laravel": "^4.1",
-        "phpunit/phpunit": "^12.5.12"
+        "phpunit/phpunit": "^12.5.12",
+        "twstec/kit-demo": "2.x-dev"
     },
     "autoload": {
         "psr-4": {
@@ -38,7 +39,6 @@
         },
         "files": [
             "app/Support/legacy-aliases.php",
-            "app/Demo/Contact/Mail/previews.php",
             "app/Support/ui-helpers.php"
         ]
     },
@@ -133,6 +133,16 @@
             "options": {
                 "versions": {
                     "twstec/kit-auth": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/demo",
+            "options": {
+                "versions": {
+                    "twstec/kit-demo": "2.x-dev"
                 },
                 "reference": "config"
             }

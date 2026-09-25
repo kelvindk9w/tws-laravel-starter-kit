@@ -24,13 +24,13 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * uma definição só, para as regras não divergirem entre as telas:
  * - aparece só para conta AINDA não verificada (User::hasVerifiedEmail, a
  *   mesma pergunta que o middleware do painel faz);
- * - some e é recusada no servidor para conta demo (UserAdminGuard);
+ * - some e é recusada no servidor para conta protegida (UserAdminGuard);
  * - pede confirmação;
  * - dispara o evento `Verified` do framework, como o link do e-mail faz;
  * - fica registrada na trilha de auditoria (`audit_events`) como
  *   `user.email_marked_verified`, com o antes/depois da data — pela captura
  *   central do /admin (AdminAudit), não por uma chamada daqui. A recusa
- *   (conta demo) também fica, como `denied`.
+ *   (conta protegida) também fica, como `denied`.
  *
  * No modo cards vira ícone verde com o nome no hover (CardActions, pelo
  * NAME desta ação).

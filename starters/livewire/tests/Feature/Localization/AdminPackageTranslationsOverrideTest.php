@@ -80,10 +80,10 @@ it('(c) grupo repartido: a demo (lang/ do app) e o produto (pacote) resolvem do 
     starterLangWithAdmin(["{$locale}/admin.php" => ['users' => ['blocked' => "Barrada no meu produto ({$locale})"]]]);
 
     $pacote = adminPackageLangFile("{$locale}/admin.php");
-    $app = require lang_path("{$locale}/admin.php");
+    $app = require base_path("vendor/twstec/kit-demo/lang/{$locale}/admin.php");
 
     expect(__('admin.users.blocked', [], $locale))->toBe("Barrada no meu produto ({$locale})")
         ->and(__('admin.users.active', [], $locale))->toBe($pacote['users']['active'])
         ->and(__('admin.products.label', [], $locale))->toBe($app['products']['label'])
         ->and(__('admin.submissions.attack_xss', [], $locale))->toBe($pacote['submissions']['attack_xss']);
-})->with(['pt_BR', 'en', 'es']);
+})->with(['pt_BR', 'en', 'es'])->group('demo');

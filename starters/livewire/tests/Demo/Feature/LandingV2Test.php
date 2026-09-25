@@ -161,10 +161,10 @@ it('v2 traduz a página inteira nos idiomas disponíveis', function () {
 })->with([[null]]);
 
 it('nenhuma string da v2 ficou fora de lang/', function () {
-    $files = ['resources/views/landing-v2.blade.php'];
+    $files = ['vendor/twstec/kit-demo/resources/views/landing-v2.blade.php'];
 
-    foreach (glob(resource_path('views/landing-v2/*.blade.php')) as $partial) {
-        $files[] = 'resources/views/landing-v2/'.basename($partial);
+    foreach (glob(base_path('vendor/twstec/kit-demo/resources/views/landing-v2/*.blade.php')) as $partial) {
+        $files[] = 'vendor/twstec/kit-demo/resources/views/landing-v2/'.basename($partial);
     }
 
     $offenders = [];

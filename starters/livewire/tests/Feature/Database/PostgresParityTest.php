@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Demo\Filament\Resources\Products\Pages\ListProducts;
-use App\Demo\Showcase\Models\FormSubmission;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use App\Models\User;
@@ -16,6 +12,10 @@ use Twstec\Kit\Admin\Resources\Projects\Pages\ListProjects;
 use Twstec\Kit\Admin\Resources\RequestLogs\Pages\ListRequestLogs;
 use Twstec\Kit\Admin\Resources\Uploads\Pages\ListUploads;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\ListProducts;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Uploads\Models\Upload;

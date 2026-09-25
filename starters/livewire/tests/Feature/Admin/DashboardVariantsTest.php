@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\DashboardHistorySeeder;
-use App\Demo\Database\Seeders\RequestLogSeeder;
-use App\Demo\Filament\Dashboards\ContentDashboard;
 use App\Models\User;
 use Filament\Pages\Dashboard;
 use Illuminate\Support\Facades\Route;
 use Twstec\Kit\Admin\Dashboards\DashboardRegistry;
 use Twstec\Kit\Admin\Dashboards\GrowthDashboard;
 use Twstec\Kit\Admin\Dashboards\OverviewDashboard;
+use Twstec\Kit\Demo\Database\Seeders\DashboardHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\RequestLogSeeder;
+use Twstec\Kit\Demo\Filament\Dashboards\ContentDashboard;
 
 // =============================================================================
 // As TRÊS variantes de dashboard do /admin (config/dashboards.php): o

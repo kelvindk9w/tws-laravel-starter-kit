@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\DemoAdminSeeder;
-use App\Demo\Database\Seeders\DemoUserSeeder;
 use Illuminate\Support\Facades\Validator;
 use Twstec\Kit\Auth\PasswordPolicy;
+use Twstec\Kit\Demo\Database\Seeders\DemoAdminSeeder;
+use Twstec\Kit\Demo\Database\Seeders\DemoUserSeeder;
 
 // =============================================================================
 // Política de senha de login (Twstec\Kit\Auth\PasswordPolicy): configurável por
@@ -101,7 +101,7 @@ it('as credenciais demo semeadas passam mesmo com TODAS as regras ligadas', func
         "A senha demo de [{$chave}] não passa na política endurecida do app: "
         .implode(' ', $validator->errors()->all())
     );
-})->with(['ui.demo_login.password', 'ui.demo_admin.password']);
+})->with(['ui.demo_login.password', 'ui.demo_admin.password'])->group('demo');
 
 it('o registro público usa a política: com regra ligada, senha fraca é recusada', function () {
     politicaDeSenha(['numbers' => true]);

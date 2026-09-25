@@ -242,7 +242,7 @@ it('conta PROTEGIDA por extensão: excluir e editar somem da tela; bloquear, exc
     $edicao = adminAuditRow('user.updated', $protegida->uuid);
 
     expect($bloqueio->outcome)->toBe(AuditOutcome::Denied)
-        ->and($bloqueio->reason)->toBe(__('admin.users.demo_protected'))
+        ->and($bloqueio->reason)->toBe(__('admin.users.account_protected'))
         ->and($edicao->outcome)->toBe(AuditOutcome::Denied)
         ->and($protegida->fresh()->status)->toBe(UserStatus::Active)
         ->and(User::query()->whereKey($protegida->id)->exists())->toBeTrue()

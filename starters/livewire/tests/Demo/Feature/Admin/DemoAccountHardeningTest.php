@@ -2,11 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Accounts\DemoAccountGuard;
-use App\Demo\Accounts\DemoAccountTrigger;
-use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
-use App\Demo\Database\Seeders\DemoAdminSeeder;
-use App\Demo\Database\Seeders\DemoUserSeeder;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +9,11 @@ use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Demo\Accounts\DemoAccountGuard;
+use Twstec\Kit\Demo\Accounts\DemoAccountTrigger;
+use Twstec\Kit\Demo\Accounts\Exceptions\DemoAccountProtectedException;
+use Twstec\Kit\Demo\Database\Seeders\DemoAdminSeeder;
+use Twstec\Kit\Demo\Database\Seeders\DemoUserSeeder;
 
 // =============================================================================
 // BLINDAGEM DAS CONTAS DEMO (DemoAccountGuard) — docs/demo.md, "Contas
@@ -196,7 +196,7 @@ it('o seeder do admin demo também roda com a blindagem ligada', function () {
 
 it('user:make-admin recusa promover a conta demo, com erro legível', function () {
     $this->artisan('user:make-admin', ['email' => config('ui.demo_login.email')])
-        ->expectsOutputToContain(__('admin.command.demo_protected', ['email' => config('ui.demo_login.email')]))
+        ->expectsOutputToContain(__('admin.command.account_protected', ['email' => config('ui.demo_login.email')]))
         ->assertExitCode(1);
 
     expect($this->demo->fresh()->is_admin)->toBeFalse();
@@ -224,7 +224,7 @@ it('a UI do Filament continua recusando com mensagem amigável, não com stack t
     Livewire::actingAs($admin)
         ->test(ListUsers::class)
         ->callTableAction('block', $this->demo)
-        ->assertNotified(__('admin.users.demo_protected'));
+        ->assertNotified(__('admin.users.account_protected'));
 
     expect($this->demo->fresh()->status)->toBe(UserStatus::Active);
 });

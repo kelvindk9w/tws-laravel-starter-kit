@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\QueryException;
@@ -11,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
+use Twstec\Kit\Demo\Catalog\Models\Product;
 use Twstec\Kit\Foundation\Audit\AuditChanges;
 use Twstec\Kit\Foundation\Audit\AuditScope;
 use Twstec\Kit\Foundation\Audit\AuditTrail;

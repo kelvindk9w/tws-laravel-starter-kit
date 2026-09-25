@@ -54,7 +54,9 @@ return [
         'challenge_expired' => 'A verificação expirou. Entre novamente com sua senha.',
         'locked' => 'Muitos códigos incorretos. Por segurança, aguarde :minutes minuto(s) e entre novamente.',
         'unavailable' => 'A verificação em duas etapas não está disponível nesta instalação.',
-        'demo_blocked' => 'Indisponível na conta de demonstração: ligar a verificação em duas etapas trancaria a demo para os próximos visitantes.',
+        'account_protected' => 'Indisponível nesta conta: ela é protegida, e a verificação em duas etapas não pode ser ligada nela.',
+        // Nome antigo (até a 2.x), com o mesmo texto: sai na 3.0.
+        'demo_blocked' => 'Indisponível nesta conta: ela é protegida, e a verificação em duas etapas não pode ser ligada nela.',
         'requires_transaction_password' => 'Defina sua senha de transação antes: ligar e desligar a verificação em duas etapas são ações sensíveis.',
     ],
     'sensitive_action' => [

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
+use Tests\TestCase;
 use Twstec\Kit\Admin\Compat\LegacyNames;
 
 // =============================================================================
@@ -27,12 +28,14 @@ use Twstec\Kit\Admin\Compat\LegacyNames;
 // (App\Core\<Módulo>\…) existem só como apelidos de compatibilidade para o
 // que está gravado fora do código.
 //
-// A DEMONSTRAÇÃO do kit (App\Demo, em app/Demo e demo/) fica no topo, FORA de
-// app/Core: ela pode usar qualquer peça do produto, e NENHUMA peça do produto
-// pode usar a demo — nem app/Core, nem as telas (app/Filament, app/Livewire),
-// nem providers, rotas, config, migrations, seeders e views. O único ponto de
-// ligação permitido é o registro do provider da demo em bootstrap/providers.php
-// (PRODUCT_DEMO_JUNCTIONS).
+// A DEMONSTRAÇÃO do kit é o pacote twstec/kit-demo (packages/demo, namespace
+// Twstec\Kit\Demo — antes App\Demo, em app/Demo e demo/), instalado só no
+// desenvolvimento (require-dev). Ela fica no topo: pode usar qualquer peça do
+// produto, e NENHUMA peça do produto pode usar a demo — nem as telas
+// (app/Filament, app/Livewire), nem providers, rotas, config, migrations,
+// seeders e views do aplicativo, nem os cinco pacotes do kit. A ligação é só
+// pela descoberta automática de pacotes e pelos pontos de extensão; nenhum
+// arquivo do produto nomeia a demo (PRODUCT_DEMO_JUNCTIONS vazia).
 //
 // Este arquivo reprova o build quando:
 //
@@ -41,7 +44,10 @@ use Twstec\Kit\Admin\Compat\LegacyNames;
 // 3. surge um CICLO entre módulos que não seja um dos grupos coesos
 //    declarados (módulos que andam juntos e vão para o MESMO pacote);
 // 4. o backend passa a depender das telas (Livewire/Filament do app);
-// 5. qualquer arquivo do produto passa a usar App\Demo.
+// 5. qualquer arquivo do produto (aplicativo ou pacote do kit) passa a usar
+//    a demonstração (Twstec\Kit\Demo, ou o nome antigo App\Demo), a demo
+//    volta a morar no aplicativo, ou o composer.json a declara fora do
+//    require-dev.
 //
 // O que ainda não pôde ser corrigido é EXCEÇÃO EXPLÍCITA, listada abaixo com
 // a fase em que sai. Exceção que deixou de existir também reprova — a lista
@@ -129,15 +135,26 @@ const CORE_FORBIDDEN_UI_PREFIXES = ['App\Livewire\\', 'App\Filament\\'];
 const PRODUCT_DIRECTORIES = ['app', 'bootstrap', 'config', 'database', 'routes', 'resources/views'];
 
 /**
- * PONTO DE LIGAÇÃO da demo: o único lugar do produto que pode nomeá-la.
+ * PONTOS DE LIGAÇÃO da demo: lugares do produto que poderiam nomeá-la.
  *
- * Não é dívida (como CORE_UPWARD_EXCEPTIONS): é a tomada, por desenho. Por
- * isso é PERMITIDO, não obrigatório — tirar o registro desliga a demo, e o
- * produto sem ele continua passando aqui.
+ * Vazia desde que a demonstração virou o pacote twstec/kit-demo (F9): o
+ * provider dela entra pela descoberta automática de pacotes, e o registro do
+ * e-mail de contato na galeria vem do autoload do próprio pacote. Nenhum
+ * arquivo do produto precisa citá-la.
+ *
+ * @var array<string, list<string>>
  */
-const PRODUCT_DEMO_JUNCTIONS = [
-    'bootstrap/providers.php' => ['App\Demo\Providers\DemoServiceProvider'],
-];
+const PRODUCT_DEMO_JUNCTIONS = [];
+
+/**
+ * Pacotes do kit que são PRODUTO (a demo não pode aparecer em nenhum deles).
+ */
+const PRODUCT_PACKAGES = ['kit-foundation', 'kit-auth', 'kit-accounts', 'kit-uploads', 'kit-admin'];
+
+/**
+ * Prefixos de nome da demonstração: o atual e o antigo (F1b).
+ */
+const DEMO_PREFIXES = ['Twstec\\Kit\\Demo\\', 'App\\Demo\\'];
 
 /**
  * Nomes de classe do próprio app (App\…) em código PHP, lidos dos tokens.
@@ -194,40 +211,70 @@ function coreAppReferences(): array
 }
 
 /**
- * Referências à demonstração (App\Demo\…) em cada arquivo do produto.
+ * Nomes da demonstração (Twstec\Kit\Demo\… ou o antigo App\Demo\…) num
+ * arquivo. PHP é lido por tokens (comentário e string não contam). Blade não
+ * é PHP puro (o `@php(...)` e o `{{ }}` não tokenizam como código): ali vale o
+ * nome escrito em qualquer lugar, inclusive em comentário — a view do produto
+ * não deve nem citar a demo.
  *
- * PHP é lido por tokens. Blade não é PHP puro (o `@php(...)` e o `{{ }}` não
- * tokenizam como código): ali vale o nome escrito em qualquer lugar, inclusive
- * em comentário — a view do produto não deve nem citar a demo.
+ * @return list<string>
+ */
+function demoReferencesIn(string $path, string $contents): array
+{
+    if (str_ends_with($path, '.blade.php')) {
+        preg_match_all('/(?:Twstec\\\\+Kit\\\\+Demo|App\\\\+Demo)(?:\\\\+[A-Za-z0-9_]+)*/', $contents, $matches);
+
+        return array_values(array_unique(array_map(
+            fn (string $name): string => (string) preg_replace('/\\\\+/', '\\', $name),
+            $matches[0],
+        )));
+    }
+
+    $names = [];
+
+    foreach (PhpToken::tokenize($contents) as $token) {
+        if (! $token->is([T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) {
+            continue;
+        }
+
+        $name = ltrim($token->text, '\\');
+
+        foreach (DEMO_PREFIXES as $prefix) {
+            if (str_starts_with($name.'\\', $prefix)) {
+                $names[$name] = true;
+            }
+        }
+    }
+
+    return array_keys($names);
+}
+
+/**
+ * Referências à demonstração em cada arquivo do produto: o aplicativo
+ * (PRODUCT_DIRECTORIES) e os cinco pacotes do kit (lidos pelo vendor/, como o
+ * aplicativo instalado os vê).
  *
  * @return array<string, list<string>> caminho relativo => nomes
  */
 function productDemoReferences(): array
 {
+    $directories = PRODUCT_DIRECTORIES;
+
+    foreach (PRODUCT_PACKAGES as $package) {
+        foreach (['src', 'config', 'database', 'lang', 'resources', 'routes'] as $directory) {
+            if (is_dir(base_path("vendor/twstec/{$package}/{$directory}"))) {
+                $directories[] = "vendor/twstec/{$package}/{$directory}";
+            }
+        }
+    }
+
     $references = [];
 
-    foreach (PRODUCT_DIRECTORIES as $directory) {
-        $finder = (new Finder)->files()->in(base_path($directory))->name('*.php');
-
-        if ($directory === 'app') {
-            $finder->exclude('Demo');
-        }
-
-        foreach ($finder as $file) {
-            $path = str_replace(base_path().'/', '', $file->getRealPath());
-
-            if (str_ends_with($path, '.blade.php')) {
-                preg_match_all('/App\\\\+Demo(?:\\\\+[A-Za-z0-9_]+)*/', $file->getContents(), $matches);
-                $names = array_values(array_unique(array_map(
-                    fn (string $name): string => (string) preg_replace('/\\\\+/', '\\', $name),
-                    $matches[0],
-                )));
-            } else {
-                $names = array_values(array_filter(
-                    appReferencesIn($file->getContents()),
-                    fn (string $name): bool => str_starts_with($name, 'App\\Demo\\'),
-                ));
-            }
+    foreach ($directories as $directory) {
+        foreach ((new Finder)->files()->in(base_path($directory))->name('*.php') as $file) {
+            // Caminho pelo vendor (não pelo link do monorepo).
+            $path = str_replace(base_path().'/', '', $file->getPath().'/'.$file->getFilename());
+            $names = demoReferencesIn($path, $file->getContents());
 
             if ($names !== []) {
                 $references[$path] = $names;
@@ -450,7 +497,7 @@ it('mantém o backend sem dependência das telas (Livewire/Filament do app)', fu
     expect($violations)->toBe([]);
 });
 
-it('mantém o produto sem dependência da demonstração (App\\Demo)', function (): void {
+it('mantém o produto sem dependência da demonstração (Twstec\\Kit\\Demo)', function (): void {
     $violations = [];
 
     foreach (productDemoReferences() as $path => $names) {
@@ -464,19 +511,64 @@ it('mantém o produto sem dependência da demonstração (App\\Demo)', function 
     expect($violations)->toBe([]);
 });
 
-it('mantém a demonstração fora de app/Core', function (): void {
-    // A demo mora em App\Demo; módulo de app/Core com classe da demo seria a
-    // fronteira voltando por dentro do produto.
-    $demoInCore = [];
+it('a leitura da demonstração pega o que deve pegar (a trava não é cega)', function (): void {
+    $php = <<<'PHP'
+        <?php
+        use Twstec\Kit\Demo\Support\DemoSurface;
+        // Twstec\Kit\Demo\Em\Comentario não conta
+        $a = \App\Demo\Support\DemoSurface::allowed();
+        $b = 'Twstec\\Kit\\Demo\\Em\\String';
+        $c = Twstec\Kit\Admin\AdminPlugin::class;
+        PHP;
 
-    foreach (is_dir(base_path('app/Core')) ? (new Finder)->files()->in(base_path('app/Core'))->name('*.php') : [] as $file) {
-        if (preg_match('/^namespace\s+App\\\\Demo\b/m', $file->getContents()) === 1) {
-            $demoInCore[] = str_replace(base_path().'/', '', $file->getRealPath());
+    expect(demoReferencesIn('x.php', $php))->toBe(['Twstec\Kit\Demo\Support\DemoSurface', 'App\Demo\Support\DemoSurface'])
+        ->and(demoReferencesIn('x.blade.php', '{{-- Twstec\\Kit\\Demo\\X --}}'))->toBe(['Twstec\Kit\Demo\X']);
+});
+
+it('mantém a demonstração fora do aplicativo', function (): void {
+    // A demo é o pacote twstec/kit-demo. Ela não volta a morar no aplicativo:
+    // nem as pastas de antes do pacote (app/Demo, demo/), nem classe dela em
+    // app/ (inclusive app/Core, onde seria a fronteira voltando por dentro do
+    // produto).
+    $violations = [];
+
+    foreach (['app/Demo', 'demo'] as $directory) {
+        if (file_exists(base_path($directory))) {
+            $violations[] = "{$directory} existe de novo (a demo é o pacote twstec/kit-demo)";
         }
     }
 
-    // A pasta app/Demo pode nem existir: o produto não exige a demo.
-    expect($demoInCore)->toBe([]);
+    foreach ((new Finder)->files()->in(base_path('app'))->name('*.php') as $file) {
+        if (preg_match('/^namespace\s+(?:App\\\\Demo|Twstec\\\\Kit\\\\Demo)\b/m', $file->getContents()) === 1) {
+            $violations[] = str_replace(base_path().'/', '', $file->getRealPath());
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
+it('declara a demonstração só como dependência de desenvolvimento', function (): void {
+    // require-dev: está no ambiente de quem clona o kit e NUNCA numa
+    // instalação `composer install --no-dev` (a imagem de produção). Na
+    // seção `require`, a demo — contas de credencial pública, vitrine, dado
+    // fictício — viajaria para produção.
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
+
+    // (Tirada com `composer remove --dev twstec/kit-demo`, ela não aparece em
+    // lugar nenhum — o que também vale.)
+    expect(array_keys($composer['require']))->not->toContain('twstec/kit-demo');
+
+    if (TestCase::demoInstalled()) {
+        expect(array_keys($composer['require-dev'] ?? []))->toContain('twstec/kit-demo');
+    }
+
+    // E nenhum pacote do produto depende dela.
+    foreach (PRODUCT_PACKAGES as $package) {
+        $manifesto = base_path("vendor/twstec/{$package}/composer.json");
+        $dados = json_decode((string) file_get_contents($manifesto), true);
+
+        expect(array_keys($dados['require'] ?? []))->not->toContain('twstec/kit-demo');
+    }
 });
 
 it('usa os nomes novos das classes da base, nunca os apelidos App\\Core\\<Módulo da base>', function (): void {

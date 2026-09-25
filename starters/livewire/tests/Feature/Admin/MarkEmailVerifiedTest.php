@@ -125,7 +125,7 @@ it('a guarda recusa conta demo e libera conta comum', function () {
     $demo = User::factory()->unverified()->create(['email' => config('ui.demo_admin.email')]);
     $comum = User::factory()->unverified()->create();
 
-    expect(UserAdminGuard::verifyEmailDenial($demo))->toBe(__('admin.users.demo_protected'))
+    expect(UserAdminGuard::verifyEmailDenial($demo))->toBe(__('admin.users.account_protected'))
         ->and(UserAdminGuard::verifyEmailDenial($comum))->toBeNull()
         ->and(MarkEmailVerifiedAction::isAvailableFor($demo))->toBeFalse()
         ->and(MarkEmailVerifiedAction::isAvailableFor($comum))->toBeTrue();
@@ -254,7 +254,7 @@ it('a execução reconfere a guarda no servidor, mesmo chamada fora da tela — 
     expect($demo->fresh()->email_verified_at)->toBeNull()
         ->and($recusa->action)->toBe(MarkEmailVerifiedAction::AUDIT_ACTION)
         ->and($recusa->outcome)->toBe(AuditOutcome::Denied)
-        ->and($recusa->reason)->toBe(__('admin.users.demo_protected'))
+        ->and($recusa->reason)->toBe(__('admin.users.account_protected'))
         ->and($recusa->changes)->toBeNull();
 })->group('demo');
 

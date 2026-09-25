@@ -72,3 +72,13 @@ it('toda chave que o código do pacote pede existe no pacote', function (): void
 
     expect($faltando)->toBe([]);
 });
+
+it('a recusa da verificação em duas etapas numa conta protegida é neutra — vale para qualquer conta protegida', function (string $locale): void {
+    // Quem protege uma conta é a extensão registrada em AccountProtection
+    // (com a demonstração do kit instalada, ela dá o texto "de demo").
+    $auth = require authLangPath("{$locale}/auth.php");
+
+    expect(mb_strtolower($auth['two_factor']['account_protected']))->not->toContain('demo')
+        // O nome antigo (até a 2.x) continua resolvendo, com o mesmo texto.
+        ->and(__('auth.two_factor.demo_blocked', [], $locale))->toBe(__('auth.two_factor.account_protected', [], $locale));
+})->with(['pt_BR', 'en', 'es']);

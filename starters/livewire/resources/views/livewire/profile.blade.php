@@ -156,7 +156,7 @@
 
     {{-- Verificação em duas etapas no login (TwoFactorLogin) ---------------------
          Depois da senha de transação de propósito: ligar e desligar são ações
-         sensíveis e dependem dela. Quem não pode mudar (conta demo protegida,
+         sensíveis e dependem dela. Quem não pode mudar (conta protegida,
          sem senha de transação) vê o motivo no lugar do botão. --}}
     @if ($twoFactorAvailable)
         <x-card :title="__('panel.profile.two_factor_heading')" :description="__('panel.profile.two_factor_hint', ['email' => $user->email])" data-two-factor-card>

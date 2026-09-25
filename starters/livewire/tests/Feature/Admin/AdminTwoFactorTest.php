@@ -218,7 +218,7 @@ it('perfil do /admin: sem senha de transação ou conta demo, a ação fica desa
     $this->actingAs($demo);
 
     Livewire::test(Profile::class)
-        ->assertSee(__('auth.two_factor.demo_blocked'))
+        ->assertSee(__('auth.two_factor.account_protected'))
         ->assertActionDisabled('toggleTwoFactor');
 
     expect($demo->fresh()->two_factor_enabled_at)->toBeNull();

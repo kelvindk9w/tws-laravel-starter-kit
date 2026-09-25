@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\FormSubmissionSeeder;
-use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
-use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Demo\Livewire\ContactForm;
-use App\Demo\Showcase\Models\FormSubmission;
-use App\Demo\Showcase\Support\SubmissionExcerpt;
 use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Demo\Database\Seeders\FormSubmissionSeeder;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use Twstec\Kit\Demo\Livewire\ContactForm;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
+use Twstec\Kit\Demo\Showcase\Support\SubmissionExcerpt;
 
 // Formulários demo do /ui gravando de verdade em form_submissions + vitrine
 // de segurança: ataques reais (XSS, SQLi, honeypot) contra AMBOS os forms —

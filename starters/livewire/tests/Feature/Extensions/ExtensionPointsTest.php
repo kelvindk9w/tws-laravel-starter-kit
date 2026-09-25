@@ -26,7 +26,7 @@ use Twstec\Kit\Foundation\Mail\Support\ConfiguredMailPreviewGate;
 // =============================================================================
 // PONTOS DE EXTENSÃO DO PRODUTO — o comportamento SEM extensão registrada.
 //
-// O produto não conhece a demonstração (App\Demo): onde precisava perguntar
+// O produto não conhece a demonstração (twstec/kit-demo): onde precisava perguntar
 // algo a ela, pergunta a um ponto de extensão neutro. Estes testes tiram do
 // container o que a demo registra e provam que o produto responde sozinho,
 // do jeito seguro: nenhuma conta protegida, nenhum login pré-preenchido,
@@ -96,8 +96,9 @@ it('com uma extensão registrada, o model e as guardas perguntam a ela', functio
 
 it('sem extensão, as telas de login nascem vazias', function (): void {
     // Com a flag do login demo ligada, a DEMO preencheria — sem a extensão
-    // registrada, o produto não preenche nada.
-    config()->set('ui.demo_login.enabled', true);
+    // registrada, o produto não preenche nada. As credenciais são as da demo
+    // (declaradas aqui: sem o pacote da demo, o config não as tem).
+    config()->set('ui.demo_login', ['enabled' => true, 'email' => 'demo@tws.dev', 'password' => 'Demo-password1']);
     app()->offsetUnset(LoginPrefillProvider::class);
 
     expect(LoginPrefill::for('web'))->toBeNull()

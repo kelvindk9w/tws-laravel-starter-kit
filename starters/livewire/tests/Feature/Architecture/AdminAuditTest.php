@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
 use App\Filament\AuditFixture\NewAdminScreen;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -17,6 +16,7 @@ use Twstec\Kit\Admin\Pages\Settings;
 use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Admin\Support\AdminAudit;
+use Twstec\Kit\Demo\Catalog\Models\Product;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 

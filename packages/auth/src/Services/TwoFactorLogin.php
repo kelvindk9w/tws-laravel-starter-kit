@@ -83,7 +83,7 @@ final class TwoFactorLogin
         }
 
         if (ProtectedAccounts::protects($user)) {
-            return __('auth.two_factor.demo_blocked');
+            return __('auth.two_factor.account_protected');
         }
 
         if (! $user->hasTransactionPassword()) {

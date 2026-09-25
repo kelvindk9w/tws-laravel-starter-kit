@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Demo\Livewire\ContactForm;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 use Livewire\Livewire;
+use Twstec\Kit\Demo\Livewire\ContactForm;
 
 // =============================================================================
 // Padrões de formulário e erros: config/ui.php → error_display (inline |

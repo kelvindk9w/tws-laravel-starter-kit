@@ -84,9 +84,9 @@ final class MakeAdminUser extends Command
             // Mudança e linha da trilha na mesma transação (falha fechada).
             DB::transaction(fn (): bool => $user->forceFill($changes)->save());
         } catch (AccountProtectedException $exception) {
-            $trail->denied('user.'.$verb, $user, __('admin.command.demo_protected', ['email' => (string) $user->email]));
+            $trail->denied('user.'.$verb, $user, __('admin.command.account_protected', ['email' => (string) $user->email]));
 
-            $this->error(__('admin.command.demo_protected', ['email' => (string) $user->email]));
+            $this->error(__('admin.command.account_protected', ['email' => (string) $user->email]));
             $this->line($exception->getMessage());
 
             return self::FAILURE;

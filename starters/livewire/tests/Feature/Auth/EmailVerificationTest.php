@@ -473,7 +473,7 @@ it('confirmar o e-mail de conta demo não é bloqueado pela blindagem', function
 
     expect($demo->markEmailAsVerified())->toBeTrue()
         ->and($demo->fresh()->email_verified_at)->not->toBeNull();
-});
+})->group('demo');
 
 it('com o modo demo desligado, a conta demo é uma conta comum (sem atalho)', function (): void {
     config(['ui.demo_login.enabled' => false]);
@@ -482,7 +482,7 @@ it('com o modo demo desligado, a conta demo é uma conta comum (sem atalho)', fu
 
     expect($demo->hasVerifiedEmail())->toBeFalse();
     $this->actingAs($demo)->get('/dashboard')->assertRedirect(route('verification.notice'));
-});
+})->group('demo');
 
 it('user:make-admin marca o e-mail como confirmado ao promover', function (): void {
     $user = User::factory()->unverified()->create(['email' => 'promovido@example.com']);

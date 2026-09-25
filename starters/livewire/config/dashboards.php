@@ -27,11 +27,11 @@ return [
     // Variantes ligadas, na ordem em que aparecem no menu (slugs separados
     // por vírgula). Vazio = nenhuma variante do kit; o painel cai no
     // Dashboard de fábrica do Filament para que /admin nunca dê 404. Slug sem
-    // variante registrada é ignorado: `content` ("Conteúdo & Operação") é
-    // registrada pela demonstração do kit (App\Demo) e some sem ela.
+    // variante registrada é ignorado (uma extensão instalada registra as dela
+    // em `variants` — ver abaixo).
     'enabled' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('DASHBOARD_ENABLED', 'overview,growth,content')),
+        explode(',', (string) env('DASHBOARD_ENABLED', 'overview,growth')),
     ))),
 
     // Variante que responde em /admin. Se o slug não estiver habilitado, a

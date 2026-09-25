@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Database\Seeders\ProductSeeder;
-use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
-use App\Demo\Filament\Resources\Products\Pages\EditProduct;
-use App\Demo\Filament\Resources\Products\Pages\ListProducts;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Livewire;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Database\Seeders\ProductSeeder;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\CreateProduct;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\EditProduct;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\ListProducts;
 use Twstec\Kit\Foundation\Money\Money;
 
 use function Pest\Livewire\livewire;

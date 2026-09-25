@@ -195,7 +195,7 @@ final class Profile extends Component
 
     /**
      * Abre a confirmação sensível para ligar/desligar a verificação em duas
-     * etapas. Conta que não pode (demo protegida, sem senha de transação,
+     * etapas. Conta que não pode (conta protegida, sem senha de transação,
      * opção desligada na instalação) recebe o motivo em vez do modal.
      */
     public function requestTwoFactorToggle(TwoFactorLogin $twoFactor): void

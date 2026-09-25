@@ -2,12 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
-use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Demo\Filament\Resources\Products\Pages\ListProducts;
-use App\Demo\Filament\Resources\Products\ProductResource;
-use App\Demo\Showcase\Models\FormSubmission;
 use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
@@ -18,6 +12,12 @@ use Twstec\Kit\Admin\Support\BaseResource;
 use Twstec\Kit\Admin\Support\CardActions;
 use Twstec\Kit\Admin\Support\ViewMode;
 use Twstec\Kit\Admin\Support\ViewModeToggle;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use Twstec\Kit\Demo\Filament\Resources\Products\Pages\ListProducts;
+use Twstec\Kit\Demo\Filament\Resources\Products\ProductResource;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 
 // =============================================================================
 // Alternador tabela/cards das listagens do super admin.

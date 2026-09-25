@@ -58,7 +58,7 @@ use Twstec\Kit\Auth\Support\UserModel;
  * quando não há nenhum admin (bootstrap e recuperação de acesso).
  *
  * Guardas de servidor (UserAdminGuard, não apenas botão escondido):
- * contas demo intocáveis, o admin não se exclui nem se bloqueia e o último
+ * contas protegidas intocáveis, o admin não se exclui nem se bloqueia e o último
  * admin ativo não perde a flag/acesso.
  *
  * `is_admin` e `status` NÃO são mass-assignable: as páginas de
@@ -274,7 +274,7 @@ final class UserResource extends BaseResource
                     ]),
                 TernaryFilter::make('is_admin')
                     ->label(__('admin.users.admin')),
-                // "Sim" = coluna preenchida, "Não" = nula. Conta demo com a
+                // "Sim" = coluna preenchida, "Não" = nula. Conta protegida com a
                 // coluna nula conta como verificada no login (blindagem), mas
                 // o seeder já grava a data — o filtro olha o dado gravado.
                 TernaryFilter::make('email_verified_at')
@@ -293,7 +293,7 @@ final class UserResource extends BaseResource
                     ->modalHeading(__('admin.users.block_heading'))
                     ->modalDescription(fn (Model&AuthUser $record): string => __('admin.users.block_warning', ['email' => $record->email]))
                     ->action(function (Model&AuthUser $record): void {
-                        // Guardas de servidor: conta demo, a própria conta e
+                        // Guardas de servidor: conta protegida, a própria conta e
                         // o último admin ativo não podem ser bloqueados. A
                         // recusa fica na trilha (`user.blocked`, denied).
                         if ($motivo = UserAdminGuard::blockDenial($record, auth()->user())) {
@@ -314,7 +314,7 @@ final class UserResource extends BaseResource
                     ->modalHeading(__('admin.users.unblock_heading'))
                     ->action(function (Model&AuthUser $record): void {
                         if ($record->isReservedAccount()) {
-                            AdminAudit::denied(__('admin.users.demo_protected'), $record, 'unblocked');
+                            AdminAudit::denied(__('admin.users.account_protected'), $record, 'unblocked');
 
                             return;
                         }

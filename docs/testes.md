@@ -66,14 +66,24 @@ documento: [autenticação](autenticacao.md#testes), [API e chaves](api.md#teste
 [uploads](uploads.md#testes), [painéis e /admin](admin-e-dashboards.md#testes),
 [backup](backup.md#testes) e [filas](filas.md#testes).
 
-Os testes da **demonstração** do kit (landings, vitrine, contato, catálogo,
-contas demo) ficam em `tests/Demo` e no grupo `demo` — assim como os casos de
-teste do produto que exercitam uma peça da demo, marcados com
-`->group('demo')`. A suíte do produto sem a demo (por exemplo, com o
-`DemoServiceProvider` fora de `bootstrap/providers.php`) é:
+Os testes da **demonstração** do kit (o pacote `twstec/kit-demo`, instalado
+só no desenvolvimento — ver [demo.md](demo.md)) estão em dois lugares:
+
+- **`packages/demo/tests`** (Orchestra Testbench, aplicação limpa): o que a
+  demo liga sozinha — pontos de extensão, configuração, rotas, migrations,
+  traduções, proteção das contas demo, fail-closed de produção, o comando
+  `demo:uninstall` e as regras que só leem os arquivos do pacote;
+- **`starters/livewire/tests/Demo`** (grupo `demo`) e os casos do produto
+  marcados com `->group('demo')`: o que exercita a demo **dentro do
+  aplicativo** (layout, componentes Blade, painel, `/admin`, gatilho no
+  PostgreSQL).
+
+Sem a demo instalada (`composer remove --dev twstec/kit-demo`), os testes do
+grupo `demo` **pulam sozinhos**, com o motivo (`tests/TestCase.php`): a suíte
+do produto é o `pest` de sempre, sem filtro de grupo. O CI roda os dois jeitos.
 
 ```bash
-docker compose exec app ./vendor/bin/pest --testsuite=Unit,Feature --exclude-group=demo
+docker compose exec -T -w /var/packages/demo app ./vendor/bin/pest   # suíte do pacote
 ```
 
 ## Testes contra o PostgreSQL

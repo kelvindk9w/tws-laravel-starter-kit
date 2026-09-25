@@ -104,21 +104,23 @@ it('painel usa o design system do kit, nunca Tailwind cru de componente', functi
 it('o esqueleto do site é montado com componentes do kit', function () {
     // Um cabeçalho copiado é um cabeçalho que diverge. Landing, showcase,
     // auth e painel passam pelo MESMO <x-layouts.site>, que por sua vez só
-    // compõe componentes do kit.
+    // compõe componentes do kit. (O apelido público da demonstração,
+    // <x-layouts.landing>, é conferido do lado dela: tests/Demo, "o layout
+    // público da demo…".)
     $site = (string) file_get_contents(resource_path('views/components/layouts/site.blade.php'));
 
     expect($site)->toContain('<x-site-header')
         ->and($site)->toContain('<x-site-footer')
         ->and($site)->toContain('<x-flash-toast');
 
-    foreach (['layouts/app', 'layouts/auth', 'components/layouts/landing'] as $layout) {
+    foreach (['layouts/app', 'layouts/auth'] as $layout) {
         expect((string) file_get_contents(resource_path("views/{$layout}.blade.php")))
             ->toContain('<x-layouts.site');
     }
 
     // Nenhum layout escreve o próprio <header>/<footer> de site. (O <header>
     // de uma PÁGINA — o bloco de título do /ui — é conteúdo, não é chrome.)
-    foreach (['layouts/app', 'layouts/auth', 'components/layouts/landing'] as $layout) {
+    foreach (['layouts/app', 'layouts/auth'] as $layout) {
         expect((string) file_get_contents(resource_path("views/{$layout}.blade.php")))
             ->not->toContain('<header')
             ->not->toContain('<footer');

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Demo\Contact\Mail\ContactMessageMail;
-use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
-use App\Demo\Showcase\Models\FormSubmission;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Twstec\Kit\Demo\Contact\Mail\ContactMessageMail;
+use Twstec\Kit\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 use Twstec\Kit\Foundation\Support\Platform;
 

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Vite;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 use Twstec\Kit\Foundation\Support\Platform;
 
@@ -37,9 +38,9 @@ it('o endereço antigo /v3 continua valendo: 301 para a home', function () {
 it('a landing anterior saiu do kit sem deixar rota nem view para trás', function () {
     // Ela vive no histórico do git. O que não pode existir é o meio-termo:
     // uma view órfã que ninguém renderiza e ninguém mantém.
-    expect(resource_path('views/landing-v3.blade.php'))->not->toBeFile()
-        ->and(is_dir(resource_path('views/landing-v3')))->toBeFalse()
-        ->and(lang_path('pt_BR/landing_v3.php'))->not->toBeFile()
+    expect(base_path('vendor/twstec/kit-demo/resources/views/landing-v3.blade.php'))->not->toBeFile()
+        ->and(is_dir(base_path('vendor/twstec/kit-demo/resources/views/landing-v3')))->toBeFalse()
+        ->and(base_path('vendor/twstec/kit-demo/lang/pt_BR/landing_v3.php'))->not->toBeFile()
         ->and(config('landing_v3'))->toBeNull();
 
     // A antiga seção de horas foi um inventário item a item; hoje é UMA linha
@@ -52,23 +53,23 @@ it('mostra as quatro telas reais do kit, em versão clara e escura', function ()
 
     foreach (['dashboard', 'admin', 'ui', 'login'] as $screen) {
         foreach (['light', 'dark'] as $theme) {
-            expect(public_path("img/landing/{$screen}-{$theme}-1440.webp"))->toBeFile()
-                ->and(public_path("img/landing/{$screen}-{$theme}-720.webp"))->toBeFile();
+            expect(base_path("vendor/twstec/kit-demo/resources/img/landing/{$screen}-{$theme}-1440.webp"))->toBeFile()
+                ->and(base_path("vendor/twstec/kit-demo/resources/img/landing/{$screen}-{$theme}-720.webp"))->toBeFile();
         }
 
-        $response->assertSee(asset("img/landing/{$screen}-light-1440.webp"), false)
-            ->assertSee(asset("img/landing/{$screen}-dark-1440.webp"), false)
+        $response->assertSee(Vite::asset("vendor/twstec/kit-demo/resources/img/landing/{$screen}-light-1440.webp"), false)
+            ->assertSee(Vite::asset("vendor/twstec/kit-demo/resources/img/landing/{$screen}-dark-1440.webp"), false)
             ->assertSee(__("landing.hero.screens.{$screen}.alt"));
     }
 });
 
 it('mostra o split-screen com o código do x-table e a captura da tela renderizada', function () {
-    expect(public_path('img/landing/table-light-900.webp'))->toBeFile()
-        ->and(public_path('img/landing/table-dark-900.webp'))->toBeFile();
+    expect(base_path('vendor/twstec/kit-demo/resources/img/landing/table-light-900.webp'))->toBeFile()
+        ->and(base_path('vendor/twstec/kit-demo/resources/img/landing/table-dark-900.webp'))->toBeFile();
 
     $this->get('/')
         ->assertSee('data-sky-split-range', false)
-        ->assertSee(asset('img/landing/table-light-900.webp'), false)
+        ->assertSee(Vite::asset('vendor/twstec/kit-demo/resources/img/landing/table-light-900.webp'), false)
         ->assertSee(__('landing.components.code_label'))
         ->assertSee(__('landing.components.screen_label'))
         // O trecho de código é o USO REAL do componente do kit.
@@ -298,10 +299,10 @@ it('os três idiomas têm exatamente as mesmas chaves', function () {
         return $keys;
     };
 
-    $reference = $flatten(require lang_path('pt_BR/landing.php'));
+    $reference = $flatten(require base_path('vendor/twstec/kit-demo/lang/pt_BR/landing.php'));
 
     foreach (['en', 'es'] as $locale) {
-        expect($flatten(require lang_path("{$locale}/landing.php")))
+        expect($flatten(require base_path("vendor/twstec/kit-demo/lang/{$locale}/landing.php")))
             ->toEqualCanonicalizing($reference);
     }
 });

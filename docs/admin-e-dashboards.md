@@ -82,7 +82,7 @@ produto — por isso é pacote.
 | --- | --- |
 | Pacote (`packages/admin`) | resources (usuários, chaves de API, projetos, uploads, logs de requisição, auditoria), páginas (perfil, configurações, login com o segundo fator por e-mail — provedor MFA próprio), dashboards e widgets (`DashboardRegistry`, as variantes Visão geral e Crescimento & API), a captura da trilha de auditoria (`AdminAudit`), guardas (`UserAdminGuard`), ações (marcar e-mail verificado), o comando `user:make-admin`, o critério de acesso (`AdminAccess`), as proteções do painel e as traduções `admin.*` |
 | Starter (`app/Providers/Filament/AdminPanelProvider.php`) | o registro do painel (`id`, `path`), a marca, as cores, a fonte, o tema (`resources/css/filament.css`), o seletor de idioma da topbar e a descoberta de telas próprias em `app/Filament` |
-| Demonstração (`App\Demo\Filament\DemoAdminPlugin`) | produtos, submissões e o dashboard "Conteúdo & Operação" — outro plugin, com as traduções dela no `lang/admin.php` do aplicativo |
+| Demonstração (`Twstec\Kit\Demo\Filament\DemoAdminPlugin`, pacote `twstec/kit-demo`, só no desenvolvimento) | produtos, submissões e o dashboard "Conteúdo & Operação" — outro plugin, com as traduções dela no `lang/admin.php` do pacote |
 
 **Por que plugin, e não um `PanelProvider` pronto para estender:** o painel
 continua sendo do aplicativo, montado com a API normal do Filament; o kit
@@ -485,7 +485,7 @@ Hoje:
   tags, sem entidades que possam virar tags, espaços colapsados, ~60
   caracteres —, com a legenda "conteúdo neutralizado". Vale para a mensagem
   **e para o apelido**: o payload entra por qualquer campo. Quem neutraliza é
-  `App\Demo\Showcase\Support\SubmissionExcerpt`, e o teste prova que o
+  `Twstec\Kit\Demo\Showcase\Support\SubmissionExcerpt`, e o teste prova que o
   trecho não tem como voltar a ser marcação;
 - **no detalhe** (`/admin/form-submissions/{uuid}`): o payload **íntegro**,
   escapado, dentro de um bloco monoespaçado rotulado "evidência forense",

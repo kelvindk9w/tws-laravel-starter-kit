@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Database\Seeders\ApiKeySeeder;
-use App\Demo\Database\Seeders\DashboardHistorySeeder;
-use App\Demo\Database\Seeders\ProductHistorySeeder;
-use App\Demo\Database\Seeders\ProductSeeder;
-use App\Demo\Database\Seeders\ProjectSeeder;
-use App\Demo\Database\Seeders\RequestLogHistorySeeder;
-use App\Demo\Database\Seeders\RequestLogSeeder;
-use App\Demo\Database\Seeders\SubmissionHistorySeeder;
-use App\Demo\Database\Seeders\UploadSeeder;
-use App\Demo\Database\Seeders\UserSeeder;
-use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Carbon;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Database\Seeders\ApiKeySeeder;
+use Twstec\Kit\Demo\Database\Seeders\DashboardHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\ProductHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\ProductSeeder;
+use Twstec\Kit\Demo\Database\Seeders\ProjectSeeder;
+use Twstec\Kit\Demo\Database\Seeders\RequestLogHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\RequestLogSeeder;
+use Twstec\Kit\Demo\Database\Seeders\SubmissionHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\UploadSeeder;
+use Twstec\Kit\Demo\Database\Seeders\UserSeeder;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Uploads\Models\Upload;

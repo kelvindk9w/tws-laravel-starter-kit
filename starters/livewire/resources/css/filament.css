@@ -31,9 +31,6 @@
 @source '../../app/Filament';
 @source '../../app/Providers/Filament';
 @source '../../resources/views/filament';
-/* Telas da demonstração no /admin (App\Demo\Filament). Sem a demo, o
-   diretório não existe e a linha não gera nada. */
-@source '../../app/Demo/Filament';
 
 @theme {
     /* Corpo e títulos do /admin passam a falar a MESMA voz tipográfica do

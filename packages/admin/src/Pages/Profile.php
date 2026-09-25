@@ -26,27 +26,29 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
 
 /**
- * Perfil do super admin (/admin — demo-safe).
+ * Perfil do super admin (/admin).
  *
  * - FOTO: editável — sobe pela função global de upload do kit
  *   (AvatarUpload → SecureUploadService) e aparece na hora no avatar do
  *   cabeçalho, porque o InitialsAvatarProvider lê o mesmo vínculo.
  * - NOME: editável e funcional (grava na conta logada).
- * - E-MAIL: read-only com nota explicativa — mudar o e-mail da conta demo
- *   quebraria o login para os próximos visitantes.
+ * - E-MAIL: read-only com nota explicativa — o e-mail de acesso não muda por
+ *   esta tela (numa conta protegida, como a conta demo, mudá-lo quebraria o
+ *   login dos próximos visitantes).
  * - SENHA: seção MONTADA mas sem endpoint — campo de senha atual
- *   desabilitado (preview) com a nota "indisponível na demo". Nenhum
- *   campo da seção é desidratado: nada aqui pode derrubar o acesso demo.
+ *   desabilitado (preview) com a nota "indisponível por esta tela". Nenhum
+ *   campo da seção é desidratado: nada aqui pode derrubar o acesso de uma
+ *   conta protegida.
  * - VERIFICAÇÃO EM DUAS ETAPAS: a MESMA preferência do painel do cliente
  *   (TwoFactorLogin), com a MESMA regra — ligar e desligar pedem senha de
  *   transação + código por e-mail (SensitiveActionService) e o token emitido é
  *   consumido pelo próprio TwoFactorLogin. Em dois modais encadeados: senha →
- *   código. A conta demo protegida vê o motivo e o botão desabilitado.
+ *   código. A conta protegida vê o motivo e o botão desabilitado.
  *
  * TRILHA DE AUDITORIA: salvar o perfil vira `user.updated` (nome mascarado)
  * e ligar/desligar vira `user.two_factor_enabled`/`user.two_factor_disabled`
  * — pela captura central do /admin (AdminAudit). Toda recusa (senha de
- * transação errada, código errado, conta demo) fica registrada como
+ * transação errada, código errado, conta protegida) fica registrada como
  * `denied` com o motivo: é o sinal de alguém tentando mexer no segundo fator
  * de uma sessão que não é a dele.
  */

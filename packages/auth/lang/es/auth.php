@@ -54,7 +54,9 @@ return [
         'challenge_expired' => 'La verificación expiró. Inicia sesión de nuevo con tu contraseña.',
         'locked' => 'Demasiados códigos incorrectos. Por seguridad, espera :minutes minuto(s) e inicia sesión de nuevo.',
         'unavailable' => 'La verificación en dos pasos no está disponible en esta instalación.',
-        'demo_blocked' => 'No disponible en la cuenta de demostración: activar la verificación en dos pasos bloquearía la demo para los próximos visitantes.',
+        'account_protected' => 'No disponible en esta cuenta: está protegida y la verificación en dos pasos no puede activarse en ella.',
+        // Nombre antiguo (hasta la 2.x), mismo texto: sale en la 3.0.
+        'demo_blocked' => 'No disponible en esta cuenta: está protegida y la verificación en dos pasos no puede activarse en ella.',
         'requires_transaction_password' => 'Define primero tu contraseña de transacción: activar y desactivar la verificación en dos pasos son acciones sensibles.',
     ],
     'sensitive_action' => [

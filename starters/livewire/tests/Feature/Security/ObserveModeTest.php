@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Demo\Contact\Mail\ContactMessageMail;
-use App\Demo\Showcase\Models\FormSubmission;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Demo\Contact\Mail\ContactMessageMail;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Foundation\Security\ValidationMode;

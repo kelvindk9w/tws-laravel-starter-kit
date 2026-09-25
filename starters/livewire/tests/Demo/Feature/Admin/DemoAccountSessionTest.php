@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-use App\Demo\Accounts\DemoAccountGuard;
-use App\Demo\Accounts\DemoAccountSession;
-use App\Demo\Accounts\DemoAccountTrigger;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Tests\TestCase;
+use Twstec\Kit\Demo\Accounts\DemoAccountGuard;
+use Twstec\Kit\Demo\Accounts\DemoAccountSession;
+use Twstec\Kit\Demo\Accounts\DemoAccountTrigger;
 
 // =============================================================================
 // GATILHO DAS CONTAS DEMO SINCRONIZADO COM O MODO DEMO DA APLICAÇÃO
@@ -92,8 +93,9 @@ describe('conexão PostgreSQL', function () {
     });
 
     afterEach(function () {
-        // O Pest roda o afterEach mesmo nos testes pulados (SQLite).
-        if (DB::connection()->getDriverName() !== 'pgsql') {
+        // O Pest roda o afterEach mesmo nos testes pulados (SQLite, ou sem o
+        // pacote da demo instalado — tests/TestCase.php).
+        if (DB::connection()->getDriverName() !== 'pgsql' || ! TestCase::demoInstalled()) {
             return;
         }
 

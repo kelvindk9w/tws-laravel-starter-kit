@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\UserSeeder;
 use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Livewire\Livewire;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Demo\Database\Seeders\UserSeeder;
 
 // Lacuna apontada pelo QA: o banco nascia com 2 contas e a paginação/filtros
 // do /admin não tinham o que exercitar.

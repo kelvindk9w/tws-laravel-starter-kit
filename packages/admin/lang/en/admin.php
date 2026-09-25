@@ -47,7 +47,9 @@ return [
         'unblock_heading' => 'Unblock user',
         'blocked_success' => 'User blocked.',
         'unblocked_success' => 'User unblocked.',
-        'demo_protected' => 'Demo account protected: demo users cannot be blocked, edited or deleted.',
+        'account_protected' => 'Protected account: this account cannot be blocked, edited or deleted.',
+        // Old name (up to 2.x), same text: removed in 3.0.
+        'demo_protected' => 'Protected account: this account cannot be blocked, edited or deleted.',
         'transaction_password' => 'Transaction password set',
         'created_at' => 'Registered at',
         // Full CRUD (create/edit/delete) — see UserResource and UserAdminGuard.
@@ -253,9 +255,9 @@ return [
 
     'profile' => [
         'heading' => 'My profile',
-        'email_readonly_note' => 'The e-mail cannot be changed in this demo — changing the demo account login would break access for the next visitors.',
+        'email_readonly_note' => 'The sign-in e-mail cannot be changed from this screen.',
         'password_section' => 'Password',
-        'password_note' => 'Password change is unavailable in the demo. This section is a UI preview — no field is submitted.',
+        'password_note' => 'Password change is unavailable from this screen. This section is a UI preview — no field is submitted.',
         'current_password' => 'Current password',
         'saved' => 'Profile updated.',
     ],
@@ -289,7 +291,9 @@ return [
         'user_not_found' => 'User not found.',
         'admin_granted' => 'Super admin access granted to :email.',
         'admin_removed' => 'Super admin access revoked from :email.',
-        'demo_protected' => 'Protected demo account: the command will not change :email.',
+        'account_protected' => 'Protected account: the command will not change :email.',
+        // Old name (up to 2.x), same text: removed in 3.0.
+        'demo_protected' => 'Protected account: the command will not change :email.',
     ],
 
     // -------------------------------------------------------------------------

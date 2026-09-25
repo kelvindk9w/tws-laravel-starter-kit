@@ -87,6 +87,35 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   valendo (são da conta).
 
 ### Alterado
+- **A demonstração virou o pacote `twstec/kit-demo`** (`packages/demo`,
+  namespace `Twstec\Kit\Demo`), instalado **só no desenvolvimento**: o
+  starter o declara em `require-dev`. As landings (`/`, `/v2`), a vitrine
+  `/ui`, o contato, o catálogo e as submissões do `/admin`, as contas demo, os
+  seeders de dado fictício, as migrations da demo (mesmos nomes de arquivo:
+  nenhuma migration pendente num banco existente), as views, as traduções, o
+  JS, o CSS e as imagens das landings saíram do aplicativo — inclusive o que
+  a separação anterior tinha deixado nele. O pacote se liga pela descoberta
+  automática e pelos pontos de extensão; nenhum arquivo do produto o nomeia.
+  A **imagem de produção não leva a demo** (`composer install --no-dev`; o
+  código dela nem entra no contexto do build), e o CI confere isso na imagem.
+  Sem a demo, `/` mostra a página inicial do produto e a suíte do starter
+  passa com o `pest` de sempre (os testes do grupo `demo` pulam sozinhos).
+  As landings continuam idênticas. Ver [docs/demo.md](docs/demo.md).
+- **`php artisan demo:uninstall [--drop-tables]`** (no pacote da demo): tira
+  do banco os gatilhos das contas demo — e, com `--drop-tables`, as tabelas e
+  o registro das migrations da demo — antes do `composer remove --dev
+  twstec/kit-demo`.
+- **Mensagens de conta protegida neutras.** `admin.users.demo_protected`,
+  `admin.command.demo_protected` e `auth.two_factor.demo_blocked` viraram
+  `admin.users.account_protected`, `admin.command.account_protected` e
+  `auth.two_factor.account_protected`, com texto que vale para qualquer conta
+  protegida (e as notas do perfil do `/admin` deixaram de falar em "demo"). Os
+  nomes antigos continuam existindo, com o mesmo texto, até a 3.0. Com a
+  demonstração instalada, ela devolve às chaves o texto "de demo" de antes.
+- A variante de dashboard padrão do produto é `overview,growth`. O `content`
+  é da demonstração: com ela instalada e sem `DASHBOARD_ENABLED` declarado,
+  ela o acrescenta ao fim da lista; declarado, vale a lista do operador (o
+  `.env.example` continua listando os três).
 - **Primeiro pacote: `twstec/kit-foundation`** (`packages/foundation`). A base
   de segurança e infraestrutura — filtro de ataques, limites, cabeçalhos,
   hosts e proxies, trilhas de requisição e de auditoria, e-mail, idioma,
@@ -328,6 +357,15 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
    contas (ver "Quebra de compatibilidade — uploads da conta" acima) e
    `docker compose restart queue scheduler` (o worker precisa do job novo de
    remoção de arquivos; o agendador, da limpeza `uploads:prune-orphans`).
+10. Demonstração como pacote: instalar as dependências PHP de novo (o
+   `composer.json` passa a exigir `twstec/kit-demo` em `require-dev`, por path
+   repository), `npm run build` (as entradas e as imagens das landings vêm do
+   pacote) e `php artisan config:clear`. Nenhuma migration nova: as da demo
+   mantêm os nomes. Código próprio que usava `App\Demo\…` passa a
+   `Twstec\Kit\Demo\…`; quem tinha tirado o `DemoServiceProvider` de
+   `bootstrap/providers.php` para desligar a demo agora tira o pacote
+   (`php artisan demo:uninstall --drop-tables` e
+   `composer remove --dev twstec/kit-demo`).
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Contact\Mail\ContactMessageMail;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
@@ -15,6 +14,7 @@ use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
+use Twstec\Kit\Demo\Contact\Mail\ContactMessageMail;
 
 // =============================================================================
 // O QUE A FILA GUARDA, POR QUANTO TEMPO, E QUEM VÊ

@@ -1,6 +1,5 @@
 <?php
 
-use App\Demo\Providers\DemoServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
@@ -14,14 +13,11 @@ return [
     // twstec/kit-accounts; e o de uploads (upload seguro, entrega por URL
     // assinada, foto de perfil e o POST /api/v1/uploads), do
     // twstec/kit-uploads — os quatro pela descoberta automática de pacotes
-    // do Laravel.
+    // do Laravel. O painel /admin (twstec/kit-admin) entra como plugin no
+    // AdminPanelProvider. A demonstração do kit (twstec/kit-demo, só no
+    // ambiente de desenvolvimento — require-dev) também entra pela descoberta
+    // automática: nada aqui a nomeia.
     AppServiceProvider::class,
     AdminPanelProvider::class,
     HorizonServiceProvider::class,
-
-    // A demonstração do kit (landings, vitrine /ui, contato, catálogo de
-    // exemplo, contas demo e seeders de dado fictício). Tirar esta linha
-    // desliga a demo; o outro ponto de ligação é o previews.php dela no
-    // autoload.files do composer.json (ver App\Demo\Providers\DemoServiceProvider).
-    DemoServiceProvider::class,
 ];

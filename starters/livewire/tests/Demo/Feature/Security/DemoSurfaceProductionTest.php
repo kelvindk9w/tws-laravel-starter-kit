@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-use App\Demo\Accounts\DemoAccountGuard;
-use App\Demo\Database\Seeders\ApiKeySeeder;
-use App\Demo\Database\Seeders\DashboardHistorySeeder;
-use App\Demo\Database\Seeders\DemoAdminSeeder;
-use App\Demo\Database\Seeders\DemoUserSeeder;
-use App\Demo\Database\Seeders\FormSubmissionSeeder;
-use App\Demo\Database\Seeders\ProductSeeder;
-use App\Demo\Database\Seeders\RequestLogSeeder;
-use App\Demo\Database\Seeders\UserSeeder;
-use App\Demo\Support\DemoSurface;
-use App\Demo\Support\Exceptions\DemoSurfaceInProductionException;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Twstec\Kit\Demo\Accounts\DemoAccountGuard;
+use Twstec\Kit\Demo\Database\Seeders\ApiKeySeeder;
+use Twstec\Kit\Demo\Database\Seeders\DashboardHistorySeeder;
+use Twstec\Kit\Demo\Database\Seeders\DemoAdminSeeder;
+use Twstec\Kit\Demo\Database\Seeders\DemoUserSeeder;
+use Twstec\Kit\Demo\Database\Seeders\FormSubmissionSeeder;
+use Twstec\Kit\Demo\Database\Seeders\ProductSeeder;
+use Twstec\Kit\Demo\Database\Seeders\RequestLogSeeder;
+use Twstec\Kit\Demo\Database\Seeders\UserSeeder;
+use Twstec\Kit\Demo\Support\DemoSurface;
+use Twstec\Kit\Demo\Support\Exceptions\DemoSurfaceInProductionException;
 use Twstec\Kit\Foundation\FoundationServiceProvider;
 
 // =============================================================================

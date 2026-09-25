@@ -13,7 +13,7 @@ use Twstec\Kit\Auth\Support\LoginPrefill;
  * devem nascer preenchidas. Sem implementação registrada no container, os
  * campos nascem vazios e nenhum aviso aparece.
  *
- * Quem implementa hoje: a demonstração do kit (App\Demo), com as contas de
+ * Quem implementa hoje: a demonstração do kit (twstec/kit-demo), com as contas de
  * credenciais públicas — e só quando a demonstração pode existir no ambiente.
  */
 interface LoginPrefillProvider

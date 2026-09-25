@@ -15,7 +15,7 @@
     // pílula que flutua sobre o céu, em vez de colada no topo com uma linha
     // embaixo. Muda só o invólucro: nenhum item, nenhuma regra e nenhum estado
     // do cabeçalho do produto sabe que ela existe (as classes sky-nav* moram
-    // em demo/resources/css/landing.css, que só a landing carrega).
+    // no CSS da landing, que só ela carrega — pacote twstec/kit-demo).
     $floating = $variant === 'floating';
 
     $shellClasses = $floating

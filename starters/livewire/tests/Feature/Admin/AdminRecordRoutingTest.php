@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Demo\Catalog\Models\Product;
-use App\Demo\Filament\Resources\Products\ProductResource;
 use App\Models\User;
 use Twstec\Kit\Admin\Resources\Users\UserResource;
+use Twstec\Kit\Demo\Catalog\Models\Product;
+use Twstec\Kit\Demo\Filament\Resources\Products\ProductResource;
 
 // =============================================================================
 // Bug de QA #2 — links de Visualizar/Editar do /admin davam 404.

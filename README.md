@@ -111,7 +111,16 @@ Com `DEMO_LOGIN_ENABLED=true` (padrão só em `APP_ENV=local`), o
 | Super admin (`/admin`) | `admin@tws.dev` | `Demo-admin-password1` |
 
 As duas nascem com o e-mail confirmado. As contas são protegidas contra alteração (UI, model e gatilho no
-PostgreSQL) e **não existem em produção** — ver [Modo demo](docs/demo.md).
+PostgreSQL) e **não existem em produção** — ver [Demonstração](docs/demo.md).
+
+A demonstração inteira (landings, vitrine `/ui`, contato, catálogo e submissões
+no `/admin`, contas demo, massa fictícia) é o pacote **`twstec/kit-demo`**,
+declarado em `require-dev`: vem no `composer install` de quem clona o kit e
+**não** vai para a imagem de produção (`--no-dev`). Para começar o seu produto
+sem ela: `php artisan demo:uninstall --drop-tables` e
+`composer remove --dev twstec/kit-demo` — sem a demo, `/` mostra a página
+inicial mínima do produto e a suíte continua passando com o `pest` de sempre
+(ver [Demonstração → Como remover](docs/demo.md#como-remover)).
 
 ## Comandos do dia a dia (sempre em container)
 
@@ -151,7 +160,7 @@ E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
 | Uploads seguros | [docs/uploads.md](docs/uploads.md) |
 | Painel do usuário, super admin e dashboards | [docs/admin-e-dashboards.md](docs/admin-e-dashboards.md) |
 | E-mails transacionais | [docs/emails.md](docs/emails.md) |
-| Modo demo e contas demo | [docs/demo.md](docs/demo.md) |
+| Demonstração (pacote `twstec/kit-demo`), modo demo e contas demo | [docs/demo.md](docs/demo.md) |
 | Interface: landing, showcase `/ui`, i18n, tema, formulários, identidade visual | [docs/interface.md](docs/interface.md) |
 | Produção e deploy | [docs/producao.md](docs/producao.md) |
 | Testes (Pest em SQLite e PostgreSQL, E2E) | [docs/testes.md](docs/testes.md) |
@@ -177,7 +186,7 @@ herdar o kit ou para a infraestrutura em volta dele:
    é pública; com um banco compartilhado, qualquer visitante altera os dados
    que o próximo vai ver. Uma demo hospedada (`DEMO_ALLOW_IN_PRODUCTION`)
    precisa de banco efêmero ou reset periódico — ou admin somente-leitura.
-   Ver [Modo demo](docs/demo.md).
+   Ver [Demonstração](docs/demo.md#demo-pública-hospedada-banco-efêmero-e-reset).
 4. **PITR/WAL archiving → R2** (RPO de segundos): camada de
    **infraestrutura** (pgBackRest/WAL-G no PostgreSQL de produção) —
    documentada em [Backup](docs/backup.md), intencionalmente fora da aplicação.

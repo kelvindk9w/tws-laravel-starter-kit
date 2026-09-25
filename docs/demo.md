@@ -1,17 +1,118 @@
-# Modo demo: login demo, superfície de demonstração e contas demo
+# Demonstração do kit (`twstec/kit-demo`)
 
-> **Onde mora a demonstração.** Tudo o que existe para mostrar o kit — e não
-> para ser a base de um produto — está separado do produto: as classes em
-> `app/Demo` (namespace `App\Demo`) e o resto em `demo/` (rotas, config,
-> migrations, views, traduções, JS e CSS), com os testes em `tests/Demo`
-> (grupo `demo`). O produto não importa nada da demo; onde precisava
-> perguntar algo a ela, pergunta a um ponto de extensão neutro (contas
-> protegidas, credenciais sugeridas no login, galeria de e-mails, links do
-> site, seeders, widgets de dashboard), e o
-> `App\Demo\Providers\DemoServiceProvider` registra as respostas da demo.
-> Tirar esse provider de `bootstrap/providers.php` (e o `previews.php` da demo
-> do `autoload.files`) desliga a demonstração inteira; a suíte do produto sem
-> ela é `pest --testsuite=Unit,Feature --exclude-group=demo`.
+## O que é
+
+Tudo o que existe para **mostrar** o kit — e não para ser a base de um
+produto — é o pacote **`twstec/kit-demo`** (`packages/demo`, namespace
+`Twstec\Kit\Demo`):
+
+- as landings **"Céu"** (`/`) e **"O Rastro"** (`/v2`, e `/v3` → 301 para `/`),
+  com o JS, o CSS e as imagens delas;
+- a vitrine de componentes **`/ui`** (e o `POST /ui/form-demo`) e o
+  formulário de **contato** (`POST /contato`, com o e-mail na galeria
+  `/mail-preview`);
+- no `/admin`: o catálogo de **produtos** de exemplo, a caixa de
+  **submissões** de formulário e o dashboard **"Conteúdo & Operação"**;
+- as **contas demo** de credenciais públicas (`demo@tws.dev` no painel,
+  `admin@tws.dev` no `/admin`), protegidas contra alteração — inclusive no
+  banco;
+- os **seeders de dado fictício** (40 pessoas, projetos, chaves, uploads,
+  histórico dos dashboards).
+
+O produto **não conhece a demo**: nenhum arquivo do starter nem dos cinco
+pacotes do kit a nomeia (uma trava de arquitetura reprova quem tentar —
+`tests/Unit/Architecture/ModuleDependenciesTest.php`). Ela entra pela
+**descoberta automática de pacotes** do Laravel e responde aos **pontos de
+extensão** do produto:
+
+| Ponto de extensão | O que a demo registra |
+| --- | --- |
+| `AccountProtection` (twstec/kit-auth) | as contas demo protegidas |
+| `LoginPrefillProvider` (twstec/kit-auth) | as credenciais demo pré-preenchidas no login do painel e do `/admin` |
+| `MailPreviewGate` (twstec/kit-foundation) | a galeria `/mail-preview` segue o modo demo |
+| `SiteLinks` (starter) | âncoras da landing, `/ui` e contato no cabeçalho e no rodapé |
+| seeders por tag (`DatabaseSeeder`, starter) | o `DemoSeeder` roda no `db:seed` |
+| variantes e widgets de dashboard (twstec/kit-admin) | a variante `content` (ligada no fim da lista quando `DASHBOARD_ENABLED` não é declarado) e as últimas submissões na Visão geral |
+| namespaces auditados do `/admin` | as telas da demo entram na trilha de auditoria |
+| superfície de CSP `landing_alt` | a CSP própria de `/v2` |
+| plugin do Filament | produtos, submissões e o dashboard no `/admin` |
+| traduções (o aplicativo vence) | as mensagens neutras de "conta protegida" do produto ganham o texto "de demo" |
+
+Sem a demo, `/` mostra a página inicial mínima do produto (rota `home`),
+nenhuma conta é protegida, o login não sugere credencial nenhuma e a galeria
+`/mail-preview` abre só com `MAIL_PREVIEW_ENABLED` (nunca em produção).
+
+## Como está instalada: só no desenvolvimento
+
+O `composer.json` do starter declara a demo em **`require-dev`** (por path
+repository, `../../packages/demo`). Quem clona o kit e roda `composer install`
+recebe a demo — é o ambiente de desenvolvimento de sempre, com a landing em
+`http://localhost:8180`, as contas demo e a massa fictícia.
+
+A **imagem de produção** instala as dependências com `composer install
+--no-dev`: a demo **não vai para produção** — nem o pacote, nem as rotas, nem
+as entradas das landings e as imagens no build do frontend (o
+`vite.config.js` só acrescenta os assets da demo quando
+`vendor/twstec/kit-demo` existe). O código dela nem entra no contexto do
+build (`packages/.dockerignore`). O CI confere isso na imagem construída
+(job "Imagens de produção", passo "Conferência da imagem do app").
+
+Assets: as entradas da landing (`landing.js`, `landing-v2.js` e os CSS), as
+imagens e as pastas que o Tailwind precisa ler vêm do `vite.js` do pacote,
+carregado pelo `vite.config.js` do starter só com a demo instalada. As
+dependências de front das landings (GSAP, Lenis, Three.js e as fontes
+Caveat/Instrument Serif) continuam no `package.json` do starter (são
+`devDependencies`, só entram no build quando alguma entrada as importa).
+
+## Como remover
+
+```bash
+# 1. Num banco que já rodou a demo: tirar os gatilhos das contas demo
+#    (PostgreSQL). Com --drop-tables, também as tabelas da demo (products,
+#    form_submissions) e o registro das migrations dela.
+docker compose exec app php artisan demo:uninstall --drop-tables
+
+# 2. Tirar o pacote.
+composer remove --dev twstec/kit-demo
+
+# 3. Refazer o build do frontend (sem as entradas da demo).
+npm run build
+
+# 4. (Desenvolvimento) Tirar a massa fictícia que os seeders gravaram nas
+#    tabelas do produto.
+docker compose exec app php artisan migrate:fresh
+```
+
+O passo 1 existe porque o gatilho fica no banco depois que o pacote sai, e
+quem o desligava (com o modo demo desligado) era o próprio pacote: sem ele,
+`demo@…` e `admin@…` continuariam intocáveis **no banco**. Num banco novo
+(`migrate:fresh`), nada disso é necessário.
+
+Sem a demo, a suíte do starter passa com o **`pest` de sempre**: os testes do
+grupo `demo` (tudo em `tests/Demo` e os casos do produto marcados com
+`->group('demo')`) **pulam sozinhos**, com o motivo (`tests/TestCase.php`). O
+CI prova isso a cada push (job `Pest · SQLite`, passos "Sem a demo").
+
+## Demo pública hospedada: banco efêmero e reset
+
+A senha do admin demo é **pública** — está no `.env.example`, no README e
+pré-preenchida no login do `/admin`. Qualquer visitante entra como super
+admin e vê o que o anterior deixou: submissões de formulário com texto livre,
+uploads, nomes. Por isso uma demo pública hospedada **nunca** é uma
+instalação com dado real, e precisa de:
+
+1. **Banco efêmero**: um banco só dela, descartável, sem nada que não seja
+   dado de demonstração.
+2. **Reset periódico**: recriar o banco do zero em intervalo curto (por
+   exemplo, a cada hora: `php artisan migrate:fresh --seed --force` num
+   agendamento, com a fila e o armazenamento de uploads limpos junto), para
+   que o que um visitante escreveu não fique para o próximo.
+3. **Opt-out declarado**: em `APP_ENV=production` a demonstração não existe
+   (fail-closed, abaixo); a demo hospedada liga `DEMO_ALLOW_IN_PRODUCTION=true`
+   e aceita o aviso no log a cada boot.
+4. **Imagem própria**: a imagem de produção do starter não leva a demo
+   (`--no-dev`). A demo hospedada é um deploy à parte, que instala o pacote
+   de propósito.
 
 ## Login demo e admin demo (fricção zero em dev)
 
@@ -54,7 +155,7 @@ caminho normal de um starter kit (`cp .env.example .env`, ajustar, subir) levava
 a demonstração toda para produção. **Esquecer não pode ser o mesmo que
 autorizar.**
 
-Agora quem decide é `app/Demo/Support/DemoSurface.php`, e a regra é: em
+Quem decide é `Twstec\Kit\Demo\Support\DemoSurface` (`packages/demo/src/Support/DemoSurface.php`), e a regra é: em
 `APP_ENV=production` a superfície de demonstração **não existe**,
 independentemente do que as flags disserem. As flags continuam valendo — mas
 como **segunda** barreira, para desligar a demo fora de produção.
@@ -65,7 +166,7 @@ Em produção, portanto:
 | --- | --- | --- |
 | `/ui`, `POST /ui/form-demo`, `/mail-preview` | **404** | 403 confirmaria que a rota existe e está a uma flag de distância de abrir; 404 é indistinguível de rota que nunca foi escrita. As rotas seguem **registradas** (o rodapé e o menu do site geram `route('ui.showcase')` incondicionalmente — desregistrar derrubaria a home com `RouteNotFoundException`) |
 | Credenciais demo no login do painel e do `/admin` | não aparecem e não são pré-preenchidas | entregar `admin@tws.dev` com a senha pública já digitada no login do super admin é a forma mais curta de perder a instalação |
-| Seeder demo chamado **direto** (`db:seed --class='App\Demo\Database\Seeders\DemoAdminSeeder'`) | **lança exceção** | quem chamou aquele seeder **pediu** aquela conta; terminar com "DONE" sem criar nada faria a pessoa acreditar que ela existe |
+| Seeder demo chamado **direto** (`db:seed --class='Twstec\Kit\Demo\Database\Seeders\DemoAdminSeeder'`) | **lança exceção** | quem chamou aquele seeder **pediu** aquela conta; terminar com "DONE" sem criar nada faria a pessoa acreditar que ela existe |
 | `db:seed` (o agregador `DatabaseSeeder`, que roda o `DemoSeeder`) | **avisa no console e segue** | é o que um script de deploy roda; derrubar o deploy por causa de dado de demonstração trocaria uma armadilha por outra |
 | `APP_DEBUG=true` | forçado para `false`, com aviso no log | fechar o vazamento sem derrubar o site: recusar o boot transformaria uma configuração errada em site fora do ar |
 
@@ -87,14 +188,14 @@ DEMO_ALLOW_IN_PRODUCTION=true
 
 A variável não tem valor padrão verdadeiro, não aparece descomentada em nenhum
 `.env` de exemplo e, enquanto estiver ligada em produção, a aplicação grava um
-aviso no log **a cada boot** (`AppServiceProvider`): um opt-out de segurança que
+aviso no log **a cada boot** (`DemoServiceProvider`): um opt-out de segurança que
 ninguém vê deixa de ser decisão e volta a ser esquecimento. **Silêncio nunca
 significa permitido.**
 
 Ligar isso é dizer "este banco é descartável e estas credenciais são públicas".
 Nunca numa instalação com dado real.
 
-Cobertura: `tests/Feature/Security/DemoSurfaceProductionTest.php`.
+Cobertura: `tests/Demo/Feature/Security/DemoSurfaceProductionTest.php` (starter) e `packages/demo/tests/Protections/DemoProtectionsTest.php` (suíte do pacote, numa aplicação limpa).
 
 ## Contas demo são intocáveis: como e por quê
 
@@ -105,8 +206,8 @@ Cobertura: `tests/Feature/Security/DemoSurfaceProductionTest.php`.
 > ninguém recebe. Ver
 > [Verificação de e-mail](autenticacao.md#verificação-de-e-mail-no-cadastro).
 
-As duas contas demo (`demo@tws.dev` e `admin@tws.dev` — e-mails de
-`config/ui.php`) são a porta de entrada de quem está avaliando o kit. Se um
+As duas contas demo (`demo@tws.dev` e `admin@tws.dev` — e-mails do
+`config/ui.php` do pacote, chaves `ui.demo_login.email` e `ui.demo_admin.email`) são a porta de entrada de quem está avaliando o kit. Se um
 visitante troca a senha, o e-mail, a flag de admin ou a situação de uma
 delas, ele não quebra a demo dele: quebra a de **todo mundo que chegar
 depois**, e alguém precisa de shell no servidor para consertar.
@@ -188,7 +289,7 @@ proteção na própria sessão, com a mesma flag que o trigger consulta
 - **Limite:** com um pooler em modo transação (PgBouncer
   `pool_mode=transaction`) a variável de sessão não acompanha a aplicação de
   uma transação para a outra. Nesse caso, com o modo demo desligado, rode uma
-  vez `php artisan tinker --execute="App\Demo\Accounts\DemoAccountTrigger::install()"`
+  vez `php artisan tinker --execute="Twstec\Kit\Demo\Accounts\DemoAccountTrigger::install()"`
   — com o modo desligado, o `install()` remove o trigger do banco.
 
 **A porta de serviço**: `DemoAccountGuard::withoutProtection(fn () => ...)`

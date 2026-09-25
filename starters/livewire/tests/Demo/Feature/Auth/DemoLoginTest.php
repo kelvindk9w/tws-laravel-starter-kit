@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\DemoUserSeeder;
 use Illuminate\Support\Facades\Auth;
+use Twstec\Kit\Demo\Database\Seeders\DemoUserSeeder;
 
 // Login demo (fricção zero em dev) — só quando config('ui.demo_login.enabled'),
 // cujo padrão é APP_ENV=local. Em produção, nada disso existe.
@@ -39,7 +39,7 @@ it('seeder cria o usuário demo autenticável (idempotente)', function () {
 
 it('por padrão o login demo só é habilitado em ambiente local', function () {
     // Contrato do config (sem mexer no env do teste): os defaults derivam de APP_ENV.
-    $source = file_get_contents(config_path('ui.php'));
+    $source = file_get_contents(base_path('vendor/twstec/kit-demo/config/ui.php'));
 
     expect($source)->toContain("env('APP_ENV') === 'local'")
         ->toContain("env('DEMO_LOGIN_ENABLED'")

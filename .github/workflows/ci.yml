@@ -27,6 +27,12 @@
 # dentro dos jobs de teste — não é check novo —, e o Pint confere o pacote no
 # mesmo job que confere o starter. A imagem do app recebe a pasta packages/
 # como contexto de build nomeado (`packages`).
+#
+# DEMONSTRAÇÃO: twstec/kit-demo é require-dev do starter. Os jobs de teste a
+# instalam (é o `composer install` de quem clona o kit); o job do SQLite
+# termina tirando-a (`composer remove --dev`) e rodando o build e a suíte do
+# produto sem ela; a conferência da imagem do app prova que ela não chega à
+# produção.
 name: CI
 
 on:
@@ -180,6 +186,23 @@ jobs:
         working-directory: packages/admin
         run: ./vendor/bin/pest --ci
 
+      # Pacote twstec/kit-demo (a demonstração do kit, require-dev do
+      # starter): idem; acha os cinco pacotes irmãos pelos path repositories.
+      # A suíte sobe uma aplicação Laravel limpa com o painel mínimo e prova
+      # o que a demo liga sozinha — pontos de extensão, proteção das contas
+      # demo, fail-closed em produção.
+      - name: Pacote demo · dependências
+        working-directory: packages/demo
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote demo · estilo (Pint)
+        working-directory: packages/demo
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote demo · testes (Pest)
+        working-directory: packages/demo
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -285,6 +308,30 @@ jobs:
         working-directory: packages/admin
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote demo · dependências
+        working-directory: packages/demo
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote demo · testes (Pest)
+        working-directory: packages/demo
+        run: ./vendor/bin/pest --ci
+
+      # O PRODUTO SEM A DEMONSTRAÇÃO: o que acontece com quem tira a demo
+      # (`composer remove --dev twstec/kit-demo`, docs/demo.md). O build do
+      # frontend continua de pé sem as entradas da demo, e a suíte do starter
+      # passa com o `pest` de sempre — os testes do grupo `demo` pulam
+      # sozinhos. Últimos passos do job: mexem no checkout.
+      - name: Sem a demo · remover o pacote
+        run: composer remove --dev twstec/kit-demo --no-interaction --no-progress
+
+      - name: Sem a demo · build do frontend
+        run: |
+          npm run build
+          if grep -q 'kit-demo' public/build/manifest.json; then echo 'build sem a demo com entrada da demo'; exit 1; fi
+
+      - name: Sem a demo · testes (Pest · SQLite)
+        run: ./vendor/bin/pest --ci
+
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
   #
@@ -358,5 +405,15 @@ jobs:
             # twstec/kit-admin (resources/css/sources.css): o pacote precisa
             # levar os resources dele para a imagem.
             test -f vendor/twstec/kit-admin/resources/css/sources.css
+            # A DEMONSTRAÇÃO (twstec/kit-demo, require-dev) NÃO vai para
+            # produção: nem o pacote, nem o registro dele no Composer, nem as
+            # entradas das landings e as imagens no build do frontend, nem as
+            # rotas dela.
+            if [ -e vendor/twstec/kit-demo ]; then echo "na imagem: vendor/twstec/kit-demo"; exit 1; fi
+            if grep -q "twstec/kit-demo" vendor/composer/installed.json; then echo "na imagem: twstec/kit-demo instalado"; exit 1; fi
+            if grep -q "kit-demo" public/build/manifest.json; then echo "na imagem: assets da demo no build"; exit 1; fi
+            if [ -e public/build/assets/img ]; then echo "na imagem: imagens da demo no build"; exit 1; fi
+            if [ -n "$(find /var/www/html -path /var/www/html/vendor -prune -o -name "*.php" -print | xargs grep -l "Twstec.Kit.Demo" 2>/dev/null)" ]; then echo "na imagem: código que nomeia a demo"; exit 1; fi
             php artisan --version
+            if php artisan route:list --json | grep -q "landing"; then echo "na imagem: rotas da demo"; exit 1; fi
           '

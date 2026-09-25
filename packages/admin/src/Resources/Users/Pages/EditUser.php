@@ -17,7 +17,7 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
 /**
  * Edição de usuário pelo super admin.
  *
- * Guardas de SERVIDOR (UserAdminGuard) antes de gravar: conta demo é
+ * Guardas de SERVIDOR (UserAdminGuard) antes de gravar: conta protegida é
  * intocável, o admin não se bloqueia e o último admin ativo não perde a
  * flag nem o acesso — esconder o botão não é proteção.
  *

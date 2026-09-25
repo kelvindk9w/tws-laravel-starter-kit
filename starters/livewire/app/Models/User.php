@@ -103,9 +103,9 @@ class User extends Authenticatable implements AuthUser, FilamentUser, HasLocaleP
     }
 
     /**
-     * Nome antigo de isReservedAccount(), mantido enquanto o teste das contas
-     * demo o usa. O produto chama isReservedAccount(); este sai junto com a
-     * demonstração.
+     * Nome antigo de isReservedAccount(), mantido por compatibilidade (a suíte
+     * das contas demo ainda o usa). O produto chama isReservedAccount(); este
+     * sai na 3.0.
      *
      * @deprecated Use isReservedAccount().
      */

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
 use App\Livewire\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -14,6 +13,7 @@ use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Models\SensitiveActionToken;
 use Twstec\Kit\Auth\Services\SensitiveActionService;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
+use Twstec\Kit\Demo\Accounts\Exceptions\DemoAccountProtectedException;
 
 // Ligar/desligar a verificação em duas etapas no /profile: ação sensível
 // (senha de transação + código por e-mail), com o token consumido pelo
@@ -146,7 +146,7 @@ it('conta demo protegida: o cartão explica e nada liga — nem pelo service, ne
     $demo = User::factory()->withTransactionPassword()->create(['email' => config('ui.demo_login.email')]);
     $this->actingAs($demo);
 
-    $this->get('/profile')->assertOk()->assertSee(__('auth.two_factor.demo_blocked'));
+    $this->get('/profile')->assertOk()->assertSee(__('auth.two_factor.account_protected'));
 
     Livewire::test(Profile::class)
         ->call('requestTwoFactorToggle')
@@ -173,7 +173,7 @@ it('com o modo demo desligado, a conta demo é comum e pode ligar', function () 
     profileTfaToggle($demo)->assertHasNoErrors();
 
     expect($demo->fresh()->two_factor_enabled_at)->not->toBeNull();
-});
+})->group('demo');
 
 it('com AUTH_TWO_FACTOR_ENABLED=false o cartão some e a ação recusa', function () {
     config()->set('auth.two_factor.enabled', false);

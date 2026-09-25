@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Demo\Database\Seeders\DemoAdminSeeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Twstec\Kit\Demo\Database\Seeders\DemoAdminSeeder;
 
 // Super admin demo (/admin): seeder + pré-preenchimento do login Filament,
 // tudo na MESMA flag do login demo (ui.demo_login.enabled — padrão local).

@@ -13,13 +13,16 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
-// Testes da DEMONSTRAÇÃO do kit (App\Demo): mesma base dos de Feature. Ficam
-// separados para sair junto com a demo, e todos no grupo `demo`.
+// Testes da DEMONSTRAÇÃO do kit (pacote twstec/kit-demo, instalado só no
+// desenvolvimento): mesma base dos de Feature, todos no grupo `demo`. Ficam
+// no starter porque exercitam a demo DENTRO do aplicativo (layout, componentes
+// Blade, painel, /admin); o que não depende do aplicativo roda na suíte do
+// próprio pacote (packages/demo/tests).
 //
 // Caso de teste do PRODUTO que exercita uma peça da demo (conta demo, tela de
 // produtos/submissões, landing, vitrine, contato) também leva `->group('demo')`.
-// A suíte do produto sem a demo é:
-//     pest --testsuite=Unit,Feature --exclude-group=demo
+// Sem a demo instalada, todo teste do grupo PULA sozinho (tests/TestCase.php):
+// a suíte do produto é o `pest` de sempre.
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->group('demo')

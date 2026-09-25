@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Demo\Contact\Mail\ContactMessageMail;
-use App\Demo\Showcase\Models\FormSubmission;
-use App\Demo\Showcase\Support\FormSubmissionGuard;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Demo\Contact\Mail\ContactMessageMail;
+use Twstec\Kit\Demo\Showcase\Models\FormSubmission;
+use Twstec\Kit\Demo\Showcase\Support\FormSubmissionGuard;
 use Twstec\Kit\Foundation\Logging\CardNumberMaskingFormatter;
 use Twstec\Kit\Foundation\Logging\MaskCardNumbersInLogs;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;

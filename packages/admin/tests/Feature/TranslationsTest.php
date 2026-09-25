@@ -132,3 +132,23 @@ it('o grupo admin do pacote não traz texto da demonstração do kit', function 
         ->and($admin['dashboards'])->not->toHaveKey('content')
         ->and($admin['audit'])->not->toHaveKey('type_product');
 });
+
+it('as mensagens de conta protegida são neutras — valem para qualquer conta protegida, não só a da demo', function (string $locale): void {
+    // O produto não conhece a demonstração: quem protege uma conta é a
+    // extensão registrada em AccountProtection. Com a demo instalada, ela dá o
+    // texto "de demo" a estas chaves (twstec/kit-demo).
+    $admin = require adminLangPath("{$locale}/admin.php");
+
+    foreach ([
+        $admin['users']['account_protected'],
+        $admin['command']['account_protected'],
+        $admin['profile']['email_readonly_note'],
+        $admin['profile']['password_note'],
+    ] as $texto) {
+        expect(mb_strtolower($texto))->not->toContain('demo');
+    }
+
+    // Os nomes antigos (até a 2.x) continuam resolvendo, com o mesmo texto.
+    expect(__('admin.users.demo_protected', [], $locale))->toBe(__('admin.users.account_protected', [], $locale))
+        ->and(__('admin.command.demo_protected', ['email' => 'x'], $locale))->toBe(__('admin.command.account_protected', ['email' => 'x'], $locale));
+})->with(ADMIN_LOCALES);

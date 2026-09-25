@@ -47,7 +47,9 @@ return [
         'unblock_heading' => 'Desbloquear usuario',
         'blocked_success' => 'Usuario bloqueado.',
         'unblocked_success' => 'Usuario desbloqueado.',
-        'demo_protected' => 'Cuenta de demostración protegida: los usuarios demo no pueden ser bloqueados, editados ni eliminados.',
+        'account_protected' => 'Cuenta protegida: esta cuenta no puede ser bloqueada, editada ni eliminada.',
+        // Nombre antiguo (hasta la 2.x), mismo texto: sale en la 3.0.
+        'demo_protected' => 'Cuenta protegida: esta cuenta no puede ser bloqueada, editada ni eliminada.',
         'transaction_password' => 'Contraseña de transacción definida',
         'created_at' => 'Registrado el',
         // CRUD completo (crear/editar/eliminar) — ver UserResource y UserAdminGuard.
@@ -253,9 +255,9 @@ return [
 
     'profile' => [
         'heading' => 'Mi perfil',
-        'email_readonly_note' => 'El e-mail no puede cambiarse en esta demostración — cambiar el login de la cuenta demo rompería el acceso de los próximos visitantes.',
+        'email_readonly_note' => 'El e-mail de acceso no puede cambiarse desde esta pantalla.',
         'password_section' => 'Contraseña',
-        'password_note' => 'El cambio de contraseña no está disponible en la demo. Esta sección es una vista previa de la interfaz — ningún campo se envía.',
+        'password_note' => 'El cambio de contraseña no está disponible desde esta pantalla. Esta sección es una vista previa de la interfaz — ningún campo se envía.',
         'current_password' => 'Contraseña actual',
         'saved' => 'Perfil actualizado.',
     ],
@@ -289,7 +291,9 @@ return [
         'user_not_found' => 'Usuario no encontrado.',
         'admin_granted' => 'Acceso de super admin concedido a :email.',
         'admin_removed' => 'Acceso de super admin revocado de :email.',
-        'demo_protected' => 'Cuenta de demostración protegida: el comando no modifica :email.',
+        'account_protected' => 'Cuenta protegida: el comando no modifica :email.',
+        // Nombre antiguo (hasta la 2.x), mismo texto: sale en la 3.0.
+        'demo_protected' => 'Cuenta protegida: el comando no modifica :email.',
     ],
 
     // -------------------------------------------------------------------------
