@@ -8,8 +8,6 @@ use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
 use App\Demo\Filament\Resources\Products\Pages\ListProducts;
-use App\Filament\Support\AdminColumns;
-use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -28,6 +26,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
+use Twstec\Kit\Admin\Support\AdminColumns;
+use Twstec\Kit\Admin\Support\BaseResource;
 use Twstec\Kit\Foundation\Money\Money;
 
 /**

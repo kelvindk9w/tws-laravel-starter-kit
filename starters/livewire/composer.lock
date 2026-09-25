@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0cb920682b1414ff1894b5237bb14446",
+    "content-hash": "f4e7e341d77e90cf36985a80f14c90ce",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8532,6 +8532,74 @@
             }
         },
         {
+            "name": "twstec/kit-admin",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/admin",
+                "reference": "5fb2cdf144aa3e4bff1c6ff971493e111c48d20a"
+            },
+            "require": {
+                "filament/filament": "^5.7",
+                "laravel/framework": "^13.17",
+                "livewire/livewire": "^4.4",
+                "php": "^8.4",
+                "twstec/kit-accounts": "2.x-dev",
+                "twstec/kit-auth": "2.x-dev",
+                "twstec/kit-foundation": "2.x-dev",
+                "twstec/kit-uploads": "2.x-dev"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Admin\\AdminServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Admin\\": "src/"
+                },
+                "files": [
+                    "src/Compat/legacy-aliases.php"
+                ]
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Admin\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Painel de super admin do TWS Laravel Starter Kit como plugin do Filament 5: usuários, chaves de API, projetos, uploads, logs de requisição, trilha de auditoria e configurações, login com verificação em duas etapas por e-mail, variantes de dashboard, trilha de auditoria de toda ação do painel (falha fechada) e as proteções de acesso (allowlist de IP, só admin com conta ativa) ligadas pelo pacote.",
+            "keywords": [
+                "admin",
+                "audit-trail",
+                "filament",
+                "laravel",
+                "security",
+                "starter-kit"
+            ],
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "twstec/kit-auth",
             "version": "2.x-dev",
             "dist": {
@@ -12467,6 +12535,7 @@
     "minimum-stability": "stable",
     "stability-flags": {
         "twstec/kit-accounts": 20,
+        "twstec/kit-admin": 20,
         "twstec/kit-auth": 20,
         "twstec/kit-foundation": 20,
         "twstec/kit-uploads": 20

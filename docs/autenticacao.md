@@ -291,10 +291,10 @@ autenticador (TOTP) e códigos de recuperação ficam para depois da 1.0 (ver
 README, "Pendências conhecidas").
 
 **`/admin` (Filament).** O login do `/admin` usa o mecanismo de MFA do
-Filament 5 (`->multiFactorAuthentication()` no `AdminPanelProvider`): a
+Filament 5 (`->multiFactorAuthentication()` registrado pelo `AdminPlugin` do pacote twstec/kit-admin): a
 página troca o formulário da senha pelo do código e, depois do código,
 confere as credenciais de novo e cria a sessão com "lembrar de mim" e ID
-novo. O **provedor** é do kit (`App\Filament\Auth\EmailCodeAuthentication`),
+novo. O **provedor** é do kit (`Twstec\Kit\Admin\Auth\EmailCodeAuthentication`),
 não o `EmailAuthentication` nativo, porque o nativo guarda o código na sessão
 sem limite de tentativas por código, manda uma notificação fora do layout,
 do idioma e da fila criptografada do kit e tem preferência e ações de

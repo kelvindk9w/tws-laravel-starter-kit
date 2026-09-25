@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
-use App\Filament\Resources\Projects\Pages\ListProjects;
-use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
-use App\Filament\Resources\Uploads\Pages\ListUploads;
-use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Admin\Resources\ApiKeys\Pages\ListApiKeys;
+use Twstec\Kit\Admin\Resources\Projects\Pages\ListProjects;
+use Twstec\Kit\Admin\Resources\RequestLogs\Pages\ListRequestLogs;
+use Twstec\Kit\Admin\Resources\Uploads\Pages\ListUploads;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;

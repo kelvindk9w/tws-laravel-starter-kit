@@ -2,8 +2,9 @@
 # vez por semana, abrindo PR contra a branch de trabalho.
 # Composer e npm apontam para o starter Livewire (starters/livewire); os
 # pacotes twstec/kit-foundation (packages/foundation), twstec/kit-auth
-# (packages/auth), twstec/kit-accounts (packages/accounts) e
-# twstec/kit-uploads (packages/uploads) têm entrada própria.
+# (packages/auth), twstec/kit-accounts (packages/accounts),
+# twstec/kit-uploads (packages/uploads) e twstec/kit-admin (packages/admin)
+# têm entrada própria.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -72,6 +73,19 @@ updates:
     groups:
       laravel:
         patterns: ['laravel/*']
+      dev:
+        dependency-type: development
+  - package-ecosystem: composer
+    directory: /packages/admin
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    versioning-strategy: widen
+    groups:
+      laravel:
+        patterns: ['laravel/*', 'livewire/*', 'filament/*']
       dev:
         dependency-type: development
   - package-ecosystem: npm

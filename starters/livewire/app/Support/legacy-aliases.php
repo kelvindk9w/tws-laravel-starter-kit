@@ -18,6 +18,10 @@ declare(strict_types=1);
 //   - AUTH_MODEL num .env antigo, ou código do projeto que ainda não trocou o
 //     `use`.
 //
+// (O comando `user:make-admin` — App\Core\Auth\Console\MakeAdminUser na 1.x
+// e App\Console\Commands\MakeAdminUser antes da 2.0 — é do pacote
+// twstec/kit-admin, que traz os dois nomes antigos.)
+//
 // (A trilha de auditoria NÃO grava o nome da classe: `audit_events.subject_type`
 // guarda o nome curto estável, `user` — ver AuditTrail::subjectType.)
 //
@@ -30,7 +34,6 @@ declare(strict_types=1);
 spl_autoload_register(static function (string $class): void {
     static $moved = [
         'App\\Core\\Auth\\Models\\User' => 'App\\Models\\User',
-        'App\\Core\\Auth\\Console\\MakeAdminUser' => 'App\\Console\\Commands\\MakeAdminUser',
     ];
 
     if (isset($moved[$class]) && class_exists($moved[$class])) {

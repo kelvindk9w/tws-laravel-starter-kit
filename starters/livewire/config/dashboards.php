@@ -1,8 +1,8 @@
 <?php
 
 declare(strict_types=1);
-use App\Filament\Dashboards\GrowthDashboard;
-use App\Filament\Dashboards\OverviewDashboard;
+use Twstec\Kit\Admin\Dashboards\GrowthDashboard;
+use Twstec\Kit\Admin\Dashboards\OverviewDashboard;
 
 // =============================================================================
 // Variantes de DASHBOARD do super admin (/admin).
@@ -18,7 +18,7 @@ use App\Filament\Dashboards\OverviewDashboard;
 // página deixa de ser registrada no painel — não é só um item escondido).
 //
 // Nada aqui é hardcodado em código: quem lê esta config é o
-// App\Filament\Dashboards\DashboardRegistry, e é ele que o AdminPanelProvider
+// Twstec\Kit\Admin\Dashboards\DashboardRegistry, e é ele que o AdminPlugin
 // consulta para registrar as páginas.
 // =============================================================================
 

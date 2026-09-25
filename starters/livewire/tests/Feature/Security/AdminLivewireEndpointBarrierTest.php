@@ -44,7 +44,7 @@ function snapshotDoPerfilAdmin(User $admin): string
         ->assertOk()
         ->getContent();
 
-    return livewireSnapshotFrom((string) $html, 'App\\Filament\\Pages\\Profile');
+    return livewireSnapshotFrom((string) $html, 'Twstec\\Kit\\Admin\\Pages\\Profile');
 }
 
 it('IP fora da allowlist NÃO executa ação de componente do admin pelo endpoint do Livewire', function (): void {

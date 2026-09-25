@@ -163,6 +163,23 @@ jobs:
         working-directory: packages/uploads
         run: ./vendor/bin/pest --ci
 
+      # Pacote twstec/kit-admin: idem; acha os quatro pacotes irmãos pelos
+      # path repositories do próprio composer.json. A suíte sobe uma aplicação
+      # Laravel limpa com o Filament e um painel que só registra o plugin, e
+      # prova que as proteções do painel (allowlist de IP, só admin com conta
+      # ativa, trilha de auditoria que falha fechada) vêm do pacote.
+      - name: Pacote admin · dependências
+        working-directory: packages/admin
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote admin · estilo (Pint)
+        working-directory: packages/admin
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote admin · testes (Pest)
+        working-directory: packages/admin
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -260,6 +277,14 @@ jobs:
         working-directory: packages/uploads
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote admin · dependências
+        working-directory: packages/admin
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote admin · testes (Pest)
+        working-directory: packages/admin
+        run: ./vendor/bin/pest --ci
+
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
   #
@@ -322,12 +347,16 @@ jobs:
             test -z "$(find /var/www/html/storage -type f)"
             # Pacotes do kit COPIADOS para o vendor (nunca link para fora da
             # imagem) e sem o que é de desenvolvimento deles.
-            for pacote in kit-foundation kit-auth kit-accounts kit-uploads; do
+            for pacote in kit-foundation kit-auth kit-accounts kit-uploads kit-admin; do
               test -d "vendor/twstec/$pacote/src"
               test ! -L "vendor/twstec/$pacote"
               for proibido in tests vendor composer.lock phpunit.xml; do
                 if [ -e "vendor/twstec/$pacote/$proibido" ]; then echo "no pacote $pacote: $proibido"; exit 1; fi
               done
             done
+            # O tema do painel é compilado pelo app com as fontes do
+            # twstec/kit-admin (resources/css/sources.css): o pacote precisa
+            # levar os resources dele para a imagem.
+            test -f vendor/twstec/kit-admin/resources/css/sources.css
             php artisan --version
           '

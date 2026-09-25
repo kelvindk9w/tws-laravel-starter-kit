@@ -8,9 +8,6 @@ use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Demo\Filament\Resources\FormSubmissions\Pages\ViewFormSubmission;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Demo\Showcase\Support\SubmissionExcerpt;
-use App\Filament\Support\AdminColumns;
-use App\Filament\Support\AttackLabel;
-use App\Filament\Support\BaseResource;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
@@ -30,6 +27,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Str;
+use Twstec\Kit\Admin\Support\AdminColumns;
+use Twstec\Kit\Admin\Support\AttackLabel;
+use Twstec\Kit\Admin\Support\BaseResource;
 
 /**
  * Submissões de formulário (super admin). Somente leitura: nascem dos dois

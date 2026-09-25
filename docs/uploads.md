@@ -114,7 +114,7 @@ usuários do aplicativo).
 | Onde | Componente | Caminho |
 | --- | --- | --- |
 | Painel do cliente (`/profile`) | Livewire (`App\Livewire\Profile::updateAvatar`) | `SecureUploadService` → `users.avatar_upload_id` |
-| Super admin (`/admin/users`, `/admin/profile`) | `App\Filament\Support\AvatarUpload` | `saveUploadedFileUsing` → `SecureUploadService` → `users.avatar_upload_id` |
+| Super admin (`/admin/users`, `/admin/profile`) | `Twstec\Kit\Admin\Support\AvatarUpload` (pacote twstec/kit-admin) | `saveUploadedFileUsing` → `SecureUploadService` → `users.avatar_upload_id` (só upload da própria conta ou enviado agora no formulário) |
 
 Nenhum dos dois grava arquivo por conta própria: os dois chamam o service, e
 por isso a mesma lei vale nos dois (conteúdo validado, re-encode GD, nome do

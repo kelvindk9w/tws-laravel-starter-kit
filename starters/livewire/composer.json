@@ -14,6 +14,7 @@
         "livewire/livewire": "^4.4",
         "spatie/laravel-backup": "^10.3",
         "twstec/kit-accounts": "2.x-dev",
+        "twstec/kit-admin": "2.x-dev",
         "twstec/kit-auth": "2.x-dev",
         "twstec/kit-foundation": "2.x-dev",
         "twstec/kit-uploads": "2.x-dev"
@@ -106,6 +107,16 @@
         }
     },
     "repositories": [
+        {
+            "type": "path",
+            "url": "../../packages/admin",
+            "options": {
+                "versions": {
+                    "twstec/kit-admin": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
         {
             "type": "path",
             "url": "../../packages/accounts",

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Profile;
 use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Pages\Profile;
 
 // Perfil do super admin (demo-safe): nome editável funciona; e-mail é
 // read-only com nota; seção de senha montada mas sem endpoint (campo

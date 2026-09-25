@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Filament\Resources\AuditEvents\AuditEventResource;
-use App\Filament\Resources\AuditEvents\Pages\ListAuditEvents;
-use App\Filament\Resources\AuditEvents\Pages\ViewAuditEvent;
-use App\Filament\Resources\RequestLogs\Pages\ViewRequestLog;
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Support\ViewModeToggle;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Resources\AuditEvents\AuditEventResource;
+use Twstec\Kit\Admin\Resources\AuditEvents\Pages\ListAuditEvents;
+use Twstec\Kit\Admin\Resources\AuditEvents\Pages\ViewAuditEvent;
+use Twstec\Kit\Admin\Resources\RequestLogs\Pages\ViewRequestLog;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Support\ViewModeToggle;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Audit\AuditScope;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
@@ -205,7 +205,9 @@ it('tem o alternador tabela/cartões da base e a ação de ver no cartão', func
 });
 
 it('tem as traduções da tela nos três idiomas', function (string $locale) {
-    foreach (array_keys((require lang_path('pt_BR/admin.php'))['audit']) as $chave) {
+    // As chaves da tela vêm do pacote twstec/kit-admin; as dos tipos da
+    // demonstração, do lang/admin.php do aplicativo (mesmo grupo).
+    foreach (array_keys(array_replace((require base_path('vendor/twstec/kit-admin/lang/pt_BR/admin.php'))['audit'], (require lang_path('pt_BR/admin.php'))['audit'])) as $chave) {
         expect(app('translator')->hasForLocale("admin.audit.{$chave}", $locale))
             ->toBeTrue("Falta admin.audit.{$chave} em {$locale}");
     }

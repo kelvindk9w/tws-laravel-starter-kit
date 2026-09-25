@@ -1,8 +1,9 @@
 # Filas (Horizon)
 
 - **Dashboard `/horizon`**: restrito a `is_admin` **com conta ativa** (gate
-  `viewHorizon` no `HorizonServiceProvider`, o mesmo critério do
-  `canAccessPanel` do `/admin` — fora do ambiente `local`, guest, usuário
+  `viewHorizon` no `HorizonServiceProvider` do starter, que lê o MESMO
+  critério do `/admin` — `Twstec\Kit\Admin\Access\AdminAccess`, do pacote
+  twstec/kit-admin — fora do ambiente `local`, guest, usuário
   comum e admin desativado recebem 403). O gate olhava só `is_admin`, então
   desativar um administrador tirava o `/admin` e **não** tirava o
   `/horizon`: com a sessão viva ele seguia operando a fila. O middleware

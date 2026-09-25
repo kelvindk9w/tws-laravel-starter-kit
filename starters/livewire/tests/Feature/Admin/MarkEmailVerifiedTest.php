@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\Pages\ViewUser;
-use App\Filament\Resources\Users\Support\MarkEmailVerifiedAction;
-use App\Filament\Resources\Users\Support\UserAdminGuard;
-use App\Filament\Support\CardActions;
-use App\Filament\Support\ViewModeToggle;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Resources\Users\Pages\ViewUser;
+use Twstec\Kit\Admin\Resources\Users\Support\MarkEmailVerifiedAction;
+use Twstec\Kit\Admin\Resources\Users\Support\UserAdminGuard;
+use Twstec\Kit\Admin\Support\CardActions;
+use Twstec\Kit\Admin\Support\ViewModeToggle;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
 use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;

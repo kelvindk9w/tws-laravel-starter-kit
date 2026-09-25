@@ -178,6 +178,10 @@ COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci --ignore-scripts; else npm install --ignore-scripts; fi
 
 COPY . .
+# O vendor/ de produção (pacotes do kit COPIADOS, não links): o tema do /admin
+# (resources/css/filament.css) importa as fontes do Tailwind do
+# twstec/kit-admin (vendor/twstec/kit-admin/resources/css/sources.css) e o
+# preset do Filament — sem eles o build falha.
 COPY --from=composer-prod /app/vendor ./vendor
 
 RUN npm run build

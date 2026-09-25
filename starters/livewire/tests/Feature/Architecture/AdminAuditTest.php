@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 use App\Demo\Catalog\Models\Product;
 use App\Filament\AuditFixture\NewAdminScreen;
-use App\Filament\Pages\Profile;
-use App\Filament\Pages\Settings;
-use App\Filament\Resources\Users\Pages\EditUser;
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Support\AdminAudit;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Pages\SimplePage;
@@ -17,6 +12,11 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Livewire;
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Admin\Pages\Profile;
+use Twstec\Kit\Admin\Pages\Settings;
+use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Support\AdminAudit;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
@@ -41,16 +41,25 @@ use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 // =============================================================================
 
 /**
- * Arquivos PHP de app/Filament, com o caminho relativo.
+ * Código do painel: o do pacote twstec/kit-admin (desde a 2.0; antes,
+ * app/Filament) e as telas próprias do aplicativo em app/Filament, se houver.
+ * Chave: `kit-admin/src/…` para o pacote e `app/Filament/…` para o aplicativo.
  *
  * @return array<string, string> caminho relativo => conteúdo
  */
 function adminFilamentSources(): array
 {
     $sources = [];
+    $package = dirname((string) (new ReflectionClass(AdminAudit::class))->getFileName(), 2);
 
-    foreach ((new Finder)->files()->in(app_path('Filament'))->name('*.php') as $file) {
-        $sources[str_replace(base_path().'/', '', $file->getRealPath())] = $file->getContents();
+    foreach ((new Finder)->files()->in($package)->name('*.php') as $file) {
+        $sources['kit-admin/src/'.str_replace('\\', '/', $file->getRelativePathname())] = $file->getContents();
+    }
+
+    if (is_dir(app_path('Filament'))) {
+        foreach ((new Finder)->files()->in(app_path('Filament'))->name('*.php') as $file) {
+            $sources[str_replace(base_path().'/', '', $file->getRealPath())] = $file->getContents();
+        }
     }
 
     ksort($sources);
@@ -59,7 +68,7 @@ function adminFilamentSources(): array
 }
 
 /**
- * Classes Livewire declaradas em app/Filament.
+ * Classes Livewire declaradas no código do painel.
  *
  * @return list<class-string<Component>>
  */
@@ -68,7 +77,9 @@ function adminLivewireComponents(): array
     $classes = [];
 
     foreach (array_keys(adminFilamentSources()) as $path) {
-        $class = 'App\\'.str_replace(['/', '.php'], ['\\', ''], Str::after($path, 'app/'));
+        $class = str_starts_with($path, 'kit-admin/src/')
+            ? 'Twstec\\Kit\\Admin\\'.str_replace(['/', '.php'], ['\\', ''], Str::after($path, 'kit-admin/src/'))
+            : 'App\\'.str_replace(['/', '.php'], ['\\', ''], Str::after($path, 'app/'));
 
         if (class_exists($class) && is_subclass_of($class, Component::class) && ! (new ReflectionClass($class))->isAbstract()) {
             $classes[] = $class;
@@ -141,18 +152,18 @@ it('nenhuma escrita do painel passa por fora dos eventos de model (ela sumiria d
 });
 
 it('toda recusa do painel passa por AdminAudit::denied() — não existe recusar sem registrar', function () {
-    // As telas de autenticação (app/Filament/Auth e Pages/Auth) recusam
+    // As telas de autenticação (Auth e Pages/Auth do pacote) recusam
     // credencial e CÓDIGO DE LOGIN, não ação de admin: ninguém está logado
     // ainda (e a trilha de requisições já registra essas tentativas). É a
     // única exceção.
-    $permitidos = ['app/Filament/Support/AdminAudit.php'];
+    $permitidos = ['kit-admin/src/Support/AdminAudit.php'];
 
     $violacoes = [];
 
     foreach (adminFilamentSources() as $path => $source) {
         if (in_array($path, $permitidos, true)
-            || str_starts_with($path, 'app/Filament/Auth/')
-            || str_starts_with($path, 'app/Filament/Pages/Auth/')) {
+            || str_starts_with($path, 'kit-admin/src/Auth/')
+            || str_starts_with($path, 'kit-admin/src/Pages/Auth/')) {
             continue;
         }
 

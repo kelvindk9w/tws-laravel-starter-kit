@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -14,6 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Twstec\Kit\Admin\Concerns\AccessesAdminPanel;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Models\Concerns\KitAuthenticatable;
 use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
@@ -39,7 +39,9 @@ use Twstec\Kit\Uploads\Concerns\HasAvatar;
  * - `name`: cast `encrypted` (AES-256-GCM da APP_KEY) — dado pessoal sensível.
  * - `email`: texto (é a chave de lookup do login; índice UNIQUE exige texto).
  *
- * Painel /admin (Filament): `canAccessPanel`. Foto de perfil (`avatar()`,
+ * Painel /admin (Filament): `canAccessPanel` pela trait AccessesAdminPanel,
+ * do pacote twstec/kit-admin (deny-by-default: só `is_admin` + conta ativa;
+ * o pacote confere o mesmo critério no painel). Foto de perfil (`avatar()`,
  * `avatarUrl()`): trait HasAvatar, do pacote twstec/kit-uploads (a coluna
  * `avatar_upload_id` é da migration de usuários do aplicativo).
  *
@@ -52,7 +54,7 @@ use Twstec\Kit\Uploads\Concerns\HasAvatar;
 class User extends Authenticatable implements AuthUser, FilamentUser, HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
-    use HasAvatar, HasFactory, HasPublicCode, HasUuids, KitAuthenticatable, Notifiable, RoutesByUuid;
+    use AccessesAdminPanel, HasAvatar, HasFactory, HasPublicCode, HasUuids, KitAuthenticatable, Notifiable, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: USR-xxxxxx.
@@ -98,16 +100,6 @@ class User extends Authenticatable implements AuthUser, FilamentUser, HasLocaleP
             'is_admin' => 'boolean',
             'notification_preferences' => 'array',
         ];
-    }
-
-    /**
-     * Acesso ao super admin Filament (/admin). Deny-by-default:
-     * somente a flag is_admin (concedida pelo comando `user:make-admin`)
-     * E conta ativa liberam o painel; os demais recebem 403.
-     */
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return $this->is_admin && $this->isActive();
     }
 
     /**

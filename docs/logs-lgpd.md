@@ -80,14 +80,14 @@ Decisão do dono: **toda ação de admin que altera dado fica registrada no banc
 (`actor_uuid`), o que aconteceu com ESTE registro (`subject_type` + `subject_uuid`) e onde aconteceu
 ESTA ação (`action`).
 
-**Como a gravação é central.** `App\Filament\Support\AdminAudit` se pendura no gancho `call` do
+**Como a gravação é central.** `Twstec\Kit\Admin\Support\AdminAudit` (pacote twstec/kit-admin) se pendura no gancho `call` do
 Livewire: toda chamada de componente do painel (o "Criar"/"Salvar" das páginas, toda Action de
 tabela, cabeçalho ou modal) roda com um escopo de auditoria aberto — contexto, quem está logado,
 correlação, IP e User-Agent. Enquanto ele está aberto, `Twstec\Kit\Foundation\Audit\AuditTrail` grava cada
 `created`/`updated`/`deleted` de model Eloquent. Um resource novo, portanto, já nasce auditado,
 sem nenhuma linha de código de auditoria. O verbo sai do nome da Action (`block` → `blocked`,
 `revoke` → `revoked`; nome fora do mapa vira snake_case) ou, no CRUD, do evento do model. O teste
-de arquitetura `tests/Feature/Architecture/AdminAuditTest.php` reprova o build nas portas que o
+de arquitetura (`tests/Architecture/AdminAuditTest.php` do pacote e `tests/Feature/Architecture/AdminAuditTest.php` do starter) reprova o build nas portas que o
 gancho não fecha: escrita que não dispara evento de model (query em massa, `DB::`, `*Quietly`,
 `withoutEvents`), recusa montada à mão sem registro, componente fora da cobertura e resource com
 escrita sobre model ignorado.
@@ -96,7 +96,7 @@ escrita sobre model ignorado.
 linha `denied` com o motivo **e** mostra a notificação ao operador — uma chamada só, para não
 existir recusa sem registro. Exemplos: bloquear/excluir/editar conta demo, excluir ou bloquear a
 si mesmo, tirar o acesso do último admin, senha de transação ou código errados ao ligar/desligar o
-segundo fator, `user:make-admin` em conta demo ou e-mail inexistente (o e-mail digitado **não** vai
+segundo fator, foto de perfil apontando para upload de outra pessoa, `user:make-admin` em conta demo ou e-mail inexistente (o e-mail digitado **não** vai
 para a trilha).
 
 **O que fica fora da captura automática** (`config/audit.php`, `ignored_models`): `request_logs`

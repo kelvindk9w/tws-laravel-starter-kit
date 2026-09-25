@@ -23,7 +23,7 @@ Quando `DEMO_LOGIN_ENABLED=true` (**padrão só em `APP_ENV=local`**), a tela de
 login mostra um aviso e vem com as credenciais demo pré-preenchidas — basta
 clicar em "Entrar" (padrão demo.filamentphp.com). A MESMA flag ativa o **admin
 demo**: usuário com `is_admin` e credenciais pré-preenchidas em `/admin/login`
-(página própria `App\Filament\Pages\Auth\Login`), com link "Ver admin demo" na
+(página própria `Twstec\Kit\Admin\Pages\Auth\Login`, do pacote twstec/kit-admin), com link "Ver admin demo" na
 landing. Os dois usuários são criados pelo `DemoUserSeeder` + `DemoAdminSeeder`,
 chamados automaticamente pelo `DemoSeeder` (que o `DatabaseSeeder` roda) quando
 o flag está ligado:

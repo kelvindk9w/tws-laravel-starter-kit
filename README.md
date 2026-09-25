@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`), [`accounts`](packages/accounts) (`twstec/kit-accounts`) e [`uploads`](packages/uploads) (`twstec/kit-uploads`). O painel de administração entra na próxima fase. |
+| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`), [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -129,9 +129,11 @@ docker compose exec app ./vendor/bin/pint            # estilo de código
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app composer:latest composer <cmd>
 
 # Build do frontend (Node 24 em container; --user evita node_modules e
-# public/build com dono root, que o php-fpm não conseguiria sobrescrever):
+# public/build com dono root, que o php-fpm não conseguiria sobrescrever). O
+# tema do /admin importa as fontes do pacote twstec/kit-admin, que no vendor/
+# é um link para packages/: por isso a pasta dos pacotes também é montada.
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm install
-docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-alpine npm run build
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -v $(pwd)/../../packages:/packages -w /app node:24-alpine npm run build
 ```
 
 E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
@@ -223,6 +225,9 @@ packages/                # pacotes do kit (ver packages/README.md):
                          # API v1 (autenticação, escopos, limites, envelope)
   uploads/               # twstec/kit-uploads — upload validado pelo conteúdo,
                          # re-encode de imagem, URL assinada, foto de perfil
+  admin/                 # twstec/kit-admin — o super admin /admin como plugin
+                         # do Filament: telas, dashboards, trilha de auditoria
+                         # das ações e as proteções do painel
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
@@ -236,7 +241,8 @@ starters/livewire/       # o aplicativo:
   app/
     Models/User.php  # o model de usuário (do app; compõe as traits dos pacotes)
     Livewire/   # painel do usuário
-    Filament/   # super admin /admin
+    Providers/Filament/  # o painel /admin do app (marca, tema) + o plugin
+                         # do twstec/kit-admin; telas próprias em Filament/
     Domain/  # regras de negócio do projeto filho
   tests/     # Pest (Unit/Feature) + e2e/ (Playwright)
 ```

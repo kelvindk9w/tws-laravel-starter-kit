@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
+use Twstec\Kit\Admin\Compat\LegacyNames;
 
 // =============================================================================
 // ARQUITETURA DOS MÓDULOS DE app/Core — a trava da divisão em pacotes.
@@ -636,6 +637,57 @@ it('usa os nomes novos das classes de uploads, nunca os apelidos App\\Core\\Uplo
     }
 
     expect($violations)->toBe([]);
+});
+
+it('usa os nomes novos das classes do painel /admin, nunca os apelidos App\\Filament\\… e App\\Console\\Commands\\MakeAdminUser', function (): void {
+    // Mesma regra, para o que saiu com o pacote twstec/kit-admin: os apelidos
+    // (packages/admin/src/Compat) existem só para o que está gravado fora do
+    // código — snapshot do Livewire, config de dashboards publicada, estado na
+    // sessão. A lista de nomes antigos é a do próprio pacote (fechada): uma
+    // tela que o aplicativo escreve em App\Filament\ continua permitida. A
+    // leitura é por tokens: o nome antigo escrito como TEXTO não conta.
+    $antigos = array_keys(LegacyNames::MAP);
+    $violations = [];
+
+    foreach (['app', 'bootstrap', 'config', 'database', 'routes', 'demo', 'tests'] as $directory) {
+        if (! is_dir(base_path($directory))) {
+            continue;
+        }
+
+        foreach ((new Finder)->files()->in(base_path($directory))->name('*.php') as $file) {
+            $path = str_replace(base_path().'/', '', $file->getRealPath());
+
+            foreach (appReferencesIn($file->getContents()) as $name) {
+                if (in_array($name, $antigos, true)) {
+                    $violations[] = "{$path} usa {$name}";
+                }
+            }
+        }
+    }
+
+    // Nas views Blade, que não são PHP puro, vale o nome escrito.
+    foreach ((new Finder)->files()->in(base_path('resources/views'))->name('*.blade.php') as $file) {
+        foreach ($antigos as $antigo) {
+            if (str_contains(str_replace('\\\\', '\\', $file->getContents()), $antigo)) {
+                $violations[] = str_replace(base_path().'/', '', $file->getRealPath()).' usa '.$antigo;
+            }
+        }
+    }
+
+    // E o painel não voltou a morar no aplicativo: nenhum arquivo de
+    // app/Filament com o nome de uma classe que é do pacote.
+    foreach ($antigos as $antigo) {
+        if (str_starts_with($antigo, 'App\\Filament\\')) {
+            $arquivo = app_path(str_replace('\\', '/', substr($antigo, strlen('App\\'))).'.php');
+
+            if (is_file($arquivo)) {
+                $violations[] = str_replace(base_path().'/', '', $arquivo).' existe de novo (a classe é do pacote twstec/kit-admin)';
+            }
+        }
+    }
+
+    expect($antigos)->not->toBeEmpty()
+        ->and($violations)->toBe([]);
 });
 
 it('deixa app/Core vazio: todo o backend do kit mora nos pacotes', function (): void {

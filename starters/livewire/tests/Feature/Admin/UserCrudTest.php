@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Filament\Resources\Users\Pages\CreateUser;
-use App\Filament\Resources\Users\Pages\EditUser;
-use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Resources\Users\Pages\CreateUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
 
 // =============================================================================

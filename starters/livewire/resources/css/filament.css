@@ -8,7 +8,8 @@
    que rebranding continue sendo "1 arquivo + .env".
 
    Registrado no vite.config.js e apontado por ->viteTheme() no
-   AdminPanelProvider.
+   AdminPanelProvider (o painel é do aplicativo; as telas vêm do plugin do
+   pacote twstec/kit-admin).
 */
 
 @import '../../vendor/filament/filament/resources/css/theme.css';
@@ -23,7 +24,10 @@
 @import './theme.css';
 
 /* Classes usadas dentro do painel: o Tailwind 4 precisa enxergar os
-   arquivos para gerar os utilitários. */
+   arquivos para gerar os utilitários. As telas do produto são do pacote
+   twstec/kit-admin (o @import traz os @source dele e falha o build se o
+   pacote não estiver ao alcance); as do aplicativo ficam aqui. */
+@import '../../vendor/twstec/kit-admin/resources/css/sources.css';
 @source '../../app/Filament';
 @source '../../app/Providers/Filament';
 @source '../../resources/views/filament';

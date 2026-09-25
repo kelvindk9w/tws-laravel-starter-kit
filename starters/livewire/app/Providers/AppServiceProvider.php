@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Console\Commands\MakeAdminUser;
 use App\Livewire\Support\SiteLinks;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
-use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,13 +37,9 @@ class AppServiceProvider extends ServiceProvider
         // pacote twstec/kit-foundation, sozinho — ver
         // Twstec\Kit\Foundation\Support\ProductionHardening.
 
-        // Downloads de export/import do Filament (`/filament/exports/…`): o
-        // pacote registra esse grupo com `['web']` apenas, fora do painel — ou
-        // seja, o arquivo gerado A PARTIR do /admin (tabela de usuários, logs de
-        // requisição) era entregue por uma rota que a barreira de origem do
-        // painel não cobria. Mesma superfície, mesma barreira. O `push` mantém
-        // o que o pacote declarar amanhã, em vez de congelar a lista dele.
-        Route::pushMiddlewareToGroup('filament.actions', EnsureAdminIpAllowed::class);
+        // A barreira de origem nos downloads de export/import do Filament
+        // (`/filament/exports/…`, fora do painel) é ligada pelo pacote
+        // twstec/kit-admin — ver Twstec\Kit\Admin\AdminServiceProvider.
 
         // Verificação de e-mail nas AÇÕES Livewire do painel. O endpoint de
         // atualização do Livewire é um só para todos os componentes e não
@@ -56,12 +49,7 @@ class AppServiceProvider extends ServiceProvider
         // chave" disparada de um snapshot anterior passaria.
         Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class]);
 
-        // Comandos próprios do kit (fora de app/Console/Commands).
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                MakeAdminUser::class,
-            ]);
-        }
+        // O comando `user:make-admin` é registrado pelo pacote twstec/kit-admin.
 
         // Os limitadores `api` e `sensitive` são registrados pelo pacote
         // twstec/kit-foundation (FoundationServiceProvider). Um RateLimiter::for

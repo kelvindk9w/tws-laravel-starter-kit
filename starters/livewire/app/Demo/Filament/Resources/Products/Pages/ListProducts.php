@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Demo\Filament\Resources\Products\Pages;
 
 use App\Demo\Filament\Resources\Products\ProductResource;
-use App\Filament\Support\BaseListRecords;
 use Filament\Actions\CreateAction;
+use Twstec\Kit\Admin\Support\BaseListRecords;
 
 /**
  * Listagem de produtos com estado refletido na URL (query string):

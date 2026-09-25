@@ -6,13 +6,13 @@ namespace App\Demo\Filament\Widgets\Content;
 
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Showcase\Models\FormSubmission;
-use App\Filament\Widgets\Support\BaseStatsWidget;
-use App\Filament\Widgets\Support\Metric;
-use App\Filament\Widgets\Support\MetricFormat;
-use App\Filament\Widgets\Support\MetricStat;
-use App\Filament\Widgets\Support\Period;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Twstec\Kit\Admin\Widgets\Support\BaseStatsWidget;
+use Twstec\Kit\Admin\Widgets\Support\Metric;
+use Twstec\Kit\Admin\Widgets\Support\MetricFormat;
+use Twstec\Kit\Admin\Widgets\Support\MetricStat;
+use Twstec\Kit\Admin\Widgets\Support\Period;
 use Twstec\Kit\Uploads\Models\Upload;
 
 /**

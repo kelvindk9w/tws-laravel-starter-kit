@@ -7,12 +7,12 @@ use App\Demo\Accounts\DemoAccountTrigger;
 use App\Demo\Accounts\Exceptions\DemoAccountProtectedException;
 use App\Demo\Database\Seeders\DemoAdminSeeder;
 use App\Demo\Database\Seeders\DemoUserSeeder;
-use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
 
 // =============================================================================

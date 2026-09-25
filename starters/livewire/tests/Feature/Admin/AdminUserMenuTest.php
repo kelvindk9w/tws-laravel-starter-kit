@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Profile;
-use App\Filament\Support\InitialsAvatarProvider;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Twstec\Kit\Admin\Pages\Profile;
+use Twstec\Kit\Admin\Support\InitialsAvatarProvider;
 use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================

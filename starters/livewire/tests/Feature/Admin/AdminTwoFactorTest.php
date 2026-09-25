@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Auth\Login;
-use App\Filament\Pages\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Pages\Auth\Login;
+use Twstec\Kit\Admin\Pages\Profile;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Models\VerificationCode;

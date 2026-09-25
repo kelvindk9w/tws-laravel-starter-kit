@@ -45,6 +45,24 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   log). Classes em `Twstec\Kit\Uploads\…`; os nomes `App\Core\Uploads\…`
   resolvem até a 3.0. Telas, rota web do avatar e o painel ficam no starter,
   e `app/Core` deixou de existir.
+- **Quinto pacote: `twstec/kit-admin`** (`packages/admin`), o super admin
+  `/admin` como **plugin do Filament** (`AdminPlugin`), que o aplicativo
+  registra no próprio painel: resources, páginas, login com segundo fator por
+  e-mail, dashboards, a trilha de auditoria das ações, as guardas e o comando
+  `user:make-admin`. Mesmo comportamento, mesmas rotas e o mesmo visual, sem
+  migration. Marca, cores, tema e o seletor de idioma ficam no
+  `AdminPanelProvider` do starter. As proteções do painel passam a ser ligadas
+  pelo pacote, em qualquer ordem do `PanelProvider`: a allowlist de IP em
+  primeiro lugar e persistente nas ações Livewire (e no download de exports),
+  o acesso só de `is_admin` com conta ativa conferido também pelo pacote, e as
+  ações em transação (opt-out: `ADMIN_PROTECTIONS=false`, com aviso no log).
+  O tema compilado pelo aplicativo importa as fontes do pacote
+  (`vendor/twstec/kit-admin/resources/css/sources.css`). Classes em
+  `Twstec\Kit\Admin\…`; os nomes `App\Filament\…` e
+  `App\Console\Commands\MakeAdminUser` resolvem até a 3.0, e o estado de
+  tabela e de visualização guardado na sessão migra sozinho. As traduções
+  `admin.*` do produto vêm do pacote; as da demonstração continuam no
+  `lang/admin.php` do aplicativo.
 - O canal de log `request_log` (a segunda camada das trilhas de requisição,
   segurança e auditoria) passa a vir do `twstec/kit-foundation`, com a mesma
   definição; uma aplicação sem o canal não perde mais essas linhas para o log
@@ -76,6 +94,15 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   autenticação passam por contratos substituíveis.
 
 ### Segurança
+- **Foto de perfil no `/admin` só de upload da própria conta.** O campo de
+  foto do cadastro de usuário e do perfil do admin vinculava como avatar
+  qualquer upload cujo uuid chegasse no formulário, sem conferir o dono — o
+  valor vem do navegador. Agora só vira foto o upload da conta editada
+  (enviado por ela na web, pela chave de API dela, ou a foto atual) ou o que
+  acabou de ser enviado naquele formulário; qualquer outro é recusado antes de
+  gravar (nada muda, nem os outros campos) e a recusa fica na trilha de
+  auditoria como `denied` (`user.updated` / `user.created`). Só
+  administradores chegavam a esse campo.
 - **Pepper vazio nunca é pepper.** O `.env.example` trazia
   `API_KEYS_HASH_PEPPER=` sem valor, e variável vazia não aciona o fallback do
   `env()`: o hash das chaves de API rodava com pepper de 0 caracteres, em
@@ -131,6 +158,12 @@ fallback da `APP_KEY`, defina o pepper e declare a `APP_KEY` atual em
    pelos apelidos; troque os `use` antes da 3.0. O mesmo vale para
    `App\Core\Auth\…` (agora `Twstec\Kit\Auth\…`, e `App\Models\User` para o
    model); um `AUTH_MODEL` antigo no `.env` também continua valendo.
+   O mesmo para `App\Filament\…` (agora `Twstec\Kit\Admin\…`): um resource
+   próprio que estende `BaseResource` ou uma config de dashboards publicada
+   com os nomes antigos continuam funcionando.
+7. O build do front em container precisa enxergar `packages/` (o tema do
+   `/admin` importa as fontes do pacote): acrescente
+   `-v $(pwd)/../../packages:/packages` ao `docker run … npm run build`.
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

@@ -282,6 +282,8 @@ it('o detalhe mostra o payload íntegro ESCAPADO como evidência forense', funct
 it('nenhum template exibe submissões com echo cru ({!! !!})', function () {
     $views = array_merge(
         glob(resource_path('views/filament/**/*.blade.php')) ?: [],
+        // As views do painel são do pacote twstec/kit-admin desde a 2.0.
+        glob(base_path('vendor/twstec/kit-admin/resources/views/**/*.blade.php')) ?: [],
         glob(resource_path('views/livewire/*.blade.php')) ?: [],
     );
 

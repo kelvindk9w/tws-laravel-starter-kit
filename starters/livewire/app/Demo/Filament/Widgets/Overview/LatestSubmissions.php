@@ -7,13 +7,13 @@ namespace App\Demo\Filament\Widgets\Overview;
 use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Demo\Showcase\Support\SubmissionExcerpt;
-use App\Filament\Widgets\Support\BaseLatestRecordsWidget;
-use App\Filament\Widgets\Support\Period;
 use BackedEnum;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Twstec\Kit\Admin\Widgets\Support\BaseLatestRecordsWidget;
+use Twstec\Kit\Admin\Widgets\Support\Period;
 
 /**
  * O que chegou pelos formulários, mais recente primeiro.

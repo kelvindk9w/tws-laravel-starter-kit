@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Widgets\Content;
 
-use App\Filament\Widgets\Support\BaseCompositionWidget;
-use App\Filament\Widgets\Support\ChartSlice;
-use App\Filament\Widgets\Support\Period;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Admin\Widgets\Support\BaseCompositionWidget;
+use Twstec\Kit\Admin\Widgets\Support\ChartSlice;
+use Twstec\Kit\Admin\Widgets\Support\Period;
 use Twstec\Kit\Uploads\Models\Upload;
 
 /**

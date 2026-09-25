@@ -71,8 +71,88 @@ e `SensitiveActionService`; a senha de transação usa o
 
 ## Super admin (Filament 5) — `/admin`
 
-- **Acesso**: somente `is_admin` + conta ativa (`User::canAccessPanel`) —
-  qualquer outro usuário recebe **403**; guest vai ao login do painel.
+### O painel é o pacote `twstec/kit-admin`, registrado como plugin
+
+Desde a 2.0 o super admin mora em `packages/admin` (Composer
+`twstec/kit-admin`, namespace `Twstec\Kit\Admin\`) e entra no painel do
+aplicativo como **plugin do Filament**. É o mesmo painel nos dois starters e no
+produto — por isso é pacote.
+
+| Onde | O quê |
+| --- | --- |
+| Pacote (`packages/admin`) | resources (usuários, chaves de API, projetos, uploads, logs de requisição, auditoria), páginas (perfil, configurações, login com o segundo fator por e-mail — provedor MFA próprio), dashboards e widgets (`DashboardRegistry`, as variantes Visão geral e Crescimento & API), a captura da trilha de auditoria (`AdminAudit`), guardas (`UserAdminGuard`), ações (marcar e-mail verificado), o comando `user:make-admin`, o critério de acesso (`AdminAccess`), as proteções do painel e as traduções `admin.*` |
+| Starter (`app/Providers/Filament/AdminPanelProvider.php`) | o registro do painel (`id`, `path`), a marca, as cores, a fonte, o tema (`resources/css/filament.css`), o seletor de idioma da topbar e a descoberta de telas próprias em `app/Filament` |
+| Demonstração (`App\Demo\Filament\DemoAdminPlugin`) | produtos, submissões e o dashboard "Conteúdo & Operação" — outro plugin, com as traduções dela no `lang/admin.php` do aplicativo |
+
+**Por que plugin, e não um `PanelProvider` pronto para estender:** o painel
+continua sendo do aplicativo, montado com a API normal do Filament; o kit
+entra como mais um plugin (a demonstração já entrava assim), sem herança nem
+método a sobrescrever, e o aplicativo pode ter outros painéis ou registrar o
+kit num painel com outro id/caminho. O registro mínimo é:
+
+```php
+$panel->default()->id('admin')->path('admin')->plugin(AdminPlugin::make());
+```
+
+Marca, cores, caminho, navegação e telas próprias o aplicativo configura no
+próprio `PanelProvider`, antes ou depois do plugin (o que vier depois
+sobrescreve o que o plugin declarou — por exemplo, outra ordem de grupos com
+`->navigationGroups([...])`).
+
+**As proteções são do pacote e não dependem da ordem do `PanelProvider`.** Em
+todo painel que registra o plugin: a barreira de origem (allowlist de IP) é o
+PRIMEIRO middleware e é persistente no endpoint do Livewire; a autenticação
+exige `is_admin` + conta ativa (também persistente); nenhum middleware da
+pilha entra duas vezes (um provider copiado do modelo do Filament, com a
+pilha inteira, continua funcionando); e as Actions e Criar/Salvar rodam em
+transação — a base da trilha que falha fechada. Quem garante é o
+`Support\AdminPanelHardening`, aplicado no registro do plugin e de novo depois
+que o aplicativo terminou de configurar o painel. O download de exports e
+imports do Filament (`/filament/exports/…`, fora do painel) também fica atrás
+da barreira de origem. Opt-out só explícito: `ADMIN_PROTECTIONS=false`, com
+aviso no log a cada boot (a trilha e o segundo fator continuam ligados).
+
+**Tema e CSS.** O pacote não entrega CSS compilado: o tema do painel é do
+aplicativo (os tokens de marca dele + o preset do Filament), compilado pelo
+Vite dele. O `resources/css/filament.css` do starter importa
+`vendor/twstec/kit-admin/resources/css/sources.css`, que só diz ao Tailwind
+onde estão as classes das telas do pacote. Por ser um `@import`, o build
+**falha** se o pacote não estiver ao alcance — em vez de gerar um tema sem as
+classes do painel. No desenvolvimento o pacote é um link para `packages/`,
+então o build em container precisa enxergar essa pasta:
+
+```bash
+cd starters/livewire
+docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/app -v $(pwd)/../../packages:/packages -w /app \
+  node:24-alpine npm run build
+```
+
+(No CI e na imagem de produção o pacote já está dentro do `vendor/`.)
+
+**Foto de perfil só da própria conta (correção de segurança da 2.0).** O
+campo de foto do cadastro de usuário e do perfil do admin só vincula um
+upload que é da conta editada (enviado por ela na web, pela chave de API
+dela, ou a foto atual) ou que acabou de ser enviado naquele formulário. O
+valor do campo vem do navegador; apontá-lo para o upload de outra pessoa é
+recusado antes de gravar qualquer coisa, e a recusa fica na trilha como
+**Recusada** (`user.updated`/`user.created`). Ver
+`Twstec\Kit\Admin\Support\AvatarUpload::denialFor()`.
+
+**Nomes antigos.** As classes `App\Filament\…` da 1.x (e o comando
+`App\Console\Commands\MakeAdminUser`) continuam resolvendo até a 3.0 —
+apelidos em `packages/admin/src/Compat`. O estado de tabela e o modo
+tabela/cards gravados na sessão pelo nome antigo migram sozinhos para o novo
+na primeira abertura da tela.
+
+
+- **Acesso**: somente `is_admin` + conta ativa — qualquer outro usuário
+  recebe **403**; guest vai ao login do painel. O critério é do pacote
+  (`Twstec\Kit\Admin\Access\AdminAccess`): o model do aplicativo o usa em
+  `canAccessPanel` (trait `AccessesAdminPanel`) e o pacote o confere de novo
+  em todo pedido do painel e em toda ação Livewire (`EnsureAdminPanelAccess`,
+  persistente) — vale mesmo que o model não implemente o contrato do
+  Filament.
 - **Criar o primeiro admin** (bootstrap e resgate de acesso — a flag NUNCA é
   mass-assignable; pela UI ela só muda no formulário de usuário do painel,
   que aplica as guardas descritas abaixo):
@@ -142,7 +222,7 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   claro/escuro/sistema, Voltar ao site e Sair. O seletor de idioma continua
   na topbar, fora do menu (decisão do dono): trocar de idioma reescreve a
   tela inteira e não é um item de conta. A foto é resolvida por
-  `App\Filament\Support\InitialsAvatarProvider`
+  `Twstec\Kit\Admin\Support\InitialsAvatarProvider`
   (`->defaultAvatarProvider()`), não por um `getFilamentAvatarUrl()` no
   model — o domínio não precisa conhecer o Filament para isso.
 - **Perfil demo-safe** (`/admin/profile`, link no menu do usuário): **foto**
@@ -150,7 +230,7 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   montada só como prévia (campo desabilitado, sem endpoint) — nada derruba o
   acesso demo. A foto sobe pela **mesma função global de upload** do resto
   do kit e vira o avatar do cabeçalho na hora.
-- **Foto de perfil no cadastro de usuário** (`App\Filament\Support\AvatarUpload`):
+- **Foto de perfil no cadastro de usuário** (`Twstec\Kit\Admin\Support\AvatarUpload`):
   o `FileUpload` do Filament grava, de fábrica, direto no disco — o que
   pularia o `SecureUploadService` e, com ele, a validação por magic bytes, o
   re-encode GD, o nome derivado do MIME real e o registro em `uploads`. Aqui
@@ -179,8 +259,10 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   as **ações dos componentes do painel**: essas não chegam pelas rotas
   `/admin/...`, e sim pelo endpoint de atualização do Livewire (uma rota
   única, compartilhada com o painel do usuário). Por isso a barreira é
-  registrada como **middleware persistente do Livewire**
-  (`->middleware([...], isPersistent: true)` no `AdminPanelProvider`): o
+  registrada como **middleware persistente do Livewire** — pelo PACOTE, em
+  todo painel que registra o `AdminPlugin` (`Support\AdminPanelHardening`,
+  que também a mantém em primeiro lugar qualquer que seja a ordem do
+  `PanelProvider` do aplicativo): o
   Livewire a reaplica só para componentes cuja rota de origem, gravada no
   snapshot assinado, é do `/admin` — o painel do usuário não é afetado.
   - **Fora de produção, vazio libera** (o IP de quem desenvolve é o que o
@@ -246,8 +328,11 @@ DASHBOARD_LATEST_RECORDS=6                  # linhas das tabelas "últimos N"
 - sem nenhuma variante habilitada, o painel volta ao Dashboard de fábrica do
   Filament — `/admin` nunca dá 404.
 
-Quem lê essa config é o `App\Filament\Dashboards\DashboardRegistry`, e é
-ele que o `AdminPanelProvider` consulta (`->pages(DashboardRegistry::pages())`).
+Quem lê essa config é o `Twstec\Kit\Admin\Dashboards\DashboardRegistry`, e é
+ele que o `AdminPlugin` do pacote consulta para registrar as páginas. A
+config vem do pacote e a cópia do aplicativo (`config/dashboards.php` do
+starter) vence; uma config publicada antes da 2.0, com os nomes antigos das
+páginas (`App\Filament\Dashboards\…`), continua funcionando.
 Nenhuma lista de dashboards existe hardcodada em código.
 
 ### Criar uma quarta variante (4 passos)
@@ -255,8 +340,8 @@ Nenhuma lista de dashboards existe hardcodada em código.
 1. **Traduções** — um bloco `admin.dashboards.finance` em
    `lang/{pt_BR,en,es}/admin.php` com `nav`, `title` e `subheading` (o teste
    de paridade de chaves reprova se faltar em algum idioma).
-2. **A página** — `app/Filament/Dashboards/FinanceDashboard.php`, estendendo
-   `BaseDashboard`. Ela declara só duas coisas:
+2. **A página** — `app/Filament/Dashboards/FinanceDashboard.php` (do
+   aplicativo), estendendo `Twstec\Kit\Admin\Dashboards\BaseDashboard`. Ela declara só duas coisas:
 
 ```php
 final class FinanceDashboard extends BaseDashboard
@@ -292,7 +377,8 @@ final class FinanceDashboard extends BaseDashboard
 
 ### Criar um widget com a base
 
-A base vive em `app/Filament/Widgets/Support/` e existe para que um widget
+A base vive no pacote (`Twstec\Kit\Admin\Widgets\Support\`, em
+`packages/admin/src/Widgets/Support/`) e existe para que um widget
 novo não repita decisão de design nem conta de porcentagem:
 
 | Peça | O que entrega |
@@ -432,7 +518,7 @@ busca e alternador respondem à mesma pergunta, "como esta lista aparece", e
 por isso agora moram juntos. Efeito colateral bem-vindo: nenhuma página
 consegue mais derrubar o alternador ao sobrescrever `getHeaderActions()`,
 porque ele não passa mais por lá (`BaseResource::table()` +
-`App\Filament\Support\ViewModeToggle`).
+`Twstec\Kit\Admin\Support\ViewModeToggle`).
 
 Os cards mostram de três a cinco campos com hierarquia (o que identifica o
 registro em destaque, o resto em cinza). A tabela segue sendo o padrão: é o
@@ -457,7 +543,7 @@ fileira de links come metade do rodapé e faz todo registro parecer um
 formulário.
 
 O resource **não precisa saber disso**: quem converte é a base
-(`BaseResource::table()` → `App\Filament\Support\CardActions`), via o hook
+(`BaseResource::table()` → `Twstec\Kit\Admin\Support\CardActions`), via o hook
 `modifyUngroupedRecordActionsUsing` do Filament, e só quando o modo vigente
 é cards. A grade de colunas iguais é CSS do tema
 (`resources/css/filament.css`). Ação com nome fora do mapa de semântica
@@ -465,7 +551,7 @@ O resource **não precisa saber disso**: quem converte é a base
 nasce neutra, não vermelha por acidente.
 
 **Onde a escolha mora (decisão documentada):** na **sessão**, com uma chave
-por recurso (`App\Filament\Support\ViewMode`). A sessão já é por usuário,
+por recurso (`Twstec\Kit\Admin\Support\ViewMode`). A sessão já é por usuário,
 então não é preciso coluna nova nem escrita no banco a cada clique; e a
 chave por recurso deixa cada tela com o seu modo — quem tria submissões em
 cards continua querendo request logs em tabela. Trocar de máquina reinicia
@@ -474,15 +560,19 @@ troca é só o `ViewMode`: nada mais no painel muda.
 
 ## Como criar uma tela nova no /admin (5 passos)
 
-Todo resource herda de `App\Filament\Support\BaseResource` e toda listagem
-de `App\Filament\Support\BaseListRecords` — isso é **verificado por teste**
+A tela nova é do **aplicativo**: mora em `app/Filament/Resources/…` e o
+`AdminPanelProvider` do starter a descobre (`discoverResources`). Todo
+resource herda de `Twstec\Kit\Admin\Support\BaseResource` e toda listagem de
+`Twstec\Kit\Admin\Support\BaseListRecords` (as bases do pacote) — nos
+resources do pacote isso é **verificado por teste**
 (`tests/Feature/Admin/TableViewModeTest.php`). De graça vêm: rota por uuid,
 rótulos e grupo de navegação traduzidos, ordenação padrão, paginação, estado
 vazio traduzido, o alternador tabela/cards e as colunas repetidas de sempre
 (`AdminColumns::publicCode()`, `AdminColumns::dateTime()` — esta última já no
 fuso de exibição da plataforma).
 
-1. **Traduções** — um bloco novo em `lang/{pt_BR,en,es}/admin.php` com, no
+1. **Traduções** — um bloco novo no `lang/{pt_BR,en,es}/admin.php` do
+   aplicativo (o mesmo grupo `admin` do pacote; o do aplicativo vence) com, no
    mínimo, `label` e `plural` (o teste de paridade de chaves reprova se
    faltar em algum idioma).
 2. **O resource** — em `app/Filament/Resources/Faturas/FaturaResource.php`:
@@ -537,14 +627,18 @@ final class FaturaResource extends BaseResource
    exemplo) vão em `getResourceHeaderActions()`, **nunca** sobrescrevendo
    `getHeaderActions()` — é de lá que sai o alternador.
 4. **`php artisan optimize:clear`** e a tela já aparece na navegação (o
-   painel descobre os resources sozinho).
+   painel do aplicativo descobre os resources de `app/Filament/Resources`).
 5. **O teste** — em `tests/Feature/Admin/`, com `Livewire::test(ListFaturas::class)`
    validando **conteúdo** (registros visíveis, filtro que filtra, ação que
    age), não só status HTTP.
 
 **A auditoria vem de graça.** Toda escrita da tela nova (CreateAction,
 EditAction, DeleteAction, Action customizada que faz `->save()`) já grava
-em `audit_events` — quem registra é a base (`AdminAudit`), não o resource.
+em `audit_events` — quem registra é a base (`AdminAudit`, ligada pelo
+pacote), não o resource: as telas de `App\Filament\` (o namespace do
+aplicativo + `Filament\`) já são cobertas. Tela vinda de outro pacote ou
+extensão entra declarando o namespace em `audit.admin_extension_namespaces`
+(a demonstração do kit declara o dela).
 O nome da ação sai do nome da Action (`Action::make('archive')` →
 `fatura.archive`; os verbos comuns estão em `AdminAudit::VERBS`). Duas
 regras, cobradas pelo teste de arquitetura:
@@ -561,6 +655,16 @@ Ajustes finos disponíveis por propriedade estática: `$defaultSortColumn` /
 Submissões, que sobem as bloqueadas), `$paginationOptions` e `cardGrid()`.
 
 ## Testes
+
+A suíte do pacote (`packages/admin`, Orchestra Testbench) sobe uma aplicação
+limpa com o Filament e um `PanelProvider` que só registra o plugin, e prova que
+as proteções e a trilha vêm do pacote: não-admin e admin inativo sem acesso
+(inclusive com um model que não implementa o contrato do Filament, em
+ambiente local), allowlist de IP nas páginas, nas ações Livewire e no
+download de exports, a barreira em primeiro lugar qualquer que seja a ordem
+do `PanelProvider`, criar/editar/excluir/bloquear usuário gravando a linha,
+recusa como `denied`, falha fechada, contas protegidas, foto só de upload da
+própria conta, nomes antigos e traduções (o aplicativo vence).
 
 `./vendor/bin/pest` (Pest): telas Livewire (renderização + ações com
 conteúdo — criar projeto, **excluir projeto de verdade**, criar/rotacionar/

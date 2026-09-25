@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Demo\Filament\Widgets\Content;
 
 use App\Demo\Showcase\Models\FormSubmission;
-use App\Filament\Widgets\Support\BaseTimeSeriesWidget;
-use App\Filament\Widgets\Support\ChartSeries;
-use App\Filament\Widgets\Support\Metric;
-use App\Filament\Widgets\Support\Period;
-use App\Filament\Widgets\Support\StatusPalette;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Admin\Widgets\Support\BaseTimeSeriesWidget;
+use Twstec\Kit\Admin\Widgets\Support\ChartSeries;
+use Twstec\Kit\Admin\Widgets\Support\Metric;
+use Twstec\Kit\Admin\Widgets\Support\Period;
+use Twstec\Kit\Admin\Widgets\Support\StatusPalette;
 use Twstec\Kit\Uploads\Models\Upload;
 
 /**

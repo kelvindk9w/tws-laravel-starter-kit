@@ -42,7 +42,7 @@ return [
     // Namespaces de telas do /admin que vêm de EXTENSÕES instaladas (além de
     // App\Filament\ e Filament\, que são do produto): os componentes Livewire
     // desses namespaces abrem o escopo de auditoria como qualquer tela do
-    // painel (ver App\Filament\Support\AdminAudit::covers). Preenchido pelas
+    // painel (ver Twstec\Kit\Admin\Support\AdminAudit::covers). Preenchido pelas
     // extensões no register — a demonstração do kit acrescenta o dela.
     'admin_extension_namespaces' => [],
 

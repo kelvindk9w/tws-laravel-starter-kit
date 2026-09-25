@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Settings;
 use App\Models\User;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Pages\Settings;
 use Twstec\Kit\Foundation\Settings\Models\Setting;
 use Twstec\Kit\Foundation\Settings\SettingsManager;
 

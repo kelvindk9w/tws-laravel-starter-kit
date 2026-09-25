@@ -6,20 +6,20 @@ use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use App\Demo\Filament\Resources\Products\Pages\EditProduct;
 use App\Demo\Filament\Resources\Products\Pages\ListProducts;
-use App\Filament\Pages\Profile;
-use App\Filament\Pages\Settings;
-use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
-use App\Filament\Resources\Users\Pages\CreateUser;
-use App\Filament\Resources\Users\Pages\EditUser;
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\UserResource;
-use App\Filament\Support\ViewModeToggle;
 use App\Models\User;
 use Filament\Support\Exceptions\Cancel;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
+use Twstec\Kit\Admin\Pages\Profile;
+use Twstec\Kit\Admin\Pages\Settings;
+use Twstec\Kit\Admin\Resources\ApiKeys\Pages\ListApiKeys;
+use Twstec\Kit\Admin\Resources\Users\Pages\CreateUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Resources\Users\UserResource;
+use Twstec\Kit\Admin\Support\ViewModeToggle;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
@@ -32,7 +32,7 @@ use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 // Trilha de auditoria de AÇÕES do /admin (tabela `audit_events`).
 //
 // Decisão do dono: toda ação de admin fica registrada no BANCO. A captura é
-// central (App\Filament\Support\AdminAudit + Twstec\Kit\Foundation\Audit\AuditTrail): cada
+// central (Twstec\Kit\Admin\Support\AdminAudit + Twstec\Kit\Foundation\Audit\AuditTrail): cada
 // teste aqui dispara a ação pela tela, como o operador faria, e confere a
 // linha — ação estável, quem, qual registro, o antes/depois redigido e a
 // origem. As tentativas RECUSADAS pelas guardas também ficam (`denied`).

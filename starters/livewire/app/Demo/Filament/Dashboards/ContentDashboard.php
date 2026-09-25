@@ -9,7 +9,7 @@ use App\Demo\Filament\Widgets\Content\LatestProducts;
 use App\Demo\Filament\Widgets\Content\SubmissionsInbox;
 use App\Demo\Filament\Widgets\Content\UploadsByTypeChart;
 use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
-use App\Filament\Dashboards\BaseDashboard;
+use Twstec\Kit\Admin\Dashboards\BaseDashboard;
 
 /**
  * VARIANTE C — "Conteúdo & Operação" (E-commerce/Ops).

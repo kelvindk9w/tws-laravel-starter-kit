@@ -16,6 +16,7 @@ docker compose exec -w /var/packages/foundation app ./vendor/bin/pest   # pacote
 docker compose exec -w /var/packages/auth app ./vendor/bin/pest         # pacote twstec/kit-auth
 docker compose exec -w /var/packages/accounts app ./vendor/bin/pest     # pacote twstec/kit-accounts
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pest      # pacote twstec/kit-uploads
+docker compose exec -w /var/packages/admin app ./vendor/bin/pest        # pacote twstec/kit-admin
 ```
 
 Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
@@ -28,7 +29,11 @@ falha, escopo, vínculo com projetos), com o ambiente de uma aplicação nova
 fixado; e a do uploads prova o mesmo para o upload (conteúdo falso, executável,
 script embutido e PDF com ações recusados, limite por tipo, imagem
 reprocessada, URL assinada com validade e sem acesso ao arquivo de outro
-dono). Os testes de ponta a ponta dessas peças (rotas, painel, banco)
+dono); e a do admin sobe o Filament com um painel que só registra o plugin e
+prova que as proteções do painel vêm do pacote (sem acesso para não-admin e
+admin inativo, allowlist de IP nas páginas, nas ações Livewire e no download
+de exports, trilha de auditoria de criar/editar/excluir/bloquear com recusa
+`denied` e falha fechada, foto de perfil só de upload da própria conta). Os testes de ponta a ponta dessas peças (rotas, painel, banco)
 continuam na suíte do starter. Como instalar as dependências do
 pacote está em [`packages/README.md`](../packages/README.md).
 

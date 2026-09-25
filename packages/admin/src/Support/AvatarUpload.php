@@ -1,0 +1,228 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Twstec\Kit\Admin\Support;
+
+use Filament\Forms\Components\FileUpload;
+use Illuminate\Database\Eloquent\Model;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+use Twstec\Kit\Foundation\Identifiers\UuidColumn;
+use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
+use Twstec\Kit\Uploads\Models\Upload;
+use Twstec\Kit\Uploads\Rules\SafeFile;
+use Twstec\Kit\Uploads\Services\SecureUploadService;
+
+/**
+ * Campo de FOTO DE PERFIL do super admin, em um lugar só (cadastro de
+ * usuário e perfil do próprio admin usam este mesmo campo).
+ *
+ * O ponto que não podia ser negociado: o Filament, de fábrica, grava o
+ * arquivo direto no disco. Isso pularia a FUNÇÃO GLOBAL DE UPLOAD do kit
+ * (SecureUploadService) e, com ela, a validação por magic bytes,
+ * o re-encode GD, o nome derivado do MIME real e o registro em `uploads`.
+ * Ou seja: o /admin viraria a única porta do sistema por onde um arquivo
+ * entra sem passar pela lei.
+ *
+ * Por isso `saveUploadedFileUsing()` delega ao service e devolve o UUID do
+ * Upload criado — é esse uuid que as páginas transformam em
+ * `avatar_upload_id`. E `SafeFile` roda antes, na validação, para que um
+ * .txt renomeado para .png apareça como erro embaixo do campo, e não como
+ * erro de servidor depois do "Salvar".
+ *
+ * DONO DO UPLOAD: o valor do campo chega do navegador (estado do Livewire) e
+ * pode ser trocado por qualquer uuid. Só vira foto de uma conta o upload que
+ * é DELA (enviado por ela na web, pela chave de API dela, ou já vinculado
+ * como a foto atual) ou o que acabou de ser enviado NESTE formulário, nesta
+ * requisição (ver FreshAvatarUploads). Qualquer outro é recusado: as páginas
+ * que gravam a foto (criar/editar usuário e o perfil do admin) perguntam
+ * denialFor() ANTES de gravar qualquer coisa e registram a recusa na trilha
+ * (AdminAudit::denied). applyTo() é a gravação em si e não repete a pergunta:
+ * quem a chamar fora dessas páginas pergunta denialFor() antes.
+ *
+ * A foto é servida por URL ASSINADA e de curta duração: o campo declara
+ * `visibility('private')`, que é o que faz o Filament pedir `temporaryUrl()`
+ * ao disco em vez de montar uma URL pública.
+ */
+final class AvatarUpload
+{
+    public const DIRECTORY = 'avatars';
+
+    /**
+     * O campo do formulário. `$name` não é coluna do model: o valor é lido
+     * e gravado pelas páginas (ver applyTo()).
+     */
+    public static function field(string $name = 'avatar'): FileUpload
+    {
+        $maxKb = (int) data_get(config('uploads.types'), 'image.max_kb', 5120);
+
+        return FileUpload::make($name)
+            ->label(__('admin.users.avatar'))
+            ->helperText(__('admin.users.avatar_hint', ['max' => $maxKb]))
+            ->avatar()
+            ->image()
+            ->imagePreviewHeight('96')
+            ->disk((string) config('uploads.disk', 'local'))
+            ->directory(self::DIRECTORY)
+            // Sem isto o Filament monta URL pública: a política do kit é
+            // documento nunca em bucket público.
+            ->visibility('private')
+            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+            ->maxSize($maxKb)
+            ->rules([new SafeFile(['image'])])
+            // A gravação é do service, não do Filament.
+            ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, SecureUploadService $uploads): ?string {
+                try {
+                    $upload = $uploads->handle($file, directory: self::DIRECTORY, allowedTypes: ['image']);
+                } catch (UploadRejectedException) {
+                    // A regra SafeFile já barrou este caso na validação; se
+                    // chegou aqui, o arquivo mudou entre uma e outra: some
+                    // sem gravar nada.
+                    return null;
+                }
+
+                // Enviado agora, por este formulário: pode virar a foto de
+                // qualquer conta que o operador estiver editando.
+                app(FreshAvatarUploads::class)->remember($upload->uuid);
+
+                return $upload->uuid;
+            });
+    }
+
+    /**
+     * Motivo da recusa quando o campo aponta para um upload que não pode virar
+     * a foto de `$user` (null na criação: a conta ainda não existe, então só
+     * um upload enviado agora serve). Null = pode gravar.
+     */
+    public static function denialFor((Model&AuthUser)|null $user, mixed $state): ?string
+    {
+        $uuids = self::uuidsIn($state);
+
+        if ($uuids === []) {
+            return null;
+        }
+
+        $uploads = Upload::query()->whereIn('uuid', $uuids)->get();
+
+        foreach ($uploads as $upload) {
+            if (! self::mayBecomeAvatarOf($upload, $user)) {
+                return __('admin.users.avatar_not_owned');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * O que o formulário devolve no campo (uuid de Upload novo, caminho do
+     * avatar atual, ou vazio) virando o vínculo do usuário.
+     *
+     * - uuid de upload novo  → troca a foto (a conferência do dono é de
+     *                          denialFor(), feita antes pelas páginas);
+     * - caminho já existente → mantém a que está lá (o usuário não mexeu);
+     * - vazio                → remove a foto (o vínculo volta a null e as
+     *                          iniciais assumem — InitialsAvatarProvider).
+     */
+    public static function applyTo(Model&AuthUser $user, mixed $state): void
+    {
+        $valores = self::valuesIn($state);
+
+        if ($valores === []) {
+            $user->forceFill(['avatar_upload_id' => null])->save();
+            $user->unsetRelation('avatar');
+
+            return;
+        }
+
+        $uuids = self::uuidsIn($valores);
+
+        if ($uuids === []) {
+            // Só caminhos de arquivo já existentes: nada mudou.
+            return;
+        }
+
+        // Vence o Upload mais novo: é o que a pessoa acabou de escolher. (Quem
+        // grava pelo formulário já perguntou denialFor() antes — upload
+        // alheio não chega aqui.)
+        $upload = Upload::query()->whereIn('uuid', $uuids)->orderByDesc('id')->first();
+
+        if ($upload === null) {
+            // uuid que não corresponde a Upload nenhum: nada a vincular.
+            return;
+        }
+
+        $user->forceFill(['avatar_upload_id' => $upload->id])->save();
+
+        // A relação pode ter sido carregada (vazia) antes da troca — o
+        // avatar do cabeçalho é desenhado na MESMA resposta e mostraria as
+        // iniciais de novo, como se o upload não tivesse funcionado.
+        $user->unsetRelation('avatar');
+    }
+
+    /**
+     * Estado inicial do campo ao abrir o formulário: o caminho do avatar
+     * atual, para o Filament desenhar a prévia.
+     */
+    public static function stateFor((Model&AuthUser)|null $user): ?string
+    {
+        // Consulta direta, não `$user->avatar->path`: a relação pode estar
+        // carregada e desatualizada na instância autenticada.
+        return $user === null ? null : $user->avatar()->value('path');
+    }
+
+    /**
+     * O upload pode virar a foto desta conta?
+     *
+     * - enviado agora, por este formulário, nesta requisição;
+     * - já é a foto atual da conta;
+     * - é da própria conta: enviado por ela na web (`user_id`) ou pela chave
+     *   de API dela (`tenant_uuid`).
+     */
+    private static function mayBecomeAvatarOf(Upload $upload, (Model&AuthUser)|null $user): bool
+    {
+        if (app(FreshAvatarUploads::class)->has((string) $upload->uuid)) {
+            return true;
+        }
+
+        if ($user === null || ! $user->exists) {
+            return false;
+        }
+
+        $current = $user->getAttribute('avatar_upload_id');
+
+        if ($current !== null && (string) $current === (string) $upload->id) {
+            return true;
+        }
+
+        if ($upload->user_id !== null && (string) $upload->user_id === (string) $user->getKey()) {
+            return true;
+        }
+
+        return $upload->tenant_uuid !== null && (string) $upload->tenant_uuid === (string) $user->getAttribute('uuid');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function valuesIn(mixed $state): array
+    {
+        return array_values(array_filter(
+            is_array($state) ? $state : [$state],
+            fn ($valor): bool => is_string($valor) && $valor !== '',
+        ));
+    }
+
+    /**
+     * Só os uuids do campo. O campo pode carregar o caminho da foto ATUAL
+     * junto com o uuid da recém-enviada: no PostgreSQL a coluna é `uuid`
+     * nativo e um caminho de arquivo na lista derruba a consulta inteira com
+     * erro de sintaxe (o SQLite aceitava calado).
+     *
+     * @return list<string>
+     */
+    private static function uuidsIn(mixed $state): array
+    {
+        return UuidColumn::onlyValid(self::valuesIn($state));
+    }
+}

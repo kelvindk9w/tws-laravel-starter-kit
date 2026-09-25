@@ -7,12 +7,14 @@ namespace App\Providers;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
+use Twstec\Kit\Admin\Access\AdminAccess;
 
 /**
  * Horizon: supervisor de filas + dashboard /horizon.
  *
- * Acesso ao dashboard: SÓ super admin com CONTA ATIVA, o mesmo critério do
- * painel Filament (User::canAccessPanel). A barreira de origem
+ * Acesso ao dashboard: SÓ super admin com CONTA ATIVA — o MESMO critério do
+ * painel /admin, lido do mesmo lugar (Twstec\Kit\Admin\Access\AdminAccess,
+ * do pacote twstec/kit-admin). A barreira de origem
  * (EnsureAdminIpAllowed) também se aplica às rotas do Horizon — ver
  * config/horizon.php → middleware. Em ambiente local o pacote libera o acesso
  * sem gate (comportamento padrão dele, apenas desenvolvimento).
@@ -37,7 +39,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     {
         Gate::define(
             'viewHorizon',
-            fn (?User $user = null): bool => (bool) $user?->is_admin && (bool) $user?->isActive(),
+            fn (?User $user = null): bool => AdminAccess::allows($user),
         );
     }
 }

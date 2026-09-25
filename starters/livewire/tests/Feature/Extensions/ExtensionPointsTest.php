@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-use App\Filament\Dashboards\DashboardRegistry;
-use App\Filament\Support\AdminAudit;
-use App\Filament\Support\AttackLabel;
-use App\Filament\Widgets\Growth\GrowthStats;
-use App\Filament\Widgets\Overview\LatestUploads;
-use App\Filament\Widgets\Overview\OverviewStats;
-use App\Filament\Widgets\Overview\RequestsStatusChart;
-use App\Filament\Widgets\Overview\RequestsTrendChart;
 use App\Livewire\Support\Navigation;
 use App\Livewire\Support\SiteLinks;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Twstec\Kit\Admin\Dashboards\DashboardRegistry;
+use Twstec\Kit\Admin\Support\AdminAudit;
+use Twstec\Kit\Admin\Support\AttackLabel;
+use Twstec\Kit\Admin\Widgets\Growth\GrowthStats;
+use Twstec\Kit\Admin\Widgets\Overview\LatestUploads;
+use Twstec\Kit\Admin\Widgets\Overview\OverviewStats;
+use Twstec\Kit\Admin\Widgets\Overview\RequestsStatusChart;
+use Twstec\Kit\Admin\Widgets\Overview\RequestsTrendChart;
 use Twstec\Kit\Auth\Contracts\AccountProtection;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Contracts\LoginPrefillProvider;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\Products\ProductResource;
-use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use Twstec\Kit\Admin\Resources\Users\UserResource;
 
 // =============================================================================
 // Bug de QA #2 — links de Visualizar/Editar do /admin davam 404.

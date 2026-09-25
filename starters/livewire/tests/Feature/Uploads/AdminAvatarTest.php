@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use App\Filament\Pages\Profile as AdminProfile;
-use App\Filament\Resources\Users\Pages\CreateUser;
-use App\Filament\Resources\Users\Pages\EditUser;
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\Pages\ViewUser;
-use App\Filament\Support\AvatarUpload;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Pages\Profile as AdminProfile;
+use Twstec\Kit\Admin\Resources\Users\Pages\CreateUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Resources\Users\Pages\ViewUser;
+use Twstec\Kit\Admin\Support\AvatarUpload;
 use Twstec\Kit\Uploads\Models\Upload;
 use Twstec\Kit\Uploads\Services\SecureUploadService;
 

@@ -8,16 +8,16 @@ use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Demo\Filament\Resources\Products\Pages\ListProducts;
 use App\Demo\Filament\Resources\Products\ProductResource;
 use App\Demo\Showcase\Models\FormSubmission;
-use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Support\BaseListRecords;
-use App\Filament\Support\BaseResource;
-use App\Filament\Support\CardActions;
-use App\Filament\Support\ViewMode;
-use App\Filament\Support\ViewModeToggle;
 use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
+use Twstec\Kit\Admin\Support\BaseListRecords;
+use Twstec\Kit\Admin\Support\BaseResource;
+use Twstec\Kit\Admin\Support\CardActions;
+use Twstec\Kit\Admin\Support\ViewMode;
+use Twstec\Kit\Admin\Support\ViewModeToggle;
 
 // =============================================================================
 // Alternador tabela/cards das listagens do super admin.
@@ -127,10 +127,19 @@ it('produtos também alternam e mostram o conteúdo nos dois modos', function ()
 // Arquitetura: a base é lei, não convenção
 // -----------------------------------------------------------------------------
 
+/**
+ * Pasta dos resources do painel — do pacote twstec/kit-admin desde a 2.0
+ * (antes, app/Filament/Resources).
+ */
+function adminPackageResourcesPath(string $relative): string
+{
+    return dirname((string) (new ReflectionClass(BaseResource::class))->getFileName(), 2).'/Resources/'.$relative;
+}
+
 it('todo Resource do painel estende a base do kit', function () {
-    $resources = collect(glob(app_path('Filament/Resources/*/*Resource.php')) ?: [])
-        ->map(fn (string $path): string => 'App\\Filament\\Resources\\'
-            .str_replace('/', '\\', str_replace([app_path('Filament/Resources/'), '.php'], '', $path)))
+    $resources = collect(glob(adminPackageResourcesPath('*/*Resource.php')) ?: [])
+        ->map(fn (string $path): string => 'Twstec\\Kit\\Admin\\Resources\\'
+            .str_replace('/', '\\', str_replace([adminPackageResourcesPath(''), '.php'], '', $path)))
         ->filter(fn (string $class): bool => class_exists($class) && is_subclass_of($class, Resource::class));
 
     expect($resources)->not->toBeEmpty();
@@ -142,9 +151,9 @@ it('todo Resource do painel estende a base do kit', function () {
 });
 
 it('toda página de listagem do painel estende a base (é de lá que vem o alternador)', function () {
-    $pages = collect(glob(app_path('Filament/Resources/*/Pages/List*.php')) ?: [])
-        ->map(fn (string $path): string => 'App\\Filament\\Resources\\'
-            .str_replace('/', '\\', str_replace([app_path('Filament/Resources/'), '.php'], '', $path)));
+    $pages = collect(glob(adminPackageResourcesPath('*/Pages/List*.php')) ?: [])
+        ->map(fn (string $path): string => 'Twstec\\Kit\\Admin\\Resources\\'
+            .str_replace('/', '\\', str_replace([adminPackageResourcesPath(''), '.php'], '', $path)));
 
     expect($pages)->not->toBeEmpty();
 
@@ -155,9 +164,9 @@ it('toda página de listagem do painel estende a base (é de lá que vem o alter
 });
 
 it('todo resource declara rótulo e grupo de navegação traduzidos (nada de chave crua na tela)', function () {
-    $resources = collect(glob(app_path('Filament/Resources/*/*Resource.php')) ?: [])
-        ->map(fn (string $path): string => 'App\\Filament\\Resources\\'
-            .str_replace('/', '\\', str_replace([app_path('Filament/Resources/'), '.php'], '', $path)))
+    $resources = collect(glob(adminPackageResourcesPath('*/*Resource.php')) ?: [])
+        ->map(fn (string $path): string => 'Twstec\\Kit\\Admin\\Resources\\'
+            .str_replace('/', '\\', str_replace([adminPackageResourcesPath(''), '.php'], '', $path)))
         ->filter(fn (string $class): bool => class_exists($class) && is_subclass_of($class, BaseResource::class));
 
     foreach ($resources as $class) {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Demo\Filament\Resources\FormSubmissions\Pages;
 
 use App\Demo\Filament\Resources\FormSubmissions\FormSubmissionResource;
-use App\Filament\Support\BaseListRecords;
+use Twstec\Kit\Admin\Support\BaseListRecords;
 
 /**
  * Listagem de submissões. Da base vêm o alternador tabela/cards e o filtro

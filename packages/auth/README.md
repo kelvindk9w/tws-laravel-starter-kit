@@ -146,7 +146,7 @@ O guia completo, com o passo a passo de um front novo, está em
 | --- | --- |
 | `App\Core\Auth\…` | `Twstec\Kit\Auth\…` (o resto do nome não muda) |
 | `App\Core\Auth\Models\User` | `App\Models\User` — do aplicativo (o apelido do nome antigo é do starter) |
-| `App\Core\Auth\Console\MakeAdminUser` | `App\Console\Commands\MakeAdminUser` — do starter |
+| `App\Core\Auth\Console\MakeAdminUser` | `Twstec\Kit\Admin\Console\MakeAdminUser` — do pacote twstec/kit-admin (o apelido do nome antigo é dele) |
 | `App\Core\Auth\Providers\AuthServiceProvider` em `bootstrap/providers.php` | Descoberto automaticamente — tire-o de `bootstrap/providers.php` |
 | `EnsureAccountIsActive` no grupo `web` e os aliases `verified`/`sensitive.token` em `bootstrap/app.php` | Instalados pelo pacote — tire-os de `bootstrap/app.php` |
 | `throttle:sensitive` declarado em cada rota de envio | Vem com o controller do pacote — tire-o da rota (senão o limite conta duas vezes) |
