@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Http\Controllers\AvatarController;
 use Twstec\Kit\Uploads\Models\Upload;
@@ -51,7 +53,8 @@ function uploadsMessage(string $key, array $replace = []): string
  */
 function assertNothingStored(): void
 {
-    expect(Upload::query()->count())->toBe(0)
+    // Todas as contas (modo sistema do teste).
+    expect(Accounts::asSystem('teste: nada gravado', fn (): int => Upload::query()->count()))->toBe(0)
         ->and(Storage::disk('local')->allFiles())->toBe([]);
 }
 
@@ -71,7 +74,8 @@ function servedContent(TestResponse $response): string
 function expectRejection(UploadedFile $file): UploadRejectedException
 {
     try {
-        app(SecureUploadService::class)->handle($file);
+        // Na conta pessoal de uma pessoa nova (o serviço exige conta atual).
+        test()->inAccountOf(null, fn () => app(SecureUploadService::class)->handle($file));
     } catch (UploadRejectedException $exception) {
         return $exception;
     }
@@ -182,7 +186,7 @@ it('a URL devolvida é assinada e com validade: entrega o arquivo; sem assinatur
 });
 
 it('a rota que entrega os arquivos é a do disco privado e não responde a nada sem assinatura', function (): void {
-    $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPng(), 'foto.png'));
+    $upload = $this->inAccountOf(null, fn () => app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPng(), 'foto.png')));
 
     expect(config('filesystems.disks.local.visibility', 'private'))->toBe('private')
         ->and(config('filesystems.disks.local.serve'))->toBeTrue();
@@ -198,9 +202,12 @@ it('upload de outro dono não é acessível: a assinatura de um arquivo não abr
     $daAna = $this->postUpload($ana, fixtureArquivoEnviado(fixtureBytesPdf(), 'da-ana.pdf'))->assertCreated();
     $doBruno = $this->postUpload($bruno, fixtureArquivoEnviado(fixtureBytesPng(), 'do-bruno.png'))->assertCreated();
 
-    // Cada registro fica com o dono da própria chave.
-    expect(Upload::query()->where('uuid', $daAna->json('data.uuid'))->value('tenant_uuid'))->toBe((string) $ana->uuid)
-        ->and(Upload::query()->where('uuid', $doBruno->json('data.uuid'))->value('tenant_uuid'))->toBe((string) $bruno->uuid);
+    // Cada registro fica com a CONTA da própria chave (a pessoal de cada um).
+    $contaDe = fn ($pessoa): int => (int) app(AccountService::class)->personalAccountOf($pessoa)->getKey();
+    $conta = fn (string $uuid): int => (int) Accounts::asSystem('teste: conta do upload', fn () => Upload::query()->where('uuid', $uuid)->value('account_id'));
+
+    expect($conta((string) $daAna->json('data.uuid')))->toBe($contaDe($ana))
+        ->and($conta((string) $doBruno->json('data.uuid')))->toBe($contaDe($bruno));
 
     // A URL da Ana, com o caminho do arquivo do Bruno no lugar do dela.
     $urlDaAna = (string) $daAna->json('data.url');
@@ -232,35 +239,43 @@ it('a foto de perfil de uma pessoa aponta só para o upload dela', function (): 
     $ana->refresh();
     $bruno->refresh();
 
-    expect($ana->avatar->user_id)->toBe($ana->id)
-        ->and($bruno->avatar->user_id)->toBe($bruno->id)
-        ->and($ana->avatarUrl())->toContain('/storage/'.$ana->avatar->path.'?')
-        ->and($ana->avatarUrl())->not->toContain($bruno->avatar->path);
+    // A foto é da PESSOA: upload pessoal (sem conta), enviado por ela.
+    expect($ana->avatarUpload()->created_by)->toBe($ana->id)
+        ->and($ana->avatarUpload()->isPersonal())->toBeTrue()
+        ->and($bruno->avatarUpload()->created_by)->toBe($bruno->id)
+        ->and($ana->avatarUrl())->toContain('/storage/'.$ana->avatarUpload()->path.'?')
+        ->and($ana->avatarUrl())->not->toContain($bruno->avatarUpload()->path);
 
     // O avatar é só imagem: PDF é recusado.
     $this->actingAs($ana)->postJson('/settings/avatar', ['avatar' => fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.png')])
         ->assertUnprocessable();
 });
 
-it('o dono é gravado de dois jeitos (web × API): comportamento atual, documentado como pendência', function (): void {
-    // NÃO é o desenho final: na API o dono vai em `tenant_uuid` (o uuid do
-    // dono da chave, sem chave estrangeira) e na web em `user_id` (com chave
-    // estrangeira). A fase de contas com membros unifica. Este teste só
-    // registra o comportamento de hoje, para a mudança ser deliberada.
+it('web e API gravam do MESMO jeito: a conta atual e quem agiu (a foto de perfil é pessoal)', function (): void {
+    // Até a F8b o dono ia em `tenant_uuid` pela API e em `user_id` pela web.
+    // Agora os dois caminhos gravam a conta atual (`account_id`) e quem
+    // enviou (`created_by`); a foto de perfil é da pessoa (sem conta).
     Route::post('settings/avatar', [AvatarController::class, 'update'])->middleware(['web', 'auth']);
+    Route::post('teste/upload-web', fn () => response()->json([
+        'uuid' => app(SecureUploadService::class)->handle(request()->file('file'))->uuid,
+    ]))->middleware(['web', 'auth']);
 
     $pessoa = $this->owner();
+    $conta = (int) app(AccountService::class)->personalAccountOf($pessoa)->getKey();
 
-    // A web primeiro: no teste, o contexto do tenant (singleton, um por
-    // requisição no PHP-FPM) sobreviveria de uma requisição para a outra.
-    $this->actingAs($pessoa)->postJson('/settings/avatar', ['avatar' => fixtureArquivoEnviado(fixtureBytesPng(), 'web.png')])->assertCreated();
+    $pelaWeb = $this->actingAs($pessoa)->postJson('/teste/upload-web', ['file' => fixtureArquivoEnviado(fixtureBytesPdf(), 'web.pdf')])->assertOk();
+    $this->actingAs($pessoa)->postJson('/settings/avatar', ['avatar' => fixtureArquivoEnviado(fixtureBytesPng(), 'foto.png')])->assertCreated();
     $pelaApi = $this->postUpload($pessoa, fixtureArquivoEnviado(fixtureBytesPdf(), 'api.pdf'))->assertCreated();
 
-    $api = Upload::query()->where('uuid', $pelaApi->json('data.uuid'))->sole();
-    $web = Upload::query()->whereKey($pessoa->refresh()->avatar_upload_id)->sole();
+    [$web, $api, $foto] = Accounts::asSystem('teste: dono dos uploads', fn (): array => [
+        Upload::query()->where('uuid', $pelaWeb->json('uuid'))->sole(),
+        Upload::query()->where('uuid', $pelaApi->json('data.uuid'))->sole(),
+        Upload::query()->whereKey($pessoa->refresh()->avatar_upload_id)->sole(),
+    ]);
 
-    expect([$api->tenant_uuid, $api->user_id])->toBe([(string) $pessoa->uuid, null])
-        ->and([$web->tenant_uuid, $web->user_id])->toBe([null, $pessoa->id]);
+    expect([$web->account_id, $web->created_by, $web->personal])->toBe([$conta, $pessoa->id, false])
+        ->and([$api->account_id, $api->created_by, $api->personal])->toBe([$conta, $pessoa->id, false])
+        ->and([$foto->account_id, $foto->created_by, $foto->personal])->toBe([null, $pessoa->id, true]);
 });
 
 // --- A rota da API -----------------------------------------------------------
@@ -284,11 +299,15 @@ it('aplicação cujo disco local não tem a entrega (sem a chave, ou desligada):
 
     $this->bootWith(['filesystems.disks.local' => ['driver' => 'local', 'root' => $raiz, 'throw' => false, ...$disco]]);
 
-    $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+    [$upload, $url] = $this->inAccountOf(null, function (): array {
+        $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
 
-    expect($upload->url())->toContain('signature=');
+        return [$upload, $upload->url()];
+    });
 
-    $this->get($upload->url())->assertOk();
+    expect($url)->toContain('signature=');
+
+    $this->get($url)->assertOk();
     $this->get('/storage/'.$upload->path)->assertForbidden();
 
     (new Filesystem)->deleteDirectory($raiz);

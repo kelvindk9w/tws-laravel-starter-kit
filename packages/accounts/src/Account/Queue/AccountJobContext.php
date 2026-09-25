@@ -64,6 +64,9 @@ final class AccountJobContext
     {
         $snapshot = $job->payload()[self::PAYLOAD_KEY] ?? null;
 
+        // Cada job começa sem papel guardado (o worker é um processo longo).
+        $this->context->forgetRoles();
+
         $this->depths[spl_object_id($job)] = $this->context->push($this->frameFor(is_array($snapshot) ? $snapshot : []));
     }
 
@@ -76,6 +79,7 @@ final class AccountJobContext
         }
 
         $this->context->popTo($this->depths[$id]);
+        $this->context->forgetRoles();
 
         unset($this->depths[$id]);
     }

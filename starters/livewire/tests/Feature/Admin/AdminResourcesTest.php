@@ -145,15 +145,14 @@ it('filtra request logs: somente órfãos', function () {
 
 it('lista uploads com dono, tipo e tamanho', function () {
     $dono = User::factory()->create();
-    $upload = Upload::query()->create([
-        'user_id' => $dono->id,
+    $upload = naConta($dono, fn () => Upload::query()->create([
         'disk' => 'local',
         'path' => 'avatars/abc.png',
         'original_name' => 'documento.png',
         'mime' => 'image/png',
         'size' => 2048,
         'sha256' => hash('sha256', 'x'),
-    ]);
+    ]));
 
     Livewire::test(ListUploads::class)
         ->assertOk()

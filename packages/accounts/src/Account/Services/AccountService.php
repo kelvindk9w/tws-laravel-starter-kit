@@ -8,8 +8,10 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
 use Twstec\Kit\Accounts\Account\Enums\AccountRole;
 use Twstec\Kit\Accounts\Account\Events\AccountCreated;
+use Twstec\Kit\Accounts\Account\Events\AccountDeleting;
 use Twstec\Kit\Accounts\Account\Events\MemberAdded;
 use Twstec\Kit\Accounts\Account\Events\MemberRemoved;
 use Twstec\Kit\Accounts\Account\Exceptions\AccountOwnershipException;
@@ -377,16 +379,26 @@ final class AccountService
                 ApiKey::query()->where('created_by', $userId)->update(['created_by' => null]);
             });
         });
+
+        // Vínculos saíram em massa (sem evento de model): papel guardado não vale mais.
+        app(CurrentAccount::class)->forgetRoles();
     }
 
     /**
      * Exclui a conta com os dados dela (projetos, chaves, vínculos). Em modo
      * sistema declarado; quem pode excluir (o dono) é decidido antes.
+     *
+     * Antes de qualquer linha sair, dentro da mesma transação, avisa quem
+     * guarda dado da conta fora deste pacote (Events\AccountDeleting — os
+     * uploads, por exemplo): o que o ouvinte apagar volta junto se a
+     * exclusão for desfeita.
      */
     public function deleteAccount(Account $account): void
     {
         Accounts::asSystem('accounts:delete-account', function () use ($account): void {
             DB::transaction(function () use ($account): void {
+                AccountDeleting::dispatch($account);
+
                 ApiKey::query()->where('account_id', $account->getKey())->get()
                     ->each(fn (ApiKey $key) => $key->projects()->detach());
 
@@ -402,5 +414,7 @@ final class AccountService
                 AccountMembership::query()->where('account_id', $account->getKey())->delete();
             });
         });
+
+        app(CurrentAccount::class)->forgetRoles();
     }
 }

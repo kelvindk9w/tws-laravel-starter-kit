@@ -53,8 +53,10 @@ it('sem foto de perfil o avatar são as INICIAIS, desenhadas localmente (sem CDN
 });
 
 it('com foto de perfil o avatar é a foto do usuário', function () {
+    // A foto é PESSOAL (da pessoa, sem conta), enviada por ela.
     $upload = Upload::query()->create([
-        'user_id' => $this->admin->id,
+        'personal' => true,
+        'created_by' => $this->admin->id,
         'disk' => 'local',
         'path' => 'avatars/ana.png',
         'original_name' => 'ana.png',

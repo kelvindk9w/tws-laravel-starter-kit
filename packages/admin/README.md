@@ -32,7 +32,7 @@ garante isso.
 | `Support\AdminPanelHardening` | As garantias de segurança do painel, aplicadas pelo pacote qualquer que seja a ordem do `PanelProvider` |
 | `Access\AdminAccess`, `Concerns\AccessesAdminPanel`, `Http\Middleware\EnsureAdminPanelAccess` | Quem entra: `is_admin` + conta ativa — o critério, a trait do `canAccessPanel` e a conferência do pacote |
 | `Resources\Users\Support\UserAdminGuard`, `MarkEmailVerifiedAction` | Guardas de servidor (conta protegida, a própria conta, o último admin ativo) e a ação de suporte |
-| `Support\AvatarUpload` | O campo de foto: grava pela função global de upload e só vincula upload da própria conta |
+| `Support\AvatarUpload` | O campo de foto: grava pela função global de upload (foto pessoal) e só vincula upload da própria pessoa |
 | `Console\MakeAdminUser` | `php artisan user:make-admin email [--remove]` — o resgate de acesso, auditado no contexto console |
 
 ## Instalação
@@ -197,20 +197,34 @@ em vez de gerar em silêncio um tema sem as classes do painel. Com o pacote
 instalado por link (path repository), o build em container precisa montar a
 pasta dos pacotes (no starter: `-v $(pwd)/../../packages:/packages`).
 
-## Foto de perfil: só upload da própria conta
+## Foto de perfil: só upload da própria pessoa
 
 O campo de foto (cadastro de usuário e perfil do admin) grava pela função
-global de upload do `twstec/kit-uploads` e só vincula como foto:
+global de upload do `twstec/kit-uploads` — como **foto pessoal**
+(`SecureUploadService::handlePersonal`, sem conta, com o operador em
+`created_by`: a foto é da pessoa e aparece em todas as contas dela) — e só
+vincula como foto:
 
 - um upload enviado **agora, naquele formulário** (o servidor o gravou nesta
   requisição — `Support\FreshAvatarUploads`);
-- um upload **da própria conta**: enviado por ela na web (`user_id`) ou pela
-  chave de API dela (`tenant_uuid`), ou a foto atual.
+- um upload **da própria pessoa**: foto pessoal que ela mesma enviou, upload
+  da **conta pessoal** dela (pela web ou pela chave de API dela), ou a foto
+  atual.
 
 O valor do campo vem do navegador; apontá-lo para o upload de outra pessoa é
 recusado **antes** de gravar qualquer coisa (nem os outros campos mudam), com a
 recusa na trilha como `denied` (`user.updated`; na criação, `user.created`).
 A regra está em `AvatarUpload::denialFor()`.
+
+## Uploads e Auditoria por conta
+
+O painel opera em modo sistema (todas as contas). A tela de **Uploads** mostra
+a conta de cada linha (código, com filtro por conta), quem enviou e o tipo de
+dono (da conta, foto pessoal, órfão — com filtro); a de **Auditoria** filtra
+pela conta em que a ação aconteceu (`audit_events.tenant_uuid`, valor que não
+é uuid não derruba a consulta). Excluir uma pessoa pelo painel apaga os
+arquivos dela (regra do `twstec/kit-uploads`), com a linha `upload.erased` na
+trilha em nome do operador.
 
 ## Nomes antigos → nomes novos
 

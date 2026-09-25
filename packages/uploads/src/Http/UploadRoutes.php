@@ -24,7 +24,7 @@ use Twstec\Kit\Uploads\Http\Controllers\UploadController;
  * Em qualquer caso a AUTENTICAÇÃO POR CHAVE (`resolve.tenant`, do
  * twstec/kit-accounts) entra no grupo — ela não é opção de quem registra —, e
  * a rota traz o próprio escopo (`scope:uploads:create`). O registro fica
- * vinculado ao dono da chave (tenant_uuid — ver SecureUploadService).
+ * na conta da chave (ver SecureUploadService e Models\Upload).
  */
 final class UploadRoutes
 {

@@ -40,13 +40,15 @@ it('os eventos do upload vão para o canal padrão que a aplicação escolher �
         'logging.default' => 'meu',
     ]);
 
-    app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+    $this->inAccountOf(null, function (): void {
+        app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
 
-    try {
-        app(SecureUploadService::class)->handle(fixtureArquivoEnviado('texto', 'foto.png'));
-    } catch (Throwable) {
-        // recusado — o que importa aqui é a linha no log
-    }
+        try {
+            app(SecureUploadService::class)->handle(fixtureArquivoEnviado('texto', 'foto.png'));
+        } catch (Throwable) {
+            // recusado — o que importa aqui é a linha no log
+        }
+    });
 
     $log = (string) file_get_contents($dir.'/meu.log');
 
@@ -58,7 +60,7 @@ it('os eventos do upload vão para o canal padrão que a aplicação escolher �
 });
 
 it('o disco padrão é o local de toda aplicação Laravel, e o disco escolhido pela aplicação vence', function (): void {
-    $padrao = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+    $padrao = $this->inAccountOf(null, fn () => app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf')));
 
     expect($padrao->disk)->toBe('local');
     Storage::disk('local')->assertExists($padrao->path);
@@ -70,13 +72,17 @@ it('o disco padrão é o local de toda aplicação Laravel, e o disco escolhido 
         'filesystems.disks.arquivos' => ['driver' => 'local', 'root' => $raiz, 'serve' => true, 'url' => '/arquivos'],
     ]);
 
-    $escolhido = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+    [$escolhido, $url] = $this->inAccountOf(null, function (): array {
+        $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+
+        return [$upload, $upload->url()];
+    });
 
     expect($escolhido->disk)->toBe('arquivos')
         ->and(is_file($raiz.'/'.$escolhido->path))->toBeTrue()
-        ->and($escolhido->url())->toContain('/arquivos/'.$escolhido->path.'?');
+        ->and($url)->toContain('/arquivos/'.$escolhido->path.'?');
 
-    $this->get($escolhido->url())->assertOk();
+    $this->get($url)->assertOk();
     $this->get('/arquivos/'.$escolhido->path)->assertForbidden();
 });
 
@@ -92,5 +98,5 @@ it('a rota de upload conta no limitador api, e um limitador api da aplicação o
         ->assertStatus(429)
         ->assertJsonPath('error.code', 'too_many_requests');
 
-    expect(Upload::query()->count())->toBe(1);
+    expect($this->inAccountOf($owner, fn (): int => Upload::query()->count()))->toBe(1);
 });

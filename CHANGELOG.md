@@ -7,6 +7,38 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Uploads da conta** (`twstec/kit-uploads`). Todo upload passa a pertencer
+  a uma **conta** (`account_id`) e guarda quem enviou (`created_by`); a web e
+  a API gravam do mesmo jeito (a conta atual e quem agiu). O isolamento é o
+  mesmo dos projetos e das chaves: toda consulta sai filtrada pela conta atual
+  e, sem conta, dá erro; a URL assinada só sai para upload da conta atual (ou
+  em modo sistema declarado, como no `/admin`). A **foto de perfil é da
+  pessoa**: vira um upload pessoal, sem conta, que aparece em todas as contas
+  dela e é lido só pela foto de perfil — restrito ao upload que a própria
+  pessoa aponta. Migração dos uploads antigos na `php artisan migrate` (ver
+  "Quebra de compatibilidade — uploads da conta").
+- **LGPD — excluir a pessoa apaga os arquivos dela:** a foto de perfil, as
+  fotos pessoais que ela enviou e os uploads das contas que somem junto (a
+  pessoal e as de que era a única dona) saem do banco e do **disco**; os
+  uploads que ela criou em contas de outras pessoas ficam (são daquela conta).
+  Excluir uma **conta** apaga os uploads dela. Os registros saem na transação
+  da exclusão; os arquivos, por job na fila **depois do commit**, com nova
+  tentativa; exclusão recusada ou desfeita não apaga nada. Trilha de auditoria
+  (`upload.erased`, `upload.files_deleted`) só com contagens e motivo.
+- **`uploads:prune-orphans`** (com `--dry-run`): apaga os órfãos antigos da
+  migração, as fotos pessoais que não são a foto de ninguém e os arquivos nas
+  pastas de upload sem registro no banco; agendado pelo próprio pacote
+  (`UPLOADS_PRUNE_SCHEDULE`, vazio desliga com aviso no log). Novas variáveis
+  `UPLOADS_PRUNE_*` e `UPLOADS_MIGRATION_CHUNK` (`.env.example`).
+- **`/admin`:** a tela de Uploads mostra a conta de cada linha, quem enviou e
+  o tipo (da conta, foto pessoal, órfão), com filtro por conta e por tipo; a
+  Auditoria filtra pela conta em que a ação aconteceu.
+- **Cache do papel por requisição** (`twstec/kit-accounts`): as perguntas de
+  papel de uma tela consultam o banco uma vez por conta e pessoa; o cache some
+  quando um vínculo muda, no fim de cada requisição e a cada job da fila.
+- **Eventos de exclusão** no `twstec/kit-accounts` para quem guarda dado das
+  contas fora dele: `PersonDeleting` (só leitura), `PersonDeleted` e
+  `AccountDeleting` (dentro da transação da exclusão da conta).
 - **Membros, convites e transferência de propriedade** (`twstec/kit-accounts`
   + telas no starter Livewire + "Contas" no `/admin`). Seletor de conta em todo
   o painel (conta atual, papel, troca só para conta de que a pessoa é membro);
@@ -141,6 +173,21 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   saiu das telas e dos controllers para serviços e Actions; as respostas de
   autenticação passam por contratos substituíveis.
 
+### Corrigido
+- **Instabilidade do teste de idempotência do seeder de usuários da demo**
+  (rodada paralela): o Faker sorteia pelo `mt_rand` global do processo, e todo
+  gerador do Faker, ao ser destruído, chama `mt_srand()` sem semente; um
+  gerador descartado antes (preso num ciclo de referências) podia ser coletado
+  no meio da montagem da lista e o resto dela saía aleatório. A lista agora é
+  montada com a coleta de ciclos desligada (`UserSeeder::linhas()`), com teste
+  de regressão que provoca a coleta em cada ponto da montagem.
+- **Suíte local vazando para o ambiente de dev:** o `phpunit.xml` (e o
+  `phpunit.pgsql.xml`) declarava fila `sync`, e-mail `array`, sessão `array` e
+  o custo mínimo do Argon2id sem `force`, e o container de dev injeta os
+  valores de produção — os testes mandavam jobs para a fila do Redis de dev
+  (processados pelo worker de dev contra o banco de dev), e-mails para o
+  Mailpit e rodavam o hash com 64 MB. Agora forçados, como o CI já rodava.
+
 ### Segurança
 - **Foto de perfil no `/admin` só de upload da própria conta.** O campo de
   foto do cadastro de usuário e do perfil do admin vinculava como avatar
@@ -228,6 +275,28 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
 4. troque o código próprio conforme a lista acima (a trava de arquitetura do
    starter aponta consulta que pula o escopo).
 
+### Quebra de compatibilidade — uploads da conta
+
+- **`uploads.user_id` e `uploads.tenant_uuid` saíram**: `account_id` (a
+  conta; nulo só na foto pessoal e no órfão da migração), `created_by` (quem
+  enviou), `personal` e `orphaned_at`. `Upload::owner()` saiu: use
+  `account()`, `creator()`.
+- **Upload é dado de conta**: `Upload::query()` sem conta atual lança
+  `MissingAccountContextException`; `SecureUploadService::handle()` exige conta
+  atual (grava nela). A foto de perfil vai por
+  `SecureUploadService::handlePersonal()` / `Avatar\AvatarService`.
+- **`Upload::url()` só assina upload da conta atual** (ou em modo sistema):
+  fora disso, `UploadOutsideAccountException`. A foto de perfil se lê por
+  `avatarUpload()` / `avatarUrl()` (a relação `avatar()` passa pelo escopo da
+  conta e não enxerga a foto pessoal).
+- A migration `2026_09_28_000001_move_uploads_to_accounts` (do pacote) passa os
+  uploads antigos: foto de perfil em uso → pessoal; `user_id` → conta pessoal
+  de quem enviou; `tenant_uuid` → a conta com aquele uuid; sem destino →
+  órfão (`orphaned_at`), nunca uma conta qualquer. Em lotes
+  (`UPLOADS_MIGRATION_CHUNK`), idempotente e reversível (o órfão volta sem
+  dono). Os arquivos não mudam de lugar: as URLs assinadas antigas continuam
+  abrindo o mesmo conteúdo.
+
 ### Atualizando um clone existente
 1. `docker compose down` **antes** do `git pull`.
 2. Depois do pull, mover para `starters/livewire/` o que não é versionado:
@@ -255,6 +324,10 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
 8. Contas com membros: `php artisan migrate` migra os dados (ver "Quebra de
    compatibilidade — contas com membros" acima) e `docker compose restart
    queue scheduler`.
+9. Uploads da conta: `php artisan migrate` passa os uploads antigos para as
+   contas (ver "Quebra de compatibilidade — uploads da conta" acima) e
+   `docker compose restart queue scheduler` (o worker precisa do job novo de
+   remoção de arquivos; o agendador, da limpeza `uploads:prune-orphans`).
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

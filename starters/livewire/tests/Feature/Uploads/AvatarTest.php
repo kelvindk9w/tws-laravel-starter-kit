@@ -8,8 +8,9 @@ use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Avatar do perfil (web autenticada): prova o reuso da MESMA função
-// global de upload fora da API. Aqui o vínculo é o user_id da sessão e o
-// destino é restrito a imagens (re-encode GD obrigatório).
+// global de upload fora da API. A foto é da PESSOA (upload pessoal, sem
+// conta, enviado por quem está logado) e o destino é restrito a imagens
+// (re-encode GD obrigatório).
 // =============================================================================
 
 beforeEach(function () {
@@ -29,9 +30,11 @@ it('atualiza o avatar com imagem legítima, vinculada ao usuário da sessão', f
         ->assertJsonPath('data.mime', 'image/png')
         ->assertJsonStructure(['data' => ['uuid', 'codigo_publico', 'path', 'url', 'sha256']]);
 
-    $upload = Upload::query()->sole();
-    expect($upload->user_id)->toBe($user->id)
-        ->and($upload->tenant_uuid)->toBeNull()
+    $upload = comoSistema(fn () => Upload::query()->sole());
+    expect($upload->created_by)->toBe($user->id)
+        ->and($upload->personal)->toBeTrue()
+        ->and($upload->account_id)->toBeNull()
+        ->and($user->fresh()->avatar_upload_id)->toBe($upload->id)
         ->and($upload->path)->toStartWith('avatars/')
         ->and(basename((string) $upload->path))->toMatch('/^[0-9a-f-]{36}\.png$/');
 
@@ -45,7 +48,7 @@ it('rejeita PDF no avatar (endpoint restrito a imagens)', function () {
         'avatar' => fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.png'),
     ])->assertUnprocessable();
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('exige autenticação (deny-by-default)', function () {

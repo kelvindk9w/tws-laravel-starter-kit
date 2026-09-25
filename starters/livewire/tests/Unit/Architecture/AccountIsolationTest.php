@@ -25,7 +25,7 @@ use Symfony\Component\Finder\Finder;
 //    de contas.
 // =============================================================================
 
-const ISOLATION_ACCOUNT_TABLES = ['accounts', 'account_memberships', 'account_invitations', 'projects', 'api_keys', 'api_key_project'];
+const ISOLATION_ACCOUNT_TABLES = ['accounts', 'account_memberships', 'account_invitations', 'projects', 'api_keys', 'api_key_project', 'uploads'];
 
 /**
  * Chamadas de modo sistema REVISADAS (arquivo => quantas), com o motivo.
@@ -42,6 +42,16 @@ const ISOLATION_SYSTEM_MODE_REVIEWED = [
     // O link de convite não diz de que conta é o convite: achar pelo hash do
     // token e marcá-lo como aceito/recusado (um ponto só).
     'vendor/twstec/kit-accounts/src/Account/Invitations/InvitationTokens.php' => 1,
+    // Uploads (F8c). A foto de perfil é da PESSOA, não de uma conta: gravar
+    // a foto pessoal (sem conta) e lê-la — restrita ao upload apontado pela
+    // própria pessoa, foto pessoal ou da conta pessoal dela.
+    'vendor/twstec/kit-uploads/src/Services/SecureUploadService.php' => 1,
+    'vendor/twstec/kit-uploads/src/Concerns/HasAvatar.php' => 1,
+    // Exclusão da pessoa ou da conta (LGPD): ler e apagar os uploads de
+    // contas que somem — não são a conta atual de ninguém.
+    'vendor/twstec/kit-uploads/src/Erasure/UploadEraser.php' => 1,
+    // Limpeza agendada: varre os uploads sem dono de todas as contas.
+    'vendor/twstec/kit-uploads/src/Console/PruneOrphanUploads.php' => 1,
     // O /admin inteiro (todas as requisições do painel, depois do acesso de
     // admin) — modo sistema da requisição (systemModeForRequest).
     'vendor/twstec/kit-admin/src/Http/Middleware/OperateAdminPanelAsSystem.php' => 1,
@@ -50,6 +60,7 @@ const ISOLATION_SYSTEM_MODE_REVIEWED = [
     // Seeders da demonstração, também quando rodados sozinhos (--class).
     'app/Demo/Database/Seeders/ProjectSeeder.php' => 1,
     'app/Demo/Database/Seeders/ApiKeySeeder.php' => 1,
+    'app/Demo/Database/Seeders/UploadSeeder.php' => 1,
 ];
 
 /**

@@ -105,7 +105,8 @@ final class Accounts
             return null;
         }
 
-        return $account->roleOf($user);
+        // Uma consulta por conta + pessoa por requisição (CurrentAccount::roleFor).
+        return self::context()->roleFor($account, $user);
     }
 
     /**

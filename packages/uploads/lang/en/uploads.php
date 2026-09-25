@@ -8,6 +8,7 @@ return [
 
     'stored' => 'File uploaded successfully.',
     'avatar_updated' => 'Avatar updated successfully.',
+    'outside_account' => 'This file does not belong to the current account.',
 
     // Security validation rejections (SecureUploadService). The messages are
     // deliberately generic: they inform the user without teaching an attacker

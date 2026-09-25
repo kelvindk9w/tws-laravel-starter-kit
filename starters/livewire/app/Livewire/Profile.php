@@ -17,9 +17,9 @@ use Livewire\WithFileUploads;
 use Twstec\Kit\Auth\PasswordPolicy;
 use Twstec\Kit\Auth\Services\TransactionPasswordService;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
+use Twstec\Kit\Uploads\Avatar\AvatarService;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Rules\SafeFile;
-use Twstec\Kit\Uploads\Services\SecureUploadService;
 
 /**
  * Perfil do usuário: dados, senha de login, senha de transação, avatar e a
@@ -28,8 +28,8 @@ use Twstec\Kit\Uploads\Services\SecureUploadService;
  *
  * Reuso (sem duplicar lógica):
  * - Senha de transação → TransactionPasswordService (mesma regra do fluxo de autenticação).
- * - Avatar → SecureUploadService (função global de upload: valida
- *   o CONTEÚDO do arquivo e faz re-encode GD antes de persistir).
+ * - Avatar → AvatarService → SecureUploadService (função global de upload:
+ *   valida o CONTEÚDO do arquivo e faz re-encode GD antes de persistir).
  * - Verificação em duas etapas → TwoFactorLogin. Ligar e desligar são ações
  *   sensíveis: passam pelo modal de confirmação (ConfirmsSensitiveAction) e o
  *   token emitido é consumido pelo próprio TwoFactorLogin.
@@ -163,9 +163,11 @@ final class Profile extends Component
 
     /**
      * Avatar: mesma função global de upload seguro (validação por
-     * conteúdo + re-encode GD). O registro fica vinculado ao perfil.
+     * conteúdo + re-encode GD), pelo AvatarService do pacote de uploads — a
+     * foto é da PESSOA (upload pessoal, sem conta) e aparece em todas as
+     * contas dela.
      */
-    public function updateAvatar(SecureUploadService $uploads): void
+    public function updateAvatar(AvatarService $avatars): void
     {
         $maxKb = (int) setting('uploads.types.image.max_kb');
 
@@ -182,12 +184,10 @@ final class Profile extends Component
         ]);
 
         try {
-            $upload = $uploads->handle($this->avatar, directory: 'avatars', allowedTypes: ['image']);
+            $avatars->replace($this->user(), $this->avatar);
         } catch (UploadRejectedException $exception) {
             throw ValidationException::withMessages(['avatar' => $exception->getMessage()]);
         }
-
-        $this->user()->forceFill(['avatar_upload_id' => $upload->id])->save();
 
         $this->reset('avatar');
         session()->flash('avatar_status', __('panel.profile.avatar_updated'));
@@ -229,7 +229,7 @@ final class Profile extends Component
 
     public function render(): View
     {
-        $user = $this->user()->fresh(['avatar']);
+        $user = $this->user()->fresh();
         $twoFactor = app(TwoFactorLogin::class);
 
         return view('livewire.profile', [

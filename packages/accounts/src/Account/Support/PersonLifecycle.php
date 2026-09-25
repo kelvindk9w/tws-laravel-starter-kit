@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Twstec\Kit\Accounts\Account\Support;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Twstec\Kit\Accounts\Account\Events\PersonDeleted;
+use Twstec\Kit\Accounts\Account\Events\PersonDeleting;
 use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
@@ -29,7 +31,12 @@ use WeakMap;
  *
  * A recusa roda no `deleting` (antes de tocar no banco) e não tem efeito
  * colateral: se outra guarda recusar depois (conta protegida, por exemplo),
- * nada foi apagado. A limpeza roda no `deleted` (a pessoa já saiu); no
+ * nada foi apagado.
+ *
+ * Para quem guarda dado das contas fora deste pacote (os uploads), dois
+ * eventos: Events\PersonDeleting (no `deleting`, depois da recusa, SÓ para
+ * ler o que vai sair) e Events\PersonDeleted (no `deleted`, antes de o
+ * pacote arrumar as contas, para apagar). A limpeza roda no `deleted` (a pessoa já saiu); no
  * PostgreSQL os gatilhos das contas fazem o mesmo dentro da própria sentença.
  */
 final class PersonLifecycle
@@ -84,6 +91,8 @@ final class PersonLifecycle
 
         $this->owned[$user] = $this->accounts->ownedAccountIds($user);
         $this->orphans[$user] = $this->accounts->orphanedKeysOnPersonExit($user);
+
+        PersonDeleting::dispatch($user, $this->owned[$user]);
     }
 
     public function deleted(AuthUser $user): void
@@ -93,6 +102,8 @@ final class PersonLifecycle
         $orfas = $this->orphans[$user] ?? [];
 
         unset($this->owned[$user], $this->orphans[$user]);
+
+        PersonDeleted::dispatch($user, $ids);
 
         $this->accounts->cleanUpAfterPersonDeleted($user->getKey(), $ids);
 

@@ -41,7 +41,7 @@ it('o histórico completo alimenta as tabelas que nasciam vazias', function () {
 
     expect(comoSistema(fn () => Project::query()->count()))->toBe(ProjectSeeder::QUANTIDADE)
         ->and(comoSistema(fn () => ApiKey::query()->count()))->toBe(ApiKeySeeder::QUANTIDADE)
-        ->and(Upload::query()->count())->toBeGreaterThan(200)
+        ->and(comoSistema(fn () => Upload::query()->count()))->toBeGreaterThan(200)
         ->and(FormSubmission::query()->count())->toBeGreaterThan(100)
         ->and(RequestLog::query()->count())->toBeGreaterThan(1000);
 })->group('slow');
@@ -53,7 +53,7 @@ it('rodar o histórico duas vezes não duplica nada', function () {
     $antes = [
         comoSistema(fn () => Project::query()->count()),
         comoSistema(fn () => ApiKey::query()->count()),
-        Upload::query()->count(),
+        comoSistema(fn () => Upload::query()->count()),
         FormSubmission::query()->count(),
         RequestLog::query()->count(),
     ];
@@ -63,7 +63,7 @@ it('rodar o histórico duas vezes não duplica nada', function () {
     expect([
         comoSistema(fn () => Project::query()->count()),
         comoSistema(fn () => ApiKey::query()->count()),
-        Upload::query()->count(),
+        comoSistema(fn () => Upload::query()->count()),
         FormSubmission::query()->count(),
         RequestLog::query()->count(),
     ])->toBe($antes);
@@ -73,10 +73,10 @@ it('os uploads cobrem as três janelas do seletor, com período anterior', funct
     $this->seed(UploadSeeder::class);
 
     foreach ([7, 30, 90] as $dias) {
-        $janela = Upload::query()->where('created_at', '>=', now()->subDays($dias))->count();
-        $anterior = Upload::query()
+        $janela = comoSistema(fn () => Upload::query()->where('created_at', '>=', now()->subDays($dias))->count());
+        $anterior = comoSistema(fn () => Upload::query()
             ->whereBetween('created_at', [now()->subDays($dias * 2), now()->subDays($dias)])
-            ->count();
+            ->count());
 
         // Janela E período anterior com dados: é o que faz o Δ% ter sentido
         // em vez de dizer "sem base de comparação" em toda instalação nova.
@@ -85,7 +85,7 @@ it('os uploads cobrem as três janelas do seletor, com período anterior', funct
     }
 
     // Nenhum registro no futuro (data de demo não pode "vazar" para frente).
-    expect(Upload::query()->where('created_at', '>', now())->count())->toBe(0);
+    expect(comoSistema(fn () => Upload::query()->where('created_at', '>', now())->count()))->toBe(0);
 });
 
 it('as submissões antigas não trazem payload de ataque — só volume', function () {

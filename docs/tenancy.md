@@ -21,7 +21,7 @@ Livewire usa as Actions; outro front (o React) reaproveita as mesmas.
 | --- | --- |
 | `accounts` | A conta: `uuid`, código público `ACC-xxxxxx`, `name` (nulo na conta pessoal) e `personal_user_id` (preenchido só na conta pessoal) |
 | `account_memberships` | Pessoa × conta, com o papel (`owner`, `admin`, `member`); uma pessoa aparece uma vez por conta |
-| `projects`, `api_keys` | `account_id` (a dona) e `created_by` (quem criou — pode ter saído da conta; o dado continua da conta) |
+| `projects`, `api_keys`, `uploads` | `account_id` (a dona) e `created_by` (quem criou — pode ter saído da conta; o dado continua da conta). Nos uploads, a foto de perfil é a exceção: é da pessoa, sem conta — ver [`docs/uploads.md`](uploads.md) |
 
 **Conta pessoal.** Toda pessoa ganha a sua ao ser criada, como dona, com o
 **mesmo uuid** dela — é isso que mantém a trilha de requisições
@@ -66,7 +66,17 @@ sempre avaliada na conta atual:
 | Excluir a conta — `account.delete` | ✓ | — | — |
 
 Quem confere é a tela (`Accounts::authorize(...)` responde 403); os serviços
-(`ProjectService`, `ApiKeyService`) não repetem a pergunta. No painel Livewire
+(`ProjectService`, `ApiKeyService`) não repetem a pergunta.
+
+**O papel é consultado uma vez por requisição.** `Accounts::roleOf()`,
+`can()`, `authorize()` e o Gate guardam o papel de cada conta + pessoa até o
+fim da requisição (`CurrentAccount::roleFor`): uma tela que esconde seis
+botões faz uma consulta, não seis. O papel guardado é esquecido na hora em que
+um vínculo de membro muda (criado, alterado ou apagado — inclusive em massa,
+na exclusão de conta ou de pessoa), no fim de cada requisição HTTP e a cada
+job da fila (o worker é um processo longo): papel velho nunca vale de uma
+requisição para outra. As Actions de conta continuam lendo o papel direto do
+banco (`$account->roleOf()`), dentro da transação da mudança. No painel Livewire
 do starter, as ações que o papel não permite somem da tela **e** são recusadas
 no servidor. O dono da conta pessoal — o único caso que existia na 1.x — pode
 tudo, como antes.
@@ -125,6 +135,10 @@ cada chamada no starter e nos pacotes e reprova a que não foi revisada. Hoje:
 | `InvitationTokens` (achar o convite pelo token; marcá-lo como aceito/recusado) | o link não diz de que conta é o convite — e quem aceita ainda não é membro dela |
 | `/admin` (`OperateAdminPanelAsSystem`) | o operador vê todas as contas; modo sistema **da requisição** (`Accounts::systemModeForRequest`), porque o Livewire reaplica os middlewares persistentes antes do componente, num pipeline à parte |
 | `DatabaseSeeder` e os seeders da demonstração | gravam em várias contas |
+| `SecureUploadService::handlePersonal` (`twstec/kit-uploads`) | grava a foto de perfil, que é da pessoa (sem conta) |
+| `HasAvatar` (`twstec/kit-uploads`) | lê a foto de perfil — restrita ao upload que a própria pessoa aponta, foto pessoal ou da conta pessoal dela |
+| `UploadEraser` (`twstec/kit-uploads`) | exclusão da pessoa ou da conta (LGPD): lê e apaga os uploads de contas que somem |
+| `uploads:prune-orphans` (`twstec/kit-uploads`) | limpeza agendada dos uploads sem dono, de todas as contas |
 
 A mesma trava reprova `withoutGlobalScope(s)`, `newQueryWithoutScopes()`,
 `newModelQuery()`, `->getQuery()` e query builder cru nas tabelas das contas
@@ -151,9 +165,17 @@ pessoal, o uuid da pessoa, o mesmo gravado na 1.x).
 | Situação | O que acontece |
 | --- | --- |
 | Dona de conta **com outros membros** | **Recusada**: nada muda. No `/admin`, a ação some e, forjada, é recusada com o motivo na trilha de auditoria (`denied`); por qualquer outro caminho, o model lança `OwnerOfSharedAccountException`; por SQL, o gatilho do PostgreSQL recusa. Transfira a propriedade antes |
-| Dona só de contas sem outros membros (a pessoal, no caso de hoje) | As contas saem **com os dados** (projetos, chaves, vínculos) — o mesmo efeito da 1.x, quando projetos e chaves eram da pessoa |
-| Admin ou member de outra conta | Deixa de ser membro; a conta e os dados ficam, e o `created_by` do que criou fica vazio |
+| Dona só de contas sem outros membros (a pessoal, no caso de hoje) | As contas saem **com os dados** (projetos, chaves, vínculos, **uploads** — registro e arquivo no disco) — o mesmo efeito da 1.x, quando projetos e chaves eram da pessoa. A foto de perfil e as fotos pessoais que ela enviou saem também |
+| Admin ou member de outra conta | Deixa de ser membro; a conta e os dados ficam (inclusive os uploads que ela enviou lá), e o `created_by` do que criou fica vazio |
 | Conta protegida (extensão de proteção, como a demonstração) | Continua protegida: a proteção recusa antes de qualquer efeito |
+
+**Eventos para quem guarda dado das contas fora do pacote.** `PersonDeleting`
+(no `deleting` da pessoa, depois de a regra das contas não recusar — **só para
+ler**: outra guarda ainda pode recusar), `PersonDeleted` (a pessoa saiu; antes
+de o pacote arrumar as contas) e `AccountDeleting` (em
+`AccountService::deleteAccount`, dentro da transação, antes de qualquer linha
+sair). O `twstec/kit-uploads` usa os três para apagar os arquivos (ver
+[Exclusão em `docs/uploads.md`](uploads.md#exclusão-o-arquivo-sai-junto-lgpd)).
 
 **Chaves de quem saiu.** A chave é da conta e continua valendo quando quem a
 criou sai da conta ou é excluído. A pessoa por trás da chave (o que é por
@@ -248,8 +270,9 @@ PostgreSQL continuam valendo). A conta pessoal não se transfere.
 ## Excluir a conta
 
 `Account\Actions\DeleteAccount`: só o **dono**, com o token de ação sensível;
-a conta sai com projetos, chaves, vínculos e convites; os membros ficam com as
-contas deles. A conta pessoal não se exclui por aqui.
+a conta sai com projetos, chaves, vínculos, convites e **uploads** (registro
+na transação, arquivo no disco por job depois do commit); os membros ficam com
+as contas deles. A conta pessoal não se exclui por aqui.
 
 ## Aviso de chave órfã
 
@@ -317,6 +340,11 @@ todas as contas (tipo, dono, membros, projetos, chaves; filtro por tipo;
 busca por nome, código e e-mail do dono) e o detalhe com os membros e papéis
 e os projetos e chaves da conta (só identificadores públicos). Nada de editar
 membros pelo `/admin`: isso é da própria conta, com a regra do dono e a trilha.
+
+Nas outras telas, a conta de cada linha aparece e filtra: projetos, chaves e
+**uploads** mostram a conta (código, com filtro por conta); os uploads mostram
+também quem enviou e o tipo (da conta, foto pessoal, órfão). A **Auditoria**
+filtra pela conta em que a ação aconteceu (`audit_events.tenant_uuid`).
 
 ## Tenancy na API
 

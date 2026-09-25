@@ -25,7 +25,7 @@ final class UploadResource extends BaseResource
         return [
             ...$this->publicIdentifiers($this->resource),
             'path' => $this->path,
-            'url' => $this->url(),
+            'url' => $this->signedUrl($request),
             'original_name' => $this->original_name,
             'mime' => $this->mime,
             'size' => $this->size,
@@ -33,5 +33,25 @@ final class UploadResource extends BaseResource
             'status' => $this->status->value,
             'created_at' => $this->isoTimestamp($this->created_at),
         ];
+    }
+
+    /**
+     * A URL assinada. Upload da conta: a de sempre (Upload::url() só assina
+     * o da conta atual). Foto PESSOAL: só quando é a foto de quem pediu (a
+     * resposta da troca de foto), pela leitura restrita da foto de perfil.
+     */
+    private function signedUrl(Request $request): ?string
+    {
+        if (! $this->resource->isPersonal()) {
+            return $this->resource->url();
+        }
+
+        $user = $request->user();
+
+        if ($user === null || ! method_exists($user, 'avatarUrl') || (string) $user->getAttribute('avatar_upload_id') !== (string) $this->resource->getKey()) {
+            return null;
+        }
+
+        return $user->avatarUrl();
     }
 }

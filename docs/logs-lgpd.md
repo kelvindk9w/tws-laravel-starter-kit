@@ -86,6 +86,20 @@ alterado, removido, saiu), propriedade transferida e conta criada/renomeada/excl
 linha cada, pelas Actions do pacote de contas, na mesma transação da mudança (falha fechada) — e
 cada recusa como `denied`, com o motivo. Lista e regras em [tenancy.md](tenancy.md#trilha-de-auditoria-das-contas).
 
+**Eventos de uploads (LGPD).** Quando a pessoa ou a conta é excluída, os uploads dela saem do
+banco e do disco ([uploads.md](uploads.md#exclusão-o-arquivo-sai-junto-lgpd)) e a trilha registra,
+sempre só com **contagens e motivo** — nunca o caminho do arquivo nem o conteúdo:
+
+| Ação | Quando | O que guarda |
+| --- | --- | --- |
+| `upload.erased` | os registros saíram, na transação da exclusão (no `/admin`, com o operador como ator) | quantos, o motivo (`person_deleted` / `account_deleted`) e a conta (`tenant_uuid`) na exclusão de conta |
+| `upload.files_deleted` | o job da fila apagou os arquivos, depois do commit (contexto `console`) | quantos eram, quantos saíram, quantos já não existiam, o motivo |
+| `upload.orphans_pruned` | a limpeza `uploads:prune-orphans` apagou algo (contexto `console`) | quantos órfãos, fotos pessoais sem uso e arquivos sem registro |
+
+Falha definitiva ao apagar arquivo (tentativas esgotadas) vai para o log de aplicação
+(`upload.files_delete_failed`, só contagens); o arquivo que sobrou sai na limpeza seguinte. No
+`/admin`, a Auditoria filtra pela conta (`tenant_uuid`).
+
 **Como a gravação é central.** `Twstec\Kit\Admin\Support\AdminAudit` (pacote twstec/kit-admin) se pendura no gancho `call` do
 Livewire: toda chamada de componente do painel (o "Criar"/"Salvar" das páginas, toda Action de
 tabela, cabeçalho ou modal) roda com um escopo de auditoria aberto — contexto, quem está logado,

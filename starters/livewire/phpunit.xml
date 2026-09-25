@@ -28,13 +28,18 @@
         <env name="APP_ENV" value="testing"/>
         <server name="APP_ENV" value="testing" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <server name="BCRYPT_ROUNDS" value="4" force="true"/>
         <!-- Argon2id com parâmetros mínimos nos testes (velocidade) — o
              ALGORITMO é o mesmo da produção, só o custo é menor. -->
-        <env name="ARGON_MEMORY" value="1024"/>
-        <env name="ARGON_THREADS" value="1"/>
-        <env name="ARGON_TIME" value="1"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="ARGON_MEMORY" value="1024" force="true"/>
+        <server name="ARGON_MEMORY" value="1024" force="true"/>
+        <env name="ARGON_THREADS" value="1" force="true"/>
+        <server name="ARGON_THREADS" value="1" force="true"/>
+        <env name="ARGON_TIME" value="1" force="true"/>
+        <server name="ARGON_TIME" value="1" force="true"/>
+        <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <server name="BROADCAST_CONNECTION" value="null" force="true"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite" force="true"/>
         <env name="DB_DATABASE" value=":memory:" force="true"/>
@@ -54,9 +59,19 @@
              instalam o gatilho eles mesmos (DemoAccountHardeningTest). -->
         <env name="DEMO_LOGIN_ENABLED" value="false" force="true"/>
         <server name="DEMO_LOGIN_ENABLED" value="false" force="true"/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
+        <!-- Fila, e-mail e sessão FORÇADOS (e o custo do hash, acima): o
+             container de dev injeta QUEUE_CONNECTION=redis, MAIL_MAILER=smtp,
+             SESSION_DRIVER=redis e o Argon2id de produção no ambiente, e um
+             <env> sem force não os sobrescreve. Sem isto, a suíte local
+             mandava jobs para a fila do Redis de DEV (o worker de dev os
+             processava contra o banco de dev), e-mails para o Mailpit e
+             rodava o hash com 64 MB — diferente do CI, que não injeta nada. -->
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <server name="MAIL_MAILER" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <server name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+        <server name="SESSION_DRIVER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

@@ -88,4 +88,35 @@ return [
         ],
     ],
 
+    // --- Migração dos uploads para as contas (twstec/kit-uploads) ------------
+    // Tamanho da faixa de ids de cada UPDATE da migration que passa os uploads
+    // antigos (dono = pessoa) para as contas.
+    'migration' => [
+        'chunk' => (int) env('UPLOADS_MIGRATION_CHUNK', 1000),
+    ],
+
+    // --- Limpeza: uploads sem dono (twstec/kit-uploads) -----------------------
+    // O comando `uploads:prune-orphans` (--dry-run só conta) apaga registro e
+    // arquivo de: órfãos da migração para contas (dono excluído antes de os
+    // uploads saírem junto), depois de `orphans_after_days`; fotos pessoais
+    // que não são a foto de ninguém (a trocada, a de um formulário não
+    // salvo), depois de `personal_after_hours`; e arquivos nas pastas de
+    // upload sem registro no banco, mais velhos que `stray_files_after_hours`
+    // (o prazo protege o envio em andamento). Cada rodada que apaga algo vai
+    // para a trilha de auditoria (só contagens).
+    //
+    // `schedule`: expressão cron (UTC) do agendamento que o PACOTE registra.
+    // Vazio desliga o agendamento — com aviso no log a cada boot (o comando
+    // continua disponível para rodar à mão).
+    'prune' => [
+        'schedule' => env('UPLOADS_PRUNE_SCHEDULE', '40 3 * * *'),
+        'orphans_after_days' => (int) env('UPLOADS_PRUNE_ORPHANS_AFTER_DAYS', 30),
+        'personal_after_hours' => (int) env('UPLOADS_PRUNE_PERSONAL_AFTER_HOURS', 24),
+        'stray_files_after_hours' => (int) env('UPLOADS_PRUNE_STRAY_FILES_AFTER_HOURS', 24),
+        // Pastas (dentro do disco) onde procurar arquivo sem registro.
+        'directories' => array_values(array_filter(explode(',', (string) env('UPLOADS_PRUNE_DIRECTORIES', 'uploads,avatars')))),
+        // Discos varridos; vazio = só o disco padrão de uploads.
+        'disks' => array_values(array_filter(explode(',', (string) env('UPLOADS_PRUNE_DISKS', '')))),
+    ],
+
 ];

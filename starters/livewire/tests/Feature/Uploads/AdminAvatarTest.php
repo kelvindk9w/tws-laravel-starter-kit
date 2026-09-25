@@ -6,6 +6,7 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
 use Twstec\Kit\Admin\Pages\Profile as AdminProfile;
 use Twstec\Kit\Admin\Resources\Users\Pages\CreateUser;
 use Twstec\Kit\Admin\Resources\Users\Pages\EditUser;
@@ -35,6 +36,11 @@ beforeEach(function () {
 
     $this->admin = User::factory()->create(['is_admin' => true, 'name' => 'Operadora Admin']);
     $this->actingAs($this->admin);
+
+    // As telas do /admin rodam em modo sistema (declarado pela pilha do
+    // painel); Livewire::test não passa por ela — declarado aqui, como em
+    // tests/Feature/Admin (tests/Pest.php).
+    app(CurrentAccount::class)->push(CurrentAccount::systemFrame('teste do /admin (Livewire::test)'));
 });
 
 // -----------------------------------------------------------------------------
@@ -197,8 +203,9 @@ it('estado com o caminho da foto atual junto do uuid da nova: vale a nova', func
 
     $antiga = $user->fresh()->avatar;
 
-    $nova = app(SecureUploadService::class)->handle(
+    $nova = app(SecureUploadService::class)->handlePersonal(
         fixtureArquivoLivewire(fixtureBytesPng(), 'nova.png'),
+        $this->admin,
         directory: AvatarUpload::DIRECTORY,
         allowedTypes: ['image'],
     );

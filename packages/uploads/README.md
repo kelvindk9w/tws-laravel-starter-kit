@@ -8,9 +8,10 @@ quarta camada do kit: depende só do [`twstec/kit-accounts`](../accounts), do
 Laravel — não conhece o painel de administração nem a interface, e um teste de
 arquitetura na suíte do pacote garante isso.
 
-Nesta versão o **dono do upload é a pessoa** (ver
-[Quem é o dono](#quem-é-o-dono-do-upload)). Contas com membros chegam numa
-versão futura.
+O **dono do upload é a conta** (como projetos e chaves de API, do
+`twstec/kit-accounts`), com o isolamento automático da conta atual; a **foto
+de perfil é da pessoa**; excluir a pessoa ou a conta **apaga os arquivos**
+(LGPD). Ver [De quem é o upload](#de-quem-é-o-upload).
 
 - **Requisitos:** PHP 8.4+ com as extensões `fileinfo` e `gd`, Laravel 13,
   `twstec/kit-accounts`, `twstec/kit-auth` e `twstec/kit-foundation` 2.x.
@@ -23,8 +24,12 @@ versão futura.
 | `Services\SecureUploadService` | A função global única de upload: validação de segurança, limite por tipo sobre o conteúdo final, nome seguro (uuid + extensão do MIME real), gravação no disco, registro e log estruturado (`upload.stored` / `upload.rejected`) |
 | `Services\FileSecurityValidator` | O núcleo da validação pelo conteúdo: executável disfarçado, MIME real (`finfo`) contra a allowlist por tipo, extensão divergente, script embutido (polyglot), PDF com JavaScript ou ação automática, teto de pixels e re-encode da imagem pela GD (falha fechada) |
 | `Rules\SafeFile` | A mesma validação como regra, para formulários que não são Form Request (Filament, Livewire) |
-| `Models\Upload` | Registro do arquivo aceito (uuid, `UPL-xxxxxx`, MIME real, tamanho, sha256) e `url()`, a URL temporária assinada |
-| `Concerns\HasAvatar` | Foto de perfil do model de usuário: `avatar()` e `avatarUrl()` (coluna `avatar_upload_id`, do aplicativo) |
+| `Models\Upload` | Registro do arquivo aceito (uuid, `UPL-xxxxxx`, MIME real, tamanho, sha256), **da conta** (`BelongsToAccount`: `account_id`, `created_by`), e `url()`, a URL temporária assinada — só para upload da conta atual ou em modo sistema |
+| `Concerns\HasAvatar` | Foto de perfil do model de usuário: `avatarUpload()` e `avatarUrl()`, leitura restrita à foto da própria pessoa (coluna `avatar_upload_id`, do aplicativo) |
+| `Avatar\AvatarService` | Troca a foto de perfil (upload pessoal, sem conta) — usado pelo perfil e pela rota web do avatar |
+| `Erasure\UploadEraser`, `Support\UploadLifecycle`, `Jobs\DeleteUploadFiles` | A exclusão com o dono (LGPD): registros na transação da exclusão, arquivos por job na fila depois do commit, com nova tentativa, e a trilha de auditoria |
+| `Console\PruneOrphanUploads` | `uploads:prune-orphans` (`--dry-run`): órfãos antigos, fotos pessoais sem uso e arquivos sem registro — agendado pelo pacote |
+| `Access\UploadOutsideAccountException` | A recusa de assinar upload fora da conta atual |
 | `Http\Controllers` | `UploadController` (API v1) e `AvatarController` (avatar pela web), com os Form Requests e o `UploadResource` |
 | `Http\UploadRoutes` | A rota `POST /api/v1/uploads` |
 | `Support\SignedDelivery` | Liga a entrega assinada do Laravel no disco local de uploads |
@@ -79,7 +84,16 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   (`vendor:publish --tag=uploads-config`).
 - **Migration** com o **mesmo nome de arquivo** que tinha no aplicativo na 1.x
   (`2026_08_20_300000_create_uploads_table.php`): um banco que já a rodou não
-  vê nada pendente.
+  vê nada pendente; e a que passa os uploads para as contas
+  (`2026_09_28_000001_move_uploads_to_accounts.php`, idempotente, reversível,
+  em lotes de `UPLOADS_MIGRATION_CHUNK`).
+- **Isolamento por conta** no model (o escopo do `twstec/kit-accounts`: sem
+  conta atual, erro) e a recusa de assinar URL de upload de outra conta.
+- **Exclusão dos arquivos com o dono** (LGPD), ligada aos eventos de exclusão
+  do `twstec/kit-accounts` — sem opção para desligar.
+- **Comando e agendamento** da limpeza `uploads:prune-orphans`
+  (`uploads.prune.schedule`, cron; vazio desliga, com aviso no log a cada
+  boot).
 - **Traduções** (pt-BR, en, es) das mensagens do upload e de cada motivo de
   recusa (`uploads.*`), sem namespace. **O aplicativo vence** na mesma chave
   (a regra do foundation, `Localization\PackageTranslations`).
@@ -113,15 +127,25 @@ UploadRoutes::register(prefix: 'v1', middleware: []);
 
 A autenticação por chave entra no grupo em qualquer caso.
 
-## Quem é o dono do upload
+## De quem é o upload
 
-Hoje o dono é a pessoa, gravado de dois jeitos: pela API, em `tenant_uuid`
-(o uuid do dono da chave, sem chave estrangeira) com `user_id` nulo; pela web
-autenticada, em `user_id` (chave estrangeira, `nullOnDelete`) com
-`tenant_uuid` nulo. `Upload::owner()` só enxerga o dono web. Nenhuma rota
-entrega upload por dono — o acesso é sempre pela URL assinada do registro —,
-então a diferença não abre o arquivo de uma pessoa para outra; é uma
-incoerência de modelo que a fase de contas com membros unifica.
+**Da conta** (`account_id`), com quem enviou em `created_by`. A web e a API
+gravam do mesmo jeito: `SecureUploadService::handle()` grava na conta atual (a
+da sessão, a da chave), com quem está agindo — sem conta atual, dá erro antes
+de tocar no disco. Toda consulta sai filtrada pela conta atual, e `url()` só
+assina upload da conta atual (ou em modo sistema declarado).
+
+A **foto de perfil é da pessoa**: `SecureUploadService::handlePersonal()`
+(ou `Avatar\AvatarService`) grava um upload **pessoal**, sem conta, que só a
+foto de perfil lê (`HasAvatar`, restrito ao upload que a própria pessoa
+aponta: foto pessoal ou upload da conta pessoal dela).
+
+**Excluir a pessoa** apaga a foto dela, as fotos pessoais que enviou e os
+uploads das contas que somem junto; os que ela criou em contas de outras
+pessoas ficam. **Excluir a conta** apaga os uploads dela. Registro na
+transação da exclusão, arquivo por job na fila depois do commit, com nova
+tentativa; exclusão recusada ou desfeita não apaga nada. O guia completo
+(migração, limpeza, trilha) está em [`docs/uploads.md`](../../docs/uploads.md).
 
 ## O que o aplicativo liga
 
@@ -138,6 +162,8 @@ incoerência de modelo que a fase de contas com membros unifica.
 | Na 1.x | Na 2.0 |
 | --- | --- |
 | `App\Core\Uploads\…` | `Twstec\Kit\Uploads\…` (o resto do nome não muda) |
+| `Upload::owner()`, colunas `user_id` e `tenant_uuid` (até a F8b da 2.0) | `account()`, `creator()`; colunas `account_id`, `created_by`, `personal`, `orphaned_at` |
+| `$user->avatar` para ler a foto | `$user->avatarUpload()` / `$user->avatarUrl()` (a relação passa pelo escopo da conta) |
 | `config/uploads.php`, migration `create_uploads_table` e `lang/*/uploads.php` no aplicativo | Vêm do pacote (a cópia do aplicativo, se existir, continua valendo) |
 | `POST /api/v1/uploads` em `routes/api.php` | Registrada pelo pacote — tire-a de `routes/api.php` |
 
@@ -165,7 +191,12 @@ vendor/bin/pest
 vendor/bin/pint --test
 ```
 
-Ela prova que as proteções vêm do pacote (conteúdo falso com extensão de
+Ela prova que as proteções vêm do pacote (o isolamento por conta — pessoa em
+duas contas pela web e pela API, URL assinada só da conta atual, erro sem
+conta; a exclusão com os arquivos — banco e disco, recusada e desfeita não
+apagam, job depois do commit e com nova tentativa, exclusão de conta; a
+limpeza com e sem `--dry-run` e o agendamento; a migração para contas, ida e
+volta; conteúdo falso com extensão de
 imagem, polyglot, extensão divergente, executável e PDF com JavaScript
 recusados; limite por tipo e teto de pixels; imagem reprocessada; URL assinada
 que entrega o arquivo e recusa pedido sem assinatura, adulterado, vencido ou

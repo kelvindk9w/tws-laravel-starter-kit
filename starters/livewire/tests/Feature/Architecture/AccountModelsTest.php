@@ -10,6 +10,7 @@ use Twstec\Kit\Accounts\Account\Models\AccountMembership;
 use Twstec\Kit\Accounts\Account\Scopes\AccountScope;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Todo MODEL cuja tabela tem `account_id` é dado de conta — e carrega o
@@ -68,7 +69,33 @@ it('todo model com account_id carrega o escopo da conta atual', function (): voi
         }
     }
 
-    // A descoberta não é cega: os dois models da conta de hoje estão lá.
-    expect($comConta)->toContain(Project::class, ApiKey::class)
+    // A descoberta não é cega: os models da conta de hoje estão lá.
+    expect($comConta)->toContain(Project::class, ApiKey::class, Upload::class)
         ->and($semEscopo)->toBe([]);
+});
+
+it('registro SEM conta só nos models revisados (hoje: a foto pessoal dos uploads)', function (): void {
+    // BelongsToAccount deixa um model gravar registro sem conta — só em modo
+    // sistema declarado — quando ele sobrescreve allowsRecordWithoutAccount().
+    // Um model novo que abrir essa porta reprova aqui até ser revisado.
+    $revisados = [
+        // A foto de perfil é da PESSOA, não de uma conta (ver HasAvatar).
+        Upload::class,
+    ];
+
+    $abrem = [];
+    $doTrait = (string) (new ReflectionClass(BelongsToAccount::class))->getFileName();
+
+    foreach (modelsDoKit() as $classe) {
+        if (! in_array(BelongsToAccount::class, class_uses_recursive($classe), true)) {
+            continue;
+        }
+
+        // Método que veio do trait tem o arquivo do trait; sobrescrito, o do model.
+        if ((new ReflectionMethod($classe, 'allowsRecordWithoutAccount'))->getFileName() !== $doTrait) {
+            $abrem[] = $classe;
+        }
+    }
+
+    expect($abrem)->toBe($revisados);
 });

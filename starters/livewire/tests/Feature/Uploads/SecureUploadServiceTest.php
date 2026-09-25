@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
@@ -26,7 +27,8 @@ beforeEach(function () {
 function esperarRejeicao(UploadedFile $file): UploadRejectedException
 {
     try {
-        app(SecureUploadService::class)->handle($file);
+        // Na conta pessoal de alguém (o serviço exige conta atual).
+        naConta(User::factory()->create(), fn () => app(SecureUploadService::class)->handle($file));
     } catch (UploadRejectedException $exception) {
         return $exception;
     }
@@ -38,14 +40,14 @@ it('rejeita executável ELF mesmo com extensão .pdf (trava explícita)', functi
     $exception = esperarRejeicao(fixtureArquivoEnviado(fixtureBytesElf(), 'boleto.pdf'));
 
     expect($exception->reason)->toBe('executable')
-        ->and(Upload::query()->count())->toBe(0);
+        ->and(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita conteúdo de texto puro disfarçado de PDF (mime_not_allowed)', function () {
     $exception = esperarRejeicao(fixtureArquivoEnviado('Relatorio de vendas do mes.', 'relatorio.pdf'));
 
     expect($exception->reason)->toBe('mime_not_allowed')
-        ->and(Upload::query()->count())->toBe(0);
+        ->and(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita arquivo vazio', function () {
@@ -77,9 +79,9 @@ it('deriva a extensão do MIME real, nunca do nome original', function () {
     $bytes = (string) ob_get_clean();
     imagedestroy($image);
 
-    $upload = app(SecureUploadService::class)->handle(
+    $upload = naConta(User::factory()->create(), fn () => app(SecureUploadService::class)->handle(
         fixtureArquivoEnviado($bytes, 'foto.jpeg'),
-    );
+    ));
 
     expect($upload->mime)->toBe('image/jpeg')
         ->and(basename((string) $upload->path))->toMatch('/^[0-9a-f-]{36}\.jpg$/');

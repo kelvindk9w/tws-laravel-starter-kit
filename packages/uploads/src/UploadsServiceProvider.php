@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Uploads;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
+use Twstec\Kit\Uploads\Console\PruneOrphanUploads;
 use Twstec\Kit\Uploads\Support\SignedDelivery;
+use Twstec\Kit\Uploads\Support\UploadLifecycle;
 
 /**
  * O que o pacote de uploads instala numa aplicação Laravel — sozinho, sem a
@@ -23,7 +26,14 @@ use Twstec\Kit\Uploads\Support\SignedDelivery;
  *   responde a URL assinada e dentro da validade;
  * - a rota da API v1 `POST /api/v1/uploads`, no mesmo grupo das rotas v1 do
  *   twstec/kit-accounts, desligável para a aplicação registrar ela mesma (ver
- *   Http\UploadRoutes).
+ *   Http\UploadRoutes);
+ * - a EXCLUSÃO DOS ARQUIVOS com o dono (LGPD — Support\UploadLifecycle):
+ *   excluir a pessoa apaga a foto dela e os uploads das contas que somem
+ *   junto; excluir a conta apaga os uploads dela — registro na transação,
+ *   arquivo por job na fila depois do commit. Sem opção para desligar;
+ * - o comando `uploads:prune-orphans` e o AGENDAMENTO dele
+ *   (`uploads.prune.schedule`, cron; vazio desliga, com aviso no log a cada
+ *   boot).
  *
  * As regras que moram no domínio continuam lá e não dependem de provider nem
  * de config: a validação pelo CONTEÚDO (magic bytes, allowlist por tipo,
@@ -55,6 +65,10 @@ final class UploadsServiceProvider extends ServiceProvider
         });
 
         PackageTranslations::register($this->app, $this->path('lang'));
+
+        // Um só por processo: guarda, entre o `deleting` e o `deleted` da
+        // pessoa, o que sai junto com ela.
+        $this->app->singleton(UploadLifecycle::class);
     }
 
     public function boot(): void
@@ -62,6 +76,10 @@ final class UploadsServiceProvider extends ServiceProvider
         foreach (SignedDelivery::warnings($this->app['config']) as $warning) {
             Log::warning($warning);
         }
+
+        UploadLifecycle::register($this->app['events']);
+
+        $this->registerPruneSchedule();
 
         // A migration roda direto daqui, com o MESMO nome de arquivo que tinha
         // quando morava no aplicativo: um banco que já a rodou não vê nada
@@ -73,10 +91,35 @@ final class UploadsServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
+            $this->commands([PruneOrphanUploads::class]);
+
             $this->publishes([
                 $this->path('config/uploads.php') => config_path('uploads.php'),
             ], 'uploads-config');
         }
+    }
+
+    /**
+     * A limpeza diária dos uploads sem dono entra no agendador da aplicação
+     * sozinha. Cron vazio = desligada, com aviso no log a cada boot (o
+     * comando continua disponível).
+     */
+    private function registerPruneSchedule(): void
+    {
+        $cron = trim((string) config('uploads.prune.schedule', ''));
+
+        if ($cron === '' || in_array(strtolower($cron), ['false', 'off', '0'], true)) {
+            Log::warning('uploads.prune.schedule vazio: a limpeza agendada dos uploads sem dono (uploads:prune-orphans) está DESLIGADA. Órfãos, fotos sem uso e arquivos sem registro só saem rodando o comando à mão.');
+
+            return;
+        }
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) use ($cron): void {
+            $schedule->command('uploads:prune-orphans')
+                ->cron($cron)
+                ->withoutOverlapping()
+                ->onOneServer();
+        });
     }
 
     private function path(string $relative): string

@@ -40,7 +40,8 @@ it('o container monta o controller pelo nome antigo (rota em cache da 1.x)', fun
 });
 
 it('a referência de model com o nome antigo (snapshot, fila) acha o registro', function (): void {
-    $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'));
+    $pessoa = $this->owner();
+    $upload = $this->inAccountOf($pessoa, fn () => app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf')));
 
     $restaurador = new class
     {
@@ -49,17 +50,23 @@ it('a referência de model com o nome antigo (snapshot, fila) acha o registro', 
         }
     };
 
-    $restaurado = $restaurador->getRestoredPropertyValue(new ModelIdentifier('App\\Core\\Uploads\\Models\\Upload', $upload->getKey(), [], null));
+    // O job restaura na conta de quem o enfileirou (contas com membros).
+    [$restaurado, $url] = $this->inAccountOf($pessoa, function () use ($restaurador, $upload): array {
+        $restaurado = $restaurador->getRestoredPropertyValue(new ModelIdentifier('App\\Core\\Uploads\\Models\\Upload', $upload->getKey(), [], null));
+
+        return [$restaurado, $restaurado->url()];
+    });
 
     expect($restaurado)->toBeInstanceOf(Upload::class)
         ->and($restaurado->is($upload))->toBeTrue()
         // O arquivo continua localizado pelo registro (disco + caminho).
-        ->and($restaurado->url())->toContain('/storage/'.$upload->path);
+        ->and($url)->toContain('/storage/'.$upload->path);
 });
 
 it('um model de usuário da 1.x que ainda usa a trait pelo nome antigo continua com a foto de perfil', function (): void {
     $pessoa = $this->owner();
-    $upload = app(SecureUploadService::class)->handle(fixtureArquivoEnviado(fixtureBytesPng(), 'foto.png'), directory: 'avatars', allowedTypes: ['image']);
+    // A foto de perfil é pessoal (da pessoa, sem conta).
+    $upload = app(SecureUploadService::class)->handlePersonal(fixtureArquivoEnviado(fixtureBytesPng(), 'foto.png'), $pessoa, directory: 'avatars', allowedTypes: ['image']);
     $pessoa->forceFill(['avatar_upload_id' => $upload->id])->save();
 
     $daUmX = new class extends Model
@@ -72,8 +79,8 @@ it('um model de usuário da 1.x que ainda usa a trait pelo nome antigo continua 
     $modelo = $daUmX->newQuery()->whereKey($pessoa->id)->sole();
 
     expect(class_uses($modelo))->toContain(HasAvatar::class)
-        ->and($modelo->avatar)->toBeInstanceOf(Upload::class)
-        ->and($modelo->avatar->is($upload))->toBeTrue()
+        ->and($modelo->avatarUpload())->toBeInstanceOf(Upload::class)
+        ->and($modelo->avatarUpload()->is($upload))->toBeTrue()
         ->and($modelo->avatarUrl())->toContain('/storage/'.$upload->path.'?');
 });
 

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\PendingDispatch;
 use Illuminate\Support\Facades\Auth;
 use InvalidArgumentException;
 use Throwable;
+use Twstec\Kit\Accounts\Account\Enums\AccountRole;
 use Twstec\Kit\Accounts\Account\Exceptions\MissingAccountContextException;
 use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
@@ -39,9 +40,16 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  *    tudo (Exceptions\MissingAccountContextException).
  *
  * Singleton. O fim de CADA requisição HTTP (evento RequestHandled) desfaz o
- * modo sistema da requisição e o cache da sessão; os quadros são sempre
- * desempilhados por quem os empilhou (seguro para processos longos, como
- * Octane e os testes).
+ * modo sistema da requisição, o cache da sessão e o cache dos papéis; os
+ * quadros são sempre desempilhados por quem os empilhou (seguro para
+ * processos longos, como Octane e os testes).
+ *
+ * CACHE DO PAPEL (roleFor): a tela pergunta o papel várias vezes por
+ * requisição (cada botão que ela esconde ou mostra); a resposta fica guardada
+ * por conta + pessoa até o fim da requisição (ou do job, na fila), e é
+ * esquecida na hora em que um vínculo de membro muda (criado, alterado,
+ * apagado — inclusive em massa pelo AccountService). Papel velho nunca vale
+ * de uma requisição para outra.
  */
 final class CurrentAccount
 {
@@ -67,6 +75,14 @@ final class CurrentAccount
      * Motivo do modo sistema declarado para a requisição HTTP corrente.
      */
     private ?string $requestSystemReason = null;
+
+    /**
+     * Papéis já consultados nesta requisição: "conta:pessoa" => papel (ou
+     * null, quando não é membro).
+     *
+     * @var array<string, AccountRole|null>
+     */
+    private array $roles = [];
 
     /**
      * A conta atual, ou nulo (modo sistema, quadro sem conta ou ninguém logado).
@@ -146,6 +162,31 @@ final class CurrentAccount
     {
         $this->requestSystemReason = null;
         $this->webCache = null;
+        $this->forgetRoles();
+    }
+
+    /**
+     * O papel da pessoa na conta — consultado no banco uma vez por
+     * requisição (ver o docblock da classe).
+     */
+    public function roleFor(Account $account, AuthUser $user): ?AccountRole
+    {
+        $chave = $account->getKey().':'.$user->getKey();
+
+        if (! array_key_exists($chave, $this->roles)) {
+            $this->roles[$chave] = $account->roleOf($user);
+        }
+
+        return $this->roles[$chave];
+    }
+
+    /**
+     * Esquece os papéis guardados (um vínculo mudou, a requisição ou o job
+     * acabou).
+     */
+    public function forgetRoles(): void
+    {
+        $this->roles = [];
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Demo\Database\Seeders\UserSeeder;
 use App\Models\User;
+use Faker\Factory as FakerFactory;
 use Livewire\Livewire;
 use Twstec\Kit\Admin\Resources\Users\Pages\ListUsers;
 use Twstec\Kit\Auth\Enums\UserStatus;
@@ -71,4 +72,41 @@ it('a massa semeada faz a paginação do admin ter mais de uma página', functio
         ->test(ListUsers::class)
         ->assertOk()
         ->assertCountTableRecords(UserSeeder::QUANTIDADE + 1);
+});
+
+// Regressão da instabilidade da rodada paralela (F8c): o Faker sorteia pelo
+// mt_rand GLOBAL, e todo gerador do Faker, ao ser destruído, chama mt_srand()
+// sem semente. Um gerador descartado antes (em ciclo: só a coleta de ciclos o
+// destrói) sendo coletado NO MEIO da montagem da lista mudava o resto dela —
+// e a segunda rodada do seeder criava gente nova. Aqui a coleta é provocada
+// em cada ponto da montagem (o lixo com um Faker dentro é deixado a N
+// "raízes" do limite que dispara a coleta): a lista tem de sair igual.
+it('a lista é a mesma mesmo se um Faker descartado for coletado no meio da montagem', function () {
+    $referencia = array_keys(UserSeeder::linhas());
+    $mudou = [];
+
+    for ($folga = 0; $folga < 3000; $folga += 10) {
+        gc_collect_cycles();
+
+        $descartado = FakerFactory::create('pt_BR');
+        unset($descartado);
+
+        $gc = gc_status();
+
+        for ($i = 0, $faltam = max(0, $gc['threshold'] - $gc['roots'] - $folga); $i < $faltam; $i++) {
+            $ciclo = new stdClass;
+            $ciclo->eu = $ciclo;
+            unset($ciclo);
+        }
+
+        if (array_keys(UserSeeder::linhas()) !== $referencia) {
+            $mudou[] = $folga;
+
+            break;
+        }
+    }
+
+    expect($mudou)->toBe([])
+        ->and($referencia)->toHaveCount(UserSeeder::QUANTIDADE)
+        ->and(gc_enabled())->toBeTrue();
 });

@@ -44,6 +44,10 @@ Schedule::command('audit:prune')
     ->withoutOverlapping()
     ->onOneServer();
 
+// Limpeza dos uploads sem dono (`uploads:prune-orphans`): agendada pelo
+// PRÓPRIO pacote twstec/kit-uploads (UPLOADS_PRUNE_SCHEDULE, cron; vazio
+// desliga, com aviso no log) — não precisa de linha aqui. Ver docs/uploads.md.
+
 Schedule::command('backup:run --only-db')
     ->cron((string) env('BACKUP_RUN_CRON', '0 * * * *'))
     ->withoutOverlapping()

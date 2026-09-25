@@ -8,6 +8,14 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml  # Pest contra Po
 npx playwright test                                             # E2E (ver abaixo como rodar em container)
 ```
 
+**O ambiente da suíte é o mesmo no container e no CI.** O container `app`
+injeta o `.env` de desenvolvimento (fila no Redis, e-mail no Mailpit, sessão no
+Redis, o Argon2id de produção); o `phpunit.xml` e o `phpunit.pgsql.xml` forçam
+(`force="true"`, em `<env>` e `<server>`) fila `sync`, e-mail e sessão
+`array`, cache `array` e o custo mínimo do hash. Sem o `force`, o valor do
+container vencia: os testes mandavam jobs para a fila do Redis de dev (e o
+worker de dev os processava contra o banco de dev) e e-mails para o Mailpit.
+
 E a suíte de cada **pacote** (`packages/<pacote>`), isolada do aplicativo, com
 Orchestra Testbench:
 

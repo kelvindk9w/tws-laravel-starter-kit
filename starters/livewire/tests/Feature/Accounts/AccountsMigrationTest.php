@@ -25,10 +25,11 @@ function migracaoDoPacote(string $arquivo): Migration
 }
 
 /**
- * As duas migrations das contas e a dos convites (que depende de `accounts`
- * por chave estrangeira: no PostgreSQL ela sai antes e volta depois).
+ * As duas migrations das contas, a dos convites e a dos uploads da conta
+ * (as duas últimas dependem de `accounts` por chave estrangeira: no
+ * PostgreSQL elas saem antes e voltam depois).
  *
- * @return array{criar: Migration, mover: Migration, convites: Migration}
+ * @return array{criar: Migration, mover: Migration, convites: Migration, uploads: Migration}
  */
 function migracoesDeContas(): array
 {
@@ -36,6 +37,7 @@ function migracoesDeContas(): array
         'criar' => migracaoDoPacote('2026_09_26_000001_create_accounts_tables.php'),
         'mover' => migracaoDoPacote('2026_09_26_000002_move_projects_and_api_keys_to_accounts.php'),
         'convites' => migracaoDoPacote('2026_09_27_000001_create_account_invitations_table.php'),
+        'uploads' => require base_path('vendor/twstec/kit-uploads/database/migrations/2026_09_28_000001_move_uploads_to_accounts.php'),
     ];
 }
 
@@ -64,10 +66,11 @@ function retratoDaTrilha(): array
 }
 
 it('no esquema do starter: conta pessoal com o mesmo id e uuid, dados movidos, trilha intacta — e ida e volta', function (): void {
-    ['criar' => $criar, 'mover' => $mover, 'convites' => $convites] = migracoesDeContas();
+    ['criar' => $criar, 'mover' => $mover, 'convites' => $convites, 'uploads' => $uploads] = migracoesDeContas();
 
     $pessoas = User::factory()->count(6)->create();
 
+    $uploads->down();
     $convites->down();
     $mover->down();
     $criar->down();
@@ -174,20 +177,23 @@ it('no esquema do starter: conta pessoal com o mesmo id e uuid, dados movidos, t
     $criar->up();
     $mover->up();
     $convites->up();
+    $uploads->up();
 
     $conferir();
 });
 
 it('pessoa criada depois da migração: conta pessoal nova não colide com as migradas (sequência ajustada)', function (): void {
-    ['criar' => $criar, 'mover' => $mover, 'convites' => $convites] = migracoesDeContas();
+    ['criar' => $criar, 'mover' => $mover, 'convites' => $convites, 'uploads' => $uploads] = migracoesDeContas();
 
     User::factory()->count(3)->create();
+    $uploads->down();
     $convites->down();
     $mover->down();
     $criar->down();
     $criar->up();
     $mover->up();
     $convites->up();
+    $uploads->up();
 
     $maiorAntes = (int) DB::table('accounts')->max('id');
     $nova = User::factory()->create();

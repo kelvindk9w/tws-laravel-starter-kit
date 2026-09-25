@@ -14,8 +14,8 @@ use Twstec\Kit\Uploads\Services\SecureUploadService;
 /**
  * Endpoint de exemplo da API v1: POST /api/v1/uploads
  * (scope uploads:create). Prova o reuso da função global única de upload
- * (SecureUploadService) no fluxo tenant — o registro sai vinculado ao
- * tenant_uuid do dono da chave.
+ * (SecureUploadService) no fluxo da API — o registro sai na CONTA da chave,
+ * com a pessoa por trás dela em `created_by` (o mesmo jeito da web).
  */
 final class UploadController
 {

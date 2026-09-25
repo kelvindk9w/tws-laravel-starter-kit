@@ -12,7 +12,9 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Twstec\Kit\Admin\Resources\Uploads\Pages\ListUploads;
 use Twstec\Kit\Admin\Support\AdminColumns;
 use Twstec\Kit\Admin\Support\BaseResource;
@@ -22,6 +24,11 @@ use Twstec\Kit\Uploads\Models\Upload;
  * Uploads — visão global (super admin). Somente leitura: todo
  * registro aqui passou pela validação de segurança do SecureUploadService (rejeitados
  * não tocam o banco). Abrir arquivo = URL assinada de curta duração.
+ *
+ * O /admin opera em modo sistema (todas as contas): cada linha mostra a CONTA
+ * dona do upload (com filtro), quem enviou, e o tipo — da conta, foto
+ * pessoal (da pessoa, sem conta) ou órfão (da migração para contas, à espera
+ * da limpeza).
  */
 final class UploadResource extends BaseResource
 {
@@ -50,14 +57,13 @@ final class UploadResource extends BaseResource
                 ->limit(40),
             self::mimeColumn(),
             self::sizeColumn(),
-            TextColumn::make('owner.email')
-                ->label(__('admin.uploads.owner'))
+            AdminColumns::account()
+                ->placeholder('—'),
+            self::kindColumn(),
+            TextColumn::make('creator.email')
+                ->label(__('admin.uploads.creator'))
                 ->placeholder('—')
                 ->searchable(),
-            TextColumn::make('tenant_uuid')
-                ->label(__('admin.uploads.tenant'))
-                ->placeholder('—')
-                ->limit(12),
             AdminColumns::dateTime('created_at', __('panel.common.created_at')),
         ];
     }
@@ -83,8 +89,16 @@ final class UploadResource extends BaseResource
                         ->color('gray')
                         ->grow(false),
                 ]),
-                TextColumn::make('owner.email')
-                    ->label(__('admin.uploads.owner'))
+                Split::make([
+                    AdminColumns::account()
+                        ->icon(Heroicon::OutlinedBuildingOffice2)
+                        ->color('gray')
+                        ->size(TextSize::Small)
+                        ->placeholder('—'),
+                    self::kindColumn()->grow(false),
+                ]),
+                TextColumn::make('creator.email')
+                    ->label(__('admin.uploads.creator'))
                     ->icon(Heroicon::OutlinedUserCircle)
                     ->color('gray')
                     ->size(TextSize::Small)
@@ -92,6 +106,32 @@ final class UploadResource extends BaseResource
                     ->searchable(),
             ])->space(2),
         ];
+    }
+
+    /**
+     * Da conta, foto pessoal ou órfão.
+     */
+    public static function kindOf(Upload $record): string
+    {
+        return match (true) {
+            $record->isOrphaned() => 'orphaned',
+            $record->isPersonal() => 'personal',
+            default => 'account',
+        };
+    }
+
+    private static function kindColumn(): TextColumn
+    {
+        return TextColumn::make('kind')
+            ->label(__('admin.uploads.kind'))
+            ->state(fn (Upload $record): string => self::kindOf($record))
+            ->formatStateUsing(fn (string $state): string => __('admin.uploads.kind_'.$state))
+            ->badge()
+            ->color(fn (string $state): string => match ($state) {
+                'orphaned' => 'danger',
+                'personal' => 'info',
+                default => 'gray',
+            });
     }
 
     private static function mimeColumn(): TextColumn
@@ -113,6 +153,23 @@ final class UploadResource extends BaseResource
     protected static function tableExtras(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['account', 'creator']))
+            ->filters([
+                AdminColumns::accountFilter(),
+                SelectFilter::make('kind')
+                    ->label(__('admin.uploads.kind'))
+                    ->options([
+                        'account' => __('admin.uploads.kind_account'),
+                        'personal' => __('admin.uploads.kind_personal'),
+                        'orphaned' => __('admin.uploads.kind_orphaned'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'account' => $query->whereNotNull('account_id'),
+                        'personal' => $query->where('personal', true),
+                        'orphaned' => $query->whereNotNull('orphaned_at'),
+                        default => $query,
+                    }),
+            ])
             ->recordActions([
                 Action::make('open')
                     ->label(__('admin.uploads.open'))

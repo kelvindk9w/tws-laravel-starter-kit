@@ -168,6 +168,27 @@ abstract class TestCase extends Testbench
     }
 
     /**
+     * Roda o callback na CONTA PESSOAL da pessoa (a conta atual), com ela
+     * agindo — o contexto que a web e a API dão ao serviço de upload. Sem
+     * pessoa, uma nova.
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $callback
+     * @return T
+     */
+    protected function inAccountOf(?User $person, \Closure $callback): mixed
+    {
+        $person ??= $this->owner();
+
+        return Accounts::actingAs(
+            app(AccountService::class)->personalAccountOf($person) ?? throw new \LogicException('Pessoa sem conta pessoal.'),
+            $callback,
+            $person,
+        );
+    }
+
+    /**
      * Cabeçalhos do par de credenciais.
      *
      * @return array<string, string>

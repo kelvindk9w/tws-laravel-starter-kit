@@ -58,10 +58,11 @@ it('aceita PDF legítimo: retorno padronizado + registro com tenant correto', fu
     expect($path)->not->toContain('contrato-social')
         ->and(basename($path))->toMatch('/^[0-9a-f-]{36}\.pdf$/');
 
-    // Registro em banco vinculado ao TENANT (uuid do dono da chave).
-    $upload = Upload::query()->sole();
-    expect($upload->tenant_uuid)->toBe((string) $user->uuid)
-        ->and($upload->user_id)->toBeNull()
+    // Registro em banco vinculado à CONTA da chave (a pessoal do dono) e a
+    // quem enviou (a pessoa por trás da chave).
+    $upload = comoSistema(fn () => Upload::query()->sole());
+    expect($upload->account_id)->toBe(contaPessoal($user)->id)
+        ->and($upload->created_by)->toBe($user->id)
         ->and($upload->disk)->toBe('uploads-test');
 
     Storage::disk('uploads-test')->assertExists($path);
@@ -98,7 +99,7 @@ it('rejeita PDF com JavaScript embutido (política: suspeita = não aceita)', fu
         ->assertJsonPath('error.errors.file.0', __('uploads.rejected.pdf_auto_action'));
 
     // Rejeitado NUNCA toca o banco nem o disco (só o log).
-    expect(Upload::query()->count())->toBe(0)
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and(Storage::disk('uploads-test')->allFiles())->toBeEmpty();
 });
 
@@ -114,7 +115,7 @@ it('rejeita executável renomeado para .pdf (magic bytes, não extensão)', func
     $response->assertUnprocessable()
         ->assertJsonStructure(['error' => ['errors' => ['file']]]);
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita imagem polyglot com PHP embutido', function () {
@@ -126,7 +127,7 @@ it('rejeita imagem polyglot com PHP embutido', function () {
     $response->assertUnprocessable()
         ->assertJsonPath('error.errors.file.0', __('uploads.rejected.embedded_script'));
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita extensão divergente do conteúdo real', function () {
@@ -137,7 +138,7 @@ it('rejeita extensão divergente do conteúdo real', function () {
     $response->assertUnprocessable()
         ->assertJsonPath('error.errors.file.0', __('uploads.rejected.extension_mismatch'));
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita arquivo acima do tamanho máximo do tipo', function () {
@@ -151,7 +152,7 @@ it('rejeita arquivo acima do tamanho máximo do tipo', function () {
     $response->assertUnprocessable()
         ->assertJsonPath('error.errors.file.0', __('uploads.rejected.too_large', ['max' => 1]));
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('rejeita conteúdo de texto disfarçado de imagem', function () {
@@ -162,7 +163,7 @@ it('rejeita conteúdo de texto disfarçado de imagem', function () {
     $response->assertUnprocessable()
         ->assertJsonStructure(['error' => ['errors' => ['file']]]);
 
-    expect(Upload::query()->count())->toBe(0);
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0);
 });
 
 it('exige o scope uploads:create', function () {

@@ -8,6 +8,7 @@ return [
 
     'stored' => 'Arquivo enviado com sucesso.',
     'avatar_updated' => 'Avatar atualizado com sucesso.',
+    'outside_account' => 'Este arquivo não pertence à conta atual.',
 
     // Rejeições da validação de segurança (SecureUploadService). As mensagens
     // são deliberadamente genéricas: informam o usuário sem ensinar o

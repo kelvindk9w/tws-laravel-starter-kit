@@ -124,7 +124,8 @@ it('faz upload do avatar pela função global de upload seguro', function () {
         ->call('updateAvatar')
         ->assertHasNoErrors();
 
-    $upload = Upload::query()->sole();
+    // A foto é PESSOAL (sem conta): lida no modo sistema do teste.
+    $upload = comoSistema(fn () => Upload::query()->sole());
 
     expect($upload->mime)->toBe('image/png')
         ->and($upload->path)->toStartWith('avatars/')
@@ -142,7 +143,7 @@ it('rejeita avatar que não é imagem de verdade (validação por conteúdo)', f
         ->call('updateAvatar')
         ->assertHasErrors(['avatar']);
 
-    expect(Upload::query()->count())->toBe(0)
+    expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
 });
 
@@ -167,6 +168,6 @@ it('texto renomeado para .png é recusado com a mensagem da validação por cont
 
     expect($erros)->toHaveCount(1)
         ->and(array_values(__('uploads.rejected')))->toContain($erros[0])
-        ->and(Upload::query()->count())->toBe(0)
+        ->and(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
 });

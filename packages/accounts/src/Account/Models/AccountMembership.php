@@ -7,6 +7,7 @@ namespace Twstec\Kit\Accounts\Account\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
 use Twstec\Kit\Accounts\Account\Enums\AccountRole;
 use Twstec\Kit\Accounts\Account\Exceptions\AccountOwnershipException;
 use Twstec\Kit\Auth\Contracts\AuthUser;
@@ -55,6 +56,11 @@ class AccountMembership extends Model
                 throw AccountOwnershipException::ownerLeaves();
             }
         });
+
+        // O papel guardado na requisição (CurrentAccount::roleFor) deixa de
+        // valer na hora em que um vínculo muda.
+        static::saved(fn () => app(CurrentAccount::class)->forgetRoles());
+        static::deleted(fn () => app(CurrentAccount::class)->forgetRoles());
     }
 
     /**

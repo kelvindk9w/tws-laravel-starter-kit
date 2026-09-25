@@ -7,6 +7,7 @@ namespace Twstec\Kit\Admin\Support;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Foundation\Identifiers\UuidColumn;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
@@ -31,11 +32,15 @@ use Twstec\Kit\Uploads\Services\SecureUploadService;
  * .txt renomeado para .png apareça como erro embaixo do campo, e não como
  * erro de servidor depois do "Salvar".
  *
+ * A foto é da PESSOA, não de uma conta: o arquivo enviado aqui vira um upload
+ * PESSOAL (SecureUploadService::handlePersonal — sem conta, com `created_by`
+ * = o operador que enviou), lido só pela foto de perfil (HasAvatar).
+ *
  * DONO DO UPLOAD: o valor do campo chega do navegador (estado do Livewire) e
- * pode ser trocado por qualquer uuid. Só vira foto de uma conta o upload que
- * é DELA (enviado por ela na web, pela chave de API dela, ou já vinculado
- * como a foto atual) ou o que acabou de ser enviado NESTE formulário, nesta
- * requisição (ver FreshAvatarUploads). Qualquer outro é recusado: as páginas
+ * pode ser trocado por qualquer uuid. Só vira foto de uma pessoa o upload que
+ * é DELA (foto pessoal que ela mesma enviou, upload da conta pessoal dela, ou
+ * já vinculado como a foto atual) ou o que acabou de ser enviado NESTE
+ * formulário, nesta requisição (ver FreshAvatarUploads). Qualquer outro é recusado: as páginas
  * que gravam a foto (criar/editar usuário e o perfil do admin) perguntam
  * denialFor() ANTES de gravar qualquer coisa e registram a recusa na trilha
  * (AdminAudit::denied). applyTo() é a gravação em si e não repete a pergunta:
@@ -73,8 +78,14 @@ final class AvatarUpload
             ->rules([new SafeFile(['image'])])
             // A gravação é do service, não do Filament.
             ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, SecureUploadService $uploads): ?string {
+                $operador = auth()->user();
+
+                if (! $operador instanceof AuthUser) {
+                    return null;
+                }
+
                 try {
-                    $upload = $uploads->handle($file, directory: self::DIRECTORY, allowedTypes: ['image']);
+                    $upload = $uploads->handlePersonal($file, $operador, directory: self::DIRECTORY, allowedTypes: ['image']);
                 } catch (UploadRejectedException) {
                     // A regra SafeFile já barrou este caso na validação; se
                     // chegou aqui, o arquivo mudou entre uma e outra: some
@@ -172,12 +183,12 @@ final class AvatarUpload
     }
 
     /**
-     * O upload pode virar a foto desta conta?
+     * O upload pode virar a foto desta pessoa?
      *
      * - enviado agora, por este formulário, nesta requisição;
-     * - já é a foto atual da conta;
-     * - é da própria conta: enviado por ela na web (`user_id`) ou pela chave
-     *   de API dela (`tenant_uuid`).
+     * - já é a foto atual dela;
+     * - é dela: foto pessoal que ela mesma enviou, ou upload da CONTA
+     *   PESSOAL dela (enviado por ela na web ou pela chave de API dela).
      */
     private static function mayBecomeAvatarOf(Upload $upload, (Model&AuthUser)|null $user): bool
     {
@@ -195,11 +206,13 @@ final class AvatarUpload
             return true;
         }
 
-        if ($upload->user_id !== null && (string) $upload->user_id === (string) $user->getKey()) {
-            return true;
+        if ($upload->isPersonal()) {
+            return $upload->created_by !== null && (string) $upload->created_by === (string) $user->getKey();
         }
 
-        return $upload->tenant_uuid !== null && (string) $upload->tenant_uuid === (string) $user->getAttribute('uuid');
+        $pessoal = app(AccountService::class)->personalAccountOf($user);
+
+        return $pessoal !== null && $upload->account_id !== null && (string) $upload->account_id === (string) $pessoal->getKey();
     }
 
     /**

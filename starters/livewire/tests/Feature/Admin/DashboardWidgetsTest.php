@@ -195,14 +195,14 @@ it('gráfico sem nenhum movimento mostra estado vazio ilustrado, não uma reta n
         ->and($vazio->getEmptyStateHeading())->toBe(__('admin.dashboards.common.empty_chart_heading'))
         ->and($vazio->getEmptyStateDescription())->toBe(__('admin.dashboards.common.empty_chart_description'));
 
-    Upload::query()->create([
+    naConta(User::factory()->create(), fn () => Upload::query()->create([
         'disk' => 'public',
         'path' => 'uploads/exemplo.jpg',
         'original_name' => 'exemplo.jpg',
         'mime' => 'image/jpeg',
         'size' => 1024,
         'sha256' => str_repeat('a', 64),
-    ]);
+    ]));
 
     expect(Livewire::test(UploadsPerDayChart::class)->assertOk()->instance()->isEmpty())->toBeFalse();
 })->group('demo');
@@ -246,14 +246,14 @@ it('a tabela do dashboard nunca imprime payload de tentativa de ataque', functio
 it('as faixas de KPI das três variantes montam os quatro cards com dados reais', function () {
     logEm(now()->toDateTimeString());
 
-    Upload::query()->create([
+    naConta(User::factory()->create(), fn () => Upload::query()->create([
         'disk' => 'public',
         'path' => 'uploads/exemplo.pdf',
         'original_name' => 'exemplo.pdf',
         'mime' => 'application/pdf',
         'size' => 2048,
         'sha256' => str_repeat('b', 64),
-    ]);
+    ]));
 
     foreach ([OverviewStats::class, GrowthStats::class, ContentStats::class] as $widget) {
         $componente = Livewire::test($widget)->assertOk();

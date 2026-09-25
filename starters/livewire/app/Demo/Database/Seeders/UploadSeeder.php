@@ -10,6 +10,8 @@ use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Uploads\Enums\UploadStatus;
 use Twstec\Kit\Uploads\Models\Upload;
 
@@ -27,6 +29,10 @@ use Twstec\Kit\Uploads\Models\Upload;
  * levemente com o tempo, para a curva ter forma em vez de ruído.
  *
  * IDEMPOTENTE: uuid derivado do índice (UUID v5 com semente fixa).
+ *
+ * Cada upload é de uma CONTA (a conta pessoal de quem enviou), com
+ * `created_by` = a pessoa — como a web e a API gravam. Grava em várias
+ * contas: modo sistema declarado, também quando rodado sozinho (--class).
  */
 final class UploadSeeder extends Seeder
 {
@@ -69,6 +75,11 @@ final class UploadSeeder extends Seeder
 
     public function run(): void
     {
+        Accounts::asSystem('seeder:demo-uploads', fn () => $this->seed());
+    }
+
+    private function seed(): void
+    {
         // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
         // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
         // DemoSurface e DemoSurfaceInProductionException.
@@ -81,6 +92,10 @@ final class UploadSeeder extends Seeder
         }
 
         $tenants = User::query()->orderBy('id')->pluck('uuid')->all();
+
+        // A conta pessoal de cada pessoa (o uuid da conta pessoal é o da pessoa).
+        $contaPorPessoa = Account::query()->whereNotNull('personal_user_id')->pluck('id', 'personal_user_id')->all();
+        $pessoaPorUuid = User::query()->pluck('id', 'uuid')->all();
 
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(DashboardHistorySeeder::SEMENTE);
@@ -121,12 +136,20 @@ final class UploadSeeder extends Seeder
                     $criadoEm = now();
                 }
 
+                // Pela API, quem enviou é a pessoa da chave (a da conta
+                // sorteada); pela web, a pessoa logada. O sorteio continua o
+                // mesmo de antes (mesma sequência do Faker).
+                $quem = $viaApi ? ($pessoaPorUuid[$tenant] ?? null) : $dono;
+                $conta = $quem !== null ? ($contaPorPessoa[$quem] ?? null) : null;
+
+                if ($conta === null) {
+                    continue;
+                }
+
                 (new Upload)->forceFill([
                     'uuid' => $uuid,
-                    // Upload via API pertence ao TENANT; via web, ao usuário
-                    // autenticado (a mesma convenção do ResolveTenant).
-                    'tenant_uuid' => $viaApi ? $tenant : null,
-                    'user_id' => $viaApi ? null : $dono,
+                    'account_id' => $conta,
+                    'created_by' => $quem,
                     'disk' => 'public',
                     // Path = uuid + extensão do MIME real (nunca o nome enviado).
                     'path' => 'uploads/'.$uuid.'.'.$tipo['ext'],
