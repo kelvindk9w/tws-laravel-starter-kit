@@ -6,6 +6,30 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+- **Contas com membros e isolamento automático** (`twstec/kit-accounts`, sem
+  telas novas). Projetos e chaves de API passam a pertencer a uma **conta**
+  (e guardam quem os criou); uma pessoa pode estar em várias contas, com um
+  papel fixo em cada (`owner`, `admin`, `member` — exatamente um dono por
+  conta, garantido no código e no banco), e toda pessoa tem a sua conta
+  pessoal, com o mesmo uuid dela. Toda consulta de dado de conta sai filtrada
+  sozinha pela **conta atual** (no painel, a selecionada na sessão — padrão a
+  pessoal; na API, a da chave) e, **sem conta, dá erro em vez de devolver
+  tudo**. O `/admin`, os comandos, os seeders e os jobs que varrem contas
+  operam num **modo sistema** explícito, com motivo, e cada uso é conferido
+  por uma trava de arquitetura; jobs enfileirados levam a conta de quem os
+  enfileirou e a restauram no worker. Papéis com a matriz em `docs/tenancy.md`
+  (também no Gate como `accounts.*`); o painel Livewire esconde e recusa (403)
+  o que o papel não permite — o dono da conta pessoal, único caso da 1.x, faz
+  tudo como antes. No `/admin`, projetos e chaves mostram a conta de cada
+  linha (com filtro), o dono e quem criou. Seletor de conta, membros e
+  convites chegam na versão seguinte. Guia em `docs/tenancy.md`.
+- **Exclusão de pessoa com contas:** recusada enquanto ela for dona de conta
+  com outros membros (no `/admin`, com o motivo na trilha; por qualquer outro
+  caminho, exceção; por SQL, o gatilho do PostgreSQL); senão a conta pessoal
+  sai com os dados, como na 1.x. Chaves de API de quem sai da conta continuam
+  valendo (são da conta).
+
 ### Alterado
 - **Primeiro pacote: `twstec/kit-foundation`** (`packages/foundation`). A base
   de segurança e infraestrutura — filtro de ataques, limites, cabeçalhos,
@@ -140,6 +164,46 @@ Quem não tinha pepper dedicado (variável ausente) não é afetado; para sair d
 fallback da `APP_KEY`, defina o pepper e declare a `APP_KEY` atual em
 `API_KEYS_PREVIOUS_HASH_PEPPERS`. Detalhes em `docs/api.md`.
 
+### Quebra de compatibilidade — contas com membros
+
+O que muda para quem tem código próprio sobre o `twstec/kit-accounts` (a API
+HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
+
+- **Dado de conta sem conta atual é exceção.** Consulta a `Project`/`ApiKey`
+  num comando, job, seeder, tinker ou teste sem conta atual lança
+  `MissingAccountContextException`. Declare: `Accounts::asSystem('motivo', fn
+  () => …)` (todas as contas) ou `Accounts::actingAs($conta, fn () => …)`.
+  Jobs enfileirados de uma requisição levam a conta sozinhos.
+- **`projects.user_id` e `api_keys.user_id` saíram**: `account_id` +
+  `created_by`. `Project::owner()` e `ApiKey::owner()` saíram: use
+  `account()`, `creator()` e `account->owner`.
+- **`tenant()` devolve a conta** (`Account`), não mais a pessoa; a pessoa por
+  trás da chave é `app(TenantContext::class)->user()` (e o `$request->user()`
+  da rota). `TenantContext::resolve()` recebe conta, chave e pessoa.
+- Serviços: `ProjectService::list()`/`find($uuid)` (eram
+  `listForUser`/`findForUser`), `ApiKeyService::resolveProjectIds($uuids)`
+  (sem a pessoa), `AccountOverviewQuery::forCurrentAccount()` (era
+  `for($pessoa)`) — todos na conta atual. `ProjectService::create()` e
+  `ApiKeyService::create()` mantêm a assinatura; o primeiro parâmetro é quem
+  cria, e a conta é a atual.
+- Excluir pessoa **dona de conta com outros membros** passa a ser recusado.
+- Testes com `Livewire::test` de telas do `/admin` precisam declarar o modo
+  sistema (o painel o declara pelo middleware; o `Livewire::test` não passa
+  por ele) — o starter faz isso em `tests/Pest.php`.
+
+**Atualizando uma base da 1.x** (a migração dos dados roda no
+`php artisan migrate`):
+1. faça backup do banco;
+2. `php artisan migrate` — cria a conta pessoal de cada pessoa com o mesmo id
+   e uuid, passa projetos e chaves para ela (`created_by` = o dono), confere
+   que nada ficou sem conta e instala os gatilhos. Em lotes
+   (`ACCOUNTS_MIGRATION_CHUNK`, padrão 1000); no PostgreSQL, numa transação.
+   `migrate:rollback` desfaz (devolve `user_id`). A trilha de auditoria e a de
+   requisições não são reescritas;
+3. reinicie filas e agendador (`docker compose restart queue scheduler`);
+4. troque o código próprio conforme a lista acima (a trava de arquitetura do
+   starter aponta consulta que pula o escopo).
+
 ### Atualizando um clone existente
 1. `docker compose down` **antes** do `git pull`.
 2. Depois do pull, mover para `starters/livewire/` o que não é versionado:
@@ -164,6 +228,9 @@ fallback da `APP_KEY`, defina o pepper e declare a `APP_KEY` atual em
 7. O build do front em container precisa enxergar `packages/` (o tema do
    `/admin` importa as fontes do pacote): acrescente
    `-v $(pwd)/../../packages:/packages` ao `docker run … npm run build`.
+8. Contas com membros: `php artisan migrate` migra os dados (ver "Quebra de
+   compatibilidade — contas com membros" acima) e `docker compose restart
+   queue scheduler`.
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

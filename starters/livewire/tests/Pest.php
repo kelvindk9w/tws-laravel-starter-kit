@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
 
 // Configuração do Pest 4.
 // Feature: roda com a aplicação Laravel completa + banco de teste — SQLite em
@@ -23,6 +24,17 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->group('demo')
     ->in('Demo');
+
+// Telas do /admin testadas com Livewire::test: o painel opera em MODO SISTEMA
+// das contas (vê todas as contas) pelo middleware persistente do plugin
+// (Twstec\Kit\Admin\Http\Middleware\OperateAdminPanelAsSystem) — e o
+// Livewire::test não passa pela pilha HTTP do painel. Aqui o modo sistema é
+// declarado para o teste inteiro, como o painel faz a cada requisição. A prova
+// pela requisição de verdade (GET do painel e endpoint do Livewire) está em
+// tests/Feature/Accounts/AdminSystemModeTest.php.
+pest()->in('Feature/Admin')->beforeEach(function (): void {
+    app(CurrentAccount::class)->push(CurrentAccount::systemFrame('teste do /admin (Livewire::test)'));
+});
 
 // Helpers compartilhados da suíte de API Keys/Tenancy.
 require_once __DIR__.'/Feature/ApiKeys/Helpers.php';

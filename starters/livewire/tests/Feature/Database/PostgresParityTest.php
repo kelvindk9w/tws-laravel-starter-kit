@@ -11,7 +11,6 @@ use App\Livewire\Projects\Index as ProjectsIndex;
 use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
-use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Admin\Resources\ApiKeys\Pages\ListApiKeys;
 use Twstec\Kit\Admin\Resources\Projects\Pages\ListProjects;
 use Twstec\Kit\Admin\Resources\RequestLogs\Pages\ListRequestLogs;
@@ -76,7 +75,7 @@ describe('uuid malformado na API', function () {
     it('o service trata lista de projetos com uuid malformado como projeto inexistente', function () {
         $user = User::factory()->create();
 
-        app(ApiKeyService::class)->resolveProjectIds($user, [UUID_MALFORMADO]);
+        naConta($user, fn () => app(ApiKeyService::class)->resolveProjectIds([UUID_MALFORMADO]));
     })->throws(InvalidArgumentException::class, 'projects');
 });
 
@@ -163,8 +162,8 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
     });
 
     it('chaves de API', function () {
-        $alvo = app(ApiKeyService::class)->create($this->admin, ['name' => 'integração do estoque'])['api_key'];
-        $outra = app(ApiKeyService::class)->create($this->admin, ['name' => 'outra coisa'])['api_key'];
+        $alvo = criarChave($this->admin, ['name' => 'integração do estoque'])['api_key'];
+        $outra = criarChave($this->admin, ['name' => 'outra coisa'])['api_key'];
 
         Livewire::test(ListApiKeys::class)
             ->searchTable('ESTOQUE')
@@ -173,8 +172,8 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
     });
 
     it('projetos', function () {
-        $alvo = Project::createWithPublicCodeRetry(['user_id' => $this->admin->id, 'name' => 'loja virtual']);
-        $outro = Project::createWithPublicCodeRetry(['user_id' => $this->admin->id, 'name' => 'outro projeto']);
+        $alvo = projetoDe($this->admin, 'loja virtual');
+        $outro = projetoDe($this->admin, 'outro projeto');
 
         Livewire::test(ListProjects::class)
             ->searchTable('Loja VIRTUAL')

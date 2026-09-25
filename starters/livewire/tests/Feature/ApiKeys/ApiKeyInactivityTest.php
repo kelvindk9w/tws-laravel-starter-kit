@@ -24,11 +24,11 @@ beforeEach(function () {
  */
 function envelhecerChave(ApiKey $key, DateTimeInterface $atividade, bool $usada = false): void
 {
-    ApiKey::query()->where('id', $key->id)->update(
+    comoSistema(fn () => ApiKey::query()->where('id', $key->id)->update(
         $usada
             ? ['created_at' => now()->subYear(), 'last_used_at' => $atividade]
             : ['created_at' => $atividade],
-    );
+    ));
 }
 
 it('envia aviso prévio por e-mail dentro da janela e NÃO repete', function () {

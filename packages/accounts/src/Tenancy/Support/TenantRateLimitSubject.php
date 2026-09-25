@@ -11,8 +11,9 @@ use Twstec\Kit\Foundation\Security\Contracts\RateLimitSubjectResolver;
 
 /**
  * O sujeito do limite da API numa requisição autenticada pelo
- * `resolve.tenant`: a CHAVE de API (padrão) ou o tenant dono dela
- * (RATE_LIMIT_API_BY=tenant). Fora de rota autenticada, null — e o
+ * `resolve.tenant`: a CHAVE de API (padrão) ou a CONTA dona dela
+ * (RATE_LIMIT_API_BY=tenant — soma as chaves da conta; na conta pessoal o
+ * uuid é o da pessoa, então o balde tem o mesmo nome da 1.x). Fora de rota autenticada, null — e o
  * ApiRateLimit conta pelo IP.
  *
  * Registrado no container pelo AccountsServiceProvider (a aplicação pode
@@ -31,7 +32,7 @@ final class TenantRateLimitSubject implements RateLimitSubjectResolver
         }
 
         if (ApiRateLimit::countsByTenant()) {
-            return 'tenant:'.(string) $this->context->user()?->uuid;
+            return 'tenant:'.(string) $this->context->account()?->uuid;
         }
 
         return 'key:'.(string) $apiKey->uuid;

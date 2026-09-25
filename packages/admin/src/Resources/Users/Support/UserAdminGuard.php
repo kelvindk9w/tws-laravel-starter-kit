@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Twstec\Kit\Admin\Resources\Users\Support;
 
 use Illuminate\Database\Eloquent\Model;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Support\UserModel;
@@ -17,7 +18,9 @@ use Twstec\Kit\Auth\Support\UserModel;
  * 2. o admin não se exclui nem se bloqueia (não existe "me tranquei fora");
  * 3. o último admin ATIVO não perde a flag, não é bloqueado e não é
  *    excluído — o painel ficaria sem dono e só o comando `user:make-admin`
- *    (que exige shell no servidor) recuperaria o acesso.
+ *    (que exige shell no servidor) recuperaria o acesso;
+ * 4. quem é DONO de conta com outros membros não é excluído — a propriedade
+ *    é transferida antes (twstec/kit-accounts).
  *
  * Cada método devolve NULL quando a ação é permitida ou a mensagem
  * traduzida do motivo quando não é.
@@ -61,7 +64,9 @@ final class UserAdminGuard
             return __('admin.users.cannot_remove_last_admin');
         }
 
-        return null;
+        // Dono de conta com outros membros: a propriedade é transferida antes
+        // (a mesma regra que o pacote de contas aplica no model e no banco).
+        return app(AccountService::class)->deletionDenial($record);
     }
 
     /**

@@ -13,6 +13,7 @@ use Twstec\Kit\Accounts\ApiKeys\Http\Requests\SyncApiKeyProjectsRequest;
 use Twstec\Kit\Accounts\ApiKeys\Http\Resources\ApiKeyResource;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\Tenancy\TenantContext;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 
 /**
@@ -24,21 +25,20 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * projetos não gerencia chaves, exceto rotacionar ou revogar a si mesma
  * (account.key:self) — ver EnsureAccountWideApiKey.
  *
- * Isolamento de tenant (coberto por testes de tenant A x B): TODA consulta é filtrada
- * pelo dono autenticado; chave de outro tenant = 404 uniforme (nunca 403,
- * para não revelar existência).
+ * Isolamento de tenant (coberto por testes de conta A x B): TODA consulta sai
+ * filtrada pela conta da chave (o escopo das contas); chave de outra conta =
+ * 404 uniforme (nunca 403, para não revelar existência).
  */
 final class ApiKeyController
 {
     public function __construct(private readonly ApiKeyService $apiKeys) {}
 
     /**
-     * GET /api/v1/api-keys — lista as chaves do tenant (scope api-keys:read).
+     * GET /api/v1/api-keys — lista as chaves da conta (scope api-keys:read).
      */
     public function index(): AnonymousResourceCollection
     {
         $keys = ApiKey::query()
-            ->where('user_id', $this->tenantUser()->id)
             ->with('projects')
             ->latest()
             ->paginate((int) config('api_keys.pagination.per_page', 15));
@@ -130,7 +130,7 @@ final class ApiKeyController
         $data = $request->validated();
 
         try {
-            $projectIds = $this->apiKeys->resolveProjectIds($this->tenantUser(), $data['project_uuids']);
+            $projectIds = $this->apiKeys->resolveProjectIds($data['project_uuids']);
         } catch (\InvalidArgumentException) {
             throw ValidationException::withMessages([
                 'project_uuids' => __('api_keys.projects.invalid'),
@@ -146,25 +146,24 @@ final class ApiKeyController
     }
 
     /**
-     * Localiza a chave do tenant pelo UUID — 404 uniforme para chave de
-     * outro tenant ou inexistente (anti-IDOR/BOLA: não revela que o recurso existe).
+     * Localiza a chave da conta pelo UUID — 404 uniforme para chave de
+     * outra conta ou inexistente (anti-IDOR/BOLA: não revela que o recurso existe).
      */
     private function findOwned(string $uuid): ApiKey
     {
         /** @var ApiKey */
         return ApiKey::query()
             ->byUuid($uuid)
-            ->where('user_id', $this->tenantUser()->id)
             ->firstOrFail();
     }
 
     /**
-     * Tenant autenticado (o ResolveTenant garante; o user resolver da
-     * request aponta para o dono da chave).
+     * A pessoa por trás da chave (o ResolveTenant garante; é o `created_by`
+     * da chave criada por aqui).
      */
     private function tenantUser(): AuthUser
     {
         /** @var AuthUser */
-        return tenant() ?? throw new \LogicException('Rota sem resolve.tenant.');
+        return app(TenantContext::class)->user() ?? throw new \LogicException('Rota sem resolve.tenant.');
     }
 }

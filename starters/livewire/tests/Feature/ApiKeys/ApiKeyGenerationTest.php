@@ -60,7 +60,7 @@ it('persiste somente o hash da secreta no banco (nunca plaintext)', function () 
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
 
-    $registro = ApiKey::query()->sole();
+    $registro = comoSistema(fn () => ApiKey::query()->sole());
 
     // Nenhuma coluna contém a secreta em claro.
     expect($registro->secret_hash)->not->toBe($secret)

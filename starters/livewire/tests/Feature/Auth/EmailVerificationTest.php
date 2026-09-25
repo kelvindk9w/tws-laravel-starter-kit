@@ -173,7 +173,7 @@ it('conta sem e-mail confirmado não executa ação Livewire do painel pelo endp
     livewireCall($this, $snapshot, 'create', ['name' => 'Projeto sem verificação'])
         ->assertRedirect(route('verification.notice'));
 
-    expect(Project::query()->where('user_id', $user->id)->exists())->toBeFalse();
+    expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->exists()))->toBeFalse();
 });
 
 it('a mensagem de JSON sai no idioma da conta', function (): void {

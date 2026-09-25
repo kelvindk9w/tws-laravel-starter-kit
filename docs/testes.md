@@ -37,6 +37,21 @@ de exports, trilha de auditoria de criar/editar/excluir/bloquear com recusa
 continuam na suíte do starter. Como instalar as dependências do
 pacote está em [`packages/README.md`](../packages/README.md).
 
+**Contas com membros nos testes.** Dado de conta (projetos, chaves) sem conta
+atual é exceção — também num teste. Os helpers de
+`tests/Feature/ApiKeys/Helpers.php` montam o arranjo como o produto faria:
+`criarChave($pessoa)` e `projetoDe($pessoa, 'Nome')` criam na conta pessoal da
+pessoa (e ela é quem criou), `naConta($pessoa, fn () => …)` roda algo na conta
+dela, `contaPessoal($pessoa)` devolve a conta, e `comoSistema(fn () => …)` faz
+a leitura direta de conferência sem filtro de conta — o que toda consulta de
+teste fazia antes das contas. Os testes de telas do `/admin` com
+`Livewire::test` (`tests/Feature/Admin`) rodam em modo sistema, declarado no
+`tests/Pest.php` (o painel o declara pelo middleware; o `Livewire::test` não
+passa por ele). As provas do isolamento ficam em `tests/Feature/Accounts`, nos
+gatilhos em `tests/Feature/Database/AccountDatabaseGuardsTest.php` e nas
+travas de arquitetura (`tests/Unit/Architecture/AccountIsolationTest.php` e
+`tests/Feature/Architecture/AccountModelsTest.php`).
+
 Os testes validam **conteúdo** das respostas, não só o status HTTP. Cada
 módulo descreve o que a sua suíte cobre na seção *Testes* do próprio
 documento: [autenticação](autenticacao.md#testes), [API e chaves](api.md#testes),

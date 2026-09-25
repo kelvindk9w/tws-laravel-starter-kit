@@ -11,6 +11,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Http\Requests\StoreApiKeyRequest;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
@@ -28,6 +30,11 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
  * ApiKeyService e a confirmação sensível ao SensitiveActionService
  * (senha de transação → código por e-mail → token de uso único,
  * consumido aqui via validateToken — mesmo contrato do middleware da API).
+ *
+ * As chaves são da CONTA ATUAL (o escopo das contas filtra toda consulta);
+ * gerir chaves exige o papel owner ou admin na conta
+ * (AccountAbility::ManageApiKeys). A senha de transação e a ação sensível
+ * continuam sendo da PESSOA logada.
  */
 final class Index extends Component
 {
@@ -72,7 +79,7 @@ final class Index extends Component
     // Ações confirmáveis desta tela: 'create' | 'rotate'.
 
     /**
-     * Chaves do usuário (todas — a listagem mostra também o histórico:
+     * Chaves da conta atual (todas — a listagem mostra também o histórico:
      * revogadas, expiradas e rotacionadas com seu status).
      *
      * @return Collection<int, ApiKey>
@@ -80,21 +87,19 @@ final class Index extends Component
     public function keys(): Collection
     {
         return ApiKey::query()
-            ->where('user_id', $this->user()->id)
             ->with('projects:projects.id,projects.uuid,projects.name')
             ->latest()
             ->get();
     }
 
     /**
-     * Projetos do usuário (para os checkboxes de vínculo).
+     * Projetos da conta atual (para os checkboxes de vínculo).
      *
      * @return Collection<int, Project>
      */
     public function projects(): Collection
     {
         return Project::query()
-            ->where('user_id', $this->user()->id)
             ->orderBy('name')
             ->get();
     }
@@ -105,6 +110,7 @@ final class Index extends Component
 
     public function startCreate(): void
     {
+        $this->authorizeManage();
         $this->resetValidation();
         $this->reset('name', 'expiresAt', 'selectedScopes', 'selectedProjectUuids');
         $this->allScopes = true;
@@ -117,6 +123,7 @@ final class Index extends Component
      */
     public function requestCreate(): void
     {
+        $this->authorizeManage();
         $this->validateKeyForm();
 
         if (! $this->user()->hasTransactionPassword()) {
@@ -136,6 +143,7 @@ final class Index extends Component
 
     public function startRotate(string $uuid): void
     {
+        $this->authorizeManage();
         $key = $this->findOwnedKey($uuid);
 
         if (! $key->isUsable()) {
@@ -155,6 +163,7 @@ final class Index extends Component
 
     public function requestRotate(): void
     {
+        $this->authorizeManage();
         $this->validate([
             'gracePeriodMinutes' => ['required', 'integer', 'min:0', 'max:'.(int) config('api_keys.rotation.max_grace_minutes', 10080)],
         ]);
@@ -168,6 +177,7 @@ final class Index extends Component
 
     public function startRevoke(string $uuid): void
     {
+        $this->authorizeManage();
         $this->findOwnedKey($uuid);
         $this->revokingKeyUuid = $uuid;
     }
@@ -179,6 +189,7 @@ final class Index extends Component
 
     public function revoke(ApiKeyService $apiKeys): void
     {
+        $this->authorizeManage();
         $key = $this->findOwnedKey((string) $this->revokingKeyUuid);
 
         $apiKeys->revoke($key);
@@ -193,6 +204,7 @@ final class Index extends Component
 
     public function startEditProjects(string $uuid): void
     {
+        $this->authorizeManage();
         $key = $this->findOwnedKey($uuid);
 
         $this->editingProjectsKeyUuid = $uuid;
@@ -206,6 +218,7 @@ final class Index extends Component
 
     public function saveProjects(ApiKeyService $apiKeys): void
     {
+        $this->authorizeManage();
         $key = $this->findOwnedKey((string) $this->editingProjectsKeyUuid);
 
         $this->validate([
@@ -213,10 +226,10 @@ final class Index extends Component
             'editingProjectsSelection.*' => ['uuid'],
         ]);
 
-        // resolveProjectIds garante que os projetos pertencem ao dono;
-        // uuid de outro tenant vira erro de validação (nunca 500 nem vínculo).
+        // resolveProjectIds garante que os projetos são da conta atual;
+        // uuid de outra conta vira erro de validação (nunca 500 nem vínculo).
         try {
-            $projectIds = $apiKeys->resolveProjectIds($this->user(), $this->editingProjectsSelection);
+            $projectIds = $apiKeys->resolveProjectIds($this->editingProjectsSelection);
         } catch (\InvalidArgumentException) {
             throw ValidationException::withMessages([
                 'editingProjectsSelection' => __('api_keys.projects.invalid'),
@@ -237,6 +250,8 @@ final class Index extends Component
 
     protected function performSensitiveAction(string $action, string $token): void
     {
+        $this->authorizeManage();
+
         // Consome o token exatamente como o middleware `sensitive.token`
         // faria na API — a operação abaixo é a única autorizada por ele.
         abort_unless(app(SensitiveActionService::class)->validateToken($this->user(), $token), 403);
@@ -267,6 +282,7 @@ final class Index extends Component
             'projects' => $this->projects(),
             'scopesCatalog' => (array) config('api_keys.scopes_catalog', []),
             'hasTransactionPassword' => $this->user()->hasTransactionPassword(),
+            'canManageKeys' => Accounts::can(AccountAbility::ManageApiKeys),
         ])->title(__('panel.api_keys.title'));
     }
 
@@ -335,16 +351,23 @@ final class Index extends Component
     }
 
     /**
-     * Busca chave do PRÓPRIO usuário por UUID — uuid de outro tenant = 404
+     * Busca chave da CONTA ATUAL por UUID — uuid de outra conta = 404
      * (anti-enumeração, mesmo padrão dos controllers da API).
      */
     private function findOwnedKey(string $uuid): ApiKey
     {
         /** @var ApiKey */
         return ApiKey::query()
-            ->where('user_id', $this->user()->id)
             ->byUuid($uuid)
             ->firstOrFail();
+    }
+
+    /**
+     * Gerir chaves: owner ou admin da conta (403 para member).
+     */
+    private function authorizeManage(): void
+    {
+        Accounts::authorize(AccountAbility::ManageApiKeys);
     }
 
     private function user(): User

@@ -116,9 +116,10 @@ it('escopo ausente: 403 no envelope, com o escopo exigido na mensagem', function
 it('projeto fora do vínculo da chave: 404 no envelope (não revela que existe); o vinculado responde', function (): void {
     $owner = $this->owner();
     $projects = app(ProjectService::class);
-    $vinculado = $projects->create($owner, 'Vinculado');
-    $fora = $projects->create($owner, 'Fora do vínculo');
-    $deOutro = $projects->create($this->owner(), 'De outra conta');
+    $vinculado = $this->inAccountOf($owner, fn () => $projects->create($owner, 'Vinculado'));
+    $fora = $this->inAccountOf($owner, fn () => $projects->create($owner, 'Fora do vínculo'));
+    $outro = $this->owner();
+    $deOutro = $this->inAccountOf($outro, fn () => $projects->create($outro, 'De outra conta'));
 
     ['api_key' => $key, 'secret_key' => $secret] = $this->keyFor($owner, ['project_uuids' => [$vinculado->uuid]]);
     $headers = $this->credentials($key, $secret);
@@ -136,7 +137,7 @@ it('projeto fora do vínculo da chave: 404 no envelope (não revela que existe);
 
 it('chave vinculada a projetos não faz operação de conta: 403 no envelope', function (): void {
     $owner = $this->owner();
-    $projeto = app(ProjectService::class)->create($owner, 'Único');
+    $projeto = $this->inAccountOf($owner, fn () => app(ProjectService::class)->create($owner, 'Único'));
     ['api_key' => $key, 'secret_key' => $secret] = $this->keyFor($owner, ['project_uuids' => [$projeto->uuid]]);
 
     $response = $this->postJson('/api/v1/projects', ['name' => 'Novo'], $this->credentials($key, $secret));
@@ -175,7 +176,7 @@ it('recusa com 401 a chave revogada, expirada, rotacionada fora da graça e a in
     $expirada->forceFill(['expires_at' => now()->subMinute()])->save();
 
     ['api_key' => $rotacionada, 'secret_key' => $s3] = $this->keyFor($owner);
-    $keys->rotate($rotacionada, null);
+    $this->inAccountOf($owner, fn () => $keys->rotate($rotacionada, null));
 
     ['api_key' => $inativa, 'secret_key' => $s4] = $this->keyFor($owner);
     $inativa->forceFill(['last_used_at' => now()->subMonthsNoOverflow((int) config('api_keys.inactivity.months'))->subDay()])->save();
@@ -206,7 +207,7 @@ it('recusa com 401 a chave de dono com e-mail não confirmado ou com conta inati
 
 it('credencial válida: 200 no envelope de sucesso, com o tenant resolvido', function (): void {
     $owner = $this->owner();
-    app(ProjectService::class)->create($owner, 'Meu projeto');
+    $this->inAccountOf($owner, fn () => app(ProjectService::class)->create($owner, 'Meu projeto'));
     ['api_key' => $key, 'secret_key' => $secret] = $this->keyFor($owner);
 
     $this->getJson('/api/v1/projects', $this->credentials($key, $secret))

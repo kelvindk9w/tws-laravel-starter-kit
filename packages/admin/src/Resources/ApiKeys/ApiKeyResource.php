@@ -60,9 +60,9 @@ final class ApiKeyResource extends BaseResource
                 ->label(__('panel.common.name'))
                 ->searchable(),
             self::publicKeyColumn(),
-            TextColumn::make('owner.email')
-                ->label(__('admin.api_keys.owner'))
-                ->searchable(),
+            AdminColumns::account(),
+            AdminColumns::accountOwner(__('admin.api_keys.owner')),
+            AdminColumns::creator(),
             self::statusColumn(),
             AdminColumns::dateTime('last_used_at', __('admin.api_keys.last_used'))
                 ->placeholder(__('admin.api_keys.never')),
@@ -91,12 +91,10 @@ final class ApiKeyResource extends BaseResource
                     ->icon(Heroicon::OutlinedKey)
                     ->color('gray')
                     ->size(TextSize::Small),
-                TextColumn::make('owner.email')
-                    ->label(__('admin.api_keys.owner'))
+                AdminColumns::accountOwner(__('admin.api_keys.owner'))
                     ->icon(Heroicon::OutlinedUserCircle)
                     ->color('gray')
-                    ->size(TextSize::Small)
-                    ->searchable(),
+                    ->size(TextSize::Small),
                 AdminColumns::dateTime('last_used_at', __('admin.api_keys.last_used'))
                     ->placeholder(__('admin.api_keys.never'))
                     ->size(TextSize::Small)
@@ -138,6 +136,7 @@ final class ApiKeyResource extends BaseResource
     {
         return $table
             ->filters([
+                AdminColumns::accountFilter(),
                 SelectFilter::make('status')
                     ->label(__('panel.common.status'))
                     ->options([
@@ -157,7 +156,7 @@ final class ApiKeyResource extends BaseResource
                     ->modalHeading(__('admin.api_keys.revoke_heading'))
                     ->modalDescription(fn (ApiKey $record): string => __('admin.api_keys.revoke_warning', [
                         'key' => $record->public_key,
-                        'owner' => $record->owner->email,
+                        'owner' => (string) $record->account?->owner?->getAttribute('email'),
                     ]))
                     ->action(function (ApiKey $record, ApiKeyService $apiKeys): void {
                         $apiKeys->revoke($record);

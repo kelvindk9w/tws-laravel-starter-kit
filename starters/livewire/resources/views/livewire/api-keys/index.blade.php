@@ -11,12 +11,13 @@
             <h1 class="font-display text-h1">{{ __('panel.api_keys.title') }}</h1>
             <p class="mt-1.5 max-w-2xl text-sm text-text-muted">{{ __('panel.api_keys.subtitle') }}</p>
         </div>
-        @unless ($showCreateForm)
+        {{-- Gerir chaves: owner ou admin da conta (AccountAbility::ManageApiKeys). --}}
+        @if ($canManageKeys && ! $showCreateForm)
             <x-button type="button" wire:click="startCreate" size="sm">
                 <x-ui-icon name="plus" class="h-4 w-4" />
                 {{ __('panel.api_keys.new') }}
             </x-button>
-        @endunless
+        @endif
     </div>
 
     @if (session('keys_status'))
@@ -171,7 +172,9 @@
                 :title="__('panel.api_keys.empty_title')"
                 :description="__('panel.api_keys.empty')"
             >
-                <x-button type="button" wire:click="startCreate">{{ __('panel.api_keys.new') }}</x-button>
+                @if ($canManageKeys)
+                    <x-button type="button" wire:click="startCreate">{{ __('panel.api_keys.new') }}</x-button>
+                @endif
             </x-empty-state>
         @endunless
     @else
@@ -234,7 +237,7 @@
                     </x-table-cell>
 
                     <x-table-cell :label="__('panel.common.actions')" align="end">
-                        @if ($key->isUsable())
+                        @if ($key->isUsable() && $canManageKeys)
                             {{-- Ações de ROTINA como secundárias pequenas;
                                  REVOGAR (irreversível) vai para o menu de
                                  overflow. Antes as três tinham o mesmo peso

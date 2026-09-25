@@ -9,6 +9,8 @@ use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
@@ -22,12 +24,20 @@ use Twstec\Kit\Accounts\Tenancy\Models\Project;
  *
  * IDEMPOTENTE: o uuid de cada projeto é derivado do índice (UUID v5 com
  * semente fixa) — a segunda execução não cria nada.
+ *
+ * Cada projeto vai para a CONTA PESSOAL de uma pessoa sorteada (e ela é quem
+ * criou). Varre contas: roda em modo sistema declarado.
  */
 final class ProjectSeeder extends Seeder
 {
     public const QUANTIDADE = 28;
 
     public function run(): void
+    {
+        Accounts::asSystem('seeder:demo-projects', fn () => $this->seed());
+    }
+
+    private function seed(): void
     {
         // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
         // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
@@ -39,6 +49,8 @@ final class ProjectSeeder extends Seeder
         if ($usuarios === []) {
             return;
         }
+
+        $contaPessoal = Account::query()->whereIn('personal_user_id', $usuarios)->pluck('id', 'personal_user_id');
 
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(DashboardHistorySeeder::SEMENTE);
@@ -73,7 +85,8 @@ final class ProjectSeeder extends Seeder
 
             (new Project)->forceFill([
                 'uuid' => $uuid,
-                'user_id' => $dono,
+                'account_id' => $contaPessoal[$dono],
+                'created_by' => $dono,
                 'name' => $nome,
                 'status' => $arquivado ? ProjectStatus::Archived : ProjectStatus::Active,
                 'created_at' => $criadoEm,

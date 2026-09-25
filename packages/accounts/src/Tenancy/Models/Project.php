@@ -8,29 +8,29 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Twstec\Kit\Accounts\Account\Concerns\BelongsToAccount;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
-use Twstec\Kit\Auth\Contracts\AuthUser;
-use Twstec\Kit\Auth\Support\UserModel;
 use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
 use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Projeto — camada ORGANIZACIONAL da conta.
  *
- * 1 login (pessoa) gerencia N projetos. Por ora o projeto nasce SÓ COM NOME
+ * Pertence à CONTA (BelongsToAccount: toda consulta sai filtrada pela conta
+ * atual; `created_by` guarda quem criou). Uma conta tem N projetos. Por ora
+ * o projeto nasce SÓ COM NOME
  * (pode existir sem empresa — ex.: pessoa antes de abrir CNPJ). Hoje é
  * metadado para separar dados e visões; a custódia segue uma por conta.
  *
  * Identificadores (3 camadas — anti-enumeração): `id` nunca exposto; `uuid` externo;
  * `codigo_publico` legível PRJ-xxxxxx.
  */
-#[Fillable(['user_id', 'name', 'status'])]
+#[Fillable(['account_id', 'created_by', 'name', 'status'])]
 class Project extends Model
 {
-    use HasPublicCode, HasUuids, RoutesByUuid;
+    use BelongsToAccount, HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: PRJ-xxxxxx.
@@ -68,19 +68,10 @@ class Project extends Model
     }
 
     /**
-     * Dono do projeto (tenant).
-     *
-     * @return BelongsTo<Model&AuthUser, $this>
-     */
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(UserModel::name(), 'user_id');
-    }
-
-    /**
-     * Projetos que a CHAVE DE API enxerga: sempre só os do dono
-     * da chave; se a chave é restrita, só os vinculados a ela — inclusive
-     * nenhum, quando todos os vinculados foram excluídos (fail-closed).
+     * Projetos que a CHAVE DE API enxerga: os da conta (o escopo da conta
+     * atual — na API, a conta da chave); se a chave é restrita, só os
+     * vinculados a ela — inclusive nenhum, quando todos os vinculados foram
+     * excluídos (fail-closed).
      *
      * Toda consulta de projeto feita em nome de uma chave passa por aqui.
      *
@@ -88,8 +79,6 @@ class Project extends Model
      */
     public function scopeVisibleToApiKey(Builder $query, ApiKey $apiKey): void
     {
-        $query->where('user_id', $apiKey->user_id);
-
         if ($apiKey->isRestrictedToProjects()) {
             $query->whereHas('apiKeys', fn (Builder $keys) => $keys->whereKey($apiKey->getKey()));
         }

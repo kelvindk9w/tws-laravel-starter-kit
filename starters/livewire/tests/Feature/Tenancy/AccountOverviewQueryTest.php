@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverview;
 use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverviewQuery;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
@@ -17,7 +16,10 @@ use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 //
 // O dashboard do painel (DashboardTest) segue provando o que aparece na tela;
 // aqui a prova é do backend reutilizável: isolamento por conta, janelas
-// configuráveis e o formato do resultado que qualquer front recebe.
+// configuráveis e o formato do resultado que qualquer front recebe. A consulta
+// é da CONTA ATUAL (naConta = a conta pessoal da pessoa, como no painel dela);
+// o tráfego é o de `request_logs.tenant_uuid` = uuid da conta, que na conta
+// pessoal é o uuid da pessoa.
 // =============================================================================
 
 function overviewLog(string $tenantUuid, Carbon $quando, string $endpoint = '/api/v1/projects'): void
@@ -39,15 +41,15 @@ it('conta só o que é da conta: chaves ativas, projetos e tráfego', function (
     $user = User::factory()->create();
     $outro = User::factory()->create();
 
-    app(ApiKeyService::class)->create($user, ['name' => 'Minha']);
-    app(ApiKeyService::class)->create($outro, ['name' => 'Alheia']);
-    app(ProjectService::class)->create($user, 'Loja');
-    app(ProjectService::class)->create($outro, 'Alheia');
+    criarChave($user, ['name' => 'Minha']);
+    criarChave($outro, ['name' => 'Alheia']);
+    naConta($user, fn () => app(ProjectService::class)->create($user, 'Loja'));
+    naConta($outro, fn () => app(ProjectService::class)->create($outro, 'Alheia'));
 
     overviewLog($user->uuid, now()->subDay());
     overviewLog($outro->uuid, now()->subDay(), '/api/v1/alheio');
 
-    $overview = app(AccountOverviewQuery::class)->for($user);
+    $overview = naConta($user, fn () => app(AccountOverviewQuery::class)->forCurrentAccount());
 
     expect($overview)->toBeInstanceOf(AccountOverview::class)
         ->and($overview->activeKeysCount)->toBe(1)
@@ -65,14 +67,14 @@ it('usa as janelas padrão e aceita outras', function () {
     overviewLog($user->uuid, now()->subDays(2));
     overviewLog($user->uuid, now()->subDays(5));
 
-    $padrao = app(AccountOverviewQuery::class)->for($user);
+    $padrao = naConta($user, fn () => app(AccountOverviewQuery::class)->forCurrentAccount());
 
     expect($padrao->chartDays)->toBe(AccountOverviewQuery::CHART_DAYS)
         ->and($padrao->chart['labels'])->toHaveCount(AccountOverviewQuery::CHART_DAYS)
         ->and($padrao->recentRequestsDays)->toBe(AccountOverviewQuery::RECENT_DAYS)
         ->and($padrao->recentRequestsCount)->toBe(3);
 
-    $curta = app(AccountOverviewQuery::class)->for($user, chartDays: 4, recentDays: 2, recentCalls: 1);
+    $curta = naConta($user, fn () => app(AccountOverviewQuery::class)->forCurrentAccount(chartDays: 4, recentDays: 2, recentCalls: 1));
 
     expect($curta->chart['labels'])->toHaveCount(4)
         ->and(array_sum($curta->chart['values']))->toBe(2)
@@ -83,7 +85,7 @@ it('usa as janelas padrão e aceita outras', function () {
 it('entrega à tela as mesmas chaves que o dashboard sempre recebeu', function () {
     $user = User::factory()->create();
 
-    expect(array_keys(app(AccountOverviewQuery::class)->for($user)->toArray()))->toBe([
+    expect(array_keys(naConta($user, fn () => app(AccountOverviewQuery::class)->forCurrentAccount())->toArray()))->toBe([
         'activeKeysCount',
         'projectsCount',
         'recentRequestsCount',

@@ -7,13 +7,21 @@ namespace Twstec\Kit\Accounts;
 use Closure;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Http\Kernel as HttpKernelContract;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Throwable;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
+use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Account\Http\Middleware\ResolveCurrentAccount;
+use Twstec\Kit\Accounts\Account\Queue\AccountJobContext;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
+use Twstec\Kit\Accounts\Account\Support\PersonLifecycle;
 use Twstec\Kit\Accounts\ApiKeys\Console\ProcessApiKeyInactivity;
 use Twstec\Kit\Accounts\ApiKeys\Http\Middleware\EnsureAccountWideApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Http\Middleware\EnsureApiKeyScope;
@@ -21,6 +29,7 @@ use Twstec\Kit\Accounts\ApiKeys\Support\PepperWarnings;
 use Twstec\Kit\Accounts\Tenancy\Middleware\ResolveTenant;
 use Twstec\Kit\Accounts\Tenancy\Support\TenantRateLimitSubject;
 use Twstec\Kit\Accounts\Tenancy\TenantContext;
+use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 use Twstec\Kit\Foundation\Security\Contracts\RateLimitSubjectResolver;
@@ -30,6 +39,14 @@ use WeakMap;
  * O que o pacote de contas e API instala numa aplicação Laravel — sozinho,
  * sem a aplicação precisar lembrar de chamar nada:
  *
+ * - CONTAS COM MEMBROS e o ISOLAMENTO AUTOMÁTICO (ver registerAccounts): a
+ *   conta atual por requisição (web: a selecionada na sessão, padrão a
+ *   pessoal; API: a da chave), o middleware da web no fim do grupo `web`,
+ *   a conta pessoal de cada pessoa criada, a regra de exclusão de pessoa, o
+ *   contexto de conta nos jobs enfileirados e as habilidades por papel no
+ *   Gate (`accounts.*`). O escopo que filtra projetos e chaves pela conta
+ *   atual vem dos próprios models (Concerns\BelongsToAccount) — não há como
+ *   desligá-lo;
  * - a configuração padrão (`config('api_keys')`), as migrations (projetos,
  *   chaves de API e o vínculo entre eles, com os MESMOS nomes de arquivo que
  *   tinham no aplicativo) e as traduções do domínio (`api_keys.*` e o
@@ -100,6 +117,15 @@ final class AccountsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom($this->path('config/api_keys.php'), 'api_keys');
+        $this->mergeConfigFrom($this->path('config/accounts.php'), 'accounts');
+
+        // Conta atual da requisição (ver Account\CurrentAccount) e o contexto
+        // de conta dos jobs. Zerados por requisição pelos middlewares do
+        // pacote (web e API).
+        $this->app->singleton(CurrentAccount::class);
+        $this->app->singleton(AccountJobContext::class);
+        $this->app->singleton(PersonLifecycle::class);
+        $this->app->singleton(AccountService::class);
 
         // Contexto do tenant da requisição, preenchido pelo ResolveTenant.
         // PHP-FPM garante o ciclo por requisição; se Octane entrar um dia,
@@ -117,6 +143,7 @@ final class AccountsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->registerAccounts();
         $this->registerApiProtections();
 
         // Pepper do hash das chaves de API em produção: sem pepper dedicado
@@ -141,8 +168,46 @@ final class AccountsServiceProvider extends ServiceProvider
 
             $this->publishes([
                 $this->path('config/api_keys.php') => config_path('api_keys.php'),
+                $this->path('config/accounts.php') => config_path('accounts.php'),
             ], 'accounts-config');
         }
+    }
+
+    /**
+     * Contas com membros: tudo o que o isolamento precisa, ligado pelo pacote.
+     */
+    private function registerAccounts(): void
+    {
+        $events = $this->app['events'];
+
+        // Pessoa criada → conta pessoal; pessoa excluída → regra do dono.
+        PersonLifecycle::register($events);
+
+        // Jobs levam a conta de quem enfileirou e a restauram no worker.
+        AccountJobContext::register($events);
+
+        // Fim de TODA requisição HTTP (web, API, /admin): o modo sistema da
+        // requisição e o cache da sessão não sobram para a próxima.
+        $events->listen(RequestHandled::class, static function (): void {
+            app(CurrentAccount::class)->endRequest();
+        });
+
+        // Papel na conta atual como habilidade do Gate: `accounts.<ação>`.
+        foreach (AccountAbility::cases() as $ability) {
+            Gate::define($ability->gateName(), static fn (AuthUser $user): bool => Accounts::can($ability, $user));
+        }
+
+        if (config('accounts.web.middleware', true) === false) {
+            Log::warning('ACCOUNTS_WEB_MIDDLEWARE=false: o middleware de conta atual do twstec/kit-accounts NÃO está no grupo `web` — o contexto de conta não é zerado a cada requisição e a seleção de conta que deixou de valer não é limpa da sessão. O isolamento continua (o escopo lança exceção sem conta). Só é seguro se a aplicação instalar o Twstec\Kit\Accounts\Account\Http\Middleware\ResolveCurrentAccount por conta própria.');
+
+            return;
+        }
+
+        $this->callAfterResolving(HttpKernelContract::class, function (HttpKernelContract $kernel): void {
+            if ($kernel instanceof HttpKernel && array_key_exists('web', $kernel->getMiddlewareGroups())) {
+                $kernel->appendMiddlewareToGroup('web', ResolveCurrentAccount::class);
+            }
+        });
     }
 
     /**

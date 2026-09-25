@@ -9,6 +9,8 @@ use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
@@ -35,6 +37,12 @@ final class ApiKeySeeder extends Seeder
 
     public function run(): void
     {
+        // Varre contas: modo sistema declarado.
+        Accounts::asSystem('seeder:demo-api-keys', fn () => $this->seed());
+    }
+
+    private function seed(): void
+    {
         // Fail-closed: dado FICTÍCIO nunca entra num banco de produção só
         // porque alguém rodou o seeder. Lança (não sai em silêncio) — ver
         // DemoSurface e DemoSurfaceInProductionException.
@@ -49,7 +57,9 @@ final class ApiKeySeeder extends Seeder
         $faker = FakerFactory::create('pt_BR');
         $faker->seed(DashboardHistorySeeder::SEMENTE);
 
-        $projetosPorDono = Project::query()->get(['id', 'user_id'])->groupBy('user_id');
+        // Chaves e projetos são da CONTA PESSOAL de cada pessoa sorteada.
+        $contaPessoal = Account::query()->whereIn('personal_user_id', $usuarios)->pluck('id', 'personal_user_id');
+        $projetosPorConta = Project::query()->get(['id', 'account_id'])->groupBy('account_id');
 
         for ($indice = 0; $indice < self::QUANTIDADE; $indice++) {
             $uuid = (string) Uuid::uuid5(DashboardHistorySeeder::NAMESPACE_UUID, 'api-key-seed-'.$indice);
@@ -87,7 +97,8 @@ final class ApiKeySeeder extends Seeder
 
             $chave->forceFill([
                 'uuid' => $uuid,
-                'user_id' => $dono,
+                'account_id' => $contaPessoal[$dono],
+                'created_by' => $dono,
                 'name' => $nome,
                 // Chave PÚBLICA determinística (identificador, não segredo).
                 'public_key' => 'pk_test_'.substr(hash('sha256', 'api-key-public-'.$indice), 0, 32),
@@ -101,10 +112,10 @@ final class ApiKeySeeder extends Seeder
                 'updated_at' => $criadaEm,
             ])->save();
 
-            // Vínculo com um projeto do MESMO dono, quando houver: chave sem
+            // Vínculo com um projeto da MESMA conta, quando houver: chave sem
             // vínculo enxerga a conta inteira — as duas
             // situações aparecem na demo.
-            $projetos = $projetosPorDono->get($dono);
+            $projetos = $projetosPorConta->get($contaPessoal[$dono]);
 
             if ($projetos !== null && $indice % 3 !== 0) {
                 app(ApiKeyService::class)->syncProjects($chave, [$projetos->first()->id]);

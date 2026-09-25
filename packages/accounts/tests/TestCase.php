@@ -8,6 +8,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Testbench;
 use Spatie\Backup\BackupServiceProvider;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\AccountsServiceProvider;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
@@ -112,14 +115,41 @@ abstract class TestCase extends Testbench
     }
 
     /**
-     * Chave criada pelo serviço do pacote (como o painel e a API criam).
+     * Chave criada pelo serviço do pacote (como o painel e a API criam), na
+     * conta pessoal da pessoa — ou na conta dada.
      *
      * @param  array<string, mixed>  $data
      * @return array{api_key: ApiKey, secret_key: string}
      */
-    protected function keyFor(User $owner, array $data = []): array
+    protected function keyFor(User $owner, array $data = [], ?Account $account = null): array
     {
-        return app(ApiKeyService::class)->create($owner, ['name' => 'Integração', ...$data]);
+        return Accounts::actingAs(
+            $account ?? $this->accountOf($owner),
+            fn (): array => app(ApiKeyService::class)->create($owner, ['name' => 'Integração', ...$data]),
+            $owner,
+        );
+    }
+
+    /**
+     * A conta pessoal da pessoa (criada junto com ela pelo pacote).
+     */
+    protected function accountOf(User $user): Account
+    {
+        return app(AccountService::class)->personalAccountOf($user)
+            ?? throw new \LogicException('Pessoa sem conta pessoal.');
+    }
+
+    /**
+     * Roda o arranjo/consulta do teste dentro da conta pessoal da pessoa.
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $callback
+     * @return T
+     */
+    protected function inAccountOf(User $user, \Closure $callback): mixed
+    {
+        return Accounts::actingAs($this->accountOf($user), $callback, $user);
     }
 
     /**

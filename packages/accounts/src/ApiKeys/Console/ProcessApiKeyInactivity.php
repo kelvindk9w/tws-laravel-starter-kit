@@ -10,6 +10,7 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Mail\ApiKeyInactivityWarningMail;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
@@ -27,6 +28,10 @@ use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
  *    expired_inactivity (irreversível pelo usuário — cria-se/rotaciona-se).
  *
  * Limites vêm de config/api_keys.php (API_KEYS_INACTIVITY_*) — nada hardcoded.
+ *
+ * Varre as chaves de TODAS as contas: roda em modo sistema declarado
+ * (`console:api-keys:process-inactivity`). O aviso vai para o DONO da conta
+ * da chave (na conta pessoal, a própria pessoa, como na 1.x).
  */
 final class ProcessApiKeyInactivity extends Command
 {
@@ -49,8 +54,10 @@ final class ProcessApiKeyInactivity extends Command
         $expireBefore = now()->subMonthsNoOverflow($config['months']);
         $warnBefore = now()->subMonthsNoOverflow($config['months'])->addDays($config['warning_days']);
 
-        $warned = $this->sendWarnings($warnBefore, $expireBefore, $config['warning_days']);
-        $expired = $this->expireInactive($expireBefore);
+        [$warned, $expired] = Accounts::asSystem('console:api-keys:process-inactivity', fn (): array => [
+            $this->sendWarnings($warnBefore, $expireBefore, $config['warning_days']),
+            $this->expireInactive($expireBefore),
+        ]);
 
         $this->info("Avisos de inatividade enviados: {$warned}. Chaves desativadas: {$expired}.");
 
@@ -73,18 +80,20 @@ final class ProcessApiKeyInactivity extends Command
             ->where('status', ApiKeyStatus::Active)
             ->whereNull('inactivity_warning_sent_at')
             ->where(fn (Builder $query) => $this->lastActivityBetween($query, $expireBefore, $warnBefore))
-            ->with('owner')
+            ->with('account.owner')
             ->chunkById(100, function ($keys) use (&$warned, $warningDays): void {
                 foreach ($keys as $key) {
                     /** @var ApiKey $key */
-                    if ($key->owner === null) {
+                    $owner = $key->account?->owner;
+
+                    if ($owner === null) {
                         continue;
                     }
 
                     // Locale do DESTINATÁRIO: o aviso sai no idioma
                     // preferido do usuário, não no locale da requisição CLI.
-                    Mail::to($key->owner)
-                        ->locale($key->owner instanceof HasLocalePreference ? $key->owner->preferredLocale() : null)
+                    Mail::to($owner)
+                        ->locale($owner instanceof HasLocalePreference ? $owner->preferredLocale() : null)
                         ->queue(new ApiKeyInactivityWarningMail($key, $warningDays));
 
                     $key->forceFill(['inactivity_warning_sent_at' => now()])->save();

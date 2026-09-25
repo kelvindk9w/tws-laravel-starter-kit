@@ -73,7 +73,7 @@ it('o aviso de inatividade enfileirado com os nomes antigos volta com a chave ce
 
 it('a referência de model com o nome antigo (snapshot, fila) acha o registro', function (): void {
     $owner = $this->owner();
-    $projeto = Project::createWithPublicCodeRetry(['user_id' => $owner->id, 'name' => 'Antigo']);
+    $projeto = $this->inAccountOf($owner, fn () => Project::createWithPublicCodeRetry(['name' => 'Antigo']));
 
     $restaurador = new class
     {

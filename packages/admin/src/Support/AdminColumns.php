@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Twstec\Kit\Admin\Support;
 
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 
 /**
  * Colunas que TODA listagem do super admin repetia palavra por palavra
@@ -29,6 +30,52 @@ final class AdminColumns
             ->searchable()
             ->copyable()
             ->copyMessage(__('admin.common.copied'));
+    }
+
+    /**
+     * A CONTA dona do registro (código público ACC-xxxxxx) — o /admin opera
+     * em modo sistema e vê todas as contas; esta coluna diz de qual é cada
+     * linha.
+     */
+    public static function account(): TextColumn
+    {
+        return TextColumn::make('account.codigo_publico')
+            ->label(__('admin.common.account'))
+            ->searchable()
+            ->copyable()
+            ->copyMessage(__('admin.common.copied'));
+    }
+
+    /**
+     * Dono da conta do registro (e-mail).
+     */
+    public static function accountOwner(string $label): TextColumn
+    {
+        return TextColumn::make('account.owner.email')
+            ->label($label)
+            ->searchable();
+    }
+
+    /**
+     * Quem criou o registro (pode ter saído da conta — o registro é da conta).
+     */
+    public static function creator(): TextColumn
+    {
+        return TextColumn::make('creator.email')
+            ->label(__('admin.common.created_by'))
+            ->placeholder('—')
+            ->toggleable(isToggledHiddenByDefault: true);
+    }
+
+    /**
+     * Filtro simples por conta (código público).
+     */
+    public static function accountFilter(): SelectFilter
+    {
+        return SelectFilter::make('account')
+            ->label(__('admin.common.account_filter'))
+            ->relationship('account', 'codigo_publico')
+            ->searchable();
     }
 
     /**

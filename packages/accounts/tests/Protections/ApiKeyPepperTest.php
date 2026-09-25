@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
 use Twstec\Kit\Accounts\ApiKeys\Support\Exceptions\MissingApiKeyPepperException;
@@ -64,7 +65,7 @@ function withPepperEnv(array $vars, Closure $callback): mixed
  */
 function storedHash(ApiKey $key): string
 {
-    return (string) ApiKey::query()->whereKey($key->getKey())->value('secret_hash');
+    return (string) Accounts::asSystem('teste: hash gravado', fn () => ApiKey::query()->whereKey($key->getKey())->value('secret_hash'));
 }
 
 /**
@@ -240,7 +241,7 @@ it('trocar o pepper sem declarar o anterior continua recusando a chave antiga co
  */
 function legacyEmptyPepperKey(ApiKey $key, string $secret): array
 {
-    ApiKey::query()->whereKey($key->getKey())->update(['secret_hash' => hash_hmac('sha256', $secret, '')]);
+    Accounts::asSystem('teste: hash legado', fn () => ApiKey::query()->whereKey($key->getKey())->update(['secret_hash' => hash_hmac('sha256', $secret, '')]));
 
     return ['api_key' => $key->refresh(), 'secret_key' => $secret];
 }

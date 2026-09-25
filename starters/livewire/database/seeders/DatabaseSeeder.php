@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Twstec\Kit\Accounts\Accounts;
 
 /**
  * Agregador do `db:seed`.
@@ -16,6 +17,11 @@ use Illuminate\Database\Seeder;
  * container com a tag `database.seeders`, e é aqui que eles rodam. A
  * demonstração do kit registra o dela (contas demo, massa fictícia e o
  * histórico dos dashboards), com as regras de quando pode semear.
+ *
+ * MODO SISTEMA declarado (contas com membros): um seeder grava em várias
+ * contas, e dado de conta sem conta atual é exceção. Os seeders rodam dentro
+ * de `Accounts::asSystem('db:seed', …)` e, gravando dado de conta, informam a
+ * conta de cada linha.
  *
  * SEM WithoutModelEvents (e isso é decisão, não esquecimento): os models do
  * kit preenchem `uuid` (HasUuids/booted) e `codigo_publico` (HasPublicCode) no
@@ -35,8 +41,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach (app()->tagged(self::EXTENSION_TAG) as $seeder) {
-            $this->call($seeder::class);
-        }
+        Accounts::asSystem('db:seed', function (): void {
+            foreach (app()->tagged(self::EXTENSION_TAG) as $seeder) {
+                $this->call($seeder::class);
+            }
+        });
     }
 }

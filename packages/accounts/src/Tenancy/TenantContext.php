@@ -4,38 +4,59 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Accounts\Tenancy;
 
+use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 
 /**
- * Contexto do tenant da requisição corrente.
+ * Contexto da requisição da API autenticada por chave.
  *
- * Preenchido pelo middleware ResolveTenant após autenticar a secret key:
- * o TENANT é o usuário dono da chave. Acesso global via helpers tenant() e
- * tenantKey() (src/Tenancy/helpers.php do pacote).
+ * Preenchido pelo middleware ResolveTenant depois de autenticar a secreta:
+ * - o TENANT é a CONTA da chave (helper tenant());
+ * - a chave que autenticou (helper tenantKey());
+ * - a PESSOA por trás da chave, para o que é por pessoa (o token de ação
+ *   sensível, o `created_by`): quem criou a chave, enquanto for membro ativo
+ *   da conta; senão, o dono da conta. É também o `$request->user()` da rota.
  *
- * Registrado como singleton no container — o ciclo de vida "por requisição"
- * é garantido pelo PHP-FPM (shared-nothing). SE Octane/worker mode for
- * adotado um dia, este estado DEVE ser resetado entre requisições
- * (worker-safety: senão o tenant de uma vaza para a próxima).
+ * Zerado no fim de cada requisição pelo próprio ResolveTenant (nada sobra
+ * para a próxima num processo longo — Octane, testes).
  */
 final class TenantContext
 {
-    private ?AuthUser $user = null;
+    private ?Account $account = null;
 
     private ?ApiKey $apiKey = null;
+
+    private ?AuthUser $user = null;
 
     /**
      * Resolve o tenant da requisição (chamado somente pelo ResolveTenant).
      */
-    public function resolve(AuthUser $user, ApiKey $apiKey): void
+    public function resolve(Account $account, ApiKey $apiKey, AuthUser $user): void
     {
-        $this->user = $user;
+        $this->account = $account;
         $this->apiKey = $apiKey;
+        $this->user = $user;
+    }
+
+    public function forget(): void
+    {
+        $this->account = null;
+        $this->apiKey = null;
+        $this->user = null;
     }
 
     /**
-     * Usuário dono da chave autenticada (o tenant). Null fora de rota tenant.
+     * A conta da chave autenticada (o tenant). Null fora de rota tenant.
+     */
+    public function account(): ?Account
+    {
+        return $this->account;
+    }
+
+    /**
+     * A pessoa por trás da chave (ver o docblock da classe). Null fora de
+     * rota tenant.
      */
     public function user(): ?AuthUser
     {
@@ -52,6 +73,6 @@ final class TenantContext
 
     public function resolved(): bool
     {
-        return $this->user !== null;
+        return $this->account !== null;
     }
 }

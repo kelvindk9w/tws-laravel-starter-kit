@@ -21,10 +21,19 @@ Authorization: Bearer sk_test_xQ7...
 O prefixo de ambiente (`live`/`test`) vem de `API_KEYS_ENVIRONMENT`
 (`config/api_keys.php`).
 
-**Dono da chave precisa estar ativo e com o e-mail confirmado.** A cada
-chamada o `ResolveTenant` confere o dono: conta bloqueada/pendente ou, com a
-verificação de e-mail ligada (padrão), conta sem e-mail confirmado recebe o
-mesmo 401 mudo de chave inválida. Na prática uma conta nova nem chega a ter
+**A chave autentica a CONTA** (2.0 — ver [Contas](tenancy.md)). A chave é da
+conta, não de quem a criou: continua valendo quando essa pessoa sai da conta
+ou é excluída. Respostas, códigos e envelopes são os mesmos da 1.x; o
+`tenant_uuid` do request log passa a ser o uuid da conta (na conta pessoal, o
+uuid da pessoa, como antes). `tenant()` devolve a conta; a pessoa por trás da
+chave — quem a criou, enquanto for membro ativo; senão o dono da conta — é o
+`$request->user()` da rota e é quem precisa do token de ação sensível.
+
+**Dono da conta precisa estar ativo e com o e-mail confirmado.** A cada
+chamada o `ResolveTenant` confere o dono da conta da chave: conta
+bloqueada/pendente ou, com a verificação de e-mail ligada (padrão), sem e-mail
+confirmado recebe o mesmo 401 mudo de chave inválida (na conta pessoal, o dono
+é a própria pessoa — a regra da 1.x). Na prática uma conta nova nem chega a ter
 chave antes de confirmar — chaves só nascem pelo painel, que exige a
 confirmação; a checagem na API cobre a conta que já tinha chave quando a
 exigência foi ligada. Ver
@@ -193,11 +202,13 @@ Cobertura: `tests/Feature/Api/ErrorEnvelopeTest.php` — um teste por status
 ## Endpoints da API v1 (do pacote — `Twstec\Kit\Accounts\Http\ApiRoutes`)
 
 Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
-(anti-enumeração — recurso de outro tenant = **404 uniforme**, nunca 403).
+(anti-enumeração — recurso de outra conta = **404 uniforme**, nunca 403). Toda
+consulta sai filtrada pela conta da chave (escopo da conta — ver
+[Isolamento automático](tenancy.md#isolamento-automático)).
 
 | Endpoint | Scope | Observação |
 |---|---|---|
-| `GET /api/v1/api-keys` | `api-keys:read` | lista paginada do tenant |
+| `GET /api/v1/api-keys` | `api-keys:read` | lista paginada da conta |
 | `POST /api/v1/api-keys` | `api-keys:create` | **ação sensível** (abaixo); secreta sai 1x no campo `secret_key` |
 | `DELETE /api/v1/api-keys/{uuid}` | `api-keys:revoke` | revogação irreversível |
 | `POST /api/v1/api-keys/{uuid}/rotate` | `api-keys:rotate` | **ação sensível**; `grace_period_minutes` no corpo |
@@ -257,7 +268,8 @@ liga, sem nenhuma linha no `bootstrap/app.php`:
 | Limite por chave | `throttle:api` na frente do grupo `api` (o limitador `api` é do foundation) e o `ResolveTenant` antes do `ThrottleRequests` na lista de prioridade — o limite conta a chave, não o IP |
 | Limite de falhas de autenticação por chave e por IP | dentro do próprio `ResolveTenant` (`ApiRateLimit`, do foundation) |
 | Envelope de erro sem vazamento | render do `ApiErrorRenderer` para `api/*` no tratador de exceções |
-| Quem o limite conta | `TenantRateLimitSubject` (a chave, ou o dono com `RATE_LIMIT_API_BY=tenant`) |
+| Quem o limite conta | `TenantRateLimitSubject` (a chave, ou a conta com `RATE_LIMIT_API_BY=tenant`) |
+| Conta atual da requisição | o `ResolveTenant` define a conta da chave como conta atual (o escopo das contas filtra por ela) e a desfaz no fim da requisição |
 
 Os aliases só entram se o aplicativo não declarou um de mesmo nome, e um
 render próprio do aplicativo no `bootstrap/app.php` roda antes do envelope do
@@ -275,8 +287,10 @@ para `api/*`: um prefixo fora de `api/` fica sem ele.
 
 `packages/accounts/tests` (aplicação Laravel limpa, sem nada do starter): as
 proteções acima (401 no envelope, limite de falhas, 403 de escopo, 404 fora do
-vínculo, 429 por chave, inatividade, dono não verificado, pepper), os nomes
-antigos, as traduções e a arquitetura do pacote.
+vínculo, 429 por chave, inatividade, dono não verificado, pepper), o
+isolamento entre contas (pessoa em duas contas, chave de cada conta, chave que
+sobrevive à saída de quem a criou, contexto nos jobs), a migração da 1.x, os
+nomes antigos, as traduções e a arquitetura do pacote.
 
 `tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` do starter (Pest): geração/hash (só
 hash no banco, formato por ambiente, pepper), ciclo criar/usar/revogar,

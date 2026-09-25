@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Component;
+use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
 
@@ -15,9 +17,10 @@ use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
  * Projetos — CRUD só com nome, TUDO na mesma tela: criar e editar
  * inline, excluir com confirmação inline. Sem labirinto de cliques.
  *
- * A regra mora no ProjectService, o mesmo que a API v1 usa (posse por dono:
- * uuid de outro tenant = 404; código público com nova tentativa). A tela só
- * valida o formulário, chama o serviço e mostra o resultado.
+ * A regra mora no ProjectService, o mesmo que a API v1 usa (os projetos são
+ * da CONTA ATUAL: uuid de outra conta = 404; código público com nova
+ * tentativa). A tela só confere o papel da pessoa na conta, valida o
+ * formulário, chama o serviço e mostra o resultado.
  */
 final class Index extends Component
 {
@@ -39,11 +42,12 @@ final class Index extends Component
      */
     public function projects(): Collection
     {
-        return $this->service()->listForUser($this->user());
+        return $this->service()->list();
     }
 
     public function startCreate(): void
     {
+        Accounts::authorize(AccountAbility::CreateProjects);
         $this->resetValidation();
         $this->reset('name');
         $this->showCreateForm = true;
@@ -57,6 +61,7 @@ final class Index extends Component
 
     public function create(): void
     {
+        Accounts::authorize(AccountAbility::CreateProjects);
         $this->validate(['name' => ['required', 'string', 'max:255']], [], [
             'name' => __('panel.common.name'),
         ]);
@@ -69,6 +74,7 @@ final class Index extends Component
 
     public function startEdit(string $uuid): void
     {
+        Accounts::authorize(AccountAbility::UpdateProjects);
         $project = $this->findOwned($uuid);
 
         $this->resetValidation();
@@ -84,6 +90,7 @@ final class Index extends Component
 
     public function update(): void
     {
+        Accounts::authorize(AccountAbility::UpdateProjects);
         $this->validate(['editingName' => ['required', 'string', 'max:255']], [], [
             'editingName' => __('panel.common.name'),
         ]);
@@ -99,6 +106,7 @@ final class Index extends Component
 
     public function startDelete(string $uuid): void
     {
+        Accounts::authorize(AccountAbility::DeleteProjects);
         $this->findOwned($uuid);
         $this->confirmingDeleteUuid = $uuid;
     }
@@ -120,6 +128,8 @@ final class Index extends Component
      */
     public function removeProject(): void
     {
+        Accounts::authorize(AccountAbility::DeleteProjects);
+
         // O vínculo N:N cai junto; a chave que só atendia este projeto segue
         // restrita, agora a nenhum (ver ProjectService::delete()).
         $this->service()->delete($this->findOwned((string) $this->confirmingDeleteUuid));
@@ -132,15 +142,18 @@ final class Index extends Component
     {
         return view('livewire.projects.index', [
             'projects' => $this->projects(),
+            'canCreate' => Accounts::can(AccountAbility::CreateProjects),
+            'canUpdate' => Accounts::can(AccountAbility::UpdateProjects),
+            'canDelete' => Accounts::can(AccountAbility::DeleteProjects),
         ])->title(__('panel.projects.title'));
     }
 
     /**
-     * Projeto do PRÓPRIO usuário por UUID — de outro tenant = 404 (nem confirma que existe).
+     * Projeto da CONTA ATUAL por UUID — de outra conta = 404 (nem confirma que existe).
      */
     private function findOwned(string $uuid): Project
     {
-        return $this->service()->findForUser($this->user(), $uuid);
+        return $this->service()->find($uuid);
     }
 
     /**

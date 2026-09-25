@@ -103,12 +103,12 @@ it('rejeita chave inativa além do limite configurado (middleware checa inativid
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
 
     // Simula chave criada há 4 meses, nunca usada.
-    ApiKey::query()->where('id', $key->id)->update(['created_at' => now()->subMonthsNoOverflow(4)]);
+    comoSistema(fn () => ApiKey::query()->where('id', $key->id)->update(['created_at' => now()->subMonthsNoOverflow(4)]));
 
     $this->getJson('/api/v1/_test/tenant', headersApi($key, $secret))->assertUnauthorized();
 
     // Dentro do limite: 2 meses → autentica normalmente.
-    ApiKey::query()->where('id', $key->id)->update(['created_at' => now()->subMonthsNoOverflow(2)]);
+    comoSistema(fn () => ApiKey::query()->where('id', $key->id)->update(['created_at' => now()->subMonthsNoOverflow(2)]));
 
     $this->getJson('/api/v1/_test/tenant', headersApi($key, $secret))->assertOk();
 });

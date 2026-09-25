@@ -17,16 +17,19 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * Regra ÚNICA do CRUD de projetos — a tela do painel (Livewire) e a API v1
  * chamam este serviço; nenhuma das duas lê ou grava Project direto.
  *
- * Posse (isolamento por dono) mora aqui, em dois recortes:
+ * Posse: o projeto é da CONTA, e toda consulta sai filtrada pela conta atual
+ * pelo escopo das contas (no painel, a conta selecionada da pessoa; na API, a
+ * conta da chave) — sem conta atual, exceção. Por cima disso, na API, o
+ * recorte da chave: Project::visibleToApiKey() — se a chave é restrita
+ * (`restricted_to_projects`), só os vinculados a ela, inclusive nenhum
+ * (fail-closed).
  *
- * - Pela PESSOA logada (painel): só os projetos dela.
- * - Pela CHAVE DE API (API v1): Project::visibleToApiKey() — os do dono da
- *   chave e, se a chave é restrita (`restricted_to_projects`), só os
- *   vinculados a ela, inclusive nenhum (fail-closed).
- *
- * Projeto fora do recorte, de outro dono ou inexistente é a MESMA exceção
+ * Projeto fora do recorte, de outra conta ou inexistente é a MESMA exceção
  * (ModelNotFoundException → 404 uniforme): não revela que o recurso existe.
  * Atualizar e excluir recebem o projeto já achado por um dos recortes.
+ *
+ * Quem pode fazer o quê (papel na conta) é decidido antes, por quem chama —
+ * ver Account\Enums\AccountRole e Accounts::authorize().
  */
 final class ProjectService
 {
@@ -37,14 +40,14 @@ final class ProjectService
     private const UPDATABLE = ['name', 'status'];
 
     /**
-     * Projetos da pessoa, mais novos primeiro, com a contagem de chaves
+     * Projetos da conta atual, mais novos primeiro, com a contagem de chaves
      * vinculadas (a lista do painel).
      *
      * @return Collection<int, Project>
      */
-    public function listForUser(AuthUser $user): Collection
+    public function list(): Collection
     {
-        return $this->ownedBy($user)
+        return Project::query()
             ->withCount('apiKeys')
             ->latest()
             ->get();
@@ -64,14 +67,14 @@ final class ProjectService
     }
 
     /**
-     * Projeto da pessoa pelo UUID.
+     * Projeto da conta atual pelo UUID.
      *
-     * @throws ModelNotFoundException<Project> De outro dono ou inexistente.
+     * @throws ModelNotFoundException<Project> De outra conta ou inexistente.
      */
-    public function findForUser(AuthUser $user, string $uuid): Project
+    public function find(string $uuid): Project
     {
         /** @var Project */
-        return $this->ownedBy($user)
+        return Project::query()
             ->byUuid($uuid)
             ->firstOrFail();
     }
@@ -79,7 +82,7 @@ final class ProjectService
     /**
      * Projeto que a chave enxerga pelo UUID.
      *
-     * @throws ModelNotFoundException<Project> De outro dono, fora do vínculo da chave ou inexistente.
+     * @throws ModelNotFoundException<Project> De outra conta, fora do vínculo da chave ou inexistente.
      */
     public function findForApiKey(ApiKey $apiKey, string $uuid): Project
     {
@@ -90,17 +93,17 @@ final class ProjectService
     }
 
     /**
-     * Cria o projeto só com nome, com o código público PRJ-xxxxxx gerado
-     * (com nova tentativa em caso de colisão).
+     * Cria o projeto só com nome, NA CONTA ATUAL, com o código público
+     * PRJ-xxxxxx gerado (com nova tentativa em caso de colisão) e quem criou.
      *
-     * Quem pode criar é decidido antes: no painel, a pessoa logada; na API,
-     * só chave de conta (middleware account.key).
+     * Quem pode criar é decidido antes: no painel, o papel da pessoa na conta;
+     * na API, só chave de conta (middleware account.key).
      */
-    public function create(AuthUser $owner, string $name): Project
+    public function create(AuthUser $creator, string $name): Project
     {
         /** @var Project */
         return Project::createWithPublicCodeRetry([
-            'user_id' => $owner->id,
+            'created_by' => $creator->getKey(),
             'name' => $name,
         ]);
     }
@@ -128,14 +131,6 @@ final class ProjectService
     public function delete(Project $project): void
     {
         $project->delete();
-    }
-
-    /**
-     * @return Builder<Project>
-     */
-    private function ownedBy(AuthUser $user): Builder
-    {
-        return Project::query()->where('user_id', $user->id);
     }
 
     /**

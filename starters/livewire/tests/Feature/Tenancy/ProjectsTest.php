@@ -53,7 +53,7 @@ it('executa o ciclo completo: criar, listar, detalhar, atualizar e remover', fun
         ->assertOk()
         ->assertJsonPath('message', __('api_keys.projects.deleted'));
 
-    expect(Project::query()->where('uuid', $uuid)->exists())->toBeFalse();
+    expect(comoSistema(fn () => Project::query()->where('uuid', $uuid)->exists()))->toBeFalse();
 });
 
 it('isola projetos por tenant: dados de um tenant são invisíveis a outro', function () {
@@ -62,7 +62,7 @@ it('isola projetos por tenant: dados de um tenant são invisíveis a outro', fun
     ['api_key' => $keyA, 'secret_key' => $secretA] = criarChave($userA);
     ['api_key' => $keyB, 'secret_key' => $secretB] = criarChave($userB);
 
-    $projetoB = Project::createWithPublicCodeRetry(['user_id' => $userB->id, 'name' => 'Projeto de B']);
+    $projetoB = projetoDe($userB, 'Projeto de B');
 
     // A lista de A não mostra o projeto de B.
     $response = $this->getJson('/api/v1/projects', headersApi($keyA, $secretA));

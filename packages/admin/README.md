@@ -153,11 +153,28 @@ painéis):
   recusada fica registrada.
 - **Trilha de auditoria** das ações do painel (`AdminAudit`, ligada no boot do
   provider) e o **segundo fator** por e-mail no login.
+- **Modo sistema das contas** (`twstec/kit-accounts`) — o painel vê projetos e
+  chaves de **todas** as contas: o `OperateAdminPanelAsSystem` entra na
+  autenticação do painel, depois do acesso de admin, e é persistente. Ele
+  declara o modo sistema **da requisição** (`Accounts::systemModeForRequest`)
+  em vez de envolver o `$next`: nas ações, o Livewire reaplica os middlewares
+  persistentes num pipeline à parte, antes do componente — um modo sistema só
+  em volta do `$next` terminaria antes da ação. O fim da requisição o desfaz.
+  As telas de projetos e chaves mostram a **conta** de cada linha (código
+  `ACC-…`, com filtro), o dono da conta e quem criou; a exclusão de pessoa
+  **dona de conta com outros membros** é recusada (ação escondida e, forjada,
+  recusada com o motivo na trilha).
 
 Opt-out só explícito: `ADMIN_PROTECTIONS=false` desliga a barreira de origem
 do painel, a conferência de acesso do pacote e a transação obrigatória — o
 aplicativo assume as três — e o pacote grava um **aviso no log a cada boot**.
-A trilha e o segundo fator continuam ligados.
+A trilha, o segundo fator e o modo sistema das contas continuam ligados (sem
+ele as telas de projetos e chaves não teriam conta atual).
+
+**Telas próprias do aplicativo no painel** que leem dado de conta rodam no
+mesmo modo sistema (a requisição é do painel). Um teste com `Livewire::test`
+de uma tela do painel não passa pela pilha HTTP: declare o modo sistema no
+teste (o starter faz isso para `tests/Feature/Admin` no `tests/Pest.php`).
 
 O dashboard de filas (`/horizon`) é do aplicativo (o Horizon não é
 dependência do pacote), mas o gate `viewHorizon` do starter lê o mesmo

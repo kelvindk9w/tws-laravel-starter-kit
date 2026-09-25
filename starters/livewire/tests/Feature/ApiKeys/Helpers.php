@@ -5,8 +5,12 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================
@@ -16,14 +20,65 @@ use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 /**
  * Cria uma chave de API real via service (o caminho de produção) e retorna
- * a chave + a secreta em claro (que só existe neste momento).
+ * a chave + a secreta em claro (que só existe neste momento). A chave é da
+ * CONTA PESSOAL da pessoa (ou da conta dada) e a pessoa é quem a criou.
  *
  * @param  array{name?: string, scopes?: list<string>|null, expires_at?: string|null, project_uuids?: list<string>|null}  $data
  * @return array{api_key: ApiKey, secret_key: string}
  */
-function criarChave(User $user, array $data = []): array
+function criarChave(User $user, array $data = [], ?Account $conta = null): array
 {
-    return app(ApiKeyService::class)->create($user, ['name' => 'Chave de teste', ...$data]);
+    return Accounts::actingAs(
+        $conta ?? contaPessoal($user),
+        fn (): array => app(ApiKeyService::class)->create($user, ['name' => 'Chave de teste', ...$data]),
+        $user,
+    );
+}
+
+/**
+ * A conta pessoal da pessoa (criada junto com ela pelo pacote de contas).
+ */
+function contaPessoal(User $user): Account
+{
+    return app(AccountService::class)->personalAccountOf($user)
+        ?? throw new LogicException('Pessoa sem conta pessoal.');
+}
+
+/**
+ * Roda o arranjo do teste dentro da conta pessoal da pessoa (como o painel
+ * dela faria).
+ *
+ * @template T
+ *
+ * @param  Closure(): T  $callback
+ * @return T
+ */
+function naConta(User $user, Closure $callback): mixed
+{
+    return Accounts::actingAs(contaPessoal($user), $callback, $user);
+}
+
+/**
+ * Leitura/gravação direta do teste SEM filtro de conta — o que toda consulta
+ * de teste fazia antes das contas (o escopo das contas lança exceção sem
+ * conta atual). Só para o arranjo e as conferências do próprio teste.
+ *
+ * @template T
+ *
+ * @param  Closure(): T  $callback
+ * @return T
+ */
+function comoSistema(Closure $callback): mixed
+{
+    return Accounts::asSystem('teste', $callback);
+}
+
+/**
+ * Projeto na conta pessoal da pessoa, criado por ela.
+ */
+function projetoDe(User $user, string $nome): Project
+{
+    return naConta($user, fn (): Project => Project::createWithPublicCodeRetry(['name' => $nome]));
 }
 
 /**

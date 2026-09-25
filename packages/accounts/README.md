@@ -1,13 +1,20 @@
 # twstec/kit-accounts
 
 Contas e API do **TWS Laravel Starter Kit**, como pacote Laravel **sem telas**:
+**contas com membros e papéis**, o **isolamento automático** entre contas,
 projetos, chaves de API e a API v1. É a terceira camada do kit: depende só do
 [`twstec/kit-auth`](../auth), do [`twstec/kit-foundation`](../foundation) e do
 Laravel — não conhece uploads, o painel de administração nem a interface, e um
 teste de arquitetura na suíte do pacote garante isso.
 
-Nesta versão o **dono é a pessoa**: cada projeto e cada chave pertencem a um
-usuário. Contas com membros e papéis chegam numa versão futura.
+O **dono dos dados é a conta**: projetos e chaves pertencem a uma conta (e
+guardam quem os criou); uma pessoa pode estar em várias contas, com um papel
+fixo em cada (owner, admin, member), e toda pessoa tem a sua conta pessoal.
+Toda consulta de dado de conta sai filtrada pela conta atual — e, sem conta,
+**dá erro em vez de devolver tudo**. O guia completo (modelo, papéis, conta
+atual, modo sistema, jobs, exclusão de pessoa, migração da 1.x) está em
+[`docs/tenancy.md`](../../docs/tenancy.md). Seletor de conta, tela de membros e
+convites chegam na versão seguinte.
 
 - **Requisitos:** PHP 8.4+, Laravel 13, `twstec/kit-auth` e
   `twstec/kit-foundation` 2.x.
@@ -17,13 +24,22 @@ usuário. Contas com membros e papéis chegam numa versão futura.
 
 | Peça | O que faz |
 | --- | --- |
+| `Accounts` | A porta de entrada: `current()`, `asSystem('motivo', fn)`, `systemModeForRequest('motivo')` (middleware de área), `actingAs($conta, fn)`, `can()`/`authorize()` pelo papel, `switchTo($conta)` (seleção na sessão) |
+| `Account\Models` | `Account` (conta; `owner`, `members`, `roleOf()`, conta pessoal) e `AccountMembership` (pessoa × conta, com a regra do dono no código) |
+| `Account\Enums` | `AccountRole` (papéis fixos e a matriz `allows()`) e `AccountAbility` (as ações, também no Gate como `accounts.*`) |
+| `Account\Concerns\BelongsToAccount` + `Account\Scopes\AccountScope` | O isolamento: escopo global da conta atual (exceção sem conta), gravação só na conta atual, `created_by` |
+| `Account\CurrentAccount` | A conta atual: quadro explícito (API, `actingAs`, modo sistema), modo sistema da requisição, sessão web (seleção ou conta pessoal) |
+| `Account\Services\AccountService` | Conta pessoal, conta de empresa, membros, a regra de exclusão de pessoa, excluir conta |
+| `Account\Http\Middleware\ResolveCurrentAccount` | No grupo `web`: limpa a seleção que deixou de valer e o estado por requisição |
+| `Account\Queue\AccountJobContext` | O contexto de conta no payload dos jobs e a restauração no worker |
+| `Account\Support\AccountDatabaseGuards` | Os gatilhos do PostgreSQL (regra do dono, chave ↔ projeto da mesma conta) |
 | `ApiKeys\Support` | Par de chaves `pk_`/`sk_` (`ApiKeyGenerator`) e o hash da secreta com HMAC-SHA256 + pepper, verificado com `hash_equals` (`ApiKeyHasher`): pepper vazio nunca é usado, peppers anteriores e o legado do pepper vazio (só com flag) migram no primeiro uso, e os avisos de produção sobre o pepper (`PepperWarnings`) |
-| `ApiKeys\Models\ApiKey` | Escopos `recurso:acao` com curinga, vínculo com projetos e a marca de restrição (`restricted_to_projects`), validade, rotação com período de graça, inatividade, `last_used_at` com escrita limitada |
+| `ApiKeys\Models\ApiKey` | Da conta (`account`, `creator`); escopos `recurso:acao` com curinga, vínculo com projetos e a marca de restrição (`restricted_to_projects`), validade, rotação com período de graça, inatividade, `last_used_at` com escrita limitada |
 | `ApiKeys\Services\ApiKeyService` | Criar, rotacionar (herda nome, escopos, projetos e a restrição), revogar e vincular projetos |
 | `ApiKeys\Console\ProcessApiKeyInactivity` | `api-keys:process-inactivity`: aviso prévio por e-mail e desativação por inatividade |
 | `ApiKeys\Http`, `Tenancy\Http` | Controllers, Form Requests e Resources da API v1; middlewares `EnsureApiKeyScope` (`scope`) e `EnsureAccountWideApiKey` (`account.key`) |
-| `Tenancy\Middleware\ResolveTenant` | `resolve.tenant`: autentica o par de chaves, recusa chave inutilizável e dono inativo ou com e-mail não confirmado, limita as falhas por chave e por IP, vincula o request log ao dono |
-| `Tenancy` | `TenantContext` e os helpers `tenant()`/`tenantKey()`, `Project` com o recorte `visibleToApiKey`, `ProjectService` (o CRUD único do painel e da API), `AccountOverviewQuery` (os números do painel do cliente) |
+| `Tenancy\Middleware\ResolveTenant` | `resolve.tenant`: autentica o par de chaves, recusa chave inutilizável e conta de dono inativo ou com e-mail não confirmado, limita as falhas por chave e por IP, define a CONTA da chave como conta atual e vincula o request log a ela |
+| `Tenancy` | `TenantContext` e os helpers `tenant()` (a conta) / `tenantKey()`, `Project` (da conta) com o recorte `visibleToApiKey`, `ProjectService` (o CRUD único do painel e da API, na conta atual), `AccountOverviewQuery` (os números do painel do cliente, da conta atual) |
 | `Http\ApiRoutes` | As rotas `/api/v1/api-keys…` e `/api/v1/projects…` |
 
 ## Instalação
@@ -50,13 +66,25 @@ outros:
 **Depois da publicação no Packagist:** `composer require twstec/kit-accounts:^2.0`.
 
 O `AccountsServiceProvider` é descoberto automaticamente. Depois,
-`php artisan migrate`. O model de usuário é o do aplicativo, lido de
-`auth.providers.users.model` (ver o README do `twstec/kit-auth`); o pacote o
-trata pelo contrato `AuthUser`.
+`php artisan migrate` (numa base da 1.x, a migração cria a conta pessoal de
+cada pessoa e passa os dados para ela — ver
+[Migração da 1.x](../../docs/tenancy.md#migração-da-1x)). O model de usuário é
+o do aplicativo, lido de `auth.providers.users.model` (ver o README do
+`twstec/kit-auth`); o pacote o trata pelo contrato `AuthUser` e liga a conta
+pessoal e a regra de exclusão aos eventos dele — o model não precisa de trait.
 
 ## O que ele instala sozinho
 
 Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
+
+- **Isolamento entre contas:** o escopo da conta atual nos models da conta
+  (não há chave para desligá-lo); o middleware de conta atual no grupo `web`
+  (opt-out explícito, com aviso no log a cada boot:
+  `ACCOUNTS_WEB_MIDDLEWARE=false`); a conta da chave na API; o contexto de
+  conta nos jobs enfileirados; o fim de toda requisição HTTP desfazendo o modo
+  sistema da requisição; a conta pessoal de cada pessoa criada; a recusa de
+  excluir pessoa dona de conta com outros membros; os gatilhos do PostgreSQL;
+  as habilidades por papel no Gate (`accounts.*`).
 
 - **Autenticação por chave:** o alias `resolve.tenant`, que entra SEMPRE no
   grupo das rotas v1 (inclusive quando o aplicativo as registra ele mesmo).
@@ -80,15 +108,18 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   inativa há mais que o limite (na autenticação — não depende do agendamento),
   recusa de dono inativo ou com e-mail não confirmado, recorte de projetos pelo
   vínculo da chave (404 uniforme fora dele).
-- **Configuração padrão** em `config('api_keys')`; as chaves de primeiro nível
-  do `config/api_keys.php` do aplicativo prevalecem
+- **Configuração padrão** em `config('api_keys')` e `config('accounts')`
+  (guard e chave de sessão da conta selecionada, o middleware web, o lote da
+  migração); as chaves de primeiro nível dos arquivos do aplicativo prevalecem
   (`vendor:publish --tag=accounts-config`).
 - **Migrations** com os **mesmos nomes de arquivo** que tinham no aplicativo na
   1.x (`projects`, `api_keys`, `api_key_project` e a coluna
-  `restricted_to_projects`): um banco que já as rodou não vê nada pendente.
-- **Traduções** (pt-BR, en, es) das mensagens da API (`api_keys.*`) e do
-  assunto do aviso de inatividade (`mail.api_key_inactivity.subject`), sem
-  namespace. **O aplicativo vence** na mesma chave (a regra do foundation,
+  `restricted_to_projects`): um banco que já as rodou não vê nada pendente; e
+  as duas das contas (`2026_09_26_000001` e `…000002`), que migram os dados da
+  1.x.
+- **Traduções** (pt-BR, en, es) das mensagens da API (`api_keys.*`), das
+  contas (`accounts.*`: papéis, recusas, exceções) e do assunto do aviso de
+  inatividade (`mail.api_key_inactivity.subject`), sem namespace. **O aplicativo vence** na mesma chave (a regra do foundation,
   `Localization\PackageTranslations`).
 - **Comando** `api-keys:process-inactivity` e o aviso de inatividade na
   galeria `/mail-preview` do foundation.
@@ -145,7 +176,9 @@ O envelope de erro vale para `api/*`: um prefixo fora de `api/` fica sem ele.
 
 | O quê | Como | Por que não no pacote |
 | --- | --- | --- |
-| Telas de chaves, projetos e painel do cliente | Componentes do front sobre `ApiKeyService`, `ProjectService` e `AccountOverviewQuery` | São a interface |
+| Telas de chaves, projetos e painel do cliente | Componentes do front sobre `ApiKeyService`, `ProjectService` e `AccountOverviewQuery`, conferindo o papel com `Accounts::authorize()` | São a interface |
+| Seletor de conta, membros, convites | Telas sobre `AccountService` e `Accounts::switchTo()` (fase seguinte) | São a interface |
+| Modo sistema dos próprios comandos, seeders e jobs que varrem contas | `Accounts::asSystem('motivo', fn () => …)` | Só o código sabe que precisa ver todas as contas |
 | Agendamento do `api-keys:process-inactivity` | `Schedule::command('api-keys:process-inactivity')->daily()` em `routes/console.php` | A ordem do agendamento é do aplicativo; a recusa da chave inativa já vale na autenticação sem ele |
 | Corpo do aviso de inatividade | View `mail.messages.api-key-inactivity-warning` | É interface (o layout `<x-email::…>` é do foundation) |
 | Catálogo de escopos oferecido na tela | `api_keys.scopes_catalog` na cópia do aplicativo | O front decide o que oferece; a API aceita qualquer `recurso:acao` bem formado |
@@ -163,6 +196,12 @@ O envelope de erro vale para `api/*`: um prefixo fora de `api/` fica sem ele.
 | `ProcessApiKeyInactivity` em `$this->commands()` do `AppServiceProvider` | Registrado pelo pacote |
 | `app/Core/Tenancy/helpers.php` e `app/Core/ApiKeys/Mail/previews.php` no `autoload.files` | Carregados pelo pacote — tire-os do `composer.json` |
 | `?User` em `tenant()`, `TenantContext::user()` e nos serviços | `?AuthUser` (o objeto continua sendo o model do aplicativo) |
+| **2.0 — contas:** `tenant()` devolvia a pessoa dona da chave | Devolve a **conta** (`Account`); a pessoa por trás da chave é `app(TenantContext::class)->user()` / `$request->user()`. O uuid da conta pessoal é o da pessoa |
+| `projects.user_id`, `api_keys.user_id`, `Project::owner()`, `ApiKey::owner()` | `account_id` + `created_by`; `account()`, `creator()` e, para o dono, `account->owner` |
+| `ProjectService::listForUser($p)` / `findForUser($p, $uuid)` | `list()` / `find($uuid)`, na conta atual |
+| `ApiKeyService::resolveProjectIds($p, $uuids)` | `resolveProjectIds($uuids)`, na conta atual |
+| `AccountOverviewQuery::for($p)` | `forCurrentAccount()` |
+| `TenantContext::resolve($pessoa, $chave)` | `resolve($conta, $chave, $pessoa)` |
 
 **Compatibilidade por uma versão.** Os nomes antigos continuam resolvendo, como
 apelidos das classes novas (`src/Compat/legacy-aliases.php`): é a mesma classe,
@@ -188,7 +227,13 @@ vendor/bin/pest
 vendor/bin/pint --test
 ```
 
-Ela prova que as proteções vêm do pacote (401 no envelope sem detalhe, limite
+Ela prova o isolamento entre contas numa aplicação limpa (consulta sem conta
+lança exceção; modo sistema explícito e desfeito mesmo com exceção; pessoa em
+duas contas pela web e pela API; gravação só na conta atual; papéis; a regra do
+dono no código e no índice; exclusão de pessoa; chave que continua valendo
+depois que quem a criou sai; o contexto restaurado nos jobs da fila
+`database`), a migração da 1.x (dados sintéticos, idempotente, ida e volta), a
+trava de arquitetura do "esquecimento", que as proteções vêm do pacote (401 no envelope sem detalhe, limite
 de falhas por chave e por IP, 403 de escopo e de operação de conta, 404 fora do
 vínculo, 429 do limite por chave com outra chave do mesmo IP passando, chave
 revogada/expirada/rotacionada/inativa e dono não verificado recusados, pepper

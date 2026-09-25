@@ -21,8 +21,8 @@ it('lista apenas os projetos do próprio usuário', function () {
     $user = User::factory()->create();
     $outro = User::factory()->create();
 
-    Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Meu Projeto']);
-    Project::createWithPublicCodeRetry(['user_id' => $outro->id, 'name' => 'Projeto Alheio']);
+    projetoDe($user, 'Meu Projeto');
+    projetoDe($outro, 'Projeto Alheio');
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -41,10 +41,11 @@ it('cria projeto pela UI com código público gerado (PRJ-)', function () {
         ->call('create')
         ->assertHasNoErrors();
 
-    $project = Project::query()->sole();
+    $project = comoSistema(fn () => Project::query()->sole());
 
     expect($project->name)->toBe('Loja Virtual')
-        ->and($project->user_id)->toBe($user->id)
+        ->and($project->account_id)->toBe(contaPessoal($user)->id)
+        ->and($project->created_by)->toBe($user->id)
         ->and($project->codigo_publico)->toStartWith('PRJ-')
         ->and($project->uuid)->not->toBeEmpty();
 });
@@ -59,12 +60,12 @@ it('valida o nome obrigatório na criação', function () {
         ->call('create')
         ->assertHasErrors(['name']);
 
-    expect(Project::query()->count())->toBe(0);
+    expect(comoSistema(fn () => Project::query()->count()))->toBe(0);
 });
 
 it('edita o nome inline', function () {
     $user = User::factory()->create();
-    $project = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Nome Antigo']);
+    $project = projetoDe($user, 'Nome Antigo');
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -78,7 +79,7 @@ it('edita o nome inline', function () {
 
 it('exclui com confirmação inline', function () {
     $user = User::factory()->create();
-    $project = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Vai Sair']);
+    $project = projetoDe($user, 'Vai Sair');
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -86,13 +87,13 @@ it('exclui com confirmação inline', function () {
         ->assertSet('confirmingDeleteUuid', $project->uuid)
         ->call('removeProject');
 
-    expect(Project::query()->count())->toBe(0);
+    expect(comoSistema(fn () => Project::query()->count()))->toBe(0);
 });
 
 it('não toca em projeto de outro tenant (404 uniforme — anti-IDOR)', function () {
     $user = User::factory()->create();
     $outro = User::factory()->create();
-    $alheio = Project::createWithPublicCodeRetry(['user_id' => $outro->id, 'name' => 'Alheio']);
+    $alheio = projetoDe($outro, 'Alheio');
 
     // findOwned() usa firstOrFail → ModelNotFoundException → 404. Desde o
     // Livewire 4.4.6 o harness de teste trata a exceção como a request real

@@ -102,7 +102,7 @@ it('a allowlist do admin NÃO afeta componentes do painel do usuário no mesmo e
     livewireCall($this, $snapshot, 'create', ['name' => 'Projeto via Livewire'], ip: '203.0.113.99')
         ->assertOk();
 
-    expect(Project::query()->where('user_id', $user->id)->where('name', 'Projeto via Livewire')->exists())->toBeTrue();
+    expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->where('name', 'Projeto via Livewire')->exists()))->toBeTrue();
 });
 
 it('a barreira de origem está registrada como middleware persistente do Livewire', function (): void {

@@ -6,10 +6,10 @@ namespace Twstec\Kit\Accounts\Tenancy\Queries;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
-use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
@@ -19,10 +19,12 @@ use Twstec\Kit\Foundation\Logging\Models\RequestLog;
  * Mora no backend para que qualquer tela — o painel Livewire hoje, um painel
  * React amanhã — mostre os MESMOS números sem refazer a conta.
  *
- * Isolamento: tudo é filtrado pela conta passada — chaves e projetos por
- * `user_id`; o tráfego por `request_logs.tenant_uuid` = uuid do dono da
- * chave, vinculado pelo middleware ResolveTenant. Log sem tenant não é da
- * conta e nunca entra.
+ * Isolamento: tudo é da CONTA ATUAL — chaves e projetos pelo escopo das
+ * contas (sem conta atual, exceção); o tráfego por `request_logs.tenant_uuid`
+ * = uuid da conta, vinculado pelo middleware ResolveTenant (a trilha de
+ * requisições é do foundation e não tem o escopo; na conta pessoal o uuid é o
+ * da pessoa, o mesmo gravado na 1.x). Log sem tenant não é da conta e nunca
+ * entra.
  */
 final class AccountOverviewQuery
 {
@@ -35,13 +37,12 @@ final class AccountOverviewQuery
     /** Quantas chamadas entram, por padrão, na lista de atividade. */
     public const RECENT_CALLS = 5;
 
-    public function for(
-        AuthUser $user,
+    public function forCurrentAccount(
         int $chartDays = self::CHART_DAYS,
         int $recentDays = self::RECENT_DAYS,
         int $recentCalls = self::RECENT_CALLS,
     ): AccountOverview {
-        $tenantUuid = (string) $user->uuid;
+        $tenantUuid = (string) Accounts::currentOrFail()->uuid;
 
         // A janela é contada no fuso de EXIBIÇÃO (o "dia" do gráfico é o dia
         // do usuário, não o dia UTC): sem isso a série ganha um dia a mais na
@@ -62,12 +63,9 @@ final class AccountOverviewQuery
 
         return new AccountOverview(
             activeKeysCount: ApiKey::query()
-                ->where('user_id', $user->id)
                 ->where('status', ApiKeyStatus::Active)
                 ->count(),
-            projectsCount: Project::query()
-                ->where('user_id', $user->id)
-                ->count(),
+            projectsCount: Project::query()->count(),
             recentRequestsCount: $window
                 ->filter(fn (Carbon $moment): bool => $moment->greaterThanOrEqualTo(
                     $today->copy()->subDays($recentDays - 1),
@@ -75,7 +73,6 @@ final class AccountOverviewQuery
                 ->count(),
             recentRequestsDays: $recentDays,
             lastKeyUsedAt: ApiKey::query()
-                ->where('user_id', $user->id)
                 ->whereNotNull('last_used_at')
                 ->max('last_used_at'),
             chartDays: $chartDays,

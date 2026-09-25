@@ -39,8 +39,8 @@ it('o histórico completo alimenta as tabelas que nasciam vazias', function () {
     $this->seed(ProductSeeder::class);
     $this->seed(DashboardHistorySeeder::class);
 
-    expect(Project::query()->count())->toBe(ProjectSeeder::QUANTIDADE)
-        ->and(ApiKey::query()->count())->toBe(ApiKeySeeder::QUANTIDADE)
+    expect(comoSistema(fn () => Project::query()->count()))->toBe(ProjectSeeder::QUANTIDADE)
+        ->and(comoSistema(fn () => ApiKey::query()->count()))->toBe(ApiKeySeeder::QUANTIDADE)
         ->and(Upload::query()->count())->toBeGreaterThan(200)
         ->and(FormSubmission::query()->count())->toBeGreaterThan(100)
         ->and(RequestLog::query()->count())->toBeGreaterThan(1000);
@@ -51,8 +51,8 @@ it('rodar o histórico duas vezes não duplica nada', function () {
     $this->seed(DashboardHistorySeeder::class);
 
     $antes = [
-        Project::query()->count(),
-        ApiKey::query()->count(),
+        comoSistema(fn () => Project::query()->count()),
+        comoSistema(fn () => ApiKey::query()->count()),
         Upload::query()->count(),
         FormSubmission::query()->count(),
         RequestLog::query()->count(),
@@ -61,8 +61,8 @@ it('rodar o histórico duas vezes não duplica nada', function () {
     $this->seed(DashboardHistorySeeder::class);
 
     expect([
-        Project::query()->count(),
-        ApiKey::query()->count(),
+        comoSistema(fn () => Project::query()->count()),
+        comoSistema(fn () => ApiKey::query()->count()),
         Upload::query()->count(),
         FormSubmission::query()->count(),
         RequestLog::query()->count(),
@@ -105,7 +105,7 @@ it('as chaves de API semeadas são inertes: nenhuma secreta existe', function ()
     $this->seed(ProjectSeeder::class);
     $this->seed(ApiKeySeeder::class);
 
-    $chaves = ApiKey::query()->get();
+    $chaves = comoSistema(fn () => ApiKey::query()->get());
 
     expect($chaves)->toHaveCount(ApiKeySeeder::QUANTIDADE);
 

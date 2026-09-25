@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
-use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
-use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Support\Platform;
 
@@ -71,12 +69,12 @@ it('mostra os contadores de chaves ativas e projetos do próprio usuário', func
     $user = User::factory()->create();
     $outro = User::factory()->create();
 
-    app(ApiKeyService::class)->create($user, ['name' => 'Minha chave']);
-    app(ApiKeyService::class)->create($outro, ['name' => 'Chave alheia']);
-    Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
+    criarChave($user, ['name' => 'Minha chave']);
+    criarChave($outro, ['name' => 'Chave alheia']);
+    projetoDe($user, 'Loja A');
 
     // Isolamento: o dashboard NUNCA conta dados de outro tenant.
-    expect(ApiKey::query()->count())->toBe(2);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(2);
 
     Livewire::actingAs($user)
         ->test(Dashboard::class)

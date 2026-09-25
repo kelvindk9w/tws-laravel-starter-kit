@@ -10,12 +10,13 @@
             <h1 class="font-display text-h1">{{ __('panel.projects.title') }}</h1>
             <p class="mt-1.5 max-w-2xl text-sm text-text-muted">{{ __('panel.projects.subtitle') }}</p>
         </div>
-        @unless ($showCreateForm)
+        {{-- Ações por papel na conta (AccountRole): member cria e edita, não exclui. --}}
+        @if ($canCreate && ! $showCreateForm)
             <x-button type="button" wire:click="startCreate" size="sm">
                 <x-ui-icon name="plus" class="h-4 w-4" />
                 {{ __('panel.projects.new') }}
             </x-button>
-        @endunless
+        @endif
     </div>
 
     @if (session('projects_status'))
@@ -57,7 +58,9 @@
                     :title="__('panel.projects.empty_title')"
                     :description="__('panel.projects.empty')"
                 >
-                    <x-button type="button" wire:click="startCreate">{{ __('panel.projects.new') }}</x-button>
+                    @if ($canCreate)
+                        <x-button type="button" wire:click="startCreate">{{ __('panel.projects.new') }}</x-button>
+                    @endif
                 </x-empty-state>
             @endunless
         @else
@@ -99,12 +102,15 @@
                             </x-table-cell>
                             <x-table-cell :label="__('panel.common.actions')" align="end">
                                 <span class="flex items-center justify-end gap-2">
-                                    <x-button type="button" variant="secondary" size="sm" wire:click="startEdit('{{ $project->uuid }}')">{{ __('panel.common.edit') }}</x-button>
+                                    @if ($canUpdate)
+                                        <x-button type="button" variant="secondary" size="sm" wire:click="startEdit('{{ $project->uuid }}')">{{ __('panel.common.edit') }}</x-button>
+                                    @endif
 
                                     {{-- Ação destrutiva mora num menu de overflow:
                                          no mobile, três botões encostados fazem o
                                          dedo errar o alvo — e o alvo errado aqui
                                          apaga dado. --}}
+                                    @if ($canDelete)
                                     <x-dropdown>
                                         <x-slot:trigger>
                                             <button
@@ -120,6 +126,7 @@
                                             {{ __('panel.common.delete') }}
                                         </x-dropdown-item>
                                     </x-dropdown>
+                                    @endif
                                 </span>
                             </x-table-cell>
                         @endif

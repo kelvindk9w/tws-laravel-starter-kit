@@ -33,8 +33,8 @@ use Twstec\Kit\Accounts\Tenancy\Models\Project;
 function cenarioChaveRestrita(): array
 {
     $dono = User::factory()->create();
-    $a = Project::createWithPublicCodeRetry(['user_id' => $dono->id, 'name' => 'Projeto A']);
-    $b = Project::createWithPublicCodeRetry(['user_id' => $dono->id, 'name' => 'Projeto B']);
+    $a = projetoDe($dono, 'Projeto A');
+    $b = projetoDe($dono, 'Projeto B');
 
     ['api_key' => $chave, 'secret_key' => $segredo] = criarChave($dono, ['project_uuids' => [$a->uuid]]);
 
@@ -74,7 +74,7 @@ it('chave vinculada não cria projeto, mesmo com o scope projects:create', funct
     assertErroApi($response, 403, 'forbidden')
         ->assertJsonPath('error.message', __('api_keys.projects.account_key_required'));
 
-    expect(Project::query()->where('user_id', $dono->id)->count())->toBe(2);
+    expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($dono)->id)->count()))->toBe(2);
 });
 
 it('chave vinculada não gerencia chaves: não lista, não revoga, não rotaciona, não cria', function () {
@@ -92,7 +92,7 @@ it('chave vinculada não gerencia chaves: não lista, não revoga, não rotacion
     }
 
     expect($outra->fresh()?->status->value)->toBe('active')
-        ->and(ApiKey::query()->where('user_id', $dono->id)->count())->toBe(2);
+        ->and(comoSistema(fn () => ApiKey::query()->where('account_id', contaPessoal($dono)->id)->count()))->toBe(2);
 });
 
 it('chave vinculada não se desvincula sozinha para ganhar a conta toda', function () {
@@ -105,7 +105,7 @@ it('chave vinculada não se desvincula sozinha para ganhar a conta toda', functi
     $chave->refresh();
 
     expect($chave->isRestrictedToProjects())->toBeTrue()
-        ->and($chave->projects->pluck('id')->all())->toBe([$a->id]);
+        ->and(comoSistema(fn () => $chave->projects->pluck('id')->all()))->toBe([$a->id]);
 });
 
 it('excluir o último projeto vinculado deixa a chave restrita a NADA, não à conta toda', function () {
@@ -140,14 +140,14 @@ it('excluir pela API o projeto vinculado também não promove a chave', function
 });
 
 it('rotação herda a restrição, inclusive a restrição a nenhum projeto', function () {
-    ['a' => $a, 'chave' => $chave] = cenarioChaveRestrita();
+    ['dono' => $dono, 'a' => $a, 'chave' => $chave] = cenarioChaveRestrita();
 
     $a->delete();
 
-    $nova = app(ApiKeyService::class)->rotate($chave->fresh(), null)['api_key'];
+    $nova = naConta($dono, fn () => app(ApiKeyService::class)->rotate($chave->fresh(), null)['api_key']);
 
     expect($nova->isRestrictedToProjects())->toBeTrue()
-        ->and($nova->projects)->toHaveCount(0);
+        ->and(comoSistema(fn () => $nova->projects))->toHaveCount(0);
 });
 
 it('chave de conta, com lista vazia EXPLÍCITA, abre outra chave para a conta toda', function () {
@@ -206,7 +206,7 @@ it('painel: esvaziar a seleção abre a chave para a conta toda; marcar restring
 
 it('painel: projeto de outro usuário não é vinculado e a chave não muda de estado', function () {
     ['chave' => $chave, 'dono' => $dono, 'a' => $a] = cenarioChaveRestrita();
-    $alheio = Project::createWithPublicCodeRetry(['user_id' => User::factory()->create()->id, 'name' => 'Alheio']);
+    $alheio = projetoDe(User::factory()->create(), 'Alheio');
 
     Livewire::actingAs($dono)
         ->test(ApiKeysIndex::class)
@@ -218,7 +218,7 @@ it('painel: projeto de outro usuário não é vinculado e a chave não muda de e
     $chave->refresh();
 
     expect($chave->isRestrictedToProjects())->toBeTrue()
-        ->and($chave->projects->pluck('id')->all())->toBe([$a->id]);
+        ->and(comoSistema(fn () => $chave->projects->pluck('id')->all()))->toBe([$a->id]);
 });
 
 it('painel: chave restrita a nenhum projeto aparece como tal, não como "conta toda"', function () {

@@ -9,16 +9,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
 use Twstec\Kit\Accounts\ApiKeys\Support\PepperMatch;
 use Twstec\Kit\Accounts\Tenancy\TenantContext;
+use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Support\EmailVerification;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 use Twstec\Kit\Foundation\Security\ApiRateLimit;
 
 /**
- * Resolve o TENANT a partir das credenciais de API no header.
+ * Resolve o TENANT — a CONTA dona da chave — a partir das credenciais de API
+ * no header.
  *
  * Par de credenciais (documentado em docs/api.md):
  * - `X-Api-Key: pk_live_...`        → chave PÚBLICA (lookup).
@@ -26,11 +31,19 @@ use Twstec\Kit\Foundation\Security\ApiRateLimit;
  *
  * Pipeline: existência da pk_ → verificação timing-safe da sk_ (hash_equals,
  * nunca comparação comum; pepper atual, anteriores e — só com a flag — o
- * vazio legado) → status/validade/grace/inatividade → usuário ativo →
- * registra o tenant no container (tenant()/tenantKey()) e no user resolver
- * da request → vincula o request log ao tenant (tenant_uuid = uuid do dono)
- * → regrava o hash com o pepper atual se conferiu com um anterior →
- * last_used_at throttled.
+ * vazio legado) → status/validade/grace/inatividade → dono da conta ativo e
+ * com e-mail confirmado → registra a conta como CONTA ATUAL da requisição
+ * (o escopo das contas filtra por ela), o tenant no container
+ * (tenant()/tenantKey()) e a pessoa por trás da chave no user resolver da
+ * request → vincula o request log ao tenant (tenant_uuid = uuid da conta; na
+ * conta pessoal, o mesmo uuid da pessoa) → regrava o hash com o pepper atual
+ * se conferiu com um anterior → last_used_at throttled. No fim da requisição
+ * o contexto é desfeito.
+ *
+ * A chave é da CONTA: ela continua valendo quando quem a criou sai da conta
+ * (ou é excluído). A pessoa por trás da chave (o que é por pessoa, como o
+ * token de ação sensível) é quem a criou, enquanto for membro ativo; senão, o
+ * dono da conta.
  *
  * Credencial inválida: 401 padronizado e o request log permanece SEM tenant
  * — exatamente o sinal de ataque/tentativa de burla que a trilha precisa mostrar
@@ -73,8 +86,10 @@ final class ResolveTenant
             $this->deny($request);
         }
 
+        // A chave ainda não tem conta conhecida — é ela que diz qual é. A
+        // busca pela pública é a única leitura de chave em modo sistema na API.
         /** @var ApiKey|null $apiKey */
-        $apiKey = ApiKey::query()->where('public_key', $publicKey)->first();
+        $apiKey = Accounts::asSystem('api.authenticate', fn () => ApiKey::query()->where('public_key', $publicKey)->first());
 
         // Timing-safe SEMPRE: verifica o hash mesmo quando a pk_ não existe
         // (segredo inválido contra hash fictício), para não vazar por tempo
@@ -95,33 +110,61 @@ final class ResolveTenant
             $this->deny($request);
         }
 
-        $tenant = $apiKey->owner;
+        $account = $apiKey->account;
+        $owner = $account?->owner;
 
-        // Dono sem e-mail confirmado também não opera pela API (mesma regra do
-        // painel — EmailVerification). Chave só nasce pelo painel, que já
-        // exige a confirmação; isto cobre a conta que tinha chave antes de a
-        // exigência ser ligada. Mesma recusa muda da conta inativa.
-        if ($tenant === null || ! $tenant->isActive() || EmailVerification::pendingFor($tenant)) {
+        // A conta responde pelo dono: dono inativo ou sem e-mail confirmado
+        // não opera pela API (mesma regra do painel — EmailVerification). Na
+        // conta pessoal o dono é a própria pessoa, como na 1.x. Mesma recusa
+        // muda da credencial inválida.
+        if (! $account instanceof Account || ! $owner instanceof AuthUser || ! $owner->isActive() || EmailVerification::pendingFor($owner)) {
             $this->deny($request);
         }
 
-        $this->tenantContext->resolve($tenant, $apiKey);
+        $person = $this->personBehind($apiKey, $account, $owner);
+        $tenantUuid = (string) $account->uuid;
+
+        $this->tenantContext->resolve($account, $apiKey, $person);
 
         ApiRateLimit::recordAuthenticationSuccess($request);
 
-        // $request->user() e Auth::user() passam a ser o tenant nesta rota
-        // (rate limiter por usuário, middleware sensitive.token, controllers).
-        $request->setUserResolver(static fn () => $tenant);
+        // $request->user() passa a ser a pessoa por trás da chave nesta rota
+        // (middleware sensitive.token, controllers).
+        $request->setUserResolver(static fn () => $person);
 
-        $this->bindRequestLog($request, (string) $tenant->uuid);
+        $this->bindRequestLog($request, $tenantUuid);
 
-        if ($match->needsRehash()) {
-            $this->migrateSecretHash($apiKey, $plainSecret, (string) $hashToVerify, $match, (string) $tenant->uuid);
+        return app(CurrentAccount::class)->runWith(
+            ['type' => CurrentAccount::FRAME_ACCOUNT, 'account' => $account, 'actor' => $person],
+            function () use ($request, $next, $apiKey, $plainSecret, $hashToVerify, $match, $tenantUuid): Response {
+                try {
+                    if ($match->needsRehash()) {
+                        $this->migrateSecretHash($apiKey, $plainSecret, (string) $hashToVerify, $match, $tenantUuid);
+                    }
+
+                    $apiKey->touchLastUsedThrottled();
+
+                    return $next($request);
+                } finally {
+                    $this->tenantContext->forget();
+                }
+            },
+        );
+    }
+
+    /**
+     * A pessoa por trás da chave: quem a criou, enquanto for membro ativo da
+     * conta; senão (saiu, foi excluído ou está bloqueado), o dono.
+     */
+    private function personBehind(ApiKey $apiKey, Account $account, AuthUser $owner): AuthUser
+    {
+        $creator = $apiKey->creator;
+
+        if ($creator instanceof AuthUser && $creator->isActive() && $account->hasMember($creator)) {
+            return $creator;
         }
 
-        $apiKey->touchLastUsedThrottled();
-
-        return $next($request);
+        return $owner;
     }
 
     /**

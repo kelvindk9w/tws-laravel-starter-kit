@@ -11,6 +11,8 @@ use Illuminate\Testing\TestResponse;
 use Orchestra\Testbench\Attributes\WithMigration;
 use Orchestra\Testbench\TestCase as Testbench;
 use Spatie\Backup\BackupServiceProvider;
+use Twstec\Kit\Accounts\Account\Services\AccountService;
+use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\AccountsServiceProvider;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
@@ -157,7 +159,12 @@ abstract class TestCase extends Testbench
      */
     protected function keyFor(User $owner, array $data = []): array
     {
-        return app(ApiKeyService::class)->create($owner, ['name' => 'Integração', ...$data]);
+        // A chave é da CONTA pessoal da pessoa (contas com membros).
+        return Accounts::actingAs(
+            app(AccountService::class)->personalAccountOf($owner) ?? throw new \LogicException('Pessoa sem conta pessoal.'),
+            fn (): array => app(ApiKeyService::class)->create($owner, ['name' => 'Integração', ...$data]),
+            $owner,
+        );
     }
 
     /**

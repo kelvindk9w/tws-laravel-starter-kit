@@ -21,7 +21,7 @@ it('todos os idiomas têm os mesmos arquivos e chaves do pt-BR', function (): vo
         $reference[basename($file)] = collect(require $file)->dot()->keys()->sort()->values();
     }
 
-    expect(array_keys($reference))->toBe(['api_keys.php', 'mail.php']);
+    expect(array_keys($reference))->toBe(['accounts.php', 'api_keys.php', 'mail.php']);
 
     foreach (['en', 'es'] as $locale) {
         foreach ($reference as $file => $keys) {
@@ -56,7 +56,7 @@ it('toda chave que o código do pacote pede existe no pacote', function (): void
             continue;
         }
 
-        preg_match_all("/__\\('((?:api_keys|mail)\\.[a-z_.]+[a-z_])'/", (string) file_get_contents((string) $file), $matches);
+        preg_match_all("/(?:__|trans_choice)\\('((?:accounts|api_keys|mail)\\.[a-z_.]+[a-z_])'/", (string) file_get_contents((string) $file), $matches);
 
         foreach ($matches[1] as $key) {
             $pedidas++;

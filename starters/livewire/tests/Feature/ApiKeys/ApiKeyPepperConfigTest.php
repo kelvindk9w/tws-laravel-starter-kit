@@ -73,7 +73,7 @@ it('com o pepper vazio vindo do ambiente, a chave criada no painel nasce com o h
     $user = User::factory()->create();
     ['api_key' => $key, 'secret_key' => $secret] = criarChave($user);
 
-    $hash = (string) ApiKey::query()->whereKey($key->getKey())->value('secret_hash');
+    $hash = (string) comoSistema(fn () => ApiKey::query()->whereKey($key->getKey())->value('secret_hash'));
 
     expect($hash)->toBe(hash_hmac('sha256', $secret, (string) config('app.key')))
         ->and($hash)->not->toBe(hash_hmac('sha256', $secret, ''))

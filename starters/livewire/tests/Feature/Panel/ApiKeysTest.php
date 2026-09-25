@@ -10,7 +10,6 @@ use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
-use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
 // =============================================================================
@@ -45,8 +44,8 @@ it('lista apenas as chaves do próprio usuário com status e último uso', funct
     $user = User::factory()->create();
     $outro = User::factory()->create();
 
-    app(ApiKeyService::class)->create($user, ['name' => 'Minha Integração']);
-    app(ApiKeyService::class)->create($outro, ['name' => 'Chave Alheia']);
+    criarChave($user, ['name' => 'Minha Integração']);
+    criarChave($outro, ['name' => 'Chave Alheia']);
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -59,7 +58,7 @@ it('lista apenas as chaves do próprio usuário com status e último uso', funct
 
 it('cria chave pela UI com 2FA completo e exibe a secreta UMA única vez', function () {
     $user = User::factory()->withTransactionPassword()->create();
-    $projeto = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
+    $projeto = projetoDe($user, 'Loja A');
 
     $component = Livewire::actingAs($user)
         ->test(Index::class)
@@ -89,7 +88,7 @@ it('cria chave pela UI com 2FA completo e exibe a secreta UMA única vez', funct
     expect($public)->toStartWith('pk_')
         ->and($secret)->toStartWith('sk_');
 
-    $key = ApiKey::query()->sole();
+    $key = comoSistema(fn () => ApiKey::query()->sole());
 
     expect($key->name)->toBe('Integração ERP')
         ->and($key->public_key)->toBe($public)
@@ -119,7 +118,7 @@ it('cria chave com escopos granulares quando o toggle "todas" está desligado', 
         ->call('confirmSensitiveAction')
         ->assertHasNoErrors();
 
-    $key = ApiKey::query()->sole();
+    $key = comoSistema(fn () => ApiKey::query()->sole());
 
     expect($key->scopes)->toBe(['projects:read', 'uploads:create'])
         ->and($key->allows('projects:read'))->toBeTrue()
@@ -137,7 +136,7 @@ it('exige seleção granular quando o toggle "todas" está desligado', function 
         ->call('requestCreate')
         ->assertHasErrors(['selectedScopes']);
 
-    expect(ApiKey::query()->count())->toBe(0);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
 });
 
 it('bloqueia a criação quando a senha de transação não foi definida', function () {
@@ -150,7 +149,7 @@ it('bloqueia a criação quando a senha de transação não foi definida', funct
         ->call('requestCreate')
         ->assertHasErrors(['name']);
 
-    expect(ApiKey::query()->count())->toBe(0);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
 });
 
 it('rejeita senha de transação incorreta no fluxo sensível', function () {
@@ -166,7 +165,7 @@ it('rejeita senha de transação incorreta no fluxo sensível', function () {
         ->assertHasErrors(['sensitivePassword'])
         ->assertSet('codeSent', false);
 
-    expect(ApiKey::query()->count())->toBe(0);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
 });
 
 it('rejeita código de verificação incorreto', function () {
@@ -183,14 +182,14 @@ it('rejeita código de verificação incorreto', function () {
         ->call('confirmSensitiveAction')
         ->assertHasErrors(['sensitiveCode']);
 
-    expect(ApiKey::query()->count())->toBe(0);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
 });
 
 it('rotaciona com grace period: nova chave herda tudo e a antiga fica em transição', function () {
     $user = User::factory()->withTransactionPassword()->create();
-    $projeto = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja']);
+    $projeto = projetoDe($user, 'Loja');
 
-    $original = app(ApiKeyService::class)->create($user, [
+    $original = criarChave($user, [
         'name' => 'Principal',
         'project_uuids' => [$projeto->uuid],
     ])['api_key'];
@@ -209,9 +208,9 @@ it('rotaciona com grace period: nova chave herda tudo e a antiga fica em transi�
     $novaSecreta = $component->get('revealedSecretKey');
 
     expect($novaSecreta)->toStartWith('sk_')
-        ->and(ApiKey::query()->count())->toBe(2);
+        ->and(comoSistema(fn () => ApiKey::query()->count()))->toBe(2);
 
-    $nova = ApiKey::query()->where('id', '!=', $original->id)->sole();
+    $nova = comoSistema(fn () => ApiKey::query()->where('id', '!=', $original->id)->sole());
     $antiga = $original->fresh();
 
     expect($nova->name)->toBe('Principal')
@@ -224,7 +223,7 @@ it('rotaciona com grace period: nova chave herda tudo e a antiga fica em transi�
 
 it('revoga com confirmação na mesma tela (irreversível)', function () {
     $user = User::factory()->create();
-    $key = app(ApiKeyService::class)->create($user, ['name' => 'Vai morrer'])['api_key'];
+    $key = criarChave($user, ['name' => 'Vai morrer'])['api_key'];
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -237,8 +236,8 @@ it('revoga com confirmação na mesma tela (irreversível)', function () {
 
 it('edita os vínculos N:N chave ↔ projetos pela UI', function () {
     $user = User::factory()->create();
-    $projeto = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja B']);
-    $key = app(ApiKeyService::class)->create($user, ['name' => 'Chave'])['api_key'];
+    $projeto = projetoDe($user, 'Loja B');
+    $key = criarChave($user, ['name' => 'Chave'])['api_key'];
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -253,8 +252,8 @@ it('edita os vínculos N:N chave ↔ projetos pela UI', function () {
 it('não vincula projeto de outro tenant a uma chave (anti-IDOR)', function () {
     $user = User::factory()->create();
     $outro = User::factory()->create();
-    $alheio = Project::createWithPublicCodeRetry(['user_id' => $outro->id, 'name' => 'Alheio']);
-    $key = app(ApiKeyService::class)->create($user, ['name' => 'Chave'])['api_key'];
+    $alheio = projetoDe($outro, 'Alheio');
+    $key = criarChave($user, ['name' => 'Chave'])['api_key'];
 
     // resolveProjectIds rejeita uuid alheio → erro de validação,
     // e o vínculo NÃO é criado.
@@ -271,7 +270,7 @@ it('não vincula projeto de outro tenant a uma chave (anti-IDOR)', function () {
 it('não rotaciona nem revoga chave de outro tenant (404 uniforme)', function () {
     $user = User::factory()->withTransactionPassword()->create();
     $outro = User::factory()->create();
-    $alheia = app(ApiKeyService::class)->create($outro, ['name' => 'Alheia'])['api_key'];
+    $alheia = criarChave($outro, ['name' => 'Alheia'])['api_key'];
 
     // firstOrFail → ModelNotFoundException → 404 (desde o Livewire 4.4.6 o
     // harness de teste responde 404 como a request real, sem propagar).
@@ -284,7 +283,7 @@ it('não rotaciona nem revoga chave de outro tenant (404 uniforme)', function ()
 it('não revoga chave de outro tenant (404 uniforme)', function () {
     $user = User::factory()->withTransactionPassword()->create();
     $outro = User::factory()->create();
-    $alheia = app(ApiKeyService::class)->create($outro, ['name' => 'Alheia'])['api_key'];
+    $alheia = criarChave($outro, ['name' => 'Alheia'])['api_key'];
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -298,7 +297,7 @@ it('não revoga chave de outro tenant (404 uniforme)', function () {
 
 it('não empilha dois modais: a confirmação de segurança substitui o de rotação', function () {
     $user = User::factory()->withTransactionPassword()->create();
-    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Produção'])['api_key'];
+    $chave = criarChave($user, ['name' => 'Produção'])['api_key'];
 
     $component = Livewire::actingAs($user)
         ->test(Index::class)
@@ -322,7 +321,7 @@ it('não empilha dois modais: a confirmação de segurança substitui o de rota�
 
 it('oferece copiar a chave pública em cada linha da listagem', function () {
     $user = User::factory()->withTransactionPassword()->create();
-    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Integração'])['api_key'];
+    $chave = criarChave($user, ['name' => 'Integração'])['api_key'];
 
     Livewire::actingAs($user)
         ->test(Index::class)
@@ -332,7 +331,7 @@ it('oferece copiar a chave pública em cada linha da listagem', function () {
 
 it('mantém a ação destrutiva fora da linha de frente (menu de overflow)', function () {
     $user = User::factory()->withTransactionPassword()->create();
-    $chave = app(ApiKeyService::class)->create($user, ['name' => 'Integração'])['api_key'];
+    $chave = criarChave($user, ['name' => 'Integração'])['api_key'];
 
     Livewire::actingAs($user)
         ->test(Index::class)

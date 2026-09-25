@@ -94,7 +94,7 @@ O dono é **a pessoa**, gravado de **dois jeitos**, conforme a entrada:
 
 | Entrada | Coluna preenchida | Outra coluna | Observação |
 | --- | --- | --- | --- |
-| API (`POST /api/v1/uploads`, `resolve.tenant` ativo) | `tenant_uuid` = uuid do dono da chave | `user_id` nulo | sem chave estrangeira: excluir a pessoa não mexe no registro |
+| API (`POST /api/v1/uploads`, `resolve.tenant` ativo) | `tenant_uuid` = uuid da **conta** da chave (na conta pessoal, o uuid da pessoa — o mesmo valor da 1.x) | `user_id` nulo | sem chave estrangeira: excluir a pessoa não mexe no registro |
 | Web autenticada (avatar no perfil, `/admin`, `POST /settings/avatar`) | `user_id` = id da pessoa da sessão | `tenant_uuid` nulo | chave estrangeira com `nullOnDelete`: excluir a pessoa deixa o registro sem dono |
 | Sem nenhum dos dois (ex.: comando, seeder) | nenhuma | — | `tenant_uuid` e `user_id` nulos |
 
@@ -102,8 +102,9 @@ A relação `Upload::owner()` só enxerga o dono web (`user_id`). Nenhuma rota
 lista ou entrega upload por dono — o acesso ao arquivo é sempre pela URL
 assinada que o sistema gera para o registro —, então a diferença não abre o
 arquivo de uma pessoa para outra. Ela é uma **incoerência de modelo**, mantida
-como está na 2.0 enquanto o dono for a pessoa: a fase de **contas com
-membros** passa uploads a pertencer à conta e unifica as duas formas.
+como está nesta etapa das contas com membros (projetos e chaves já são da
+conta; o upload ainda não tem o escopo da conta): a etapa seguinte passa
+uploads a pertencer à conta e unifica as duas formas.
 
 ## Foto de perfil (os dois painéis usam a mesma função)
 

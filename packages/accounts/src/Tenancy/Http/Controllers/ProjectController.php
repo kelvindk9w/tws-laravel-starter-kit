@@ -11,6 +11,7 @@ use Twstec\Kit\Accounts\Tenancy\Http\Requests\StoreProjectRequest;
 use Twstec\Kit\Accounts\Tenancy\Http\Requests\UpdateProjectRequest;
 use Twstec\Kit\Accounts\Tenancy\Http\Resources\ProjectResource;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
+use Twstec\Kit\Accounts\Tenancy\TenantContext;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 
 /**
@@ -19,10 +20,10 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * A regra mora no ProjectService (o mesmo que o painel usa); aqui ficam só o
  * HTTP e o envelope das respostas.
  *
- * Isolamento: TODA consulta passa pelo recorte da chave no ProjectService
- * (Project::visibleToApiKey()) — os projetos do dono da chave e, se a chave é
- * vinculada a projetos, só os vinculados.
- * Projeto de outro tenant, ou do mesmo dono fora do vínculo da chave = 404
+ * Isolamento: TODA consulta sai filtrada pela conta da chave (escopo das
+ * contas) e passa pelo recorte da chave no ProjectService
+ * (Project::visibleToApiKey()) — se a chave é vinculada a projetos, só os
+ * vinculados. Projeto de outra conta, ou da mesma conta fora do vínculo = 404
  * uniforme (não revela existência). Criar projeto é operação de conta: a rota
  * exige chave sem vínculo (middleware account.key).
  */
@@ -31,7 +32,7 @@ final class ProjectController
     public function __construct(private readonly ProjectService $projects) {}
 
     /**
-     * GET /api/v1/projects — lista os projetos do tenant (scope projects:read).
+     * GET /api/v1/projects — lista os projetos da conta (scope projects:read).
      */
     public function index(): AnonymousResourceCollection
     {
@@ -105,6 +106,6 @@ final class ProjectController
     private function tenantUser(): AuthUser
     {
         /** @var AuthUser */
-        return tenant() ?? throw new \LogicException('Rota sem resolve.tenant.');
+        return app(TenantContext::class)->user() ?? throw new \LogicException('Rota sem resolve.tenant.');
     }
 }

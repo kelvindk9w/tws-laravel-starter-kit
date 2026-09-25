@@ -23,6 +23,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Twstec\Kit\Admin\Auth\EmailCodeAuthentication;
 use Twstec\Kit\Admin\Dashboards\DashboardRegistry;
 use Twstec\Kit\Admin\Http\Middleware\EnsureAdminPanelAccess;
+use Twstec\Kit\Admin\Http\Middleware\OperateAdminPanelAsSystem;
 use Twstec\Kit\Admin\Pages\Auth\Login;
 use Twstec\Kit\Admin\Pages\Profile;
 use Twstec\Kit\Admin\Pages\Settings;
@@ -207,8 +208,10 @@ final class AdminPlugin implements Plugin
 
     /**
      * Autenticação do painel: o Authenticate do Filament (quem não está logado
-     * vai para o login) e o acesso só de admin com conta ativa, conferido pelo
-     * pacote. Os dois persistentes: valem também nas ações Livewire.
+     * vai para o login), o acesso só de admin com conta ativa, conferido pelo
+     * pacote, e — depois dos dois — o MODO SISTEMA das contas (o painel vê
+     * todas as contas; ver OperateAdminPanelAsSystem). Os três persistentes:
+     * valem também nas ações Livewire.
      *
      * @return list<class-string>
      */
@@ -217,6 +220,7 @@ final class AdminPlugin implements Plugin
         return [
             Authenticate::class,
             EnsureAdminPanelAccess::class,
+            OperateAdminPanelAsSystem::class,
         ];
     }
 

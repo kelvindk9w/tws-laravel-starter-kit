@@ -17,6 +17,9 @@ return [
     // Bloques que usa TODO listado del super admin (ver BaseResource y
     // AdminColumns): las etiquetas comunes no se repiten recurso a recurso.
     'common' => [
+        'account' => 'Cuenta',
+        'account_filter' => 'Cuenta (código)',
+        'created_by' => 'Creado por',
         'copied' => 'Código copiado.',
         'created_at' => 'Creado el',
         'empty_heading' => 'Ningún registro en :records',

@@ -52,9 +52,9 @@ final class ProjectResource extends BaseResource
             TextColumn::make('name')
                 ->label(__('panel.common.name'))
                 ->searchable(),
-            TextColumn::make('owner.email')
-                ->label(__('admin.projects.owner'))
-                ->searchable(),
+            AdminColumns::account(),
+            AdminColumns::accountOwner(__('admin.projects.owner')),
+            AdminColumns::creator(),
             self::linkedKeysColumn(),
             self::statusColumn(),
             AdminColumns::dateTime('created_at', __('panel.common.created_at')),
@@ -73,12 +73,10 @@ final class ProjectResource extends BaseResource
                         ->searchable(),
                     self::statusColumn()->grow(false),
                 ]),
-                TextColumn::make('owner.email')
-                    ->label(__('admin.projects.owner'))
+                AdminColumns::accountOwner(__('admin.projects.owner'))
                     ->icon(Heroicon::OutlinedUserCircle)
                     ->color('gray')
-                    ->size(TextSize::Small)
-                    ->searchable(),
+                    ->size(TextSize::Small),
                 Split::make([
                     self::linkedKeysColumn(),
                     AdminColumns::publicCode()
@@ -115,6 +113,7 @@ final class ProjectResource extends BaseResource
     {
         return $table
             ->filters([
+                AdminColumns::accountFilter(),
                 SelectFilter::make('status')
                     ->label(__('panel.common.status'))
                     ->options([

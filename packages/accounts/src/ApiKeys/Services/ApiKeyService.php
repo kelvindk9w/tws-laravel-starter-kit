@@ -33,21 +33,21 @@ final class ApiKeyService
     ) {}
 
     /**
-     * Cria uma chave de API para o usuário (dono/tenant).
+     * Cria uma chave de API na conta atual; `$creator` é quem criou.
      *
      * @param  array{name: string, scopes?: list<string>|null, expires_at?: string|null, project_uuids?: list<string>|null}  $data
      * @return array{api_key: ApiKey, secret_key: string} A secreta em claro —
      *                                                    exibir UMA vez e descartar. Não há recuperação.
      */
-    public function create(AuthUser $user, array $data): array
+    public function create(AuthUser $creator, array $data): array
     {
         $pair = $this->generator->generatePair();
 
         /** @var ApiKey $apiKey */
-        $apiKey = DB::transaction(function () use ($user, $data, $pair): ApiKey {
+        $apiKey = DB::transaction(function () use ($creator, $data, $pair): ApiKey {
             /** @var ApiKey $apiKey */
             $apiKey = ApiKey::createWithPublicCodeRetry([
-                'user_id' => $user->id,
+                'created_by' => $creator->getKey(),
                 'name' => $data['name'],
                 'public_key' => $pair['public_key'],
                 // SOMENTE o hash — nunca a sk_ em claro.
@@ -57,7 +57,7 @@ final class ApiKeyService
                 'status' => ApiKeyStatus::Active,
             ]);
 
-            $this->syncProjects($apiKey, $this->resolveProjectIds($user, $data['project_uuids'] ?? null));
+            $this->syncProjects($apiKey, $this->resolveProjectIds($data['project_uuids'] ?? null));
 
             return $apiKey;
         });
@@ -87,8 +87,10 @@ final class ApiKeyService
         /** @var ApiKey $newKey */
         $newKey = DB::transaction(function () use ($current, $gracePeriodMinutes, $pair): ApiKey {
             /** @var ApiKey $newKey */
+            // Mesma conta da antiga (a atual — o escopo não deixa achar chave
+            // de outra); quem rotacionou vira o `created_by` da nova.
             $newKey = ApiKey::createWithPublicCodeRetry([
-                'user_id' => $current->user_id,
+                'account_id' => $current->account_id,
                 'name' => $current->name,
                 'public_key' => $pair['public_key'],
                 'secret_hash' => $this->hasher->hash($pair['secret_key']),
@@ -135,7 +137,7 @@ final class ApiKeyService
      *
      * Lista com projetos = chave restrita a eles. Lista vazia = chave de conta
      * toda: é a ação explícita de quem gerencia a conta. Os ids já
-     * devem ter passado por resolveProjectIds() (projetos do dono).
+     * devem ter passado por resolveProjectIds() (projetos da conta atual).
      *
      * A restrição NÃO é recalculada quando um projeto é excluído — a cascata
      * remove o vínculo e a chave segue restrita, agora a menos projetos (ou a
@@ -152,15 +154,15 @@ final class ApiKeyService
     }
 
     /**
-     * Resolve os UUIDs de projetos (N:N) garantindo que pertencem ao dono —
-     * nunca vincula projeto de outro tenant.
+     * Resolve os UUIDs de projetos (N:N) garantindo que pertencem à conta
+     * atual (escopo das contas) — nunca vincula projeto de outra conta.
      *
      * @param  list<string>|null  $projectUuids
      * @return list<int>
      *
-     * @throws InvalidArgumentException Algum projeto não existe para o dono.
+     * @throws InvalidArgumentException Algum projeto não existe na conta.
      */
-    public function resolveProjectIds(AuthUser $user, ?array $projectUuids): array
+    public function resolveProjectIds(?array $projectUuids): array
     {
         if ($projectUuids === null || $projectUuids === []) {
             return [];
@@ -177,7 +179,6 @@ final class ApiKeyService
 
         /** @var list<int> $ids */
         $ids = Project::query()
-            ->where('user_id', $user->id)
             ->whereIn('uuid', $projectUuids)
             ->pluck('id')
             ->all();

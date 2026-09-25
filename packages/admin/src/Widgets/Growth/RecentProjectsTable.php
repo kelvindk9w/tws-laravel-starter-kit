@@ -30,7 +30,7 @@ final class RecentProjectsTable extends BaseLatestRecordsWidget
      */
     protected function latestQuery(Period $period): Builder
     {
-        return Project::query()->with('owner')->withCount('apiKeys');
+        return Project::query()->with('account.owner')->withCount('apiKeys');
     }
 
     protected function latestHeading(): string
@@ -59,7 +59,7 @@ final class RecentProjectsTable extends BaseLatestRecordsWidget
                 ->weight(FontWeight::SemiBold)
                 ->limit(30),
 
-            TextColumn::make('owner.email')
+            TextColumn::make('account.owner.email')
                 ->label(__('admin.dashboards.growth.project_owner'))
                 ->color('gray')
                 ->limit(28),

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Mail;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
-use Twstec\Kit\Accounts\Tenancy\Models\Project;
 
 // Endpoints do motor de chaves da API v1: criar (ação
 // sensível), listar, revogar, rotacionar (ação sensível + grace period)
@@ -43,7 +42,7 @@ it('cria chave exigindo ação sensível: sem o token, 403', function () {
         'forbidden',
     )->assertJsonPath('error.message', __('auth.sensitive_action.invalid_token'));
 
-    expect(ApiKey::query()->count())->toBe(1); // só a bootstrap
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(1); // só a bootstrap
 });
 
 it('cria chave com token de ação sensível e exibe a secreta UMA única vez', function () {
@@ -71,9 +70,9 @@ it('cria chave com token de ação sensível e exibe a secreta UMA única vez', 
         ->and($secretKey)->toStartWith("sk_{$ambiente}_")
         ->and($response->json('data.codigo_publico'))->toStartWith('KEY-')
         // A secreta NUNCA vai para o banco — só o hash HMAC.
-        ->and(app(ApiKeyHasher::class)->verify($secretKey, ApiKey::query()->where('public_key', $publicKey)->sole()->secret_hash))->toBeTrue();
+        ->and(app(ApiKeyHasher::class)->verify($secretKey, comoSistema(fn () => ApiKey::query()->where('public_key', $publicKey)->sole())->secret_hash))->toBeTrue();
 
-    expect(ApiKey::query()->where('public_key', $publicKey)->sole()->secret_hash)->not->toBe($secretKey);
+    expect(comoSistema(fn () => ApiKey::query()->where('public_key', $publicKey)->sole())->secret_hash)->not->toBe($secretKey);
 
     // O token de ação sensível é de USO ÚNICO: segunda criação com o mesmo
     // token é negada.
@@ -96,7 +95,7 @@ it('cria chave com scopes restritos e validade definida pelo usuário', function
     $response->assertCreated()
         ->assertJsonPath('data.scopes', ['customers:read']);
 
-    $chave = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
+    $chave = comoSistema(fn () => ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole());
 
     expect($chave->allows('customers:read'))->toBeTrue()
         ->and($chave->allows('customers:create'))->toBeFalse()
@@ -168,7 +167,7 @@ it('rotaciona SEM grace period: a antiga morre na hora e a nova funciona', funct
         ->assertJsonStructure(['secret_key']);
 
     $novaSegredo = $response->json('secret_key');
-    $nova = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
+    $nova = comoSistema(fn () => ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole());
 
     // Encadeamento da rotação + morte imediata da antiga.
     expect($antiga->refresh()->status)->toBe(ApiKeyStatus::Rotated)
@@ -195,7 +194,7 @@ it('rotaciona COM grace period: antiga convive até o fim da janela escolhida', 
     $response->assertCreated();
 
     $novaSegredo = $response->json('secret_key');
-    $nova = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
+    $nova = comoSistema(fn () => ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole());
 
     // Antiga segue ATIVA durante o grace (sem downtime na troca).
     expect($antiga->refresh()->status)->toBe(ApiKeyStatus::Active)
@@ -217,16 +216,13 @@ it('exige ação sensível para rotacionar', function () {
     $this->postJson("/api/v1/api-keys/{$key->uuid}/rotate", [], headersApi($key, $secret))
         ->assertForbidden();
 
-    expect(ApiKey::query()->count())->toBe(1);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(1);
 });
 
 it('rotação herda scopes e projetos da chave antiga', function () {
     ['user' => $user] = tenantBootstrap();
 
-    $projeto = Project::createWithPublicCodeRetry([
-        'user_id' => $user->id,
-        'name' => 'Loja A',
-    ]);
+    $projeto = projetoDe($user, 'Loja A');
 
     // A chave restrita precisa do scope api-keys:rotate para se autorrotacionar
     // (rotacionar a SI MESMA é permitido à chave vinculada; rotacionar outra
@@ -244,9 +240,9 @@ it('rotação herda scopes e projetos da chave antiga', function () {
     $response->assertCreated()
         ->assertJsonPath('data.scopes', ['pix:create', 'api-keys:rotate']);
 
-    $nova = ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole();
+    $nova = comoSistema(fn () => ApiKey::query()->where('public_key', $response->json('data.public_key'))->sole());
 
-    expect($nova->projects()->pluck('projects.id')->all())->toBe([$projeto->id])
+    expect(comoSistema(fn () => $nova->projects()->pluck('projects.id')->all()))->toBe([$projeto->id])
         ->and($nova->isRestrictedToProjects())->toBeTrue();
 });
 
@@ -256,9 +252,9 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
     ['user' => $user, 'api_key' => $gestora, 'secret_key' => $secret] = tenantBootstrap();
     $key = criarChave($user)['api_key'];
 
-    $projetoA = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja A']);
-    $projetoB = Project::createWithPublicCodeRetry(['user_id' => $user->id, 'name' => 'Loja B']);
-    $projetoAlheio = Project::createWithPublicCodeRetry(['user_id' => User::factory()->create()->id, 'name' => 'Alheio']);
+    $projetoA = projetoDe($user, 'Loja A');
+    $projetoB = projetoDe($user, 'Loja B');
+    $projetoAlheio = projetoDe(User::factory()->create(), 'Alheio');
 
     // Vincula dois projetos do tenant.
     $this->putJson("/api/v1/api-keys/{$key->uuid}/projects", [
@@ -267,7 +263,7 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
         ->assertOk()
         ->assertJsonPath('message', __('api_keys.keys.projects_synced'));
 
-    expect($key->refresh()->projects()->pluck('projects.id')->all())
+    expect(comoSistema(fn () => $key->refresh()->projects()->pluck('projects.id')->all()))
         ->toEqualCanonicalizing([$projetoA->id, $projetoB->id]);
 
     // Projeto de OUTRO tenant: 422, sem vazar existência.
@@ -283,7 +279,7 @@ it('vincula e desvincula projetos da chave (N:N) somente dentro do tenant', func
         'project_uuids' => [],
     ], headersApi($gestora, $secret))->assertOk();
 
-    expect($key->refresh()->projects()->count())->toBe(0)
+    expect(comoSistema(fn () => $key->refresh()->projects()->count()))->toBe(0)
         ->and($key->isRestrictedToProjects())->toBeFalse();
 });
 

@@ -100,7 +100,7 @@ it('conta desativada não executa ação Livewire do painel pelo endpoint real',
     livewireCall($this, $snapshot, 'create', ['name' => 'Projeto após bloqueio'])
         ->assertRedirect(route('login'));
 
-    expect(Project::query()->where('user_id', $user->id)->exists())->toBeFalse();
+    expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->exists()))->toBeFalse();
     $this->assertGuest();
 })->with(statusesInativos());
 
@@ -112,7 +112,7 @@ it('conta ativa continua operando o painel, inclusive a ação Livewire', functi
 
     livewireCall($this, $snapshot, 'create', ['name' => 'Projeto ativo'])->assertOk();
 
-    expect(Project::query()->where('user_id', $user->id)->where('name', 'Projeto ativo')->exists())->toBeTrue();
+    expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->where('name', 'Projeto ativo')->exists()))->toBeTrue();
     $this->assertAuthenticatedAs($user);
 });
 

@@ -6,7 +6,6 @@ use App\Models\User;
 use Livewire\Livewire;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
-use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Admin\Resources\ApiKeys\Pages\ListApiKeys;
 use Twstec\Kit\Admin\Resources\Projects\Pages\ListProjects;
 use Twstec\Kit\Admin\Resources\RequestLogs\Pages\ListRequestLogs;
@@ -54,7 +53,7 @@ it('bloqueia e desbloqueia usuário pela tabela', function () {
 
 it('lista chaves de API de TODOS os tenants (visão global) sem expor a secreta', function () {
     $dono = User::factory()->create(['email' => 'dono@example.com']);
-    $key = app(ApiKeyService::class)->create($dono, ['name' => 'Chave Visível'])['api_key'];
+    $key = criarChave($dono, ['name' => 'Chave Visível'])['api_key'];
 
     Livewire::test(ListApiKeys::class)
         ->assertOk()
@@ -66,7 +65,7 @@ it('lista chaves de API de TODOS os tenants (visão global) sem expor a secreta'
 
 it('revoga chave de qualquer tenant pela ação administrativa', function () {
     $dono = User::factory()->create();
-    $key = app(ApiKeyService::class)->create($dono, ['name' => 'Revogável'])['api_key'];
+    $key = criarChave($dono, ['name' => 'Revogável'])['api_key'];
 
     Livewire::test(ListApiKeys::class)
         ->callTableAction('revoke', $key);
@@ -76,8 +75,8 @@ it('revoga chave de qualquer tenant pela ação administrativa', function () {
 
 it('não oferece revogação para chave já revogada', function () {
     $dono = User::factory()->create();
-    $key = app(ApiKeyService::class)->create($dono, ['name' => 'Morta'])['api_key'];
-    app(ApiKeyService::class)->revoke($key);
+    $key = criarChave($dono, ['name' => 'Morta'])['api_key'];
+    naConta($dono, fn () => app(ApiKeyService::class)->revoke($key));
 
     Livewire::test(ListApiKeys::class)
         ->assertTableActionHidden('revoke', $key);
@@ -85,7 +84,7 @@ it('não oferece revogação para chave já revogada', function () {
 
 it('lista projetos com dono e contagem de chaves vinculadas', function () {
     $dono = User::factory()->create();
-    $projeto = Project::createWithPublicCodeRetry(['user_id' => $dono->id, 'name' => 'Projeto Admin']);
+    $projeto = projetoDe($dono, 'Projeto Admin');
 
     Livewire::test(ListProjects::class)
         ->assertOk()

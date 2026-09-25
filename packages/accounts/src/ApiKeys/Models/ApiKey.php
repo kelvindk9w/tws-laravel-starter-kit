@@ -11,15 +11,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Accounts\Account\Concerns\BelongsToAccount;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
-use Twstec\Kit\Auth\Contracts\AuthUser;
-use Twstec\Kit\Auth\Support\UserModel;
 use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
 use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
 
 /**
  * Chave de API — motor de acesso programático.
+ *
+ * Pertence à CONTA (BelongsToAccount: toda consulta sai filtrada pela conta
+ * atual) e é ela que a chave autentica. `created_by` guarda quem criou; a
+ * chave continua valendo quando essa pessoa sai da conta.
  *
  * Par pública/secreta:
  * - `public_key` (pk_live_/pk_test_...): identificador público, indexado.
@@ -36,14 +39,14 @@ use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
  * inatividade (job diário — ver config/api_keys.php).
  */
 #[Fillable([
-    'user_id', 'name', 'public_key', 'secret_hash', 'scopes', 'restricted_to_projects',
+    'account_id', 'created_by', 'name', 'public_key', 'secret_hash', 'scopes', 'restricted_to_projects',
     'expires_at', 'last_used_at', 'inactivity_warning_sent_at',
     'rotated_from_id', 'rotated_to_id', 'grace_ends_at', 'status',
 ])]
 #[Hidden(['secret_hash'])]
 class ApiKey extends Model
 {
-    use HasPublicCode, HasUuids, RoutesByUuid;
+    use BelongsToAccount, HasPublicCode, HasUuids, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: KEY-xxxxxx.
@@ -84,16 +87,6 @@ class ApiKey extends Model
             'grace_ends_at' => 'datetime',
             'status' => ApiKeyStatus::class,
         ];
-    }
-
-    /**
-     * Dono da chave = o tenant que ela resolve.
-     *
-     * @return BelongsTo<Model&AuthUser, $this>
-     */
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(UserModel::name(), 'user_id');
     }
 
     /**

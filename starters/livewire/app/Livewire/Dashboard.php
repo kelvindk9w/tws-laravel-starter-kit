@@ -12,8 +12,8 @@ use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverviewQuery;
 /**
  * Dashboard do painel do usuário (Livewire).
  *
- * A tela de entrada mostra o que o kit JÁ COLETA sobre a conta: chaves,
- * projetos e o tráfego real da API do tenant (request_logs). Um dashboard que
+ * A tela de entrada mostra o que o kit JÁ COLETA sobre a CONTA ATUAL: chaves,
+ * projetos e o tráfego real da API da conta (request_logs). Um dashboard que
  * só conta linhas de duas tabelas não prova que a instrumentação existe.
  *
  * Os números e listas vêm do AccountOverviewQuery (backend, reutilizável por
@@ -28,7 +28,7 @@ final class Dashboard extends Component
 
         return view('livewire.dashboard', [
             'user' => $user,
-            ...app(AccountOverviewQuery::class)->for($user)->toArray(),
+            ...app(AccountOverviewQuery::class)->forCurrentAccount()->toArray(),
         ])->title(__('panel.dashboard.title'));
     }
 }

@@ -1,0 +1,322 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Twstec\Kit\Accounts\Account\Services;
+
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
+use Twstec\Kit\Accounts\Account\Enums\AccountRole;
+use Twstec\Kit\Accounts\Account\Events\AccountCreated;
+use Twstec\Kit\Accounts\Account\Events\MemberAdded;
+use Twstec\Kit\Accounts\Account\Events\MemberRemoved;
+use Twstec\Kit\Accounts\Account\Exceptions\AccountOwnershipException;
+use Twstec\Kit\Accounts\Account\Exceptions\OwnerOfSharedAccountException;
+use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Account\Models\AccountMembership;
+use Twstec\Kit\Accounts\Account\Support\AccountDatabaseGuards;
+use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+
+/**
+ * Regra única das CONTAS e dos MEMBROS (sem telas).
+ *
+ * - Toda pessoa tem uma conta pessoal, criada junto com ela, com o MESMO uuid
+ *   (AccountsServiceProvider liga isso ao evento de criação do model de
+ *   usuário do aplicativo).
+ * - Membros: entrar, sair e mudar de papel passam por aqui — o dono nunca é
+ *   rebaixado nem sai; a propriedade muda por transferência (fase seguinte).
+ * - Exclusão de pessoa: recusada enquanto ela for DONA de conta com outros
+ *   membros; senão, as contas dela (a pessoal e as que só ela usa) saem junto,
+ *   com os dados — o mesmo efeito da 1.x, quando projetos e chaves eram da
+ *   pessoa.
+ *
+ * Contas e vínculos não são dados "de conta" (não têm o escopo da conta
+ * atual): são a própria estrutura do tenant.
+ */
+final class AccountService
+{
+    /**
+     * A conta pessoal da pessoa — criada se ainda não existe.
+     */
+    public function createPersonalAccount(AuthUser $user): Account
+    {
+        return DB::transaction(function () use ($user): Account {
+            $existente = $this->personalAccountOf($user);
+
+            if ($existente !== null) {
+                return $existente;
+            }
+
+            /** @var Account $account */
+            $account = Account::createWithPublicCodeRetry([
+                'uuid' => (string) $user->getAttribute('uuid'),
+                'name' => null,
+                'personal_user_id' => $user->getKey(),
+            ]);
+
+            AccountMembership::query()->create([
+                'account_id' => $account->getKey(),
+                'user_id' => $user->getKey(),
+                'role' => AccountRole::Owner,
+            ]);
+
+            AccountDatabaseGuards::checkOwnershipNow();
+
+            AccountCreated::dispatch($account);
+
+            return $account;
+        });
+    }
+
+    /**
+     * Uma conta de EMPRESA nova, com a pessoa como dona (as telas de membros
+     * e convites chegam na fase seguinte; o serviço já existe).
+     */
+    public function createAccount(string $name, AuthUser $owner): Account
+    {
+        return DB::transaction(function () use ($name, $owner): Account {
+            /** @var Account $account */
+            $account = Account::createWithPublicCodeRetry(['name' => $name]);
+
+            AccountMembership::query()->create([
+                'account_id' => $account->getKey(),
+                'user_id' => $owner->getKey(),
+                'role' => AccountRole::Owner,
+            ]);
+
+            AccountDatabaseGuards::checkOwnershipNow();
+
+            AccountCreated::dispatch($account);
+
+            return $account;
+        });
+    }
+
+    public function personalAccountOf(AuthUser $user): ?Account
+    {
+        return Account::query()->where('personal_user_id', $user->getKey())->first();
+    }
+
+    /**
+     * Contas de que a pessoa participa (a pessoal primeiro).
+     *
+     * @return Collection<int, Account>
+     */
+    public function accountsOf(AuthUser $user): Collection
+    {
+        return Account::query()
+            ->whereHas('memberships', fn ($query) => $query->where('user_id', $user->getKey()))
+            ->orderByRaw('case when personal_user_id = ? then 0 else 1 end', [$user->getKey()])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * A conta atual de uma pessoa na web: a selecionada na sessão, se ela
+     * ainda é membro; senão a conta pessoal (criada se faltar — uma pessoa
+     * gravada por fora do Eloquent, por exemplo).
+     */
+    public function resolveForPerson(AuthUser $user, ?string $selectedUuid): ?Account
+    {
+        if ($selectedUuid !== null) {
+            $selecionada = Account::query()
+                ->byUuid($selectedUuid)
+                ->whereHas('memberships', fn ($query) => $query->where('user_id', $user->getKey()))
+                ->first();
+
+            if ($selecionada !== null) {
+                return $selecionada;
+            }
+        }
+
+        $pessoal = $this->personalAccountOf($user);
+
+        if ($pessoal !== null) {
+            return $pessoal;
+        }
+
+        if ($user->getAttribute('uuid') === null) {
+            return null;
+        }
+
+        Log::warning('accounts.personal_account.recreated', ['user_uuid' => $user->getAttribute('uuid')]);
+
+        return $this->createPersonalAccount($user);
+    }
+
+    /**
+     * Põe a pessoa na conta como admin ou member (dono só por criação ou
+     * transferência).
+     */
+    public function addMember(Account $account, AuthUser $user, AccountRole $role): AccountMembership
+    {
+        if ($role === AccountRole::Owner) {
+            throw AccountOwnershipException::secondOwner();
+        }
+
+        if ($account->hasMember($user)) {
+            throw new InvalidArgumentException(__('accounts.members.already_member'));
+        }
+
+        /** @var AccountMembership $membership */
+        $membership = AccountMembership::query()->create([
+            'account_id' => $account->getKey(),
+            'user_id' => $user->getKey(),
+            'role' => $role,
+        ]);
+
+        MemberAdded::dispatch($membership);
+
+        return $membership;
+    }
+
+    /**
+     * Tira a pessoa da conta. O dono não sai (transfira antes). As chaves que
+     * ela criou continuam valendo: são da conta.
+     */
+    public function removeMember(Account $account, AuthUser $user): void
+    {
+        $membership = $account->memberships()->where('user_id', $user->getKey())->first();
+
+        if ($membership === null) {
+            return;
+        }
+
+        $membership->delete();
+
+        MemberRemoved::dispatch($account, $user->getKey());
+    }
+
+    public function changeRole(Account $account, AuthUser $user, AccountRole $role): AccountMembership
+    {
+        /** @var AccountMembership $membership */
+        $membership = $account->memberships()->where('user_id', $user->getKey())->firstOrFail();
+
+        $membership->role = $role;
+        $membership->save();
+
+        return $membership;
+    }
+
+    /**
+     * Contas de que a pessoa é DONA e que têm outros membros — as que
+     * impedem a exclusão dela.
+     *
+     * @return Collection<int, Account>
+     */
+    public function sharedAccountsOwnedBy(AuthUser $user): Collection
+    {
+        return Account::query()
+            ->whereHas('memberships', fn ($query) => $query
+                ->where('user_id', $user->getKey())
+                ->where('role', AccountRole::Owner->value))
+            ->whereHas('memberships', fn ($query) => $query->where('user_id', '!=', $user->getKey()))
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Motivo traduzido pelo qual a pessoa não pode ser excluída (nulo quando
+     * pode) — para as telas avisarem antes.
+     */
+    public function deletionDenial(AuthUser $user): ?string
+    {
+        $compartilhadas = $this->sharedAccountsOwnedBy($user);
+
+        if ($compartilhadas->isEmpty()) {
+            return null;
+        }
+
+        return OwnerOfSharedAccountException::messageFor($compartilhadas->pluck('codigo_publico')->all());
+    }
+
+    /**
+     * Recusa a exclusão da pessoa que é dona de conta com outros membros.
+     *
+     * @throws OwnerOfSharedAccountException
+     */
+    public function ensurePersonCanBeDeleted(AuthUser $user): void
+    {
+        $compartilhadas = $this->sharedAccountsOwnedBy($user);
+
+        if ($compartilhadas->isNotEmpty()) {
+            throw new OwnerOfSharedAccountException($compartilhadas->pluck('codigo_publico')->all());
+        }
+    }
+
+    /**
+     * Ids das contas de que a pessoa é dona (antes de ela sair).
+     *
+     * @return list<int>
+     */
+    public function ownedAccountIds(AuthUser $user): array
+    {
+        return AccountMembership::query()
+            ->where('user_id', $user->getKey())
+            ->where('role', AccountRole::Owner->value)
+            ->pluck('account_id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Depois que a pessoa saiu do banco: o que ela deixou nas contas é
+     * arrumado aqui, sem depender de o banco ter as chaves estrangeiras
+     * ligadas (no PostgreSQL os gatilhos e as cascatas já fizeram o mesmo na
+     * própria sentença; aqui nada sobra em nenhum banco):
+     *
+     * - as contas de que era dona e que ficaram sem dono saem com os dados;
+     * - os vínculos que sobraram (admin/member) saem;
+     * - `created_by` dos dados que criou fica vazio — os dados são da conta.
+     *
+     * @param  list<int>  $ownedAccountIds  Contas de que a pessoa era dona.
+     */
+    public function cleanUpAfterPersonDeleted(mixed $userId, array $ownedAccountIds): void
+    {
+        Accounts::asSystem('accounts:person-deleted', function () use ($userId, $ownedAccountIds): void {
+            DB::transaction(function () use ($userId, $ownedAccountIds): void {
+                AccountMembership::query()->where('user_id', $userId)->where('role', '!=', AccountRole::Owner->value)->delete();
+
+                Account::query()
+                    ->whereKey($ownedAccountIds)
+                    ->whereDoesntHave('memberships', fn ($query) => $query
+                        ->where('role', AccountRole::Owner->value)
+                        ->where('user_id', '!=', $userId))
+                    ->get()
+                    ->each(fn (Account $account) => $this->deleteAccount($account));
+
+                Project::query()->where('created_by', $userId)->update(['created_by' => null]);
+                ApiKey::query()->where('created_by', $userId)->update(['created_by' => null]);
+            });
+        });
+    }
+
+    /**
+     * Exclui a conta com os dados dela (projetos, chaves, vínculos). Em modo
+     * sistema declarado; quem pode excluir (o dono) é decidido antes.
+     */
+    public function deleteAccount(Account $account): void
+    {
+        Accounts::asSystem('accounts:delete-account', function () use ($account): void {
+            DB::transaction(function () use ($account): void {
+                ApiKey::query()->where('account_id', $account->getKey())->get()
+                    ->each(fn (ApiKey $key) => $key->projects()->detach());
+
+                ApiKey::query()->where('account_id', $account->getKey())->update(['rotated_from_id' => null, 'rotated_to_id' => null]);
+                ApiKey::query()->where('account_id', $account->getKey())->delete();
+                Project::query()->where('account_id', $account->getKey())->delete();
+
+                // A conta sai antes dos vínculos: no PostgreSQL, a regra do
+                // dono só deixa o vínculo do dono sair quando a conta já saiu.
+                $account->delete();
+
+                AccountMembership::query()->where('account_id', $account->getKey())->delete();
+            });
+        });
+    }
+}

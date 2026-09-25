@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\TenantContext;
-use Twstec\Kit\Auth\Contracts\AuthUser;
 
 // =============================================================================
 // Helpers globais do módulo de Tenancy.
@@ -13,12 +13,16 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
 
 if (! function_exists('tenant')) {
     /**
-     * Tenant da requisição corrente (usuário dono da chave de API).
+     * Tenant da requisição corrente da API: a CONTA da chave de API.
      * Null fora de rotas protegidas pelo middleware resolve.tenant.
+     *
+     * Na 1.x devolvia a pessoa dona da chave; a pessoa por trás da chave agora
+     * é `app(TenantContext::class)->user()` (e o `$request->user()` da rota).
+     * O uuid da conta pessoal é o da pessoa.
      */
-    function tenant(): ?AuthUser
+    function tenant(): ?Account
     {
-        return app(TenantContext::class)->user();
+        return app(TenantContext::class)->account();
     }
 }
 
