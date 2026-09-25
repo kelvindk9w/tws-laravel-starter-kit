@@ -212,6 +212,9 @@ test('seletor de idioma (bandeira em SVG + nome) troca o idioma do painel', asyn
     } finally {
         // Cleanup: a troca persiste users.locale na conta demo (banco de dev
         // compartilhado) — volta para PT mesmo se o teste falhar no meio.
+        // Enquanto dura, a conta demo vê o /admin em inglês em QUALQUER
+        // sessão, inclusive nos outros workers: quem usa o /admin fora deste
+        // arquivo não pode depender de texto (ver support/cleanup.js).
         await openAdmin(page, '/admin');
         await page.locator('details.tws-locale summary').click();
         await page.locator('details.tws-locale').getByRole('menuitem', { name: 'Português (Brasil)' }).click();
