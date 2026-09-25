@@ -71,6 +71,35 @@ return [
         'reply_hint' => 'Responder este correo contesta directamente a quien escribió.',
     ],
 
+    // Invitación a una cuenta (twstec/kit-accounts). El asunto es del paquete.
+    'account_invitation' => [
+        'preheader' => ':inviter lo invitó a la cuenta :account.',
+        'heading' => 'Lo invitaron a la cuenta :account',
+        'intro' => ':inviter lo invitó a trabajar en la cuenta :account en :platform.',
+        'account_label' => 'Cuenta',
+        'role_label' => 'Rol',
+        'expires_label' => 'Válida hasta',
+        'action' => 'Abrir la invitación',
+        'how' => 'Si todavía no tiene acceso a la plataforma, créelo en la propia pantalla de la invitación. Si ya lo tiene, entre y acepte.',
+        'fallback' => 'Si el botón no funciona, copie y pegue esta dirección en el navegador:',
+        'ignore' => 'Si no esperaba esta invitación, ignore este correo: sin la aceptación, no pasa nada.',
+    ],
+
+    // Aviso de clave huérfana (twstec/kit-accounts). El asunto es del paquete.
+    'orphaned_api_keys' => [
+        'preheader' => '{1} :count clave de API de la cuenta :account sigue funcionando.|[2,*] :count claves de API de la cuenta :account siguen funcionando.',
+        'heading' => '{1} Una clave de API se quedó sin quien la creó|[2,*] Claves de API se quedaron sin quien las creó',
+        'intro_removed' => '{1} :name fue quitado de la cuenta :account y había creado la clave de abajo.|[2,*] :name fue quitado de la cuenta :account y había creado las claves de abajo.',
+        'intro_deleted' => '{1} El acceso de :name a la plataforma fue eliminado, y esa persona había creado la clave de abajo en la cuenta :account.|[2,*] El acceso de :name a la plataforma fue eliminado, y esa persona había creado las claves de abajo en la cuenta :account.',
+        'intro_left' => '{1} :name salió de la cuenta :account y había creado la clave de abajo.|[2,*] :name salió de la cuenta :account y había creado las claves de abajo.',
+        'name_label' => 'Nombre de la clave',
+        'code_label' => 'Código público',
+        'key_label' => 'Clave pública',
+        'still_valid' => '{1} La clave es de la cuenta, no de la persona: sigue funcionando. Si quien la usaba ya no debe tener acceso, rótela o revóquela.|[2,*] Las claves son de la cuenta, no de la persona: siguen funcionando. Si quien las usaba ya no debe tener acceso, rótelas o revóquelas.',
+        'cta' => 'Revisar las claves de la cuenta',
+        'why' => 'Recibe este aviso porque es propietario o administrador de la cuenta.',
+    ],
+
     // Pantalla de vista previa de correos (/mail-preview) — solo en desarrollo.
     'preview' => [
         'title' => 'Vista previa de los correos',
@@ -89,6 +118,8 @@ return [
             'login-code' => 'Código de acceso (inicio de sesión)',
             'password-reset' => 'Restablecer contraseña',
             'api-key-inactivity' => 'Clave de API inactiva',
+            'account-invitation' => 'Invitación a una cuenta',
+            'orphaned-api-keys' => 'Clave de API huérfana',
             'contact-message' => 'Formulario de contacto',
         ],
         'locales' => ['pt_BR' => 'Português', 'en' => 'English', 'es' => 'Español'],

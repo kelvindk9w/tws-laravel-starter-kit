@@ -24,7 +24,7 @@ garante isso.
 | Peça | O que faz |
 | --- | --- |
 | `AdminPlugin` | O plugin que o aplicativo registra no painel: resources, páginas, login, segundo fator, dashboards, navegação, menu do usuário, avatar de iniciais e as proteções |
-| `Resources\…` | Usuários (CRUD com guardas), Chaves de API, Projetos, Uploads, Logs de requisição e Auditoria |
+| `Resources\…` | Usuários (CRUD com guardas), Contas (só leitura: membros e papéis, projetos e chaves da conta), Chaves de API, Projetos, Uploads, Logs de requisição e Auditoria |
 | `Pages\…` | Perfil do admin (foto, nome, segundo fator), Configurações editáveis e o Login (`Pages\Auth\Login`) |
 | `Auth\EmailCodeAuthentication` | Provedor de MFA do Filament com o motor do `twstec/kit-auth` (código por e-mail, mesmos limites do painel do cliente) |
 | `Dashboards\…`, `Widgets\…` | As variantes "Visão geral" e "Crescimento & API", o `DashboardRegistry` (lê `config/dashboards.php`) e a base de widgets (`Metric`, `Period`, `BaseStatsWidget`…) |

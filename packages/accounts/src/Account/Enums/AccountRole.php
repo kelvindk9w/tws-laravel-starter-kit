@@ -9,7 +9,9 @@ namespace Twstec\Kit\Accounts\Account\Enums;
  *
  * - owner: o dono — exatamente um por conta (o banco garante). Faz tudo,
  *   inclusive o que só ele pode: transferir a propriedade e excluir a conta.
- * - admin: administra a conta — projetos, chaves de API e membros.
+ * - admin: administra a conta — projetos, chaves de API, membros (com o
+ *   limite de Support\MemberRules: não mexe no dono nem em outro admin) e o
+ *   nome da conta.
  * - member: trabalha na conta — vê tudo e cria/edita projetos; não gere
  *   chaves de API, não exclui projeto e não mexe em membros.
  *
@@ -33,7 +35,8 @@ enum AccountRole: string
             AccountAbility::UpdateProjects => true,
             AccountAbility::DeleteProjects,
             AccountAbility::ManageApiKeys,
-            AccountAbility::ManageMembers => $this !== self::Member,
+            AccountAbility::ManageMembers,
+            AccountAbility::UpdateAccount => $this !== self::Member,
             AccountAbility::TransferOwnership,
             AccountAbility::DeleteAccount => $this === self::Owner,
         };

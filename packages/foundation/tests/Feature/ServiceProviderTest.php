@@ -47,6 +47,7 @@ it('roda as migrations do pacote com os mesmos nomes de arquivo da 1.x', functio
         '2026_08_21_000002_create_settings_table',
         '2026_09_21_000001_add_client_correlation_id_to_request_logs_table',
         '2026_09_25_000001_create_audit_events_table',
+        '2026_09_27_000001_add_tenant_uuid_to_audit_events_table',
     ]);
 
     expect(app('migrator')->paths())->toContain(foundationPackagePath('database/migrations'));

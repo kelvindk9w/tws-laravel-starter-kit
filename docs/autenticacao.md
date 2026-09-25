@@ -334,7 +334,7 @@ acima valem — nada disso roda no boot.
 
 ## Ação sensível: senha de transação + código por e-mail (2FA)
 
-Fluxo (para saque, rotação de chave de API e alterações críticas):
+Fluxo (para saque, criação e rotação de chave de API, transferência de propriedade e exclusão de conta — ver [tenancy.md](tenancy.md) — e alterações críticas):
 
 1. `POST /sensitive-actions/code` com a senha de transação → gera código de
    **6 dígitos**, persiste **somente o hash** (`verification_codes`) com

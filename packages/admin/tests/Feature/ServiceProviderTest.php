@@ -16,6 +16,7 @@ use Twstec\Kit\Admin\Http\Middleware\OperateAdminPanelAsSystem;
 use Twstec\Kit\Admin\Pages\Auth\Login;
 use Twstec\Kit\Admin\Pages\Profile;
 use Twstec\Kit\Admin\Pages\Settings;
+use Twstec\Kit\Admin\Resources\Accounts\AccountResource;
 use Twstec\Kit\Admin\Resources\ApiKeys\ApiKeyResource;
 use Twstec\Kit\Admin\Resources\AuditEvents\AuditEventResource;
 use Twstec\Kit\Admin\Resources\Projects\ProjectResource;
@@ -71,6 +72,7 @@ it('o plugin põe no painel o produto inteiro: resources, páginas, login com se
 
     expect($panel->hasPlugin(AdminPlugin::ID))->toBeTrue()
         ->and($panel->getResources())->toEqualCanonicalizing([
+            AccountResource::class,
             ApiKeyResource::class,
             AuditEventResource::class,
             ProjectResource::class,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Symfony\Component\Finder\Finder;
 use Twstec\Kit\Accounts\Account\Concerns\BelongsToAccount;
+use Twstec\Kit\Accounts\Account\Models\AccountInvitation;
 use Twstec\Kit\Accounts\Account\Scopes\AccountScope;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
@@ -25,7 +26,7 @@ use Twstec\Kit\Accounts\Tenancy\Models\Project;
 // (tests/Unit/Architecture/AccountIsolationTest.php).
 // =============================================================================
 
-const ACCOUNT_TABLES = ['accounts', 'account_memberships', 'projects', 'api_keys', 'api_key_project'];
+const ACCOUNT_TABLES = ['accounts', 'account_memberships', 'account_invitations', 'projects', 'api_keys', 'api_key_project'];
 
 /**
  * Onde o pacote entra em modo sistema, e por quê.
@@ -36,8 +37,12 @@ const ACCOUNTS_SYSTEM_MODE_ALLOWED = [
     'src/Tenancy/Middleware/ResolveTenant.php' => 1,
     // O comando varre as chaves de todas as contas (avisos e desativação).
     'src/ApiKeys/Console/ProcessApiKeyInactivity.php' => 1,
-    // Excluir conta e arrumar o que a pessoa excluída deixou nas contas.
-    'src/Account/Services/AccountService.php' => 2,
+    // Excluir conta, arrumar o que a pessoa excluída deixou nas contas e ler,
+    // antes da exclusão, as chaves que ela deixa órfãs em contas alheias.
+    'src/Account/Services/AccountService.php' => 3,
+    // O link de convite não diz de que conta é o convite: achar pelo hash do
+    // token e marcá-lo como aceito/recusado (um ponto só, InvitationTokens::system).
+    'src/Account/Invitations/InvitationTokens.php' => 1,
 ];
 
 /**
@@ -186,7 +191,7 @@ it('modo sistema só onde foi revisado, sempre com motivo', function (): void {
 });
 
 it('os models da conta carregam o escopo (e o trait) — o esquecimento de um model novo reprova', function (): void {
-    foreach ([Project::class, ApiKey::class] as $model) {
+    foreach ([Project::class, ApiKey::class, AccountInvitation::class] as $model) {
         expect(in_array(BelongsToAccount::class, class_uses_recursive($model), true))->toBeTrue($model)
             ->and((new $model)->hasGlobalScope(AccountScope::class))->toBeTrue($model);
     }

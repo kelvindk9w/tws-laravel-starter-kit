@@ -20,9 +20,17 @@
             :title="__('ui.nav.account')"
             :groups="Navigation::account()"
             mobile="none"
-        />
+        >
+            {{-- A conta atual em todo o painel, e a troca de conta. --}}
+            <x-slot:header>
+                <x-account-switcher />
+            </x-slot:header>
+        </x-side-nav>
 
         <main class="min-w-0 flex-1">
+            {{-- No celular a coluna some: o seletor abre o conteúdo. --}}
+            <x-account-switcher class="mb-6 lg:hidden" />
+
             {{ $slot }}
         </main>
     </div>

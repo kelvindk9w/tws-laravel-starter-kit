@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Twstec\Kit\Accounts\Account\Support;
 
 use Illuminate\Contracts\Events\Dispatcher;
+use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Support\UserModel;
@@ -22,7 +23,9 @@ use WeakMap;
  *   - senão, as contas de que ela era dona (a pessoal e as que só ela usava)
  *     saem com os dados — o mesmo efeito da 1.x; nas contas em que era admin
  *     ou member ela só deixa de ser membro, e as chaves que criou continuam
- *     valendo (são da conta).
+ *     valendo (são da conta) — e o dono e os admins de cada uma dessas
+ *     contas recebem o AVISO DE CHAVE ÓRFÃ (uma vez por conta, pela fila,
+ *     depois do commit; exclusão recusada não avisa ninguém).
  *
  * A recusa roda no `deleting` (antes de tocar no banco) e não tem efeito
  * colateral: se outra guarda recusar depois (conta protegida, por exemplo),
@@ -38,9 +41,19 @@ final class PersonLifecycle
      */
     private WeakMap $owned;
 
-    public function __construct(private readonly AccountService $accounts)
-    {
+    /**
+     * Chaves órfãs que cada pessoa em exclusão vai deixar, por conta.
+     *
+     * @var WeakMap<AuthUser, list<array{account: Account, keys: list<array{name: string, code: string, public_key: string}>}>>
+     */
+    private WeakMap $orphans;
+
+    public function __construct(
+        private readonly AccountService $accounts,
+        private readonly OrphanedApiKeys $notices,
+    ) {
         $this->owned = new WeakMap;
+        $this->orphans = new WeakMap;
     }
 
     public static function register(Dispatcher $events): void
@@ -70,14 +83,25 @@ final class PersonLifecycle
         $this->accounts->ensurePersonCanBeDeleted($user);
 
         $this->owned[$user] = $this->accounts->ownedAccountIds($user);
+        $this->orphans[$user] = $this->accounts->orphanedKeysOnPersonExit($user);
     }
 
     public function deleted(AuthUser $user): void
     {
         $ids = $this->owned[$user] ?? [];
 
-        unset($this->owned[$user]);
+        $orfas = $this->orphans[$user] ?? [];
+
+        unset($this->owned[$user], $this->orphans[$user]);
 
         $this->accounts->cleanUpAfterPersonDeleted($user->getKey(), $ids);
+
+        // Chaves que a pessoa criou em contas de OUTROS donos continuam
+        // valendo: o dono e os admins de cada uma são avisados (uma vez por
+        // conta, pela fila, depois do commit). Quem saiu pela página da conta
+        // já não é membro dela aqui — não há aviso duplicado.
+        foreach ($orfas as $orfa) {
+            $this->notices->notify($orfa['account'], $user, $orfa['keys'], removed: true, deleted: true);
+        }
     }
 }

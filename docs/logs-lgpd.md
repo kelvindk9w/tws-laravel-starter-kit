@@ -66,19 +66,25 @@ Decisão do dono: **toda ação de admin que altera dado fica registrada no banc
 | Coluna | Conteúdo |
 |---|---|
 | `uuid`, `occurred_at` | identificador e momento (UTC) |
-| `context` | de onde partiu: `admin` e `console` hoje; `panel` e `api` já previstos (`AuditContext`) |
+| `context` | de onde partiu: `admin`, `panel` (os eventos de conta do painel) e `console`; `api` já previsto (`AuditContext`) |
 | `actor_uuid`, `actor_is_admin` | quem agiu e se era admin naquele momento (nulo no console) |
 | `action` | nome estável `<tipo>.<verbo>`: `user.blocked`, `api_key.revoked`, `product.created`, `setting.changed`, `user.two_factor_enabled`, `user.admin_granted`... |
 | `outcome` | `success` ou `denied` (tentativa recusada por guarda de servidor) |
-| `subject_type`, `subject_uuid` | o registro afetado (`user`, `api_key`, `product`...) |
+| `subject_type`, `subject_uuid` | o registro afetado (`user`, `api_key`, `product`, `account_invitation`...) |
+| `tenant_uuid` | a CONTA em que a ação aconteceu (o mesmo valor de `request_logs.tenant_uuid`); nulo quando a ação não é de uma conta |
 | `changes` | resumo do que mudou, `{campo: {before, after}}`, **já redigido** (abaixo) |
 | `reason` | o motivo da recusa, quando `denied` (passa pelo Redactor) |
 | `correlation_id` | o MESMO da linha de `request_logs` da requisição (nulo no console) |
 | `ip`, `user_agent` | como a trilha de requisições trata: IP resolvido pelo TrustProxies, User-Agent em 500 caracteres. No console, o `user_agent` leva o comando e o usuário do sistema operacional |
 
-Índices para as três perguntas de auditoria, todas por período: o que FULANO fez
-(`actor_uuid`), o que aconteceu com ESTE registro (`subject_type` + `subject_uuid`) e onde aconteceu
-ESTA ação (`action`).
+Índices para as quatro perguntas de auditoria, todas por período: o que FULANO fez
+(`actor_uuid`), o que aconteceu com ESTE registro (`subject_type` + `subject_uuid`), onde aconteceu
+ESTA ação (`action`) e o que aconteceu NESTA conta (`tenant_uuid`).
+
+**Eventos de conta.** Convites (criado, reenviado, revogado, aceito, recusado), membros (papel
+alterado, removido, saiu), propriedade transferida e conta criada/renomeada/excluída gravam uma
+linha cada, pelas Actions do pacote de contas, na mesma transação da mudança (falha fechada) — e
+cada recusa como `denied`, com o motivo. Lista e regras em [tenancy.md](tenancy.md#trilha-de-auditoria-das-contas).
 
 **Como a gravação é central.** `Twstec\Kit\Admin\Support\AdminAudit` (pacote twstec/kit-admin) se pendura no gancho `call` do
 Livewire: toda chamada de componente do painel (o "Criar"/"Salvar" das páginas, toda Action de

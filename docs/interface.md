@@ -222,6 +222,33 @@ a vitrine responde 404 **mesmo com a flag ligada** — ver
 > Nota: o nome `<x-icon>` pertence ao pacote `blade-icons` (dependência do
 > Filament) — por isso os ícones inline do kit usam `<x-ui-icon>`.
 
+### Componentes das listas e das contas do painel
+
+Três componentes nasceram com as contas com membros (em
+`resources/views/components/`, prontos para qualquer tela do painel):
+
+- **`<x-icon-button icon="trash" color="red" :label="…" wire:click="…" />`** —
+  ação de linha ou de cartão **só com o ícone**, colorido pelo tipo da ação
+  (`gray` neutra, `green` promover/aprovar, `amber` rebaixar/reverter, `red`
+  remover/revogar, `blue` informação), com o nome no **tooltip** (hover e foco
+  do teclado) e no `aria-label`. Alvo de 44px no celular, 32px a partir de
+  `sm:`. É o padrão das ações de membro e de convite na página da conta.
+- **`<x-view-toggle :current="$view" action="setView" />`** — o alternador
+  **tabela/cartões** das listas do painel (o mesmo padrão do `/admin`): chama a
+  ação Livewire com `'table'` ou `'cards'`; quem guarda a escolha, por lista, é
+  o componente (na sessão). No celular a `<x-table>` já vira cartões — o
+  alternador escolhe o layout do desktop (e fica escondido abaixo de `sm:`).
+- **`<x-account-switcher />`** — o **seletor de conta**: a conta atual e o
+  papel da pessoa, a lista das contas dela (cada uma um `POST` para a troca), o
+  atalho da página da conta e o de criar conta. No painel ele fica no topo da
+  coluna do menu lateral (o `<x-side-nav>` ganhou o slot opcional `header`,
+  fora da área que rola, para o menu ancorado não ser recortado) e, no
+  celular, no topo do conteúdo. Os dados vêm de `App\Livewire\Support\AccountMenu`.
+
+Ícones novos no `<x-ui-icon>`: `user-group`, `user-plus`, `user-minus`,
+`arrow-up-circle`, `arrow-down-circle`, `paper-airplane`, `arrows-right-left`,
+`arrow-left-start-on-rectangle`, `chevron-up-down`.
+
 ### Padrões de formulário
 
 Dois padrões canônicos — **não invente um terceiro** (fetch/AJAX manual em

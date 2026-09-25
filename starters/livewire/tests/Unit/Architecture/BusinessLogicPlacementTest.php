@@ -35,6 +35,13 @@ const THIN_AUTH_CONTROLLERS = [
     'vendor/twstec/kit-auth/src/Http/Controllers/RegisteredUserController.php',
     'vendor/twstec/kit-auth/src/Http/Controllers/TwoFactorChallengeController.php',
     'app/Http/Controllers/Auth/AuthPageController.php',
+    // Contas com membros: os envios do link de convite e a troca de conta
+    // (regra nas Actions de Twstec\Kit\Accounts\Account\Actions) e as telas
+    // do starter que os chamam.
+    'vendor/twstec/kit-accounts/src/Account/Http/Controllers/InvitationController.php',
+    'vendor/twstec/kit-accounts/src/Account/Http/Controllers/AccountSwitchController.php',
+    'app/Http/Controllers/Accounts/InvitationPageController.php',
+    'app/Http/Controllers/Accounts/OpenAccountController.php',
 ];
 
 /**
@@ -67,6 +74,14 @@ const SERVICE_BACKED_ENTRY_POINTS = [
     'app/Livewire/Dashboard.php',
     'app/Livewire/Projects/Index.php',
     'vendor/twstec/kit-accounts/src/Tenancy/Http/Controllers/ProjectController.php',
+    // Contas com membros: telas sobre as Actions e o AccountDirectory.
+    'app/Livewire/Account/Show.php',
+    'app/Livewire/Account/Create.php',
+    'app/Livewire/Support/AccountMenu.php',
+    'app/Http/Controllers/Accounts/InvitationPageController.php',
+    'app/Http/Controllers/Accounts/OpenAccountController.php',
+    'vendor/twstec/kit-accounts/src/Account/Http/Controllers/InvitationController.php',
+    'vendor/twstec/kit-accounts/src/Account/Http/Controllers/AccountSwitchController.php',
 ];
 
 /**

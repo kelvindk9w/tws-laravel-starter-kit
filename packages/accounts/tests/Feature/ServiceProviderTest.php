@@ -67,6 +67,8 @@ it('roda as migrations com os mesmos nomes de arquivo que tinham no aplicativo',
         // Contas com membros (2.0) — arquivos novos, depois dos da 1.x.
         '2026_09_26_000001_create_accounts_tables.php',
         '2026_09_26_000002_move_projects_and_api_keys_to_accounts.php',
+        // Convites (2.0, membros).
+        '2026_09_27_000001_create_account_invitations_table.php',
     ])->and(app('migrator')->paths())->toContain(dirname(__DIR__, 2).'/database/migrations')
         ->and(Schema::hasTable('projects'))->toBeTrue()
         ->and(Schema::hasTable('api_key_project'))->toBeTrue()
@@ -74,7 +76,8 @@ it('roda as migrations com os mesmos nomes de arquivo que tinham no aplicativo',
         ->and(Schema::hasTable('accounts'))->toBeTrue()
         ->and(Schema::hasTable('account_memberships'))->toBeTrue()
         ->and(Schema::hasColumn('projects', 'account_id'))->toBeTrue()
-        ->and(Schema::hasColumn('api_keys', 'account_id'))->toBeTrue();
+        ->and(Schema::hasColumn('api_keys', 'account_id'))->toBeTrue()
+        ->and(Schema::hasTable('account_invitations'))->toBeTrue();
 });
 
 it('registra o contexto do tenant (um por aplicação) e quem o limite da API conta', function (): void {

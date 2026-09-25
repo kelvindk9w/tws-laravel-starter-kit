@@ -13,8 +13,10 @@ fixo em cada (owner, admin, member), e toda pessoa tem a sua conta pessoal.
 Toda consulta de dado de conta sai filtrada pela conta atual — e, sem conta,
 **dá erro em vez de devolver tudo**. O guia completo (modelo, papéis, conta
 atual, modo sistema, jobs, exclusão de pessoa, migração da 1.x) está em
-[`docs/tenancy.md`](../../docs/tenancy.md). Seletor de conta, tela de membros e
-convites chegam na versão seguinte.
+[`docs/tenancy.md`](../../docs/tenancy.md). Membros, convites, transferência de
+propriedade, exclusão de conta e a trilha de auditoria de cada evento de conta
+são **Actions** do pacote (sem tela), com as respostas HTTP em contratos — o
+starter Livewire tem as telas; outro front reaproveita as Actions.
 
 - **Requisitos:** PHP 8.4+, Laravel 13, `twstec/kit-auth` e
   `twstec/kit-foundation` 2.x.
@@ -30,6 +32,13 @@ convites chegam na versão seguinte.
 | `Account\Concerns\BelongsToAccount` + `Account\Scopes\AccountScope` | O isolamento: escopo global da conta atual (exceção sem conta), gravação só na conta atual, `created_by` |
 | `Account\CurrentAccount` | A conta atual: quadro explícito (API, `actingAs`, modo sistema), modo sistema da requisição, sessão web (seleção ou conta pessoal) |
 | `Account\Services\AccountService` | Conta pessoal, conta de empresa, membros, a regra de exclusão de pessoa, excluir conta |
+| `Account\Actions` | A regra de cada fluxo de conta, conferindo o papel e gravando a trilha (inclusive as recusas): `CreateAccount`, `RenameAccount`, `DeleteAccount` e `TransferOwnership` (os dois últimos com o token de ação sensível), `SwitchAccount`, `InviteMember`, `ResendInvitation`, `RevokeInvitation`, `AcceptInvitation`, `RegisterAndAcceptInvitation` (o aceite cria a conta, verificada), `DeclineInvitation`, `ChangeMemberRole`, `RemoveMember`, `LeaveAccount` |
+| `Account\Support\MemberRules` | Quem mexe em quem (a mesma regra na Action e na tela) |
+| `Account\Support\AccountAudit` | A trilha dos eventos de conta em `audit_events` (quem, conta, alvo, antes/depois redigido, IP, UA, correlation_id; `denied` nas recusas), na transação da mudança |
+| `Account\Support\OrphanedApiKeys`, `Account\Mail` | O aviso de chave órfã e o convite (e-mails no template do kit, na galeria `/mail-preview`; o corpo é do front) |
+| `Account\Models\AccountInvitation`, `Account\Invitations` | O convite (dado da conta; token só em hash), a busca pelo token (o único modo sistema dos convites) e o que a tela do link pode mostrar (`InvitationPreview`) |
+| `Account\Queries\AccountDirectory` | As leituras das telas de conta (contas da pessoa, membros, convites em aberto) |
+| `Account\Contracts\Responses`, `Account\Http` | Os contratos de resposta (aceite, recusa, convite indisponível, troca de conta — padrão `bindIf`) e os controllers dos envios do link de convite e da troca de conta (com `throttle:sensitive` no controller) |
 | `Account\Http\Middleware\ResolveCurrentAccount` | No grupo `web`: limpa a seleção que deixou de valer e o estado por requisição |
 | `Account\Queue\AccountJobContext` | O contexto de conta no payload dos jobs e a restauração no worker |
 | `Account\Support\AccountDatabaseGuards` | Os gatilhos do PostgreSQL (regra do dono, chave ↔ projeto da mesma conta) |
@@ -110,13 +119,14 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   vínculo da chave (404 uniforme fora dele).
 - **Configuração padrão** em `config('api_keys')` e `config('accounts')`
   (guard e chave de sessão da conta selecionada, o middleware web, o lote da
-  migração); as chaves de primeiro nível dos arquivos do aplicativo prevalecem
+  migração, validade, limite e intervalo dos convites, limite de contas de
+  empresa por dono); as chaves de primeiro nível dos arquivos do aplicativo prevalecem
   (`vendor:publish --tag=accounts-config`).
 - **Migrations** com os **mesmos nomes de arquivo** que tinham no aplicativo na
   1.x (`projects`, `api_keys`, `api_key_project` e a coluna
   `restricted_to_projects`): um banco que já as rodou não vê nada pendente; e
   as duas das contas (`2026_09_26_000001` e `…000002`), que migram os dados da
-  1.x.
+  1.x, e a dos convites (`2026_09_27_000001`).
 - **Traduções** (pt-BR, en, es) das mensagens da API (`api_keys.*`), das
   contas (`accounts.*`: papéis, recusas, exceções) e do assunto do aviso de
   inatividade (`mail.api_key_inactivity.subject`), sem namespace. **O aplicativo vence** na mesma chave (a regra do foundation,
@@ -177,7 +187,8 @@ O envelope de erro vale para `api/*`: um prefixo fora de `api/` fica sem ele.
 | O quê | Como | Por que não no pacote |
 | --- | --- | --- |
 | Telas de chaves, projetos e painel do cliente | Componentes do front sobre `ApiKeyService`, `ProjectService` e `AccountOverviewQuery`, conferindo o papel com `Accounts::authorize()` | São a interface |
-| Seletor de conta, membros, convites | Telas sobre `AccountService` e `Accounts::switchTo()` (fase seguinte) | São a interface |
+| Seletor de conta, página da conta, tela do convite | Telas sobre as Actions, o `AccountDirectory` e o `InvitationPreview`; rotas apontando para os controllers do pacote (`InvitationController`, `AccountSwitchController`) | São a interface |
+| Corpo dos e-mails de convite e de chave órfã | Views `mail.messages.account-invitation` e `mail.messages.orphaned-api-keys` (a do convite usa a rota `invitations.show`; a do aviso, a rota assinada `accounts.open`) | É interface |
 | Modo sistema dos próprios comandos, seeders e jobs que varrem contas | `Accounts::asSystem('motivo', fn () => …)` | Só o código sabe que precisa ver todas as contas |
 | Agendamento do `api-keys:process-inactivity` | `Schedule::command('api-keys:process-inactivity')->daily()` em `routes/console.php` | A ordem do agendamento é do aplicativo; a recusa da chave inativa já vale na autenticação sem ele |
 | Corpo do aviso de inatividade | View `mail.messages.api-key-inactivity-warning` | É interface (o layout `<x-email::…>` é do foundation) |
@@ -227,7 +238,14 @@ vendor/bin/pest
 vendor/bin/pint --test
 ```
 
-Ela prova o isolamento entre contas numa aplicação limpa (consulta sem conta
+Ela prova os membros e os convites (cada célula de quem mexe em quem, com a
+linha `denied` nas recusas; token só em hash, uso único inclusive na corrida
+de dois aceites, expiração, reenvio, revogação, e-mail diferente sem dado da
+conta, sem enumeração, intervalo e limites, o aceite que cria a conta
+verificada), a transferência só com o token de ação sensível e sempre com um
+dono, a exclusão de conta, o aviso de chave órfã sem segredo, a trilha de cada
+evento (e a falha fechada), os contratos de resposta e o
+isolamento entre contas numa aplicação limpa (consulta sem conta
 lança exceção; modo sistema explícito e desfeito mesmo com exceção; pessoa em
 duas contas pela web e pela API; gravação só na conta atual; papéis; a regra do
 dono no código e no índice; exclusão de pessoa; chave que continua valendo

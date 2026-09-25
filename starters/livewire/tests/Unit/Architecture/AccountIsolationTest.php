@@ -25,7 +25,7 @@ use Symfony\Component\Finder\Finder;
 //    de contas.
 // =============================================================================
 
-const ISOLATION_ACCOUNT_TABLES = ['accounts', 'account_memberships', 'projects', 'api_keys', 'api_key_project'];
+const ISOLATION_ACCOUNT_TABLES = ['accounts', 'account_memberships', 'account_invitations', 'projects', 'api_keys', 'api_key_project'];
 
 /**
  * Chamadas de modo sistema REVISADAS (arquivo => quantas), com o motivo.
@@ -36,7 +36,12 @@ const ISOLATION_SYSTEM_MODE_REVIEWED = [
     // Comando diário: varre as chaves de todas as contas.
     'vendor/twstec/kit-accounts/src/ApiKeys/Console/ProcessApiKeyInactivity.php' => 1,
     // Excluir conta; arrumar o que a pessoa excluída deixou nas contas.
-    'vendor/twstec/kit-accounts/src/Account/Services/AccountService.php' => 2,
+    // + ler, antes da exclusão da pessoa, as chaves que ela deixa órfãs em
+    // contas alheias (para o aviso aos donos).
+    'vendor/twstec/kit-accounts/src/Account/Services/AccountService.php' => 3,
+    // O link de convite não diz de que conta é o convite: achar pelo hash do
+    // token e marcá-lo como aceito/recusado (um ponto só).
+    'vendor/twstec/kit-accounts/src/Account/Invitations/InvitationTokens.php' => 1,
     // O /admin inteiro (todas as requisições do painel, depois do acesso de
     // admin) — modo sistema da requisição (systemModeForRequest).
     'vendor/twstec/kit-admin/src/Http/Middleware/OperateAdminPanelAsSystem.php' => 1,

@@ -141,6 +141,17 @@ final class Accounts
         session()->put(CurrentAccount::sessionKey(), (string) $account->uuid);
     }
 
+    /**
+     * Desfaz a seleção de conta na sessão web (a pessoa volta para a conta
+     * pessoal) — depois de sair de uma conta ou de excluí-la.
+     */
+    public static function clearSelection(): void
+    {
+        if (app()->bound('session')) {
+            session()->forget(CurrentAccount::sessionKey());
+        }
+    }
+
     private static function context(): CurrentAccount
     {
         return app(CurrentAccount::class);

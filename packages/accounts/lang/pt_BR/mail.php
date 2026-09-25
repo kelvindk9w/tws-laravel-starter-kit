@@ -12,4 +12,12 @@ return [
         'subject' => ':platform — Sua chave de API será desativada por inatividade',
     ],
 
+    'account_invitation' => [
+        'subject' => ':platform — Convite para a conta :account',
+    ],
+
+    'orphaned_api_keys' => [
+        'subject' => '{1} :platform — Uma chave de API da conta :account ficou sem quem a criou|[2,*] :platform — Chaves de API da conta :account ficaram sem quem as criou',
+    ],
+
 ];

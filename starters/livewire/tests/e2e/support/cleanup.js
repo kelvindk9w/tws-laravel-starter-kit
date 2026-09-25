@@ -77,6 +77,81 @@ export async function deleteAccountViaAdmin(browser, address) {
 }
 
 /**
+ * Exclui VÁRIAS contas pelo /admin, na ordem que a regra do dono permitir.
+ *
+ * Pessoa dona de conta com outros membros não pode ser excluída (o /admin
+ * recusa e a linha fica). Um teste de contas com membros que falhe no meio
+ * pode deixar qualquer combinação — o dono com um membro, o membro que virou
+ * dono com o antigo dono como admin... Por isso a limpeza tenta cada conta,
+ * deixa para a rodada seguinte a que foi recusada (a exclusão de outra pode
+ * liberá-la) e, no fim, confere pela busca que NENHUMA ficou. Contas de
+ * empresa cujo dono sai por aqui vão junto (sem outros membros, a conta sai
+ * com a pessoa). Independente de idioma, como deleteAccountViaAdmin.
+ */
+export async function deleteAccountsViaAdmin(browser, addresses) {
+    const admin = await browser.newPage();
+    let pending = [...addresses];
+
+    try {
+        await admin.goto('/admin/login', { waitUntil: 'networkidle' });
+        await admin.waitForFunction(() => document.querySelector('[wire\\:id]')?.__livewire !== undefined, null, {
+            timeout: 15_000,
+        });
+        await admin.getByRole('button', { name: /entrar|sign in|iniciar|^login$/i }).click();
+        await admin.waitForURL((url) => !url.pathname.includes('login'), { timeout: 15_000 });
+
+        for (let round = 0; round <= addresses.length && pending.length > 0; round++) {
+            const left = [];
+
+            for (const address of pending) {
+                if ((await tryDeleteRow(admin, address)) === 'refused') {
+                    left.push(address);
+                }
+            }
+
+            pending = left;
+        }
+
+        expect(pending, `limpeza E2E: contas que ficaram no banco de dev: ${pending.join(', ')}`).toEqual([]);
+    } finally {
+        await admin.close();
+    }
+}
+
+/**
+ * Uma tentativa: 'absent' (não existe), 'deleted' ou 'refused' (a linha
+ * continuou depois de confirmar — a guarda do dono recusou).
+ */
+async function tryDeleteRow(admin, address) {
+    const search = `/admin/users?search=${encodeURIComponent(address)}`;
+
+    await admin.goto(search, { waitUntil: 'networkidle' });
+    const row = admin.getByRole('row').filter({ hasText: address });
+    const empty = admin.locator('.fi-ta-empty-state');
+
+    await expect(row.or(empty), `limpeza E2E: a busca por ${address} no /admin não terminou`).toBeVisible({ timeout: 15_000 });
+
+    if (await empty.isVisible()) {
+        return 'absent';
+    }
+
+    await row.locator(`button[wire\\:click^="mountAction('delete'"]`).click();
+    const confirm = admin.locator('.fi-modal-window').filter({ visible: true }).locator('button[type="submit"]');
+    await expect(confirm).toBeVisible({ timeout: 15_000 });
+    await confirm.click();
+
+    try {
+        await expect(row).toHaveCount(0, { timeout: 5_000 });
+    } catch {
+        return 'refused';
+    }
+
+    await admin.goto(search, { waitUntil: 'networkidle' });
+
+    return (await empty.isVisible()) ? 'deleted' : 'refused';
+}
+
+/**
  * Apaga do Mailpit todas as mensagens enviadas para `address`.
  */
 export async function deleteMailpitMessagesTo(request, address) {

@@ -20,6 +20,9 @@
        era uma nuvem de 13 pílulas empilhadas ANTES do conteúdo: a página
        começava com um menu do tamanho da tela.
 
+     `<x-slot:header>` (opcional) fica no topo da coluna do desktop, acima
+     dos grupos — no painel, o seletor de conta.
+
      `mobile="none"` desliga a barra: no painel o índice mobile vive dentro da
      gaveta do cabeçalho, junto dos links do site (decisão do dono — uma
      gaveta só).
@@ -65,13 +68,29 @@
     @endif
 
     <aside class="hidden shrink-0 lg:block lg:w-60">
-        <nav
-            aria-label="{{ $title }}"
-            @if ($spy) data-scrollspy @endif
-            class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain pb-6 pe-2"
-        >
-            <x-side-nav-items :groups="$groups" />
-        </nav>
+        @isset($header)
+            {{-- Cabeçalho da coluna (no painel, o seletor de conta): fica FORA
+                 do <nav> que rola — um menu ancorado dentro de um contêiner
+                 com overflow seria recortado por ele. --}}
+            <div class="sticky top-20">
+                <div class="mb-4 pe-2">{{ $header }}</div>
+                <nav
+                    aria-label="{{ $title }}"
+                    @if ($spy) data-scrollspy @endif
+                    class="max-h-[calc(100vh-11rem)] overflow-y-auto overscroll-contain pb-6 pe-2"
+                >
+                    <x-side-nav-items :groups="$groups" />
+                </nav>
+            </div>
+        @else
+            <nav
+                aria-label="{{ $title }}"
+                @if ($spy) data-scrollspy @endif
+                class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain pb-6 pe-2"
+            >
+                <x-side-nav-items :groups="$groups" />
+            </nav>
+        @endisset
     </aside>
 
     {{-- A gaveta acompanha a barra: com mobile="none" ela não existe (no

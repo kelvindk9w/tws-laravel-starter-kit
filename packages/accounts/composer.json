@@ -23,7 +23,8 @@
         "files": [
             "src/Compat/legacy-aliases.php",
             "src/Tenancy/helpers.php",
-            "src/ApiKeys/Mail/previews.php"
+            "src/ApiKeys/Mail/previews.php",
+            "src/Account/Mail/previews.php"
         ]
     },
     "autoload-dev": {

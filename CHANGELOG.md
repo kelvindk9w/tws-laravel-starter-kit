@@ -7,6 +7,31 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Membros, convites e transferência de propriedade** (`twstec/kit-accounts`
+  + telas no starter Livewire + "Contas" no `/admin`). Seletor de conta em todo
+  o painel (conta atual, papel, troca só para conta de que a pessoa é membro);
+  página da conta (`/account`) com membros em tabela ou cartões, convidar,
+  reenviar e revogar convite, mudar papel e remover pela regra de quem mexe em
+  quem (o dono em todos; o admin só em members; ninguém no dono), sair da
+  conta, **transferir a propriedade** e **excluir a conta** (os dois com senha
+  de transação + código por e-mail; o antigo dono vira admin, sempre um dono);
+  criar conta de empresa. **Convite** por e-mail com token só em hash, uso
+  único, validade, limites e intervalo configuráveis, sem enumeração; o aceite
+  pede o mesmo e-mail e, para quem não tem conta, **cria a conta já
+  verificada**. **Aviso de chave órfã** por e-mail ao dono e aos admins quando
+  alguém sai, é removido ou tem o acesso excluído por qualquer caminho (as
+  chaves continuam valendo; uma vez por conta, pela fila, depois do commit;
+  sem segredo no e-mail). **Trilha no banco** de todo evento de conta (e `denied` nas
+  recusas), na transação da mudança. A regra mora em Actions do pacote, com
+  respostas HTTP em contratos (para o front React reaproveitar). No `/admin`,
+  "Contas" só leitura: membros e papéis, projetos e chaves da conta. Novas
+  variáveis `ACCOUNTS_INVITATION_*` e `ACCOUNTS_MAX_OWNED` (`.env.example`),
+  componentes `<x-icon-button>`, `<x-view-toggle>` e `<x-account-switcher>`,
+  e-mails "Convite para uma conta" e "Chave de API órfã" na galeria. Guia em
+  `docs/tenancy.md`.
+- **Trilha de auditoria por conta:** `audit_events.tenant_uuid` (migration do
+  `twstec/kit-foundation`; o mesmo valor de `request_logs.tenant_uuid`), com
+  índice por período; `AuditTrail::record()`/`denied()` aceitam a conta.
 - **Contas com membros e isolamento automático** (`twstec/kit-accounts`, sem
   telas novas). Projetos e chaves de API passam a pertencer a uma **conta**
   (e guardam quem os criou); uma pessoa pode estar em várias contas, com um
@@ -22,8 +47,7 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (também no Gate como `accounts.*`); o painel Livewire esconde e recusa (403)
   o que o papel não permite — o dono da conta pessoal, único caso da 1.x, faz
   tudo como antes. No `/admin`, projetos e chaves mostram a conta de cada
-  linha (com filtro), o dono e quem criou. Seletor de conta, membros e
-  convites chegam na versão seguinte. Guia em `docs/tenancy.md`.
+  linha (com filtro), o dono e quem criou. Guia em `docs/tenancy.md`.
 - **Exclusão de pessoa com contas:** recusada enquanto ela for dona de conta
   com outros membros (no `/admin`, com o motivo na trilha; por qualquer outro
   caminho, exceção; por SQL, o gatilho do PostgreSQL); senão a conta pessoal

@@ -165,6 +165,9 @@ final class AuditTrail
     /**
      * Registro explícito de uma ação que teve efeito.
      *
+     * `$tenantUuid`: a CONTA em que a ação aconteceu (o mesmo valor de
+     * `request_logs.tenant_uuid`), quando a ação é de uma conta.
+     *
      * @param  array<string, array{before?: mixed, after?: mixed}>  $changes
      */
     public function record(
@@ -173,6 +176,7 @@ final class AuditTrail
         array $changes = [],
         ?string $subjectType = null,
         ?string $subjectUuid = null,
+        ?string $tenantUuid = null,
     ): AuditEvent {
         return $this->write(
             scope: $this->scope ?? AuditScope::ambient(),
@@ -182,6 +186,7 @@ final class AuditTrail
             subjectUuid: $subjectUuid ?? ($subject !== null ? self::subjectUuid($subject) : null),
             changes: $this->changes->sanitize($changes, $subject),
             reason: null,
+            tenantUuid: $tenantUuid,
         );
     }
 
@@ -194,15 +199,18 @@ final class AuditTrail
         ?Model $subject,
         string $reason,
         ?string $subjectType = null,
+        ?string $tenantUuid = null,
+        ?string $subjectUuid = null,
     ): AuditEvent {
         return $this->write(
             scope: $this->scope ?? AuditScope::ambient(),
             action: $action,
             outcome: AuditOutcome::Denied,
             subjectType: $subjectType ?? ($subject !== null ? self::subjectType($subject) : null),
-            subjectUuid: $subject !== null ? self::subjectUuid($subject) : null,
+            subjectUuid: $subjectUuid ?? ($subject !== null ? self::subjectUuid($subject) : null),
             changes: [],
             reason: $reason,
+            tenantUuid: $tenantUuid,
         );
     }
 
@@ -255,6 +263,7 @@ final class AuditTrail
         ?string $subjectUuid,
         array $changes,
         ?string $reason,
+        ?string $tenantUuid = null,
     ): AuditEvent {
         $attributes = [
             'context' => $scope->context,
@@ -264,6 +273,7 @@ final class AuditTrail
             'outcome' => $outcome,
             'subject_type' => $subjectType,
             'subject_uuid' => $subjectUuid,
+            'tenant_uuid' => UuidColumn::isValid($tenantUuid) ? $tenantUuid : null,
             'changes' => $changes === [] ? null : $changes,
             'reason' => $reason === null ? null : Str::limit($this->redactor->redactString($reason), 500, ''),
             'correlation_id' => UuidColumn::isValid($scope->correlationId) ? $scope->correlationId : null,
@@ -278,6 +288,7 @@ final class AuditTrail
             'actor_uuid' => $scope->actorUuid,
             'subject_type' => $subjectType,
             'subject_uuid' => $subjectUuid,
+            'tenant_uuid' => $attributes['tenant_uuid'],
             'fields' => array_keys($changes),
             'correlation_id' => $attributes['correlation_id'],
         ];

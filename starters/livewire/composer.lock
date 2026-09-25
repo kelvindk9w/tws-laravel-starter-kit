@@ -8472,7 +8472,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/accounts",
-                "reference": "6e9b82e11be1b248ab02de3f3b1c6ac200bf6e7d"
+                "reference": "5c278fa24d4f362a421d5aec21c1387b616d593e"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -8500,7 +8500,8 @@
                 "files": [
                     "src/Compat/legacy-aliases.php",
                     "src/Tenancy/helpers.php",
-                    "src/ApiKeys/Mail/previews.php"
+                    "src/ApiKeys/Mail/previews.php",
+                    "src/Account/Mail/previews.php"
                 ]
             },
             "autoload-dev": {

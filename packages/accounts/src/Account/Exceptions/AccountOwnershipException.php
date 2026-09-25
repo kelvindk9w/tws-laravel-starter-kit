@@ -27,6 +27,11 @@ final class AccountOwnershipException extends LogicException
         return new self(__('accounts.ownership.owner_leaves'));
     }
 
+    public static function invalidTransfer(): self
+    {
+        return new self(__('accounts.ownership.invalid_transfer'));
+    }
+
     public static function membershipMovesAccount(): self
     {
         return new self(__('accounts.ownership.moves_account'));

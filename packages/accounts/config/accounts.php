@@ -28,6 +28,34 @@ return [
         'middleware' => env('ACCOUNTS_WEB_MIDDLEWARE', true),
     ],
 
+    'invitations' => [
+        // Validade do convite, em horas (padrão: 7 dias). Depois disso o link
+        // não aceita mais — quem convidou pode reenviar (o reenvio gera um
+        // link novo e renova a validade).
+        'expires_hours' => (int) env('ACCOUNTS_INVITATION_EXPIRES_HOURS', 168),
+
+        // Convites PENDENTES ao mesmo tempo, por conta. Chegando no limite,
+        // um novo convite é recusado até algum ser aceito, revogado ou
+        // expirar.
+        'max_pending' => (int) env('ACCOUNTS_INVITATION_MAX_PENDING', 20),
+
+        // Quantos convites (novos e reenvios) cabem numa janela de
+        // `throttle_minutes`: por conta e por pessoa que convida. Contra
+        // spam — o e-mail do convite sai em nome da plataforma.
+        'throttle' => [
+            'per_account' => (int) env('ACCOUNTS_INVITATION_THROTTLE_PER_ACCOUNT', 30),
+            'per_person' => (int) env('ACCOUNTS_INVITATION_THROTTLE_PER_PERSON', 20),
+            'minutes' => (int) env('ACCOUNTS_INVITATION_THROTTLE_MINUTES', 60),
+        ],
+    ],
+
+    'limits' => [
+        // Contas de EMPRESA de que uma pessoa pode ser dona (a conta pessoal
+        // não conta). Contra abuso: cada conta é um tenant com dados, chaves
+        // e trilha.
+        'owned_accounts' => (int) env('ACCOUNTS_MAX_OWNED', 10),
+    ],
+
     'migration' => [
         // Tamanho do lote da migração 1.x → contas (pessoas por lote e
         // faixa de ids por UPDATE de projetos/chaves).

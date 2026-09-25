@@ -16,9 +16,17 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
 use Throwable;
+use Twstec\Kit\Accounts\Account\Contracts\Responses\AccountSwitchedResponse as AccountSwitchedResponseContract;
+use Twstec\Kit\Accounts\Account\Contracts\Responses\InvitationAcceptedResponse as InvitationAcceptedResponseContract;
+use Twstec\Kit\Accounts\Account\Contracts\Responses\InvitationDeclinedResponse as InvitationDeclinedResponseContract;
+use Twstec\Kit\Accounts\Account\Contracts\Responses\InvitationUnavailableResponse as InvitationUnavailableResponseContract;
 use Twstec\Kit\Accounts\Account\CurrentAccount;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
 use Twstec\Kit\Accounts\Account\Http\Middleware\ResolveCurrentAccount;
+use Twstec\Kit\Accounts\Account\Http\Responses\AccountSwitchedResponse;
+use Twstec\Kit\Accounts\Account\Http\Responses\InvitationAcceptedResponse;
+use Twstec\Kit\Accounts\Account\Http\Responses\InvitationDeclinedResponse;
+use Twstec\Kit\Accounts\Account\Http\Responses\InvitationUnavailableResponse;
 use Twstec\Kit\Accounts\Account\Queue\AccountJobContext;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Accounts\Account\Support\PersonLifecycle;
@@ -44,7 +52,9 @@ use WeakMap;
  *   pessoal; API: a da chave), o middleware da web no fim do grupo `web`,
  *   a conta pessoal de cada pessoa criada, a regra de exclusão de pessoa, o
  *   contexto de conta nos jobs enfileirados e as habilidades por papel no
- *   Gate (`accounts.*`). O escopo que filtra projetos e chaves pela conta
+ *   Gate (`accounts.*`). Membros, convites, transferência e a trilha de
+ *   auditoria de cada evento de conta moram nas Actions (Account\Actions),
+ *   com as respostas HTTP em contratos (Account\Contracts\Responses); O escopo que filtra projetos e chaves pela conta
  *   atual vem dos próprios models (Concerns\BelongsToAccount) — não há como
  *   desligá-lo;
  * - a configuração padrão (`config('api_keys')`), as migrations (projetos,
@@ -102,6 +112,18 @@ final class AccountsServiceProvider extends ServiceProvider
     ];
 
     /**
+     * Contrato de resposta => implementação padrão (Account\Http\Responses).
+     *
+     * @var array<class-string, class-string>
+     */
+    public const RESPONSES = [
+        InvitationAcceptedResponseContract::class => InvitationAcceptedResponse::class,
+        InvitationDeclinedResponseContract::class => InvitationDeclinedResponse::class,
+        InvitationUnavailableResponseContract::class => InvitationUnavailableResponse::class,
+        AccountSwitchedResponseContract::class => AccountSwitchedResponse::class,
+    ];
+
+    /**
      * Limite por chave de API, na FRENTE do grupo `api` (o limitador `api` é
      * do foundation — Security\ApiRateLimit).
      */
@@ -137,6 +159,13 @@ final class AccountsServiceProvider extends ServiceProvider
         // (foundation) define o contrato, este pacote diz quem é o cliente (a
         // chave ou o tenant). Um resolvedor próprio da aplicação prevalece.
         $this->app->bindIf(RateLimitSubjectResolver::class, TenantRateLimitSubject::class);
+
+        // Respostas HTTP dos fluxos de conta (aceite de convite, troca de
+        // conta): o padrão é `bindIf` — a implementação do aplicativo (outro
+        // front, uma API JSON) vence em qualquer ordem de providers.
+        foreach (self::RESPONSES as $contract => $default) {
+            $this->app->bindIf($contract, $default);
+        }
 
         PackageTranslations::register($this->app, $this->path('lang'));
     }

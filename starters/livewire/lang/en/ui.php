@@ -62,4 +62,19 @@ return [
         'support' => 'Support',
     ],
 
+    // Table/cards switch of the panel lists (<x-view-toggle>).
+    'view_toggle' => [
+        'label' => 'How the list is shown',
+        'table' => 'Show as table',
+        'cards' => 'Show as cards',
+    ],
+
+    // Account switcher (<x-account-switcher>).
+    'account_switcher' => [
+        'label' => 'Current account: :account. Switch account',
+        'heading' => 'Your accounts',
+        'manage' => 'Account & members',
+        'create' => 'Create a company account',
+    ],
+
 ];

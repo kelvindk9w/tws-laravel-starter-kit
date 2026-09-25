@@ -2,14 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Accounts\InvitationPageController;
+use App\Http\Controllers\Accounts\OpenAccountController;
 use App\Http\Controllers\Auth\AuthPageController;
 use App\Http\Controllers\ThemePreferenceController;
+use App\Livewire\Account\Create as AccountCreate;
+use App\Livewire\Account\Show as AccountShow;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
 use App\Livewire\Dashboard;
 use App\Livewire\Notifications\Preferences as NotificationPreferences;
 use App\Livewire\Profile;
 use App\Livewire\Projects\Index as ProjectsIndex;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Accounts\Account\Http\Controllers\AccountSwitchController;
+use Twstec\Kit\Accounts\Account\Http\Controllers\InvitationController;
 use Twstec\Kit\Auth\Http\Controllers\AuthenticatedSessionController;
 use Twstec\Kit\Auth\Http\Controllers\EmailVerificationController;
 use Twstec\Kit\Auth\Http\Controllers\NewPasswordController;
@@ -80,6 +86,25 @@ Route::middleware('guest')->group(function (): void {
         ->name('password.update');
 });
 
+// =============================================================================
+// Convite para uma conta (link do e-mail) — PÚBLICO: quem abre pode estar
+// logado com o e-mail do convite, logado com outro, deslogado com conta ou
+// sem conta nenhuma. A tela (GET) é do starter; os envios vão para o
+// controller do pacote de contas, que traz o próprio `throttle:sensitive`.
+// Aceitar exige sessão; criar a conta pelo convite exige NÃO ter sessão.
+// O token no caminho não vai para a trilha de requisições (ela grava o
+// padrão da rota, não o caminho real).
+// =============================================================================
+Route::get('invitations/{token}', [InvitationPageController::class, 'show'])->name('invitations.show');
+Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'])
+    ->middleware('auth')
+    ->name('invitations.accept');
+Route::post('invitations/{token}/register', [InvitationController::class, 'register'])
+    ->middleware('guest')
+    ->name('invitations.register');
+Route::post('invitations/{token}/decline', [InvitationController::class, 'decline'])
+    ->name('invitations.decline');
+
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
@@ -115,6 +140,21 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('projects', ProjectsIndex::class)->name('panel.projects');
     Route::get('notifications', NotificationPreferences::class)->name('panel.notifications');
     Route::get('profile', Profile::class)->name('panel.profile');
+
+    // Contas com membros: a página da conta atual (membros, convites,
+    // transferência, exclusão) e a criação de uma conta de empresa.
+    Route::get('account', AccountShow::class)->name('panel.account');
+    Route::get('accounts/create', AccountCreate::class)->name('panel.accounts.create');
+
+    // Troca de conta (o seletor): POST para o controller do pacote — só
+    // conta de que a pessoa é membro.
+    Route::post('accounts/{account}/switch', [AccountSwitchController::class, 'store'])->name('accounts.switch');
+
+    // Link dos e-mails de conta: abre uma tela já na conta certa. Só com URL
+    // ASSINADA (ninguém monta um link que troca a conta de outra pessoa).
+    Route::get('accounts/{account}/open/{to}', OpenAccountController::class)
+        ->middleware('signed:relative')
+        ->name('accounts.open');
 
     // Senha de transação (hash separado da senha de login).
     // Rota standalone mantida; o painel Livewire (Perfil) usa o

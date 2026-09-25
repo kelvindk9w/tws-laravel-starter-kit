@@ -12,4 +12,12 @@ return [
         'subject' => ':platform — Your API key will be deactivated due to inactivity',
     ],
 
+    'account_invitation' => [
+        'subject' => ':platform — Invitation to the :account account',
+    ],
+
+    'orphaned_api_keys' => [
+        'subject' => '{1} :platform — An API key of the :account account lost its creator|[2,*] :platform — API keys of the :account account lost their creator',
+    ],
+
 ];

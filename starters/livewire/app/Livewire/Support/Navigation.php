@@ -77,6 +77,7 @@ final class Navigation
             [
                 'label' => __('panel.nav.groups.account'),
                 'items' => [
+                    ['route' => 'panel.account', 'label' => __('panel.nav.account'), 'icon' => 'user-group'],
                     ['route' => 'panel.notifications', 'label' => __('panel.nav.notifications'), 'icon' => 'bell'],
                     ['route' => 'panel.profile', 'label' => __('panel.nav.profile'), 'icon' => 'user-circle'],
                     ['route' => 'transaction-password.edit', 'label' => __('panel.nav.transaction_password'), 'icon' => 'lock-closed'],

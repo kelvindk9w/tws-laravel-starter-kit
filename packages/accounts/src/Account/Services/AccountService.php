@@ -15,8 +15,10 @@ use Twstec\Kit\Accounts\Account\Events\MemberRemoved;
 use Twstec\Kit\Accounts\Account\Exceptions\AccountOwnershipException;
 use Twstec\Kit\Accounts\Account\Exceptions\OwnerOfSharedAccountException;
 use Twstec\Kit\Accounts\Account\Models\Account;
+use Twstec\Kit\Accounts\Account\Models\AccountInvitation;
 use Twstec\Kit\Accounts\Account\Models\AccountMembership;
 use Twstec\Kit\Accounts\Account\Support\AccountDatabaseGuards;
+use Twstec\Kit\Accounts\Account\Support\OrphanedApiKeys;
 use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
@@ -29,7 +31,9 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  *   (AccountsServiceProvider liga isso ao evento de criação do model de
  *   usuário do aplicativo).
  * - Membros: entrar, sair e mudar de papel passam por aqui — o dono nunca é
- *   rebaixado nem sai; a propriedade muda por transferência (fase seguinte).
+ *   rebaixado nem sai; a propriedade muda por transferência
+ *   (transferOwnership). QUEM pode fazer cada coisa é das Actions
+ *   (Account\Actions), que também gravam a trilha de auditoria.
  * - Exclusão de pessoa: recusada enquanto ela for DONA de conta com outros
  *   membros; senão, as contas dela (a pessoal e as que só ela usa) saem junto,
  *   com os dados — o mesmo efeito da 1.x, quando projetos e chaves eram da
@@ -74,8 +78,7 @@ final class AccountService
     }
 
     /**
-     * Uma conta de EMPRESA nova, com a pessoa como dona (as telas de membros
-     * e convites chegam na fase seguinte; o serviço já existe).
+     * Uma conta de EMPRESA nova, com a pessoa como dona.
      */
     public function createAccount(string $name, AuthUser $owner): Account
     {
@@ -204,6 +207,50 @@ final class AccountService
     }
 
     /**
+     * TRANSFERE A PROPRIEDADE: o vínculo de dono passa a ser da pessoa
+     * `$to` (que já é membro) e quem era dono fica como admin — tudo numa
+     * transação, sem nunca haver zero nem dois donos:
+     *
+     * 1. sai o vínculo atual de `$to` (admin ou member);
+     * 2. o vínculo de DONO troca de pessoa (o papel não muda — é o que a
+     *    regra do dono permite no código e nos gatilhos do PostgreSQL);
+     * 3. quem era dono entra de novo, como admin.
+     *
+     * Quem pode transferir (o dono, com senha de transação e ação sensível)
+     * é decidido antes, pela Action TransferOwnership.
+     *
+     * @throws AccountOwnershipException se `$from` não é o dono ou `$to` não é membro.
+     */
+    public function transferOwnership(Account $account, AuthUser $from, AuthUser $to): AccountMembership
+    {
+        return DB::transaction(function () use ($account, $from, $to): AccountMembership {
+            /** @var AccountMembership|null $dono */
+            $dono = $account->memberships()->where('role', AccountRole::Owner->value)->lockForUpdate()->first();
+
+            /** @var AccountMembership|null $alvo */
+            $alvo = $account->memberships()->where('user_id', $to->getKey())->lockForUpdate()->first();
+
+            if ($dono === null || (string) $dono->user_id !== (string) $from->getKey() || $alvo === null || $alvo->getKey() === $dono->getKey()) {
+                throw AccountOwnershipException::invalidTransfer();
+            }
+
+            $alvo->delete();
+
+            $dono->user_id = $to->getKey();
+            $dono->save();
+
+            /** @var AccountMembership $antigo */
+            $antigo = AccountMembership::query()->create([
+                'account_id' => $account->getKey(),
+                'user_id' => $from->getKey(),
+                'role' => AccountRole::Admin,
+            ]);
+
+            return $antigo;
+        });
+    }
+
+    /**
      * Contas de que a pessoa é DONA e que têm outros membros — as que
      * impedem a exclusão dela.
      *
@@ -265,6 +312,42 @@ final class AccountService
     }
 
     /**
+     * As chaves ÓRFÃS que a exclusão desta pessoa vai deixar: em cada conta
+     * de que ela é admin ou member (nas que é dona e que saem junto, não há
+     * órfã), as chaves que ela criou e que ainda autenticam. Lido ANTES de a
+     * pessoa sair do banco (depois, o `created_by` já é nulo).
+     *
+     * Modo sistema: as contas não são a atual de ninguém nesta hora.
+     *
+     * @return list<array{account: Account, keys: list<array{name: string, code: string, public_key: string}>}>
+     */
+    public function orphanedKeysOnPersonExit(AuthUser $user): array
+    {
+        return Accounts::asSystem('accounts:person-leaving', function () use ($user): array {
+            $contas = AccountMembership::query()
+                ->where('user_id', $user->getKey())
+                ->where('role', '!=', AccountRole::Owner->value)
+                ->pluck('account_id');
+
+            $orfas = [];
+
+            foreach (Account::query()->whereKey($contas)->orderBy('id')->get() as $account) {
+                $keys = OrphanedApiKeys::summarize(ApiKey::query()
+                    ->where('account_id', $account->getKey())
+                    ->where('created_by', $user->getKey())
+                    ->orderBy('id')
+                    ->get());
+
+                if ($keys !== []) {
+                    $orfas[] = ['account' => $account, 'keys' => $keys];
+                }
+            }
+
+            return $orfas;
+        });
+    }
+
+    /**
      * Depois que a pessoa saiu do banco: o que ela deixou nas contas é
      * arrumado aqui, sem depender de o banco ter as chaves estrangeiras
      * ligadas (no PostgreSQL os gatilhos e as cascatas já fizeram o mesmo na
@@ -310,6 +393,7 @@ final class AccountService
                 ApiKey::query()->where('account_id', $account->getKey())->update(['rotated_from_id' => null, 'rotated_to_id' => null]);
                 ApiKey::query()->where('account_id', $account->getKey())->delete();
                 Project::query()->where('account_id', $account->getKey())->delete();
+                AccountInvitation::query()->where('account_id', $account->getKey())->delete();
 
                 // A conta sai antes dos vínculos: no PostgreSQL, a regra do
                 // dono só deixa o vínculo do dono sair quando a conta já saiu.

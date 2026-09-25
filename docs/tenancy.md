@@ -6,10 +6,14 @@ de API pertencem a uma conta, e uma pessoa pode estar em várias contas, com um
 papel em cada. Toda consulta de dado de conta sai **filtrada sozinha** pela
 conta atual — e, sem conta atual, **dá erro em vez de devolver tudo**.
 
-Nesta versão não há tela nova: o painel mostra a conta atual da pessoa (a
-pessoal, até existir o seletor), o `/admin` opera em modo sistema e a API usa a
-conta da chave. Seletor de conta, tela de membros, convites e transferência de
-propriedade chegam numa versão seguinte, sobre o mesmo modelo.
+No painel, o **seletor de conta** mostra em todo o painel a conta atual (e o
+papel da pessoa nela) e troca de conta; a **página da conta** (`/account`)
+reúne membros, convites, transferência de propriedade, saída e exclusão; o
+**convite** chega por e-mail e o link aceita — criando o acesso de quem ainda
+não tem conta. O `/admin` opera em modo sistema (com a lista "Contas", só
+leitura) e a API usa a conta da chave. Toda a regra mora em **Actions** do
+pacote (`Account\Actions`), com as respostas HTTP em contratos: o starter
+Livewire usa as Actions; outro front (o React) reaproveita as mesmas.
 
 ## O modelo
 
@@ -38,7 +42,7 @@ de usuário do aplicativo, sem trait nenhuma no model.
 | Chave ↔ projeto só da mesma conta | escopo da conta na busca dos projetos | PostgreSQL: gatilho |
 
 A propriedade muda por **transferência**, que troca a pessoa do vínculo de dono
-(fase seguinte). Os gatilhos ficam em `Account\Support\AccountDatabaseGuards`
+(ver [Transferir a propriedade](#transferir-a-propriedade)). Os gatilhos ficam em `Account\Support\AccountDatabaseGuards`
 e são instalados pela migration; como os outros gatilhos do kit, não protegem
 de quem é dono do esquema no PostgreSQL (separação de papéis é decisão de
 infraestrutura).
@@ -56,7 +60,8 @@ sempre avaliada na conta atual:
 | Renomear/arquivar projeto — `projects.update` | ✓ | ✓ | ✓ |
 | Excluir projeto — `projects.delete` | ✓ | ✓ | — |
 | Criar, rotacionar, revogar chave e definir o vínculo com projetos — `api-keys.manage` | ✓ | ✓ | — |
-| Convidar, remover e mudar papel de membros — `members.manage` (telas na fase seguinte) | ✓ | ✓ | — |
+| Convidar, remover e mudar papel de membros — `members.manage` (quem mexe em quem: abaixo) | ✓ | ✓ | — |
+| Renomear a conta — `account.update` | ✓ | ✓ | — |
 | Transferir a propriedade — `account.transfer` | ✓ | — | — |
 | Excluir a conta — `account.delete` | ✓ | — | — |
 
@@ -116,7 +121,8 @@ cada chamada no starter e nos pacotes e reprova a que não foi revisada. Hoje:
 | --- | --- |
 | `ResolveTenant` | a busca da chave pela pública, antes de saber de que conta ela é |
 | `api-keys:process-inactivity` | varre as chaves de todas as contas |
-| `AccountService` (excluir conta; arrumar o que uma pessoa excluída deixou) | mexe numa conta que não é a atual |
+| `AccountService` (excluir conta; arrumar o que uma pessoa excluída deixou; ler as chaves que ela deixa órfãs em contas alheias) | mexe numa conta que não é a atual |
+| `InvitationTokens` (achar o convite pelo token; marcá-lo como aceito/recusado) | o link não diz de que conta é o convite — e quem aceita ainda não é membro dela |
 | `/admin` (`OperateAdminPanelAsSystem`) | o operador vê todas as contas; modo sistema **da requisição** (`Accounts::systemModeForRequest`), porque o Livewire reaplica os middlewares persistentes antes do componente, num pipeline à parte |
 | `DatabaseSeeder` e os seeders da demonstração | gravam em várias contas |
 
@@ -152,12 +158,165 @@ pessoal, o uuid da pessoa, o mesmo gravado na 1.x).
 **Chaves de quem saiu.** A chave é da conta e continua valendo quando quem a
 criou sai da conta ou é excluído. A pessoa por trás da chave (o que é por
 pessoa, como o token de ação sensível, e o `$request->user()` da rota) é quem a
-criou enquanto for membro ativo; depois, o dono da conta. O aviso aos donos
-chega com a tela de membros.
+criou enquanto for membro ativo; depois, o dono da conta. Quando a pessoa sai
+ou é removida pela página da conta, o dono e os admins recebem o
+[aviso de chave órfã](#aviso-de-chave-órfã).
 
 **Conta bloqueada.** Dono da conta bloqueado, pendente ou sem e-mail confirmado
 derruba as chaves da conta (401) — na conta pessoal, exatamente como a regra da
 1.x para a pessoa.
+
+## Membros
+
+**Quem mexe em quem** (`Account\Support\MemberRules` — a mesma regra esconde o
+botão na tela e recusa a Action no servidor):
+
+| Quem age | Convidar | Mudar papel (member ↔ admin) | Remover | Sair |
+| --- | --- | --- | --- | --- |
+| owner | como admin ou member | de qualquer admin ou member | qualquer admin ou member | não — transfere antes |
+| admin | como admin ou member | só promove member a admin | só member | sim |
+| member | — | — | — | sim |
+
+- Ninguém mexe no **dono** (papel ou remoção): a propriedade só muda por
+  transferência, que é do próprio dono.
+- Admin não mexe em **outro admin** (rebaixar ou remover um admin é decisão do
+  dono). Um admin pode promover um member — depois disso, só o dono mexe nele.
+- Ninguém muda o **próprio** papel nem se remove: para isso existe "sair da
+  conta".
+- Pessoa que não é membro da conta (ou não existe) é **404** — o uuid não
+  confirma nada.
+
+**A conta pessoal também recebe membros.** Decisão: o modelo não distingue as
+duas no que importa (papéis, isolamento, trilha), a conta pessoal é a de toda
+pessoa migrada da 1.x (quem já tem projetos e chaves nela pode chamar alguém
+sem precisar mover nada para uma empresa) e um bloqueio aqui seria regra a mais
+sem ganho de segurança. O que a conta pessoal **não** faz: não é renomeada (o
+nome é o da pessoa, dado cifrado que não é copiado), não é transferida (é da
+pessoa) e não é excluída pela página (sai junto com a pessoa — e a exclusão da
+pessoa segue recusada enquanto a conta tiver outros membros).
+
+## Convites
+
+`Account\Actions\InviteMember` (dono e admin), `ResendInvitation`,
+`RevokeInvitation`, `AcceptInvitation`, `RegisterAndAcceptInvitation`,
+`DeclineInvitation`.
+
+- **Papel** admin ou member — nunca owner.
+- **Token** de 32 bytes aleatórios (64 hex), que só existe em claro no e-mail;
+  no banco, só o **hash SHA-256** (`account_invitations.token_hash`, fora da
+  serialização). O caminho `/invitations/{token}` vai para a trilha de
+  requisições como o **padrão** da rota — o token não é gravado.
+- **Uso único** (`accepted_at` gravado com UPDATE condicional: dois aceites ao
+  mesmo tempo não viram dois membros), **validade** configurável, **reenvio**
+  (gera link novo — o antigo morre — e renova a validade), **revogação**,
+  **recusa** pela pessoa convidada.
+- **Recusas** na criação: e-mail inválido, quem já é membro, convite pendente
+  para o mesmo e-mail (reenvie), limite de pendentes da conta, intervalo por
+  conta e por pessoa (novos e reenvios contam juntos).
+- **Sem enumeração:** o convite para um e-mail que já tem conta na plataforma e
+  para um que não tem é criado igual, com a mesma resposta e o mesmo e-mail — é
+  a tela do link que decide entre "entrar" e "criar a conta".
+- **Aceite** só pela pessoa com o **mesmo e-mail** (sem diferença de caixa).
+  Logada com outro e-mail: recusa clara (`wrong_email`), **sem nenhum dado da
+  conta**. Deslogada com conta: entra e volta ao convite. Deslogada **sem
+  conta**: o aceite **cria a conta** (nome + senha pela política do kit; o
+  e-mail é o do convite) já **verificada** — o link só chega a quem lê aquela
+  caixa. A conta logada que ainda não tinha o e-mail confirmado passa a ter.
+- O convite é **dado da conta** (escopo da conta atual). Achar o convite pelo
+  token e marcá-lo como aceito/recusado são as únicas operações em modo
+  sistema (`Account\Invitations\InvitationTokens`, revisada na trava de
+  arquitetura): o link não diz de que conta é o convite até ele ser achado.
+
+| Variável | Padrão | O que faz |
+| --- | --- | --- |
+| `ACCOUNTS_INVITATION_EXPIRES_HOURS` | 168 | Validade do link |
+| `ACCOUNTS_INVITATION_MAX_PENDING` | 20 | Convites pendentes por conta |
+| `ACCOUNTS_INVITATION_THROTTLE_PER_ACCOUNT` / `_PER_PERSON` / `_MINUTES` | 30 / 20 / 60 | Intervalo dos convites |
+| `ACCOUNTS_MAX_OWNED` | 10 | Contas de empresa de que uma pessoa pode ser dona |
+
+## Transferir a propriedade
+
+`Account\Actions\TransferOwnership`: só o **dono**, para um **membro** da
+conta, com o **token de ação sensível** da pessoa — emitido só depois da
+**senha de transação** e do **código por e-mail** (o mesmo mecanismo da
+rotação de chave), consumido pela Action (uso único). Sem token válido, nada
+muda (403 + `denied`). A troca é uma transação (`AccountService::transferOwnership`):
+sai o vínculo do novo dono, o vínculo de dono troca de pessoa e o antigo dono
+volta como **admin** — nunca zero nem dois donos (o índice e os gatilhos do
+PostgreSQL continuam valendo). A conta pessoal não se transfere.
+
+## Excluir a conta
+
+`Account\Actions\DeleteAccount`: só o **dono**, com o token de ação sensível;
+a conta sai com projetos, chaves, vínculos e convites; os membros ficam com as
+contas deles. A conta pessoal não se exclui por aqui.
+
+## Aviso de chave órfã
+
+Quando alguém **sai** ou é **removido** da conta, as chaves de API que criou e
+que ainda autenticam continuam valendo, e o **dono e os admins** (menos quem
+saiu) recebem o e-mail "chave órfã" no idioma de cada um: quais chaves (nome,
+código público, chave pública — **nunca** a secreta nem o hash) e um botão que
+abre a tela de chaves **já na conta certa** (URL **assinada**: ninguém monta
+um link que troca a conta de outra pessoa). A **exclusão da pessoa** também
+avisa, por qualquer caminho (o `/admin`, um comando, o model direto): antes de
+ela sair do banco, o pacote lê as chaves que ela criou em cada conta de que era
+admin ou member (`AccountService::orphanedKeysOnPersonExit`, o terceiro ponto de
+modo sistema do serviço) e, depois da exclusão, avisa o dono e os admins de
+cada uma — uma vez por conta, pela fila, **só depois do commit** (exclusão
+desfeita não avisa). Quem já saiu pela página não é mais membro na hora da
+exclusão: não há aviso duplicado. Exclusão recusada (dona de conta com outros
+membros) não avisa ninguém.
+
+## Trilha de auditoria das contas
+
+Todo evento de conta grava uma linha em `audit_events` (contexto `panel`),
+**na mesma transação da mudança** — se a linha não grava, a mudança é desfeita
+(falha fechada, como no `/admin`) —, com quem agiu, a conta (`tenant_uuid`), o
+alvo (a pessoa, o convite ou a conta), o antes/depois redigido (e-mail
+mascarado), IP, User-Agent e `correlation_id`. Cada **recusa** (papel, regra
+de quem mexe em quem, token, limite, convite inválido/expirado/de outro
+e-mail) grava a mesma ação com `outcome = denied` e o motivo, antes de a
+exceção sair.
+
+| Ação (`AccountAuditEvent`) | Quando |
+| --- | --- |
+| `account.created` / `account.renamed` / `account.deleted` | conta criada, renomeada, excluída |
+| `account.invitation_created` / `_resent` / `_revoked` | convite criado, reenviado, revogado |
+| `account.invitation_accepted` / `_declined` | convite aceito (inclusive criando a conta), recusado pela pessoa |
+| `account.member_role_changed` / `account.member_removed` / `account.member_left` | papel alterado, membro removido, membro saiu |
+| `account.ownership_transferred` | propriedade transferida |
+| `account.switched` | só a recusa (troca para conta de que a pessoa não é membro) |
+
+## Telas (starter Livewire)
+
+- **Seletor de conta** (`<x-account-switcher>`, no topo da coluna do painel e
+  no topo do conteúdo no celular): conta atual e papel; as contas da pessoa
+  com o papel em cada; troca por `POST /accounts/{uuid}/switch` (controller do
+  pacote, que só aceita conta de que a pessoa é membro — senão 403 e `denied`).
+- **Página da conta** (`/account`): dados (nome, código, tipo), membros
+  (tabela ou cartões — `<x-view-toggle>`), convidar, convites em aberto
+  (reenviar, revogar), transferir, sair, excluir. Ações de linha só com ícone
+  colorido + tooltip (`<x-icon-button>`). O botão que o papel não permite
+  **some** e a ação chamada por fora é **recusada no servidor** (403).
+- **Criar conta** (`/accounts/create`).
+- **Tela do convite** (`/invitations/{token}`, pública) com os estados de erro
+  (expirado, revogado, já usado, recusado, e-mail diferente, já é membro,
+  link inválido).
+
+Um front novo reaproveita as Actions, o `Account\Queries\AccountDirectory`
+(as leituras das telas), o `Account\Invitations\InvitationPreview` (o que a
+tela do link pode mostrar) e os controllers do pacote com os contratos de
+resposta (`Account\Contracts\Responses`: aceite, recusa, convite
+indisponível, troca de conta — padrão com `bindIf`, o do aplicativo vence).
+
+## /admin
+
+"Contas" (`Twstec\Kit\Admin\Resources\Accounts`), **somente leitura**: lista
+todas as contas (tipo, dono, membros, projetos, chaves; filtro por tipo;
+busca por nome, código e e-mail do dono) e o detalhe com os membros e papéis
+e os projetos e chaves da conta (só identificadores públicos). Nada de editar
+membros pelo `/admin`: isso é da própria conta, com a regra do dono e a trilha.
 
 ## Tenancy na API
 

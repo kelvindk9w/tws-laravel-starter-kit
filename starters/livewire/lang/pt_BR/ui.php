@@ -63,4 +63,19 @@ return [
         'support' => 'Suporte',
     ],
 
+    // Alternador tabela/cartões das listas do painel (<x-view-toggle>).
+    'view_toggle' => [
+        'label' => 'Como a lista aparece',
+        'table' => 'Ver em tabela',
+        'cards' => 'Ver em cartões',
+    ],
+
+    // Seletor de conta (<x-account-switcher>).
+    'account_switcher' => [
+        'label' => 'Conta atual: :account. Trocar de conta',
+        'heading' => 'Suas contas',
+        'manage' => 'Conta e membros',
+        'create' => 'Criar conta de empresa',
+    ],
+
 ];

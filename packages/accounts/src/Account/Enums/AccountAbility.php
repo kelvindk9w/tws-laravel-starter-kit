@@ -27,8 +27,11 @@ enum AccountAbility: string
     /** Criar, rotacionar, revogar chaves de API e definir o vínculo com projetos. */
     case ManageApiKeys = 'api-keys.manage';
 
-    /** Convidar, remover e mudar o papel de membros (telas na fase seguinte). */
+    /** Convidar, remover e mudar o papel de membros (quem mexe em quem: Support\MemberRules). */
     case ManageMembers = 'members.manage';
+
+    /** Renomear a conta (a conta pessoal não tem nome próprio). */
+    case UpdateAccount = 'account.update';
 
     case TransferOwnership = 'account.transfer';
 

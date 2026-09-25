@@ -47,6 +47,7 @@ use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
  * @property AuditOutcome $outcome
  * @property string|null $subject_type
  * @property string|null $subject_uuid
+ * @property string|null $tenant_uuid
  * @property array<string, array{before: mixed, after: mixed}>|null $changes
  * @property string|null $reason
  * @property string|null $correlation_id
@@ -76,6 +77,7 @@ class AuditEvent extends Model
         'outcome',
         'subject_type',
         'subject_uuid',
+        'tenant_uuid',
         'changes',
         'reason',
         'correlation_id',
