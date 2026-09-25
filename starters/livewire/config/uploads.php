@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Uploads Seguros.
+// Uploads Seguros — a cópia do APLICATIVO da configuração do pacote
+// twstec/kit-uploads (as chaves de primeiro nível daqui prevalecem sobre as do
+// pacote; as que faltarem vêm dele).
 //
 // Política (lei): o arquivo é validado pelo CONTEÚDO (magic bytes via finfo),
 // NUNCA pela extensão declarada. PDF é só PDF, imagem é só imagem.
@@ -58,6 +60,31 @@ return [
                 'application/pdf' => 'pdf',
             ],
             'max_kb' => (int) env('UPLOADS_PDF_MAX_KB', 10240),
+        ],
+    ],
+
+    // --- Entrega por URL assinada (pacote twstec/kit-uploads) -----------------
+    // PROTEÇÃO que o pacote liga sozinho no disco padrão de uploads, quando ele
+    // é local (mesmo que o disco a declare desligada): a entrega assinada do
+    // Laravel (`serve`), que responde só a URL assinada e dentro da validade.
+    // Desligar só é seguro se a aplicação entregar os arquivos por conta
+    // própria sem expô-los — e fica registrado no log a cada boot. A validação pelo conteúdo, o limite por tipo e o
+    // reprocessamento de imagem moram no domínio e não são desligáveis.
+    'protections' => env('UPLOADS_PROTECTIONS', true),
+
+    // --- API v1 (pacote twstec/kit-uploads) ------------------------------------
+    'api' => [
+        // POST /api/v1/uploads. Com `enabled` = false o pacote não registra a
+        // rota e a aplicação chama Twstec\Kit\Uploads\Http\UploadRoutes::register()
+        // onde quiser. Prefixo, middleware e nomes nulos = os mesmos das rotas
+        // v1 do twstec/kit-accounts (`api_keys.api.routes`): o upload fica no
+        // MESMO grupo das outras rotas da API. A autenticação por chave
+        // (`resolve.tenant`) entra sempre.
+        'routes' => [
+            'enabled' => env('UPLOADS_API_ROUTES', true),
+            'prefix' => null,
+            'middleware' => null,
+            'name' => null,
         ],
     ],
 

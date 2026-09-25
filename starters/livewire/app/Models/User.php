@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Core\Uploads\Concerns\HasAvatar;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -19,6 +18,7 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Models\Concerns\KitAuthenticatable;
 use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
 use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
+use Twstec\Kit\Uploads\Concerns\HasAvatar;
 
 /**
  * Usuário da plataforma — o model é do APLICATIVO e compõe o que cada pacote
@@ -40,7 +40,8 @@ use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
  * - `email`: texto (é a chave de lookup do login; índice UNIQUE exige texto).
  *
  * Painel /admin (Filament): `canAccessPanel`. Foto de perfil (`avatar()`,
- * `avatarUrl()`): trait HasAvatar, do módulo de Uploads.
+ * `avatarUrl()`): trait HasAvatar, do pacote twstec/kit-uploads (a coluna
+ * `avatar_upload_id` é da migration de usuários do aplicativo).
  *
  * NOME ANTIGO: até a 1.x este model era App\Core\Auth\Models\User. O nome
  * antigo continua resolvendo para esta classe (app/Support/legacy-aliases.php)

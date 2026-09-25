@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Filament\Resources\ApiKeys\Pages\ListApiKeys;
 use App\Filament\Resources\Projects\Pages\ListProjects;
 use App\Filament\Resources\RequestLogs\Pages\ListRequestLogs;
@@ -16,6 +15,7 @@ use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Resources do super admin (Filament): listagens com conteúdo,

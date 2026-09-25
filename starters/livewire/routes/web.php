@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Http\Controllers\AvatarController;
 use App\Http\Controllers\Auth\AuthPageController;
 use App\Http\Controllers\ThemePreferenceController;
 use App\Livewire\ApiKeys\Index as ApiKeysIndex;
@@ -21,6 +20,7 @@ use Twstec\Kit\Auth\Http\Controllers\TransactionPasswordController;
 use Twstec\Kit\Auth\Http\Controllers\TwoFactorChallengeController;
 use Twstec\Kit\Foundation\Localization\Http\Controllers\LocaleController;
 use Twstec\Kit\Foundation\Mail\Http\Controllers\MailPreviewController;
+use Twstec\Kit\Uploads\Http\Controllers\AvatarController;
 
 // Página inicial do PRODUTO. Uma extensão instalada pode responder por "/"
 // com a própria página (a demonstração do kit responde com a landing): as

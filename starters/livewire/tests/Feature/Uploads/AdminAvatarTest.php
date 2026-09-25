@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
-use App\Core\Uploads\Services\SecureUploadService;
 use App\Filament\Pages\Profile as AdminProfile;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
@@ -14,6 +12,8 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Uploads\Models\Upload;
+use Twstec\Kit\Uploads\Services\SecureUploadService;
 
 // =============================================================================
 // FOTO DE PERFIL NO /admin (ponta a ponta).

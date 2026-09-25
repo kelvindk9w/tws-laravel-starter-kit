@@ -12,16 +12,19 @@ use Symfony\Component\Finder\Finder;
 // ABAIXO dele: foundation não conhece ninguém; auth conhece foundation;
 // accounts conhece auth e foundation; uploads conhece os três.
 //
-// As camadas foundation, auth e accounts JÁ SAÍRAM de app/Core: são os
-// pacotes twstec/kit-foundation (packages/foundation), twstec/kit-auth
-// (packages/auth) e twstec/kit-accounts (packages/accounts), e a trava de
-// cada uma — não conhecer nada do aplicativo nem das camadas de cima — mora
-// na suíte do próprio pacote. Aqui ficam as regras dos módulos que ainda
-// moram em app/Core, e mais uma: o código do aplicativo usa os nomes NOVOS das
+// As QUATRO camadas JÁ SAÍRAM de app/Core: são os pacotes
+// twstec/kit-foundation (packages/foundation), twstec/kit-auth
+// (packages/auth), twstec/kit-accounts (packages/accounts) e
+// twstec/kit-uploads (packages/uploads), e a trava de cada uma — não conhecer
+// nada do aplicativo nem das camadas de cima — mora na suíte do próprio
+// pacote. Desde a extração do pacote uploads (F6), app/Core não existe mais:
+// as regras dos módulos de app/Core continuam aqui para reprovar um módulo que
+// volte a morar nele. E mais uma: o código do aplicativo usa os nomes NOVOS das
 // classes que saíram (Twstec\Kit\Foundation\…, Twstec\Kit\Auth\…,
-// Twstec\Kit\Accounts\…, e App\Models\User para o model de usuário, que é
-// do aplicativo); os nomes antigos (App\Core\<Módulo>\…) existem só como
-// apelidos de compatibilidade para o que está gravado fora do código.
+// Twstec\Kit\Accounts\…, Twstec\Kit\Uploads\…, e App\Models\User para o
+// model de usuário, que é do aplicativo); os nomes antigos
+// (App\Core\<Módulo>\…) existem só como apelidos de compatibilidade para o
+// que está gravado fora do código.
 //
 // A DEMONSTRAÇÃO do kit (App\Demo, em app/Demo e demo/) fica no topo, FORA de
 // app/Core: ela pode usar qualquer peça do produto, e NENHUMA peça do produto
@@ -51,13 +54,14 @@ use Symfony\Component\Finder\Finder;
 /**
  * Camadas, de baixo para cima, e os módulos de cada uma.
  *
- * As camadas foundation, auth e accounts não aparecem: são os pacotes
- * twstec/kit-foundation, twstec/kit-auth e twstec/kit-accounts, e usar classe
- * deles é sempre descer na hierarquia.
+ * Vazia desde a extração do pacote uploads (F6): as quatro camadas são os
+ * pacotes twstec/kit-foundation, twstec/kit-auth, twstec/kit-accounts e
+ * twstec/kit-uploads, e usar classe deles é sempre descer na hierarquia. Um
+ * módulo que reaparecer em app/Core sem camada declarada aqui reprova.
+ *
+ * @var array<string, list<string>>
  */
-const CORE_LAYERS = [
-    'uploads' => ['Uploads'],
-];
+const CORE_LAYERS = [];
 
 /**
  * Grupos coesos: ciclos aceitos porque os módulos vão juntos para o MESMO
@@ -92,6 +96,13 @@ const AUTH_MOVED_MODULES = ['Auth'];
  * Twstec\Kit\Accounts\ApiKeys\…).
  */
 const ACCOUNTS_MOVED_MODULES = ['Tenancy', 'ApiKeys'];
+
+/**
+ * Módulo que saiu de app/Core para o pacote twstec/kit-uploads. O nome antigo
+ * App\Core\Uploads\… não pode voltar ao código (o novo é
+ * Twstec\Kit\Uploads\…).
+ */
+const UPLOADS_MOVED_MODULES = ['Uploads'];
 
 /**
  * Imports que sobem na hierarquia e ainda não puderam sair: arquivo => classes.
@@ -166,6 +177,11 @@ function coreAppReferences(): array
     }
 
     $references = [];
+
+    // Sem app/Core (desde a F6), não há módulo nenhum para ler.
+    if (! is_dir(base_path('app/Core'))) {
+        return $references;
+    }
 
     foreach ((new Finder)->files()->in(base_path('app/Core'))->name('*.php') as $file) {
         $references[str_replace(base_path().'/', '', $file->getRealPath())] = appReferencesIn($file->getContents());
@@ -350,7 +366,7 @@ it('declara a camada de todo módulo de app/Core, uma vez só', function (): voi
 
     $modules = [];
 
-    foreach ((new Finder)->directories()->in(base_path('app/Core'))->depth(0) as $directory) {
+    foreach (is_dir(base_path('app/Core')) ? (new Finder)->directories()->in(base_path('app/Core'))->depth(0) : [] as $directory) {
         $modules[] = $directory->getFilename();
     }
 
@@ -452,7 +468,7 @@ it('mantém a demonstração fora de app/Core', function (): void {
     // fronteira voltando por dentro do produto.
     $demoInCore = [];
 
-    foreach ((new Finder)->files()->in(base_path('app/Core'))->name('*.php') as $file) {
+    foreach (is_dir(base_path('app/Core')) ? (new Finder)->files()->in(base_path('app/Core'))->name('*.php') : [] as $file) {
         if (preg_match('/^namespace\s+App\\\\Demo\b/m', $file->getContents()) === 1) {
             $demoInCore[] = str_replace(base_path().'/', '', $file->getRealPath());
         }
@@ -578,4 +594,62 @@ it('usa os nomes novos das classes de contas e API, nunca os apelidos App\\Core\
     }
 
     expect($violations)->toBe([]);
+});
+
+it('usa os nomes novos das classes de uploads, nunca os apelidos App\\Core\\Uploads', function (): void {
+    // Mesma regra, para o que saiu com o pacote twstec/kit-uploads: os
+    // apelidos (packages/uploads/src/Compat) existem só para o que está
+    // gravado fora do código — rota em cache, snapshot do Livewire, payload de
+    // fila. A leitura é por tokens: o nome antigo escrito como TEXTO (string,
+    // nowdoc, comentário) não conta.
+    $pattern = '/^App\\\\Core\\\\('.implode('|', UPLOADS_MOVED_MODULES).')\\\\/';
+    $violations = [];
+
+    foreach (['app', 'bootstrap', 'config', 'database', 'routes', 'demo', 'tests'] as $directory) {
+        if (! is_dir(base_path($directory))) {
+            continue;
+        }
+
+        foreach ((new Finder)->files()->in(base_path($directory))->name('*.php') as $file) {
+            $path = str_replace(base_path().'/', '', $file->getRealPath());
+
+            foreach (appReferencesIn($file->getContents()) as $name) {
+                if (preg_match($pattern, $name) === 1) {
+                    $violations[] = "{$path} usa {$name}";
+                }
+            }
+        }
+    }
+
+    // Nas views Blade, que não são PHP puro, vale o nome escrito.
+    foreach ((new Finder)->files()->in(base_path('resources/views'))->name('*.blade.php') as $file) {
+        if (preg_match('/App\\\\+Core\\\\+('.implode('|', UPLOADS_MOVED_MODULES).')\\\\+/', $file->getContents()) === 1) {
+            $violations[] = str_replace(base_path().'/', '', $file->getRealPath()).' usa App\\Core\\Uploads';
+        }
+    }
+
+    // E o módulo não voltou a morar em app/Core.
+    foreach (UPLOADS_MOVED_MODULES as $module) {
+        if (is_dir(base_path("app/Core/{$module}"))) {
+            $violations[] = "app/Core/{$module} existe de novo (o módulo é do pacote twstec/kit-uploads)";
+        }
+    }
+
+    expect($violations)->toBe([]);
+});
+
+it('deixa app/Core vazio: todo o backend do kit mora nos pacotes', function (): void {
+    // Desde a extração do pacote uploads (F6), nenhum arquivo do aplicativo
+    // mora em app/Core. Backend novo do kit vai para o pacote da camada dele;
+    // código do produto de quem usa o kit mora fora de app/Core (app/Domain,
+    // app/Models…).
+    $restantes = [];
+
+    if (is_dir(base_path('app/Core'))) {
+        foreach ((new Finder)->files()->in(base_path('app/Core')) as $file) {
+            $restantes[] = str_replace(base_path().'/', '', $file->getRealPath());
+        }
+    }
+
+    expect($restantes)->toBe([]);
 });

@@ -9,10 +9,12 @@ return [
     // Os providers da base do kit (auditoria, e-mail, configurações
     // editáveis e a pilha de segurança) vêm do pacote twstec/kit-foundation;
     // o de autenticação (respostas padrão, proteções da sessão web,
-    // migrations e traduções), do twstec/kit-auth; e o de contas e API
+    // migrations e traduções), do twstec/kit-auth; o de contas e API
     // (projetos, chaves de API, a API v1 e as proteções dela), do
-    // twstec/kit-accounts — os três pela descoberta automática de pacotes do
-    // Laravel.
+    // twstec/kit-accounts; e o de uploads (upload seguro, entrega por URL
+    // assinada, foto de perfil e o POST /api/v1/uploads), do
+    // twstec/kit-uploads — os quatro pela descoberta automática de pacotes
+    // do Laravel.
     AppServiceProvider::class,
     AdminPanelProvider::class,
     HorizonServiceProvider::class,

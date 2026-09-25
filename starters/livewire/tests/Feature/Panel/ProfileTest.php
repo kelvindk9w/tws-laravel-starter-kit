@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Livewire\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Perfil (Livewire): dados, senha de login, senha de transação

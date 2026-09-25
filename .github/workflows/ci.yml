@@ -146,6 +146,23 @@ jobs:
         working-directory: packages/accounts
         run: ./vendor/bin/pest --ci
 
+      # Pacote twstec/kit-uploads: idem; acha o accounts, o auth e o
+      # foundation irmãos pelos path repositories do próprio composer.json. A
+      # suíte sobe uma aplicação Laravel limpa e prova que as proteções do
+      # upload (validação pelo conteúdo, limite por tipo, re-encode de imagem,
+      # URL assinada) vêm do pacote. Exige fileinfo e gd (já no setup-php).
+      - name: Pacote uploads · dependências
+        working-directory: packages/uploads
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote uploads · estilo (Pint)
+        working-directory: packages/uploads
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote uploads · testes (Pest)
+        working-directory: packages/uploads
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -235,6 +252,14 @@ jobs:
         working-directory: packages/accounts
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote uploads · dependências
+        working-directory: packages/uploads
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote uploads · testes (Pest)
+        working-directory: packages/uploads
+        run: ./vendor/bin/pest --ci
+
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
   #
@@ -285,6 +310,9 @@ jobs:
         if: matrix.image == 'app'
         run: |
           docker run --rm --entrypoint php tws-starter-app:ci -m | grep -qx pcntl
+          # Extensões de imagem e de MIME real do twstec/kit-uploads.
+          docker run --rm --entrypoint php tws-starter-app:ci -m | grep -qx gd
+          docker run --rm --entrypoint php tws-starter-app:ci -m | grep -qx fileinfo
           docker run --rm --entrypoint sh tws-starter-app:ci -c '
             set -e
             test "$(id -u)" != 0
@@ -294,7 +322,7 @@ jobs:
             test -z "$(find /var/www/html/storage -type f)"
             # Pacotes do kit COPIADOS para o vendor (nunca link para fora da
             # imagem) e sem o que é de desenvolvimento deles.
-            for pacote in kit-foundation kit-auth kit-accounts; do
+            for pacote in kit-foundation kit-auth kit-accounts kit-uploads; do
               test -d "vendor/twstec/$pacote/src"
               test ! -L "vendor/twstec/$pacote"
               for proibido in tests vendor composer.lock phpunit.xml; do

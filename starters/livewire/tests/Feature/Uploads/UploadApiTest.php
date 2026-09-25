@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Enums\UploadStatus;
-use App\Core\Uploads\Models\Upload;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Twstec\Kit\Uploads\Enums\UploadStatus;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Uploads Seguros — endpoint da API v1.

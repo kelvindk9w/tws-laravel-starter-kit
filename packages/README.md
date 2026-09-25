@@ -9,9 +9,10 @@ própria, com a suíte de testes verde antes e depois.
 | [`foundation`](foundation) | `twstec/kit-foundation` | Segurança (filtro de ataques, limites, cabeçalhos, hosts e proxies), trilha de requisições e trilha de auditoria com redação LGPD, identificadores, dinheiro, idioma, configurações editáveis no banco, infraestrutura de e-mail e template, guarda de segredos e de backup | Laravel |
 | [`auth`](auth) | `twstec/kit-auth` | Autenticação sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, segundo fator por e-mail, senha de transação, ação sensível, política de senha, status da conta e contratos de resposta para qualquer front | foundation |
 | [`accounts`](accounts) | `twstec/kit-accounts` | Contas e API sem telas: projetos, chaves de API (par pública/secreta, hash com pepper, escopos, vínculo com projetos, rotação com graça, expiração por inatividade), a autenticação e os limites da API, o envelope de erro e a API v1 | foundation, auth |
+| [`uploads`](uploads) | `twstec/kit-uploads` | Uploads seguros sem telas: validação pelo conteúdo real, limite por tipo, re-encode de imagem, nome seguro, entrega por URL assinada, foto de perfil e o `POST /api/v1/uploads` | foundation, auth, accounts |
 
-Os próximos (uploads e o painel de administração) ainda vivem no starter e
-entram aqui nas próximas fases.
+O próximo (o painel de administração) ainda vive no starter e entra aqui na
+próxima fase.
 
 ## Como o starter usa os pacotes
 
@@ -41,12 +42,16 @@ docker compose exec -w /var/packages/auth app ./vendor/bin/pest
 docker compose exec -w /var/packages/auth app ./vendor/bin/pint --test
 docker compose exec -w /var/packages/accounts app ./vendor/bin/pest
 docker compose exec -w /var/packages/accounts app ./vendor/bin/pint --test
+docker compose exec -w /var/packages/uploads app ./vendor/bin/pest
+docker compose exec -w /var/packages/uploads app ./vendor/bin/pint --test
 ```
 
 As dependências de desenvolvimento do pacote (`packages/<pacote>/vendor`, fora
 do git) são instaladas com o Composer em container, da raiz do repositório
-(troque `foundation` pelo pacote; o `auth` e o `accounts` acham os irmãos de
-que dependem pelos path repositories do próprio `composer.json`):
+(troque `foundation` pelo pacote; o `auth`, o `accounts` e o `uploads` acham
+os irmãos de que dependem pelos path repositories do próprio `composer.json`;
+no `uploads`, acrescente `--ignore-platform-req=ext-gd`, porque a imagem do
+Composer não traz a GD — a suíte roda no container do app, que traz):
 
 ```bash
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/repo \

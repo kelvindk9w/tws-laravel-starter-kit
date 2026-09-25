@@ -203,7 +203,7 @@ Todos sob `resolve.tenant` + scope próprio; `uuid` na URL, nunca `id`
 | `POST /api/v1/api-keys/{uuid}/rotate` | `api-keys:rotate` | **ação sensível**; `grace_period_minutes` no corpo |
 | `PUT /api/v1/api-keys/{uuid}/projects` | `api-keys:assign` | vínculo N:N (lista vazia = conta toda) |
 | `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome |
-| `POST /api/v1/uploads` | `uploads:create` | do starter (`routes/api.php`), no mesmo grupo — vai para o pacote de uploads numa fase futura |
+| `POST /api/v1/uploads` | `uploads:create` | do pacote `twstec/kit-uploads`, no mesmo grupo (ver [Uploads](uploads.md#endpoints)) |
 
 Além do scope, o **vínculo da chave com projetos** limita o que ela alcança (ver
 [Projetos](tenancy.md#projetos-multi-empresa-organizacional)): toda rota de `api-keys` e o

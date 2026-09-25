@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Exceptions\UploadRejectedException;
-use App\Core\Uploads\Models\Upload;
-use App\Core\Uploads\Services\SecureUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
+use Twstec\Kit\Uploads\Models\Upload;
+use Twstec\Kit\Uploads\Services\SecureUploadService;
 
 // =============================================================================
 // SecureUploadService diretamente: exercita a camada de SEGURANÇA do

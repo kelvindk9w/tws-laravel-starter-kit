@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Filament\Pages\Profile;
 use App\Filament\Support\InitialsAvatarProvider;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Menu do usuário do /admin: avatar (foto ou iniciais), perfil,

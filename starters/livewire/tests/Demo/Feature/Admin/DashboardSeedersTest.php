@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Database\Seeders\ApiKeySeeder;
 use App\Demo\Database\Seeders\DashboardHistorySeeder;
@@ -20,6 +19,7 @@ use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Exceptions\AppendOnlyViolationException;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // O histórico que faz os dashboards nascerem CHEIOS em qualquer instalação.

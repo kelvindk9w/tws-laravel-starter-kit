@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 use Twstec\Kit\Foundation\Http\Controllers\HealthController;
 
@@ -13,20 +12,13 @@ Route::get('/health', HealthController::class)->name('api.health');
 // =============================================================================
 // API v1.
 //
-// As rotas de chaves de API e de projetos (/api/v1/api-keys…, /api/v1/projects…)
-// vêm do pacote twstec/kit-accounts, com a autenticação por chave
-// (resolve.tenant), os escopos e o limite por chave — ver
-// Twstec\Kit\Accounts\Http\ApiRoutes e docs/api.md.
+// As rotas da API v1 vêm dos pacotes, no mesmo grupo (prefixo v1,
+// autenticação por chave `resolve.tenant`, limite por chave, nomes api.v1.*):
 //
-// Aqui fica o que ainda é do aplicativo, no MESMO grupo (prefixo v1,
-// resolve.tenant, nomes api.v1.*): o upload seguro, que vai para o pacote de
-// uploads numa fase futura.
+// - chaves de API e projetos (/api/v1/api-keys…, /api/v1/projects…): pacote
+//   twstec/kit-accounts — ver Twstec\Kit\Accounts\Http\ApiRoutes;
+// - upload seguro (POST /api/v1/uploads, escopo uploads:create): pacote
+//   twstec/kit-uploads — ver Twstec\Kit\Uploads\Http\UploadRoutes.
+//
+// Detalhes em docs/api.md e docs/uploads.md.
 // =============================================================================
-Route::prefix('v1')->middleware('resolve.tenant')->name('api.v1.')->group(function (): void {
-    // --- Uploads seguros ------------------------------------------------------
-    // Função global única: validação de formulário (Form Request) → validação
-    // de segurança do arquivo (magic bytes, polyglot, PDF c/ script) → upload.
-    Route::post('uploads', [UploadController::class, 'store'])
-        ->middleware('scope:uploads:create')
-        ->name('uploads.store');
-});

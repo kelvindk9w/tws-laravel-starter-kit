@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Widgets\Content;
 
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Filament\Widgets\Support\BaseTimeSeriesWidget;
 use App\Filament\Widgets\Support\ChartSeries;
@@ -13,6 +12,7 @@ use App\Filament\Widgets\Support\Period;
 use App\Filament\Widgets\Support\StatusPalette;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * Volume operacional por dia — arquivos que entraram e mensagens que

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Widgets\Content;
 
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Showcase\Models\FormSubmission;
 use App\Filament\Widgets\Support\BaseStatsWidget;
@@ -14,6 +13,7 @@ use App\Filament\Widgets\Support\MetricStat;
 use App\Filament\Widgets\Support\Period;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * O dia a dia de quem cuida do conteúdo: catálogo, arquivos que entram,

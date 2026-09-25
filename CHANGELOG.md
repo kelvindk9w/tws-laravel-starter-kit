@@ -35,6 +35,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (`API_KEYS_API_ROUTES=false`). Classes em `Twstec\Kit\Accounts\…`; os nomes
   `App\Core\Tenancy\…` e `App\Core\ApiKeys\…` resolvem até a 3.0. Telas,
   resources do painel e o agendamento da inatividade ficam no starter.
+- **Quarto pacote: `twstec/kit-uploads`** (`packages/uploads`), sem telas:
+  upload validado pelo conteúdo, re-encode de imagem, URL assinada, foto de
+  perfil (`HasAvatar`) e o `POST /api/v1/uploads`, agora registrado pelo
+  pacote no mesmo grupo da API v1 (`UPLOADS_API_ROUTES=false` deixa o
+  aplicativo registrá-lo). Mesmo comportamento e sem migration pendente. O
+  pacote liga sozinho a entrega assinada no disco local de uploads, mesmo que
+  o disco não a declare (opt-out: `UPLOADS_PROTECTIONS=false`, com aviso no
+  log). Classes em `Twstec\Kit\Uploads\…`; os nomes `App\Core\Uploads\…`
+  resolvem até a 3.0. Telas, rota web do avatar e o painel ficam no starter,
+  e `app/Core` deixou de existir.
 - O canal de log `request_log` (a segunda camada das trilhas de requisição,
   segurança e auditoria) passa a vir do `twstec/kit-foundation`, com a mesma
   definição; uma aplicação sem o canal não perde mais essas linhas para o log

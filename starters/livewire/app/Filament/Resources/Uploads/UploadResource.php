@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Uploads;
 
-use App\Core\Uploads\Models\Upload;
 use App\Filament\Resources\Uploads\Pages\ListUploads;
 use App\Filament\Support\AdminColumns;
 use App\Filament\Support\BaseResource;
@@ -17,6 +16,7 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * Uploads — visão global (super admin). Somente leitura: todo

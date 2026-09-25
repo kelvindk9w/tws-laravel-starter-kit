@@ -15,7 +15,8 @@
         "spatie/laravel-backup": "^10.3",
         "twstec/kit-accounts": "2.x-dev",
         "twstec/kit-auth": "2.x-dev",
-        "twstec/kit-foundation": "2.x-dev"
+        "twstec/kit-foundation": "2.x-dev",
+        "twstec/kit-uploads": "2.x-dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -131,6 +132,16 @@
             "options": {
                 "versions": {
                     "twstec/kit-foundation": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/uploads",
+            "options": {
+                "versions": {
+                    "twstec/kit-uploads": "2.x-dev"
                 },
                 "reference": "config"
             }

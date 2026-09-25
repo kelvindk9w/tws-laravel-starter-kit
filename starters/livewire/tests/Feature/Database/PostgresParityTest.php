@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Catalog\Models\Product;
 use App\Demo\Filament\Resources\FormSubmissions\Pages\ListFormSubmissions;
 use App\Demo\Filament\Resources\Products\Pages\ListProducts;
@@ -20,6 +19,7 @@ use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // PARIDADE COM O POSTGRESQL (banco de produção).

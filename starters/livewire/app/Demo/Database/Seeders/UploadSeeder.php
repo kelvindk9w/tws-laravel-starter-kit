@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Demo\Database\Seeders;
 
-use App\Core\Uploads\Enums\UploadStatus;
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Support\DemoSurface;
 use App\Models\User;
 use Faker\Factory as FakerFactory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Ramsey\Uuid\Uuid;
+use Twstec\Kit\Uploads\Enums\UploadStatus;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * Histórico de uploads espalhado no tempo.

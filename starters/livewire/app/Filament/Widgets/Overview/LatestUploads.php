@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets\Overview;
 
-use App\Core\Uploads\Models\Upload;
 use App\Filament\Resources\Uploads\UploadResource;
 use App\Filament\Widgets\Support\BaseLatestRecordsWidget;
 use App\Filament\Widgets\Support\MetricFormat;
@@ -14,6 +13,7 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * Últimos arquivos aceitos pela função global de upload (SecureUploadService): nome

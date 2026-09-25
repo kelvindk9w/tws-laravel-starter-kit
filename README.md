@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`) e [`accounts`](packages/accounts) (`twstec/kit-accounts`). Os demais entram nas próximas fases. |
+| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`), [`accounts`](packages/accounts) (`twstec/kit-accounts`) e [`uploads`](packages/uploads) (`twstec/kit-uploads`). O painel de administração entra na próxima fase. |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -221,6 +221,8 @@ packages/                # pacotes do kit (ver packages/README.md):
                          # senha de transação, ação sensível
   accounts/              # twstec/kit-accounts — projetos, chaves de API e a
                          # API v1 (autenticação, escopos, limites, envelope)
+  uploads/               # twstec/kit-uploads — upload validado pelo conteúdo,
+                         # re-encode de imagem, URL assinada, foto de perfil
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
@@ -232,9 +234,6 @@ starters/livewire/       # o aplicativo:
   config/platform.php      # config centralizada da plataforma (nada hardcoded)
   lang/{pt_BR,en,es}/      # traduções (pt-BR é o idioma padrão)
   app/
-    Core/    # módulos de backend que ainda não viraram pacote: ApiKeys,
-             # Tenancy, Uploads (a base já é o pacote foundation, e a
-             # autenticação, o pacote auth)
     Models/User.php  # o model de usuário (do app; compõe as traits dos pacotes)
     Livewire/   # painel do usuário
     Filament/   # super admin /admin

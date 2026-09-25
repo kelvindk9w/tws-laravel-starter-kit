@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Demo\Filament\Widgets\Content;
 
-use App\Core\Uploads\Models\Upload;
 use App\Filament\Widgets\Support\BaseCompositionWidget;
 use App\Filament\Widgets\Support\ChartSlice;
 use App\Filament\Widgets\Support\Period;
 use BackedEnum;
 use Filament\Support\Icons\Heroicon;
+use Twstec\Kit\Uploads\Models\Upload;
 
 /**
  * Composição do acervo por FAMÍLIA de tipo (imagem, PDF, documento, outros).

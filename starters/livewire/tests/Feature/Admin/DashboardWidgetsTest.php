@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Demo\Filament\Widgets\Content\ContentStats;
 use App\Demo\Filament\Widgets\Content\UploadsPerDayChart;
 use App\Demo\Filament\Widgets\Overview\LatestSubmissions;
@@ -19,6 +18,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // A BASE reutilizável dos dashboards (app/Filament/Widgets/Support):

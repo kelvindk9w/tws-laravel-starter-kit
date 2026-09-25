@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Core\Uploads\Models\Upload;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
 // Avatar do perfil (web autenticada): prova o reuso da MESMA função

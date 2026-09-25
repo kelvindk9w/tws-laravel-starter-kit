@@ -12,7 +12,9 @@
 #     -f docker/php/Dockerfile .
 #
 # Base pinada: php:8.4.24-fpm-alpine (nunca usar `latest`).
-# Extensões: pgsql, redis, intl, bcmath, gd, zip, opcache, pcntl (filas).
+# Extensões: pgsql, redis, intl, bcmath, gd (re-encode de imagem do
+# twstec/kit-uploads, que também exige a fileinfo, nativa do PHP), zip,
+# opcache, pcntl (filas).
 # As dependências PHP de produção são instaladas SOBRE este mesmo base (estágio
 # composer-prod), então a checagem de plataforma do Composer vale para o PHP
 # que de fato roda em produção.

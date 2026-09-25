@@ -91,7 +91,8 @@ it('a referência de model com o nome antigo (snapshot, fila) acha o registro', 
 it('não inventa apelido fora dos dois módulos nem para o que não existe', function (): void {
     expect(class_exists('App\\Core\\Tenancy\\NaoExiste'))->toBeFalse()
         ->and(class_exists('App\\Core\\ApiKeys\\Models\\NaoExiste'))->toBeFalse()
-        // Uploads é de outra camada (continua no aplicativo nesta fase).
+        // Uploads é de outra camada (o pacote twstec/kit-uploads, que este não
+        // conhece: os apelidos App\Core\Uploads\… são dele).
         ->and(class_exists('App\\Core\\Uploads\\Models\\Upload'))->toBeFalse();
 });
 
