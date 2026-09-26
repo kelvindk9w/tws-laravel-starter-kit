@@ -15,7 +15,9 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyAttempt;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Http\Requests\StoreApiKeyRequest;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
@@ -34,6 +36,11 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
  * (AccountAbility::ManageApiKeys) — conferido em CADA envio, não só no botão.
  * Criar e rotacionar são AÇÕES SENSÍVEIS (senha de transação → código → token
  * consumido aqui, como o middleware `sensitive.token` faria na API).
+ *
+ * Toda recusa fica na trilha (AccountResourceGuard), com a ação tentada: o
+ * papel que não permite (403), a chave que não está na conta atual (o mesmo
+ * 404 de sempre) e o projeto de fora da conta no vínculo (o mesmo erro de
+ * validação).
  *
  * A SECRETA: só existe na resposta IMEDIATA da criação/rotação, como dado de
  * uma resposta só do Inertia (`flash` da página, que o Inertia não guarda no
@@ -68,9 +75,9 @@ final class ApiKeysController implements HasMiddleware
      */
     public function code(Request $request): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Created);
         $this->validateKeyForm($request);
-        $this->resolveProjects($request);
+        $this->resolveProjects($request, ApiKeyAttempt::Created);
         $this->requireTransactionPassword($request, 'name', __('panel.api_keys.sensitive_requires_password'));
 
         return $this->afterStage($request);
@@ -84,9 +91,9 @@ final class ApiKeysController implements HasMiddleware
      */
     public function store(Request $request, ApiKeyService $apiKeys): Response
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Created);
         $validated = $this->validateKeyForm($request);
-        $this->resolveProjects($request);
+        $this->resolveProjects($request, ApiKeyAttempt::Created);
 
         $this->consume($request);
 
@@ -109,7 +116,7 @@ final class ApiKeysController implements HasMiddleware
      */
     public function rotateCode(Request $request, string $key): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Rotated, $key);
         $this->rotatableKey($key);
         $this->validateGrace($request);
 
@@ -124,7 +131,7 @@ final class ApiKeysController implements HasMiddleware
      */
     public function rotate(Request $request, string $key, ApiKeyService $apiKeys): Response
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Rotated, $key);
         $current = $this->rotatableKey($key);
         $grace = $this->validateGrace($request);
 
@@ -138,9 +145,9 @@ final class ApiKeysController implements HasMiddleware
      */
     public function revoke(string $key, ApiKeyService $apiKeys): RedirectResponse
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Revoked, $key);
 
-        $apiKeys->revoke($this->findKey($key));
+        $apiKeys->revoke($this->findKey($key, ApiKeyAttempt::Revoked));
 
         return to_route('panel.api-keys')->with('status', __('panel.api_keys.revoked'));
     }
@@ -153,15 +160,15 @@ final class ApiKeysController implements HasMiddleware
      */
     public function projects(Request $request, string $key, ApiKeyService $apiKeys): RedirectResponse
     {
-        $this->authorizeManage();
-        $apiKey = $this->findKey($key);
+        $this->authorizeManage(ApiKeyAttempt::ProjectsSynced, $key);
+        $apiKey = $this->findKey($key, ApiKeyAttempt::ProjectsSynced);
 
         $request->validate([
             'project_uuids' => ['array'],
             'project_uuids.*' => ['uuid'],
         ]);
 
-        $apiKeys->syncProjects($apiKey, $this->resolveProjects($request));
+        $apiKeys->syncProjects($apiKey, $this->resolveProjects($request, ApiKeyAttempt::ProjectsSynced, (string) $apiKey->uuid));
 
         return to_route('panel.api-keys')->with('status', __('panel.api_keys.projects_saved'));
     }
@@ -285,17 +292,19 @@ final class ApiKeysController implements HasMiddleware
 
     /**
      * Os projetos pedidos, só da conta atual (resolveProjectIds do serviço):
-     * uuid de outra conta vira erro de validação.
+     * uuid de outra conta vira erro de validação, com a tentativa na trilha.
      *
      * @return list<int>
      *
      * @throws ValidationException
      */
-    private function resolveProjects(Request $request): array
+    private function resolveProjects(Request $request, ApiKeyAttempt $attempt, ?string $keyUuid = null): array
     {
         try {
             return app(ApiKeyService::class)->resolveProjectIds(array_values((array) $request->input('project_uuids', [])));
         } catch (\InvalidArgumentException) {
+            $this->guard()->foreignProjects($attempt, $keyUuid);
+
             throw ValidationException::withMessages(['project_uuids' => __('api_keys.projects.invalid')]);
         }
     }
@@ -319,7 +328,7 @@ final class ApiKeysController implements HasMiddleware
      */
     private function rotatableKey(string $uuid): ApiKey
     {
-        $key = $this->findKey($uuid);
+        $key = $this->findKey($uuid, ApiKeyAttempt::Rotated);
 
         if ($key->status !== ApiKeyStatus::Active || ! $key->isUsable()) {
             throw ValidationException::withMessages(['rotate' => __('api_keys.keys.not_rotatable')]);
@@ -329,17 +338,26 @@ final class ApiKeysController implements HasMiddleware
     }
 
     /**
-     * Chave da CONTA ATUAL pelo uuid — de outra conta = 404 (anti-enumeração).
+     * Chave da CONTA ATUAL pelo uuid — de outra conta = 404 (anti-enumeração),
+     * com a tentativa na trilha.
      */
-    private function findKey(string $uuid): ApiKey
+    private function findKey(string $uuid, ApiKeyAttempt $attempt): ApiKey
     {
-        /** @var ApiKey */
-        return ApiKey::query()->byUuid($uuid)->firstOrFail();
+        return $this->guard()->apiKey($uuid, $attempt);
     }
 
-    private function authorizeManage(): void
+    /**
+     * Gerir chaves: owner ou admin da conta (403 para member, com a
+     * tentativa na trilha).
+     */
+    private function authorizeManage(ApiKeyAttempt $attempt, ?string $keyUuid = null): void
     {
-        Accounts::authorize(AccountAbility::ManageApiKeys);
+        $this->guard()->authorize(AccountAbility::ManageApiKeys, $attempt, $keyUuid);
+    }
+
+    private function guard(): AccountResourceGuard
+    {
+        return app(AccountResourceGuard::class);
     }
 
     private function user(Request $request): User

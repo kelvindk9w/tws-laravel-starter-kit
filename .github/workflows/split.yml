@@ -22,7 +22,8 @@
 # Antes da cópia, o composer.json de cada pasta vira o da versão publicada
 # (.github/release/prepare-composer.php): sem os path repositories do
 # monorepo, com os pacotes do kit em `^2.0` (no starter, `^2.0@beta` enquanto
-# a versão for pré-release) e, no starter, sem o composer.lock. É exatamente o
+# a versão for pré-release) e, no starter, sem o composer.lock e com o
+# docker-compose.prod.yml sem o contexto de build `packages` do monorepo. É exatamente o
 # que a simulação da instalação publicada, no CI, instala e testa
 # (.github/release/simulate-install.sh).
 name: Publicação (split) — desligada
@@ -101,7 +102,7 @@ jobs:
           php-version: '8.4'
           coverage: none
 
-      - name: composer.json da versão publicada
+      - name: composer.json (e, no starter, compose de produção) da versão publicada
         run: php .github/release/prepare-composer.php "${{ matrix.path }}" "$TAG"
 
       - name: Cópia para ${{ env.SPLIT_OWNER }}/${{ matrix.repository }}

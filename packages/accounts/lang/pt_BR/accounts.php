@@ -40,6 +40,9 @@ return [
     'authorization' => [
         'denied' => 'Seu papel nesta conta não permite esta ação.',
         'not_member' => 'Você não é membro desta conta.',
+        // Motivo gravado na trilha (`denied`) quando a tela procura, na conta
+        // atual, um recurso que não está nela — a resposta continua o 404 comum.
+        'not_found' => 'Recurso não encontrado na conta atual (inexistente ou de outra conta).',
     ],
 
     'account' => [

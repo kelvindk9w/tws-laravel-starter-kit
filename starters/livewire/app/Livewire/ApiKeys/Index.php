@@ -12,7 +12,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyAttempt;
 use Twstec\Kit\Accounts\ApiKeys\Http\Requests\StoreApiKeyRequest;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
@@ -35,6 +37,11 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
  * gerir chaves exige o papel owner ou admin na conta
  * (AccountAbility::ManageApiKeys). A senha de transação e a ação sensível
  * continuam sendo da PESSOA logada.
+ *
+ * Toda recusa fica na trilha (AccountResourceGuard), com a ação tentada: o
+ * papel que não permite (403), a chave que não está na conta atual (o mesmo
+ * 404 de sempre) e o projeto de fora da conta no vínculo (o mesmo erro de
+ * validação).
  */
 final class Index extends Component
 {
@@ -110,7 +117,7 @@ final class Index extends Component
 
     public function startCreate(): void
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Created);
         $this->resetValidation();
         $this->reset('name', 'expiresAt', 'selectedScopes', 'selectedProjectUuids');
         $this->allScopes = true;
@@ -123,8 +130,9 @@ final class Index extends Component
      */
     public function requestCreate(): void
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Created);
         $this->validateKeyForm();
+        $this->resolveSelectedProjects(app(ApiKeyService::class));
 
         if (! $this->user()->hasTransactionPassword()) {
             throw ValidationException::withMessages([
@@ -143,8 +151,8 @@ final class Index extends Component
 
     public function startRotate(string $uuid): void
     {
-        $this->authorizeManage();
-        $key = $this->findOwnedKey($uuid);
+        $this->authorizeManage(ApiKeyAttempt::Rotated, $uuid);
+        $key = $this->findOwnedKey($uuid, ApiKeyAttempt::Rotated);
 
         if (! $key->isUsable()) {
             throw ValidationException::withMessages([
@@ -163,7 +171,7 @@ final class Index extends Component
 
     public function requestRotate(): void
     {
-        $this->authorizeManage();
+        $this->authorizeManage(ApiKeyAttempt::Rotated, $this->rotatingKeyUuid);
         $this->validate([
             'gracePeriodMinutes' => ['required', 'integer', 'min:0', 'max:'.(int) config('api_keys.rotation.max_grace_minutes', 10080)],
         ]);
@@ -177,8 +185,8 @@ final class Index extends Component
 
     public function startRevoke(string $uuid): void
     {
-        $this->authorizeManage();
-        $this->findOwnedKey($uuid);
+        $this->authorizeManage(ApiKeyAttempt::Revoked, $uuid);
+        $this->findOwnedKey($uuid, ApiKeyAttempt::Revoked);
         $this->revokingKeyUuid = $uuid;
     }
 
@@ -189,8 +197,8 @@ final class Index extends Component
 
     public function revoke(ApiKeyService $apiKeys): void
     {
-        $this->authorizeManage();
-        $key = $this->findOwnedKey((string) $this->revokingKeyUuid);
+        $this->authorizeManage(ApiKeyAttempt::Revoked, $this->revokingKeyUuid);
+        $key = $this->findOwnedKey((string) $this->revokingKeyUuid, ApiKeyAttempt::Revoked);
 
         $apiKeys->revoke($key);
 
@@ -204,8 +212,8 @@ final class Index extends Component
 
     public function startEditProjects(string $uuid): void
     {
-        $this->authorizeManage();
-        $key = $this->findOwnedKey($uuid);
+        $this->authorizeManage(ApiKeyAttempt::ProjectsSynced, $uuid);
+        $key = $this->findOwnedKey($uuid, ApiKeyAttempt::ProjectsSynced);
 
         $this->editingProjectsKeyUuid = $uuid;
         $this->editingProjectsSelection = $key->projects->pluck('uuid')->all();
@@ -218,8 +226,8 @@ final class Index extends Component
 
     public function saveProjects(ApiKeyService $apiKeys): void
     {
-        $this->authorizeManage();
-        $key = $this->findOwnedKey((string) $this->editingProjectsKeyUuid);
+        $this->authorizeManage(ApiKeyAttempt::ProjectsSynced, $this->editingProjectsKeyUuid);
+        $key = $this->findOwnedKey((string) $this->editingProjectsKeyUuid, ApiKeyAttempt::ProjectsSynced);
 
         $this->validate([
             'editingProjectsSelection' => ['array'],
@@ -227,10 +235,13 @@ final class Index extends Component
         ]);
 
         // resolveProjectIds garante que os projetos são da conta atual;
-        // uuid de outra conta vira erro de validação (nunca 500 nem vínculo).
+        // uuid de outra conta vira erro de validação (nunca 500 nem vínculo),
+        // com a tentativa na trilha.
         try {
             $projectIds = $apiKeys->resolveProjectIds($this->editingProjectsSelection);
         } catch (\InvalidArgumentException) {
+            $this->guard()->foreignProjects(ApiKeyAttempt::ProjectsSynced, $key->uuid);
+
             throw ValidationException::withMessages([
                 'editingProjectsSelection' => __('api_keys.projects.invalid'),
             ]);
@@ -250,7 +261,10 @@ final class Index extends Component
 
     protected function performSensitiveAction(string $action, string $token): void
     {
-        $this->authorizeManage();
+        $this->authorizeManage(
+            $action === 'rotate' ? ApiKeyAttempt::Rotated : ApiKeyAttempt::Created,
+            $action === 'rotate' ? $this->rotatingKeyUuid : null,
+        );
 
         // Consome o token exatamente como o middleware `sensitive.token`
         // faria na API — a operação abaixo é a única autorizada por ele.
@@ -319,6 +333,10 @@ final class Index extends Component
 
     private function performCreate(ApiKeyService $apiKeys): void
     {
+        // Os projetos de novo (podem ter mudado desde o passo 1): fora da conta
+        // atual = erro de validação com a tentativa na trilha, nunca 500.
+        $this->resolveSelectedProjects($apiKeys);
+
         $result = $apiKeys->create($this->user(), [
             'name' => $this->name,
             'scopes' => $this->allScopes ? null : array_values($this->selectedScopes),
@@ -340,7 +358,7 @@ final class Index extends Component
 
     private function performRotate(ApiKeyService $apiKeys): void
     {
-        $key = $this->findOwnedKey((string) $this->rotatingKeyUuid);
+        $key = $this->findOwnedKey((string) $this->rotatingKeyUuid, ApiKeyAttempt::Rotated);
 
         $result = $apiKeys->rotate($key, $this->gracePeriodMinutes);
 
@@ -351,23 +369,48 @@ final class Index extends Component
     }
 
     /**
-     * Busca chave da CONTA ATUAL por UUID — uuid de outra conta = 404
-     * (anti-enumeração, mesmo padrão dos controllers da API).
+     * Os projetos escolhidos na criação são da conta atual? Senão, erro de
+     * validação no campo, com a tentativa na trilha.
+     *
+     * @return list<int>
+     *
+     * @throws ValidationException
      */
-    private function findOwnedKey(string $uuid): ApiKey
+    private function resolveSelectedProjects(ApiKeyService $apiKeys): array
     {
-        /** @var ApiKey */
-        return ApiKey::query()
-            ->byUuid($uuid)
-            ->firstOrFail();
+        try {
+            return $apiKeys->resolveProjectIds(array_values($this->selectedProjectUuids));
+        } catch (\InvalidArgumentException) {
+            $this->guard()->foreignProjects(ApiKeyAttempt::Created);
+
+            throw ValidationException::withMessages([
+                'selectedProjectUuids' => __('api_keys.projects.invalid'),
+            ]);
+        }
     }
 
     /**
-     * Gerir chaves: owner ou admin da conta (403 para member).
+     * Busca chave da CONTA ATUAL por UUID — uuid de outra conta = 404
+     * (anti-enumeração, mesmo padrão dos controllers da API), com a
+     * tentativa na trilha.
      */
-    private function authorizeManage(): void
+    private function findOwnedKey(string $uuid, ApiKeyAttempt $attempt): ApiKey
     {
-        Accounts::authorize(AccountAbility::ManageApiKeys);
+        return $this->guard()->apiKey($uuid, $attempt);
+    }
+
+    /**
+     * Gerir chaves: owner ou admin da conta (403 para member, com a
+     * tentativa na trilha).
+     */
+    private function authorizeManage(ApiKeyAttempt $attempt, ?string $keyUuid = null): void
+    {
+        $this->guard()->authorize(AccountAbility::ManageApiKeys, $attempt, $keyUuid);
+    }
+
+    private function guard(): AccountResourceGuard
+    {
+        return app(AccountResourceGuard::class);
     }
 
     private function user(): User

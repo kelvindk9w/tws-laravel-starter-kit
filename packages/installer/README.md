@@ -1,5 +1,12 @@
 # twstec/kit-installer
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/installer`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 O instalador do **TWS Laravel Starter Kit**: `php artisan tws:install`. Você
 escolhe os módulos opcionais do kit — **contas e API** (`twstec/kit-accounts`),
 **uploads** (`twstec/kit-uploads`) e o **painel `/admin`** (`twstec/kit-admin`)
@@ -8,10 +15,19 @@ escolhe os módulos opcionais do kit — **contas e API** (`twstec/kit-accounts`
 
 - **Requisitos:** PHP 8.4+, Laravel 13, `twstec/kit-foundation` 2.x.
 - **Licença:** MIT.
-- **Onde fica:** em `require-dev` dos starters (o Livewire hoje; o React
-  usará o mesmo). É ferramenta de desenvolvimento: roda o Composer e escreve
-  no `.env`, então não vai para a imagem de produção
+- **Onde fica:** em `require-dev` dos dois starters (`twstec/starter-livewire`
+  e `twstec/starter-react`). É ferramenta de desenvolvimento: roda o Composer
+  e escreve no `.env`, então não vai para a imagem de produção
   (`composer install --no-dev`).
+
+## Instalação
+
+Vem com os starters (o `post-create-project-cmd` o chama). Num aplicativo que
+usa os pacotes do kit sem starter:
+
+```bash
+composer require --dev "twstec/kit-installer:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
 
 ## Por que um pacote à parte
 
@@ -47,7 +63,7 @@ Idempotente. Não apaga arquivo do aplicativo — o starter esconde sozinho o qu
 As regras: `uploads` exige `accounts`; a demonstração exige todos os módulos
 opcionais (tirar um deles exige `--no-demo`); `foundation` e `auth` não saem.
 
-Tudo em [docs/instalacao.md](../../docs/instalacao.md).
+Tudo em [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
 
 ## Testes
 

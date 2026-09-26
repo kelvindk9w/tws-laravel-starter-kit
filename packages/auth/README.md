@@ -1,7 +1,14 @@
 # twstec/kit-auth
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/auth`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 A autenticação do **TWS Laravel Starter Kit**, como pacote Laravel **sem telas**.
-É a segunda camada do kit: depende só do [`twstec/kit-foundation`](../foundation)
+É a segunda camada do kit: depende só do [`twstec/kit-foundation`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/foundation)
 e do Laravel — não conhece contas, chaves de API, uploads, o painel de
 administração nem a interface, e um teste de arquitetura na suíte do pacote
 garante isso.
@@ -23,7 +30,18 @@ garante isso.
 
 ## Instalação
 
-**Hoje (monorepo):** o starter instala o pacote por *path repository*, como o
+Pelo Packagist:
+
+```bash
+composer require "twstec/kit-auth:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
+
+Durante o beta, cada pacote do kit que você requerer leva o `@beta` (ou o
+projeto declara `"minimum-stability": "beta"` com `"prefer-stable": true`) —
+ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
+
+**No monorepo** (desenvolvimento do próprio kit), o starter instala o pacote por
+*path repository* — como o
 foundation:
 
 ```json
@@ -41,8 +59,6 @@ foundation:
     "twstec/kit-auth": "2.x-dev"
 }
 ```
-
-**Depois da publicação no Packagist:** `composer require twstec/kit-auth:^2.0`.
 
 O `AuthServiceProvider` é descoberto automaticamente. Depois, `php artisan migrate`.
 
@@ -138,7 +154,7 @@ aplicação instalar as mesmas proteções por conta própria.
 | Contas protegidas, credenciais sugeridas | Registrar `AccountProtection` / `LoginPrefillProvider` | Pontos de extensão; sem registro, nada é protegido nem preenchido |
 
 O guia completo, com o passo a passo de um front novo, está em
-[`docs/autenticacao.md`](../../docs/autenticacao.md).
+[`docs/autenticacao.md`](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/autenticacao.md).
 
 ## Nomes antigos → nomes novos
 

@@ -118,11 +118,12 @@ final class Accounts
     }
 
     /**
-     * Conferência de papel SEM trilha — para telas de chaves e projetos, que
-     * não passam por uma Action de conta. Para a pré-checagem de uma ação de
-     * conta, membros ou convites (transferir, excluir, renomear, remover,
-     * revogar), use o `authorize()` da própria Action: a recusa grava
-     * `denied` na trilha.
+     * Conferência de papel SEM trilha — para código que decide sozinho o que
+     * fazer com a recusa. Nas TELAS, a recusa fica na trilha: nas de chaves de
+     * API e de projetos, use o Account\Support\AccountResourceGuard (o mesmo
+     * 403 e a mesma mensagem, com a linha `denied`); na pré-checagem de uma
+     * ação de conta, membros ou convites (transferir, excluir, renomear,
+     * remover, revogar), o `authorize()` da própria Action.
      *
      * @throws AuthorizationException 403 quando o papel não permite.
      */

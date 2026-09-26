@@ -9,7 +9,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Tenancy\Enums\ProjectAttempt;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
 
@@ -21,6 +23,10 @@ use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
  * da CONTA ATUAL: uuid de outra conta = 404; código público com nova
  * tentativa). A tela só confere o papel da pessoa na conta, valida o
  * formulário, chama o serviço e mostra o resultado.
+ *
+ * Toda recusa fica na trilha (AccountResourceGuard): o papel que não permite
+ * (403) e o projeto que não está na conta atual (o mesmo 404 de sempre) gravam
+ * `denied` com a ação tentada.
  */
 final class Index extends Component
 {
@@ -47,7 +53,7 @@ final class Index extends Component
 
     public function startCreate(): void
     {
-        Accounts::authorize(AccountAbility::CreateProjects);
+        $this->guard()->authorize(AccountAbility::CreateProjects, ProjectAttempt::Created);
         $this->resetValidation();
         $this->reset('name');
         $this->showCreateForm = true;
@@ -61,7 +67,7 @@ final class Index extends Component
 
     public function create(): void
     {
-        Accounts::authorize(AccountAbility::CreateProjects);
+        $this->guard()->authorize(AccountAbility::CreateProjects, ProjectAttempt::Created);
         $this->validate(['name' => ['required', 'string', 'max:255']], [], [
             'name' => __('panel.common.name'),
         ]);
@@ -74,8 +80,8 @@ final class Index extends Component
 
     public function startEdit(string $uuid): void
     {
-        Accounts::authorize(AccountAbility::UpdateProjects);
-        $project = $this->findOwned($uuid);
+        $this->guard()->authorize(AccountAbility::UpdateProjects, ProjectAttempt::Updated, $uuid);
+        $project = $this->findOwned($uuid, ProjectAttempt::Updated);
 
         $this->resetValidation();
         $this->editingUuid = $uuid;
@@ -90,13 +96,13 @@ final class Index extends Component
 
     public function update(): void
     {
-        Accounts::authorize(AccountAbility::UpdateProjects);
+        $this->guard()->authorize(AccountAbility::UpdateProjects, ProjectAttempt::Updated, $this->editingUuid);
         $this->validate(['editingName' => ['required', 'string', 'max:255']], [], [
             'editingName' => __('panel.common.name'),
         ]);
 
         $this->service()->update(
-            $this->findOwned((string) $this->editingUuid),
+            $this->findOwned((string) $this->editingUuid, ProjectAttempt::Updated),
             ['name' => $this->editingName],
         );
 
@@ -106,8 +112,8 @@ final class Index extends Component
 
     public function startDelete(string $uuid): void
     {
-        Accounts::authorize(AccountAbility::DeleteProjects);
-        $this->findOwned($uuid);
+        $this->guard()->authorize(AccountAbility::DeleteProjects, ProjectAttempt::Deleted, $uuid);
+        $this->findOwned($uuid, ProjectAttempt::Deleted);
         $this->confirmingDeleteUuid = $uuid;
     }
 
@@ -128,11 +134,11 @@ final class Index extends Component
      */
     public function removeProject(): void
     {
-        Accounts::authorize(AccountAbility::DeleteProjects);
+        $this->guard()->authorize(AccountAbility::DeleteProjects, ProjectAttempt::Deleted, $this->confirmingDeleteUuid);
 
         // O vínculo N:N cai junto; a chave que só atendia este projeto segue
         // restrita, agora a nenhum (ver ProjectService::delete()).
-        $this->service()->delete($this->findOwned((string) $this->confirmingDeleteUuid));
+        $this->service()->delete($this->findOwned((string) $this->confirmingDeleteUuid, ProjectAttempt::Deleted));
 
         $this->cancelDelete();
         session()->flash('projects_status', __('panel.projects.deleted'));
@@ -149,11 +155,17 @@ final class Index extends Component
     }
 
     /**
-     * Projeto da CONTA ATUAL por UUID — de outra conta = 404 (nem confirma que existe).
+     * Projeto da CONTA ATUAL por UUID — de outra conta = 404 (nem confirma que
+     * existe), com a tentativa na trilha.
      */
-    private function findOwned(string $uuid): Project
+    private function findOwned(string $uuid, ProjectAttempt $attempt): Project
     {
-        return $this->service()->find($uuid);
+        return $this->guard()->project($uuid, $attempt);
+    }
+
+    private function guard(): AccountResourceGuard
+    {
+        return app(AccountResourceGuard::class);
     }
 
     /**

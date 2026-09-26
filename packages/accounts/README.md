@@ -1,9 +1,16 @@
 # twstec/kit-accounts
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/accounts`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 Contas e API do **TWS Laravel Starter Kit**, como pacote Laravel **sem telas**:
 **contas com membros e papéis**, o **isolamento automático** entre contas,
 projetos, chaves de API e a API v1. É a terceira camada do kit: depende só do
-[`twstec/kit-auth`](../auth), do [`twstec/kit-foundation`](../foundation) e do
+[`twstec/kit-auth`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth), do [`twstec/kit-foundation`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/foundation) e do
 Laravel — não conhece uploads, o painel de administração nem a interface, e um
 teste de arquitetura na suíte do pacote garante isso.
 
@@ -13,7 +20,7 @@ fixo em cada (owner, admin, member), e toda pessoa tem a sua conta pessoal.
 Toda consulta de dado de conta sai filtrada pela conta atual — e, sem conta,
 **dá erro em vez de devolver tudo**. O guia completo (modelo, papéis, conta
 atual, modo sistema, jobs, exclusão de pessoa, migração da 1.x) está em
-[`docs/tenancy.md`](../../docs/tenancy.md). Membros, convites, transferência de
+[`docs/tenancy.md`](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/tenancy.md). Membros, convites, transferência de
 propriedade, exclusão de conta e a trilha de auditoria de cada evento de conta
 são **Actions** do pacote (sem tela), com as respostas HTTP em contratos — o
 starter Livewire tem as telas; outro front reaproveita as Actions.
@@ -35,6 +42,7 @@ starter Livewire tem as telas; outro front reaproveita as Actions.
 | `Account\Events` | Pontos de extensão: `AccountCreated`, `MemberAdded`, `MemberRemoved` e, para quem guarda dado das contas fora do pacote (os uploads), `PersonDeleting` (só leitura — a exclusão ainda pode ser recusada), `PersonDeleted` e `AccountDeleting` (na transação da exclusão da conta) |
 | `Account\Actions` | A regra de cada fluxo de conta, conferindo o papel e gravando a trilha (inclusive as recusas): `CreateAccount`, `RenameAccount`, `DeleteAccount` e `TransferOwnership` (os dois últimos com o token de ação sensível), `SwitchAccount`, `InviteMember`, `ResendInvitation`, `RevokeInvitation`, `AcceptInvitation`, `RegisterAndAcceptInvitation` (o aceite cria a conta, verificada), `DeclineInvitation`, `ChangeMemberRole`, `RemoveMember`, `LeaveAccount`. Pré-checagem para a tela conferir o papel antes de abrir a confirmação ou mandar o código: `authorize($pessoa)` em `TransferOwnership`, `DeleteAccount`, `RenameAccount`, `RemoveMember` e `RevokeInvitation` — o mesmo 403 de `handle()`, com a recusa na trilha (`denied`) |
 | `Account\Support\MemberRules` | Quem mexe em quem (a mesma regra na Action e na tela) |
+| `Account\Support\AccountResourceGuard` | A guarda das telas de chaves de API e de projetos: papel (`authorize()`, o 403 de sempre) e posse (`apiKey()`, `project()`: o 404 comum, idêntico para "de outra conta" e "não existe"; `foreignProjects()` no vínculo), gravando cada recusa (`denied`) com a ação tentada — `ApiKeyAttempt`, `ProjectAttempt`. Na API v1, os 403 de escopo e de chave vinculada também gravam `denied` (contexto `api`); os 401/404 ficam só no `request_logs` |
 | `Account\Support\AccountAudit` | A trilha dos eventos de conta em `audit_events` (quem, conta, alvo, antes/depois redigido, IP, UA, correlation_id; `denied` nas recusas), na transação da mudança |
 | `Account\Support\OrphanedApiKeys`, `Account\Mail` | O aviso de chave órfã e o convite (e-mails no template do kit, na galeria `/mail-preview`; o corpo é do front) |
 | `Account\Models\AccountInvitation`, `Account\Invitations` | O convite (dado da conta; token só em hash), a busca pelo token (o único modo sistema dos convites) e o que a tela do link pode mostrar (`InvitationPreview`) |
@@ -54,7 +62,18 @@ starter Livewire tem as telas; outro front reaproveita as Actions.
 
 ## Instalação
 
-**Hoje (monorepo):** o starter instala o pacote por *path repository*, como os
+Pelo Packagist:
+
+```bash
+composer require "twstec/kit-accounts:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
+
+Durante o beta, cada pacote do kit que você requerer leva o `@beta` (ou o
+projeto declara `"minimum-stability": "beta"` com `"prefer-stable": true`) —
+ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
+
+**No monorepo** (desenvolvimento do próprio kit), o starter instala o pacote por
+*path repository* — como os
 outros:
 
 ```json
@@ -73,12 +92,10 @@ outros:
 }
 ```
 
-**Depois da publicação no Packagist:** `composer require twstec/kit-accounts:^2.0`.
-
 O `AccountsServiceProvider` é descoberto automaticamente. Depois,
 `php artisan migrate` (numa base da 1.x, a migração cria a conta pessoal de
 cada pessoa e passa os dados para ela — ver
-[Migração da 1.x](../../docs/tenancy.md#migração-da-1x)). O model de usuário é
+[Migração da 1.x](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/tenancy.md#migração-da-1x)). O model de usuário é
 o do aplicativo, lido de `auth.providers.users.model` (ver o README do
 `twstec/kit-auth`); o pacote o trata pelo contrato `AuthUser` e liga a conta
 pessoal e a regra de exclusão aos eventos dele — o model não precisa de trait.
@@ -164,7 +181,7 @@ falhas.
 
 Em `APP_ENV=production`, o provider grava aviso no log a cada boot quando não
 há pepper dedicado (ausente ou vazio) e quando a flag do legado está ligada —
-aviso, não recusa. Roteiro de transição em [`docs/api.md`](../../docs/api.md#roteiro-de-transição).
+aviso, não recusa. Roteiro de transição em [`docs/api.md`](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/api.md#roteiro-de-transição).
 
 ## Rotas da API v1
 
@@ -187,7 +204,7 @@ O envelope de erro vale para `api/*`: um prefixo fora de `api/` fica sem ele.
 
 | O quê | Como | Por que não no pacote |
 | --- | --- | --- |
-| Telas de chaves, projetos e painel do cliente | Componentes do front sobre `ApiKeyService`, `ProjectService` e `AccountOverviewQuery`, conferindo o papel com `Accounts::authorize()` | São a interface |
+| Telas de chaves, projetos e painel do cliente | Componentes do front sobre `ApiKeyService`, `ProjectService` e `AccountOverviewQuery`, conferindo o papel e a posse com o `Account\Support\AccountResourceGuard` (o mesmo 403/404, com a recusa na trilha) | São a interface |
 | Seletor de conta, página da conta, tela do convite | Telas sobre as Actions, o `AccountDirectory` e o `InvitationPreview`; rotas apontando para os controllers do pacote (`InvitationController`, `AccountSwitchController`) | São a interface |
 | Corpo dos e-mails de convite e de chave órfã | Views `mail.messages.account-invitation` e `mail.messages.orphaned-api-keys` (a do convite usa a rota `invitations.show`; a do aviso, a rota assinada `accounts.open`) | É interface |
 | Modo sistema dos próprios comandos, seeders e jobs que varrem contas | `Accounts::asSystem('motivo', fn () => …)` | Só o código sabe que precisa ver todas as contas |

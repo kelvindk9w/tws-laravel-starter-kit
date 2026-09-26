@@ -18,6 +18,13 @@ declare(strict_types=1);
 // um projeto recebe o starter limpo (a página inicial do produto; os testes
 // da demo pulam sozinhos, e o instalador não a encontra para perguntar).
 //
+// Ainda no starter, o docker-compose.prod.yml publicado sai SEM o contexto de
+// build `packages` (`additional_contexts: packages: ../../packages`, que só
+// existe no monorepo): no projeto criado não há pasta packages/, e o
+// Dockerfile de produção — o mesmo arquivo — cai no estágio `packages` vazio
+// e instala os pacotes do Composer (ver docker/php/Dockerfile do starter). O
+// script falha se sobrar alguma referência ao monorepo fora de comentário.
+//
 // Uso:
 //   php .github/release/prepare-composer.php <pasta> <versão> [opções]
 //     --set-version          grava "version" no composer.json (só para o
@@ -108,9 +115,30 @@ if ($isProject && is_file(rtrim($dir, '/').'/composer.lock')) {
     unlink(rtrim($dir, '/').'/composer.lock');
 }
 
+// Compose de produção do starter: sem o contexto `packages` do monorepo.
+$compose = rtrim($dir, '/').'/docker-compose.prod.yml';
+
+if ($isProject && is_file($compose)) {
+    $yaml = (string) file_get_contents($compose);
+    $yaml = (string) preg_replace(
+        '/^[ \t]*# Pacotes do kit \(path repository\)[^\n]*\n[ \t]*# só no monorepo[^\n]*\n[ \t]*additional_contexts:[ \t]*\n[ \t]*packages: \.\.\/\.\.\/packages[ \t]*\n/mu',
+        '',
+        $yaml,
+    );
+
+    foreach (explode("\n", $yaml) as $line) {
+        if (! str_starts_with(ltrim($line), '#') && (str_contains($line, 'additional_contexts') || str_contains($line, '../../packages'))) {
+            fwrite(STDERR, "o docker-compose.prod.yml publicado ainda cita o monorepo: {$line}\n");
+            exit(1);
+        }
+    }
+
+    file_put_contents($compose, $yaml);
+}
+
 if ($isProject && str_contains((string) json_encode($composer), 'kit-demo')) {
     fwrite(STDERR, "o composer.json publicado do starter ainda cita a demonstração\n");
     exit(1);
 }
 
-fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, $isProject ? ' (projeto; sem a demonstração; composer.lock removido)' : ''));
+fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, $isProject ? ' (projeto; sem a demonstração; composer.lock removido; compose de produção sem o contexto do monorepo)' : ''));

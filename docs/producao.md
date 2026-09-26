@@ -74,22 +74,36 @@ sessões, cache, logs — a estrutura vazia é recriada no Dockerfile); testes,
 Conferir numa imagem construída:
 
 ```bash
+# no monorepo (de starters/livewire ou starters/react)
 docker build --build-context packages=../../packages -f docker/php/Dockerfile --target prod -t tws-app:prod .
+# num projeto criado pelo create-project (sem a pasta packages/)
+docker build -f docker/php/Dockerfile --target prod -t tws-app:prod .
+
 docker run --rm --entrypoint sh tws-app:prod -c \
   'id; ls -A /var/www/html; find /var/www/html/storage -type f | wc -l; ls -A /var/www/html/.env* 2>&1'
 ```
 
-O `--build-context packages=../../packages` entrega à imagem a pasta `packages/` da raiz do
-repositório: o estágio do Composer instala dali os pacotes do kit (`twstec/kit-foundation`, `twstec/kit-auth`, `twstec/kit-accounts`),
+**O mesmo Dockerfile nos dois cenários.** No monorepo, o
+`--build-context packages=../../packages` entrega à imagem a pasta `packages/` da raiz do
+repositório: o estágio do Composer instala dali os pacotes do kit (path repository),
 **copiando** cada um para `vendor/` (`COMPOSER_MIRROR_PATH_REPOS=1`) — a imagem final não tem link
 para fora dela nem a pasta `/packages`. O `packages/.dockerignore` deixa de fora o que é de
-desenvolvimento do pacote (`vendor/`, `tests/`, `composer.lock`, `phpunit.xml`). O
-`docker-compose.prod.yml` já passa esse contexto (`additional_contexts`, Compose 2.17+).
+desenvolvimento do pacote (`vendor/`, `tests/`, `composer.lock`, `phpunit.xml`), a demonstração e
+o instalador. O `docker-compose.prod.yml` do monorepo já passa esse contexto
+(`additional_contexts`, Compose 2.17+). Num projeto criado pelo `create-project`, o contexto não
+existe: o Dockerfile tem um estágio `packages` **vazio** (só um arquivo-marcador, para o cache do
+BuildKit nunca confundir as duas origens), que o contexto nomeado substitui quando
+é passado (regra do BuildKit); sem ele, `/packages` fica vazio e o Composer instala os pacotes do
+kit do Packagist, como qualquer dependência. O `docker-compose.prod.yml` **publicado** sai sem as
+linhas `additional_contexts` (o `.github/release/prepare-composer.php` as tira na publicação). Se
+um `composer.json` com path repository for construído sem o contexto, o build para com a
+instrução. A simulação da instalação publicada, no CI, constrói as imagens (app e nginx) do
+projeto criado e passa as mesmas conferências de imagem limpa do job de imagens.
 
 Esperado: `uid=82(www-data)`; na raiz só `app artisan bootstrap composer.json
 composer.lock config database demo lang package*.json public resources routes
-storage vendor vite.config.js`, o `README.md` do starter, `.npmrc` e `.dockerignore`
-(o contexto do build é `starters/livewire`: `docs/`, `LICENSE` e os demais `.md`
+storage vendor vite.config.js`, o `README.md`, o `LICENSE` e o `SECURITY.md` do starter,
+`.npmrc` e `.dockerignore` (o contexto do build é a pasta do starter: `docs/` e os demais `.md`
 da raiz do repositório não entram); zero arquivo em `storage/`; nenhum `.env*`.
 
 ## E-mail em produção: sem mailer de verdade, nenhum e-mail sai

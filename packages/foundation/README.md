@@ -1,5 +1,12 @@
 # twstec/kit-foundation
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/foundation`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 A base de segurança e infraestrutura do **TWS Laravel Starter Kit**, como pacote
 Laravel. É a camada de baixo do kit: não conhece autenticação, contas, uploads
 nem interface — e um teste de arquitetura na suíte do pacote garante isso.
@@ -22,12 +29,22 @@ nem interface — e um teste de arquitetura na suíte do pacote garante isso.
 | `Support` | `Platform` (a configuração da plataforma, tipada) e o helper `platform()`; guarda de segredos críticos; guardas de produção |
 | `Backup` | `backup:run` que recusa backup sem criptografia em produção |
 | `Money`, `Identifiers` | Dinheiro em centavos (formatação e cast) e identificadores públicos (UUID nas rotas, código público) |
-| `Kit` (raiz) | Quais módulos do kit estão instalados — o ponto ÚNICO de detecção: `Kit::has('accounts')`, a diretiva `@kit('uploads') … @else … @endkit` nas views, as dependências entre módulos (`uploads` exige `accounts`) e, só para testes, `Kit::pretendAbsent()`. Instalado = registrado pelo Composer **e** com o provider carregável. Ver [docs/instalacao.md](../../docs/instalacao.md) |
+| `Kit` (raiz) | Quais módulos do kit estão instalados — o ponto ÚNICO de detecção: `Kit::has('accounts')`, a diretiva `@kit('uploads') … @else … @endkit` nas views, as dependências entre módulos (`uploads` exige `accounts`) e, só para testes, `Kit::pretendAbsent()`. Instalado = registrado pelo Composer **e** com o provider carregável. Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md) |
 
 ## Instalação
 
-**Hoje (monorepo):** o starter instala o pacote por *path repository*. No
-`composer.json` do aplicativo:
+Pelo Packagist:
+
+```bash
+composer require "twstec/kit-foundation:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
+
+Durante o beta, cada pacote do kit que você requerer leva o `@beta` (ou o
+projeto declara `"minimum-stability": "beta"` com `"prefer-stable": true`) —
+ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
+
+**No monorepo** (desenvolvimento do próprio kit), o starter instala o pacote por
+*path repository*. No `composer.json` do aplicativo:
 
 ```json
 "repositories": [
@@ -44,8 +61,6 @@ nem interface — e um teste de arquitetura na suíte do pacote garante isso.
     "twstec/kit-foundation": "2.x-dev"
 }
 ```
-
-**Depois da publicação no Packagist:** `composer require twstec/kit-foundation:^2.0`.
 
 Os providers são descobertos automaticamente (`extra.laravel.providers`):
 `FoundationServiceProvider`, e os dos módulos de auditoria, e-mail e

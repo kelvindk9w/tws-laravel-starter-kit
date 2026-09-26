@@ -1,5 +1,12 @@
 # twstec/kit-admin
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/admin`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 O super admin do **TWS Laravel Starter Kit** (`/admin`) como **plugin do
 Filament 5**: usuários, chaves de API, projetos, uploads, logs de requisição,
 trilha de auditoria e configurações, login com verificação em duas etapas por
@@ -8,9 +15,9 @@ e-mail, variantes de dashboard, a trilha de auditoria de toda ação do painel
 aplicativo.
 
 É a camada de cima do kit e o único pacote com telas: depende do
-[`twstec/kit-auth`](../auth), do [`twstec/kit-foundation`](../foundation), do
+[`twstec/kit-auth`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth), do [`twstec/kit-foundation`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/foundation), do
 Laravel e do Filament (com o Livewire, que o Filament usa). O
-[`twstec/kit-accounts`](../accounts) e o [`twstec/kit-uploads`](../uploads) são
+[`twstec/kit-accounts`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/accounts) e o [`twstec/kit-uploads`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/uploads) são
 **sugeridos** (`suggest`), não exigidos: o painel se adapta ao que está
 instalado (abaixo). Não conhece o
 aplicativo — o model de usuário é o configurado em
@@ -58,9 +65,19 @@ combinação, no CI.
 
 ## Instalação
 
-**Hoje (monorepo):** o starter instala o pacote por *path repository*, como os
+Pelo Packagist:
+
+```bash
+composer require "twstec/kit-admin:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
+
+Durante o beta, cada pacote do kit que você requerer leva o `@beta` (ou o
+projeto declara `"minimum-stability": "beta"` com `"prefer-stable": true`) —
+ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
+
+**No monorepo** (desenvolvimento do próprio kit), o starter instala o pacote por
+*path repository* — como os
 outros (`"url": "../../packages/admin"`, `"twstec/kit-admin": "2.x-dev"`).
-**Depois da publicação no Packagist:** `composer require twstec/kit-admin:^2.0`.
 
 O `AdminServiceProvider` é descoberto automaticamente. O aplicativo precisa de:
 

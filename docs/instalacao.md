@@ -284,7 +284,14 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   (`composer archive`, com o `composer.json` da versão publicada), o projeto é
   criado **só** a partir deles (`composer create-project` com repositório
   `artifact` — pacotes copiados, sem link para o monorepo) e roda o build e a
-  suíte. Pega starter que só funciona dentro do monorepo. Script:
+  suíte. Por fim constrói as **imagens de produção (app e nginx) do projeto
+  criado** — sem a pasta `packages/`, com o Dockerfile e o
+  `docker-compose.prod.yml` publicados — e passa as mesmas conferências de
+  imagem limpa do job de imagens (sem `.env`, testes, storage, SQLite, demo
+  nem instalador; pacotes copiados). O repositório `artifact` é relativo
+  (`../packages`): no build da imagem ele chega pelo contexto opcional
+  `packages` do Dockerfile, que no uso real fica vazio (os pacotes vêm do
+  Packagist). Pega starter que só funciona dentro do monorepo. Script:
   `.github/release/simulate-install.sh` — uma vez com o Livewire e uma com o
   React (`STARTER=react`).
 - **As imagens de produção** dos dois starters são construídas e conferidas
@@ -299,7 +306,10 @@ tag `v2.*`, cada pacote e cada starter para o repositório só-leitura dele
 `kelvindk9w/twstec-starter-react` — a demonstração **não** é publicada), com o
 `composer.json` preparado por `.github/release/prepare-composer.php` (sem path
 repositories, pacotes do kit em `^2.0`; nos starters, `^2.0@beta` durante o
-beta, sem `composer.lock` e sem nenhuma referência à demo). O repositório
+beta, sem `composer.lock` e sem nenhuma referência à demo; o
+`docker-compose.prod.yml` sem o contexto `packages` do monorepo). Cada pasta
+publicada leva `README.md` (com o link do monorepo e das docs), `LICENSE` e
+`SECURITY.md` (que aponta para a política do monorepo). O repositório
 espelho do React (`kelvindk9w/twstec-starter-react`) precisa ser criado,
 vazio, antes de ligar a publicação, e registrado no Packagist depois do
 primeiro split, como os outros. O job só roda com a variável do

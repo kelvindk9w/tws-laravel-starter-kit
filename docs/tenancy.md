@@ -65,8 +65,12 @@ sempre avaliada na conta atual:
 | Transferir a propriedade — `account.transfer` | ✓ | — | — |
 | Excluir a conta — `account.delete` | ✓ | — | — |
 
-Quem confere é a tela (`Accounts::authorize(...)` responde 403); os serviços
-(`ProjectService`, `ApiKeyService`) não repetem a pergunta.
+Quem confere é a tela; os serviços (`ProjectService`, `ApiKeyService`) não
+repetem a pergunta. As telas de chaves e projetos dos starters conferem pelo
+`Account\Support\AccountResourceGuard` (o 403 de `Accounts::authorize()`,
+com a recusa na trilha — ver "Recusas das telas de chaves e projetos",
+abaixo); `Accounts::authorize(...)` responde o mesmo 403 **sem** trilha, para
+código que decide sozinho o que fazer com a recusa.
 
 **O papel é consultado uma vez por requisição.** `Accounts::roleOf()`,
 `can()`, `authorize()` e o Gate guardam o papel de cada conta + pessoa até o
@@ -311,9 +315,34 @@ mensagem de `handle()`, e grava `denied` (a mesma ação, o motivo e quem
 tentou); quem pode passa sem linha nenhuma (a linha de sucesso é da
 operação). Os dois starters usam esse caminho: no Livewire, ao abrir renomear,
 remover, revogar, transferir e excluir; no React, no pedido do código e no
-envio de transferir e de excluir. `Accounts::authorize()` continua existindo
-para as telas de chaves e projetos, que não passam por uma Action de conta —
-ele responde 403 **sem** trilha.
+envio de transferir e de excluir.
+
+**Recusas das telas de chaves e projetos.** As telas de chaves de API e de
+projetos não passam por uma Action de conta; passam pelo
+`Account\Support\AccountResourceGuard`, e cada recusa grava `denied` com a
+ação **tentada**, quem, a conta e o alvo:
+
+| Recusa | Resposta (a de sempre) | Linha na trilha |
+| --- | --- | --- |
+| O papel não permite (`authorize()`) | 403, `accounts.authorization.denied` | a ação tentada, motivo = a mesma mensagem |
+| Chave ou projeto fora da conta atual (`apiKey()`, `project()`) | 404 comum — **idêntico** para "de outra conta" e "não existe" (a guarda não consulta outra conta para distinguir) | a ação tentada, o uuid tentado (só se for uuid), motivo `accounts.authorization.not_found` |
+| Projeto de fora da conta no vínculo da chave (`foreignProjects()`) | erro de validação `api_keys.projects.invalid` | `api_key.created` ou `api_key.projects_synced` |
+
+As ações: `api_key.created`, `api_key.rotated`, `api_key.revoked`,
+`api_key.projects_synced` (`ApiKeys\Enums\ApiKeyAttempt`) e
+`project.created`, `project.updated`, `project.deleted`
+(`Tenancy\Enums\ProjectAttempt`). Quem pode passa sem linha nenhuma.
+
+**Na API v1 (por chave)**, a chave **autenticada** que tenta além do que
+pode também fica na trilha, no contexto `api`, com a própria chave como alvo:
+`api_key.scope_denied` (escopo que ela não tem — `EnsureApiKeyScope`) e
+`api_key.account_key_required` (chave vinculada a projetos em operação de
+conta — `EnsureAccountWideApiKey`). A resposta é o mesmo 403. **Ficam fora
+da trilha**, de propósito, os **401** (credencial ausente ou inválida: não há
+quem registrar) e os **404** (recurso de outra conta ou inexistente): os dois
+são o sinal de quem varre a API, já vão para o `request_logs` (com o status
+e, no 404, a conta da chave) e, gravados um a um em `audit_events`,
+inflariam a trilha com o volume de um ataque.
 
 | Ação (`AccountAuditEvent`) | Quando |
 | --- | --- |

@@ -26,7 +26,11 @@ Créditos são dados a quem reportar, se desejar.
 
 ## Versões suportadas
 
-Apenas a branch `producao` e a última tag recebem correções de segurança.
+| Linha | Suporte |
+|---|---|
+| 2.x (branch `producao` e a última tag `v2.*`) | Correções de segurança e de defeitos |
+| 1.x (branch `1.x`) | Só correções de segurança, até 6 meses depois do lançamento da 2.0.0 |
+| Anteriores à 1.0 | Sem suporte |
 
 ## O que já está coberto
 

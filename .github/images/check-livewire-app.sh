@@ -1,23 +1,20 @@
 #!/bin/sh
 # =============================================================================
-# Conferência da imagem de PRODUÇÃO do app do starter React
-# (starters/react/docker/php/Dockerfile, target prod).
+# Conferência da imagem de PRODUÇÃO do app do starter Livewire
+# (starters/livewire/docker/php/Dockerfile, target prod).
 #
-#   sh .github/images/check-react-app.sh <imagem>
+#   sh .github/images/check-livewire-app.sh <imagem>
 #
-# As mesmas conferências da imagem do starter Livewire (job "Imagens de
-# produção" do .github/workflows/ci.yml), mais as do front React. Prova
-# mínima de que a imagem é utilizável e de que nada que não deveria viajar foi
-# junto: arquivo de ambiente, testes (inclusive o E2E), storage local, banco
-# SQLite, a demonstração e o instalador. Qualquer desvio = saída diferente de 0.
-# Roda no CI (job "Imagens de produção do starter React", a imagem construída
-# no monorepo; e a simulação da instalação publicada, a imagem do projeto
-# criado pelo create-project — .github/release/simulate-install.sh) e
-# localmente.
+# Prova mínima de que a imagem é utilizável e de que nada que não deveria
+# viajar foi junto: arquivo de ambiente, testes, storage local, banco SQLite,
+# a demonstração e o instalador. Qualquer desvio = saída diferente de 0.
+# Roda no CI (job "Imagens de produção", a imagem construída no monorepo; e a
+# simulação da instalação publicada, a imagem do projeto criado pelo
+# create-project — .github/release/simulate-install.sh) e localmente.
 # =============================================================================
 set -eu
 
-IMAGE="${1:?informe a imagem: sh .github/images/check-react-app.sh <imagem>}"
+IMAGE="${1:?informe a imagem: sh .github/images/check-livewire-app.sh <imagem>}"
 
 # Extensões: filas (pcntl) e imagem/MIME real do twstec/kit-uploads.
 for ext in pcntl gd fileinfo; do
@@ -33,10 +30,9 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
     # O processo não roda como root.
     test "$(id -u)" != 0
 
-    # Nada de ambiente, testes, ferramentas de teste nem node_modules.
+    # Nada de ambiente, testes nem node_modules.
     for proibido in .env .env.example .env.prod.example tests phpunit.xml phpunit.pgsql.xml \
-        playwright.config.ts playwright.config.js node_modules public/hot bootstrap/ssr \
-        docker-compose.yml docker-compose.prod.yml docker; do
+        playwright.config.js node_modules public/hot docker-compose.yml docker-compose.prod.yml docker; do
         if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
     done
 
@@ -62,31 +58,28 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
         done
     done
 
-    # O tema do /admin é compilado com as fontes do twstec/kit-admin.
+    # O tema do painel é compilado pelo app com as fontes do twstec/kit-admin
+    # (resources/css/sources.css): o pacote precisa levar os resources dele
+    # para a imagem.
     test -f vendor/twstec/kit-admin/resources/css/sources.css
 
-    # A demonstração e o instalador (require-dev) não vão para produção.
+    # A DEMONSTRAÇÃO (twstec/kit-demo, require-dev) e o INSTALADOR
+    # (twstec/kit-installer, require-dev) NÃO vão para produção: nem o
+    # pacote, nem o registro dele no Composer; da demo, nem as entradas das
+    # landings e as imagens no build do frontend, nem as rotas.
     for pacote in kit-demo kit-installer; do
         if [ -e "vendor/twstec/$pacote" ]; then echo "na imagem: vendor/twstec/$pacote"; exit 1; fi
         if grep -q "twstec/$pacote" vendor/composer/installed.json; then echo "na imagem: twstec/$pacote instalado"; exit 1; fi
     done
+    if grep -q "kit-demo" public/build/manifest.json; then echo "na imagem: assets da demo no build"; exit 1; fi
+    if [ -e public/build/assets/img ]; then echo "na imagem: imagens da demo no build"; exit 1; fi
     if [ -n "$(find /var/www/html -path /var/www/html/vendor -prune -o -name "*.php" -print | xargs grep -l "Twstec.Kit.Demo" 2>/dev/null)" ]; then
         echo "na imagem: código que nomeia a demo"; exit 1
     fi
 
-    # O front React compilado: a entrada do Inertia, o CSS do painel e o tema
-    # do /admin (o painel está instalado nesta imagem).
-    test -f public/build/manifest.json
-    grep -q "\"resources/js/app.tsx\"" public/build/manifest.json
-    grep -q "\"resources/css/app.css\"" public/build/manifest.json
-    grep -q "\"resources/css/filament.css\"" public/build/manifest.json
-    if grep -q "kit-demo" public/build/manifest.json; then echo "na imagem: assets da demo no build"; exit 1; fi
-
-    # Sobe: o artisan responde e as rotas são as do produto (nada da demo).
+    # Sobe: o artisan responde e nenhuma rota é da demo.
     php artisan --version
-    rotas="$(php artisan route:list --json)"
-    echo "$rotas" | grep -q "\"name\":\"dashboard\""
-    if echo "$rotas" | grep -q "landing"; then echo "na imagem: rotas da demo"; exit 1; fi
+    if php artisan route:list --json | grep -q "landing"; then echo "na imagem: rotas da demo"; exit 1; fi
 '
 
-echo "imagem do app do starter React: conferência ok"
+echo "imagem do app do starter Livewire: conferência ok"

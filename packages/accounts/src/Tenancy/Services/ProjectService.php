@@ -29,7 +29,8 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * Atualizar e excluir recebem o projeto já achado por um dos recortes.
  *
  * Quem pode fazer o quê (papel na conta) é decidido antes, por quem chama —
- * ver Account\Enums\AccountRole e Accounts::authorize().
+ * ver Account\Enums\AccountRole e, nas telas, Account\Support\AccountResourceGuard
+ * (a recusa e o projeto fora da conta atual ficam na trilha).
  */
 final class ProjectService
 {

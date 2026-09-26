@@ -1,10 +1,17 @@
 # twstec/kit-uploads
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/uploads`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 Uploads seguros do **TWS Laravel Starter Kit**, como pacote Laravel **sem
 telas**: validação pelo conteúdo real, reprocessamento de imagem, nome seguro,
 entrega por URL assinada, foto de perfil e o `POST /api/v1/uploads`. É a
-quarta camada do kit: depende só do [`twstec/kit-accounts`](../accounts), do
-[`twstec/kit-auth`](../auth), do [`twstec/kit-foundation`](../foundation) e do
+quarta camada do kit: depende só do [`twstec/kit-accounts`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/accounts), do
+[`twstec/kit-auth`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth), do [`twstec/kit-foundation`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/foundation) e do
 Laravel — não conhece o painel de administração nem a interface, e um teste de
 arquitetura na suíte do pacote garante isso.
 
@@ -36,7 +43,18 @@ de perfil é da pessoa**; excluir a pessoa ou a conta **apaga os arquivos**
 
 ## Instalação
 
-**Hoje (monorepo):** o starter instala o pacote por *path repository*, como os
+Pelo Packagist:
+
+```bash
+composer require "twstec/kit-uploads:^2.0@beta"   # durante o beta; na 2.0.0 estável, ^2.0
+```
+
+Durante o beta, cada pacote do kit que você requerer leva o `@beta` (ou o
+projeto declara `"minimum-stability": "beta"` com `"prefer-stable": true`) —
+ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).
+
+**No monorepo** (desenvolvimento do próprio kit), o starter instala o pacote por
+*path repository* — como os
 outros:
 
 ```json
@@ -54,8 +72,6 @@ outros:
     "twstec/kit-uploads": "2.x-dev"
 }
 ```
-
-**Depois da publicação no Packagist:** `composer require twstec/kit-uploads:^2.0`.
 
 O `UploadsServiceProvider` é descoberto automaticamente. Depois,
 `php artisan migrate`. Para a foto de perfil, o model de usuário do aplicativo
@@ -145,7 +161,7 @@ uploads das contas que somem junto; os que ela criou em contas de outras
 pessoas ficam. **Excluir a conta** apaga os uploads dela. Registro na
 transação da exclusão, arquivo por job na fila depois do commit, com nova
 tentativa; exclusão recusada ou desfeita não apaga nada. O guia completo
-(migração, limpeza, trilha) está em [`docs/uploads.md`](../../docs/uploads.md).
+(migração, limpeza, trilha) está em [`docs/uploads.md`](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/uploads.md).
 
 ## O que o aplicativo liga
 

@@ -12,7 +12,9 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
+use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Tenancy\Enums\ProjectAttempt;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
@@ -25,10 +27,17 @@ use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
  * projetos são da CONTA ATUAL: uuid de outra conta = 404). O controller
  * confere o PAPEL da pessoa na conta em cada envio (member cria e edita, não
  * exclui — AccountAbility), valida e chama o serviço.
+ *
+ * Toda recusa fica na trilha (AccountResourceGuard): o papel que não permite
+ * (403) e o projeto que não está na conta atual (o mesmo 404 de sempre) gravam
+ * `denied` com a ação tentada.
  */
 final class ProjectsController
 {
-    public function __construct(private readonly ProjectService $projects) {}
+    public function __construct(
+        private readonly ProjectService $projects,
+        private readonly AccountResourceGuard $guard,
+    ) {}
 
     public function index(): Response
     {
@@ -56,7 +65,7 @@ final class ProjectsController
      */
     public function store(Request $request): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::CreateProjects);
+        $this->guard->authorize(AccountAbility::CreateProjects, ProjectAttempt::Created);
 
         $validated = $request->validate(['name' => ['required', 'string', 'max:255']], [], [
             'name' => __('panel.common.name'),
@@ -76,8 +85,8 @@ final class ProjectsController
      */
     public function update(Request $request, string $project): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::UpdateProjects);
-        $model = $this->projects->find($project);
+        $this->guard->authorize(AccountAbility::UpdateProjects, ProjectAttempt::Updated, $project);
+        $model = $this->guard->project($project, ProjectAttempt::Updated);
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -94,11 +103,11 @@ final class ProjectsController
 
     public function destroy(string $project): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::DeleteProjects);
+        $this->guard->authorize(AccountAbility::DeleteProjects, ProjectAttempt::Deleted, $project);
 
         // O vínculo N:N cai junto; a chave que só atendia este projeto segue
         // restrita, agora a nenhum (ProjectService::delete()).
-        $this->projects->delete($this->projects->find($project));
+        $this->projects->delete($this->guard->project($project, ProjectAttempt::Deleted));
 
         return to_route('panel.projects')->with('status', __('panel.projects.deleted'));
     }

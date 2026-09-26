@@ -1,12 +1,19 @@
 # Starter React
 
+> **Parte do [TWS Laravel Starter Kit](https://github.com/kelvindk9w/tws-laravel-starter-kit).** O código, as issues e os
+> pull requests ficam no monorepo
+> [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `starters/react`); este
+> repositório é o espelho só-leitura publicado a cada versão.
+> Documentação: [docs/](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs) · Segurança:
+> [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
+
 O TWS Laravel Starter Kit com o painel do usuário em **React 19 + Inertia 3 +
 TypeScript + Tailwind 4 + shadcn/ui**, a partir do
 [kit oficial React do Laravel](https://github.com/laravel/react-starter-kit)
 — com a autenticação, a segurança e a auditoria dos pacotes `twstec/kit-*`
 no lugar das do kit oficial. Composer: `twstec/starter-react` (projeto).
 
-O backend é o mesmo do [starter Livewire](../livewire): os mesmos pacotes, as
+O backend é o mesmo do [starter Livewire](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/starters/livewire): os mesmos pacotes, as
 mesmas regras, as mesmas mensagens e o mesmo `/admin` (plugin Filament do
 `twstec/kit-admin`). Muda a interface do painel e das telas de autenticação.
 
@@ -15,12 +22,12 @@ duas etapas, notificações, seletor de conta, conta e membros, convites,
 chaves de API, projetos e foto de perfil — com E2E próprio (Playwright),
 imagem de produção própria e as combinações de módulos no CI.
 
-**Criar um projeto** (depois da publicação no Packagist):
-`composer create-project twstec/starter-react meu-app` ou
-`laravel new meu-app --using=twstec/starter-react`. O
+**Criar um projeto** (Packagist; durante o beta, com `:^2.0@beta`):
+`composer create-project "twstec/starter-react:^2.0@beta" meu-app` ou
+`laravel new meu-app --using="twstec/starter-react:^2.0@beta"`. O
 `post-create-project-cmd` chama o instalador (`php artisan tws:install`),
 que pergunta os módulos opcionais num terminal — ver
-[docs/instalacao.md](../../docs/instalacao.md#starter-react).
+[docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#starter-react).
 
 ## Rodar (Docker de desenvolvimento, porta 8181)
 
@@ -238,12 +245,18 @@ dependências de produção instaladas sobre o PHP da imagem final, os pacotes
 do kit **copiados** em `vendor/`, o front React compilado no estágio `assets`
 — Node 24 glibc, por causa dos binários nativos do Vite+ —, código de root e
 processo como `www-data`) e `docker/nginx/Dockerfile` (nginx com TLS
-autoassinado; `docker/nginx/prod.conf`). A pasta `packages/` do monorepo
-entra como contexto de build nomeado:
+autoassinado; `docker/nginx/prod.conf`). O mesmo Dockerfile serve nos dois
+cenários: no monorepo, a pasta `packages/` entra como contexto de build
+nomeado; num projeto criado pelo `create-project`, sem o contexto, os pacotes
+vêm do Composer (Packagist) como qualquer dependência:
 
 ```bash
+# no monorepo
 docker build --build-context packages=../../packages --target prod \
   -f docker/php/Dockerfile -t meu-app:prod .
+# num projeto criado pelo create-project
+docker build --target prod -f docker/php/Dockerfile -t meu-app:prod .
+
 docker build --target prod -f docker/nginx/Dockerfile -t meu-app-nginx:prod .
 ```
 
@@ -251,7 +264,8 @@ O `.dockerignore` deixa de fora todo arquivo de ambiente, testes (inclusive o
 E2E), storage local, bancos SQLite e artefatos de build. A demonstração e o
 instalador (require-dev) não entram. O CI constrói as duas imagens e confere
 a do app com `.github/images/check-react-app.sh` (job "Imagens de produção do
-starter React"). Para subir a stack completa: `docker-compose.prod.yml` e
+starter React") — e, na simulação da instalação publicada, constrói as
+imagens do projeto criado e passa a mesma conferência. Para subir a stack completa: `docker-compose.prod.yml` e
 `.env.prod.example` (os mesmos do Livewire, com o banco `tws_starter_react`)
-— ver [docs/producao.md](../../docs/producao.md).
+— ver [docs/producao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/producao.md).
 

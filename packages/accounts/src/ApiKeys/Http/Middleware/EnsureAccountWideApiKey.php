@@ -7,7 +7,10 @@ namespace Twstec\Kit\Accounts\ApiKeys\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Twstec\Kit\Accounts\Account\Support\AccountAudit;
+use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyAttempt;
 use Twstec\Kit\Accounts\Tenancy\TenantContext;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 
 /**
  * Operação de CONTA exige chave de conta toda.
@@ -31,12 +34,19 @@ use Twstec\Kit\Accounts\Tenancy\TenantContext;
  * credencial suspeita de vazamento. Vincular projetos a si mesma continua
  * proibido: lista vazia = conta toda.
  *
+ * A recusa da chave vinculada grava a tentativa na trilha
+ * (`api_key.account_key_required`, contexto `api`, `denied`, a chave como
+ * alvo e a mesma mensagem como motivo).
+ *
  * Uso (SEMPRE depois de resolve.tenant): `->middleware('account.key')` ou
  * `->middleware('account.key:self')`.
  */
 final class EnsureAccountWideApiKey
 {
-    public function __construct(private readonly TenantContext $tenantContext) {}
+    public function __construct(
+        private readonly TenantContext $tenantContext,
+        private readonly AccountAudit $audit,
+    ) {}
 
     public function handle(Request $request, Closure $next, ?string $allow = null): Response
     {
@@ -47,7 +57,18 @@ final class EnsureAccountWideApiKey
         }
 
         if ($apiKey->isRestrictedToProjects() && ! $this->actsOnItself($request, $apiKey->uuid, $allow)) {
-            abort(403, __('api_keys.projects.account_key_required'));
+            $reason = __('api_keys.projects.account_key_required');
+
+            $this->audit->denied(
+                ApiKeyAttempt::AccountKeyRequired,
+                $this->tenantContext->account(),
+                $this->tenantContext->user(),
+                $reason,
+                $apiKey,
+                context: AuditContext::Api,
+            );
+
+            abort(403, $reason);
         }
 
         return $next($request);

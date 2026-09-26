@@ -6,7 +6,87 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+Esta seção vira a **2.0.0-beta.1** quando a tag `v2.0.0-beta.1` for criada
+(a data entra junto com a tag). Até lá, nada aqui está publicado.
+
+### A 2.0 em resumo
+
+- **Monorepo com pacotes.** O kit virou 7 pacotes Composer
+  (`twstec/kit-foundation`, `-auth`, `-accounts`, `-uploads`, `-admin`,
+  `-installer` e, só no monorepo, `-demo`) e dois starters
+  (`twstec/starter-livewire` e `twstec/starter-react`), publicados por split
+  em repositórios só-leitura e no Packagist. `composer create-project
+  "twstec/starter-livewire:^2.0@beta"` (ou `starter-react`) cria um projeto
+  limpo, sem a demonstração; `php artisan tws:install` escolhe os módulos
+  opcionais (contas e API, uploads, `/admin`).
+- **Contas com membros** (dono, admin, member), convites, transferência de
+  propriedade e exclusão de conta, com toda recusa na trilha de auditoria.
+- **Uploads da conta** e foto de perfil pessoal.
+- **Starter React** (Inertia + TypeScript) com o mesmo backend do Livewire.
+
+### Atualizando da 1.x para a 2.0 (resumo)
+
+O detalhe está nas seções "Quebra de compatibilidade" e "Atualizando um clone
+existente", abaixo. Em produção:
+
+1. **Backup do banco** e uma **janela de manutenção** (ver os riscos abaixo).
+2. **Esvazie a fila antes do deploy**: pare de aceitar trabalho novo, deixe o
+   Horizon terminar o que está na fila (`php artisan horizon:pause`, espere a
+   fila zerar, `php artisan horizon:terminate`). Um job da 1.x que rode depois
+   da migração não conhece a conta (projetos, chaves e uploads passam a ser
+   da conta) e falha.
+3. **Pepper das chaves de API**: defina `API_KEYS_HASH_PEPPER` (dedicado). Se
+   a 1.x usava o fallback da `APP_KEY`, declare a `APP_KEY` atual em
+   `API_KEYS_PREVIOUS_HASH_PEPPERS` — as chaves emitidas continuam
+   autenticando e migram de hash no primeiro uso. Se o `.env` tinha
+   `API_KEYS_HASH_PEPPER=` vazio, ver "Pepper vazio" em `docs/api.md`.
+4. **Demonstração**: se a instalação rodava a demo, **antes** de subir a 2.0
+   rode `php artisan demo:uninstall --drop-tables` (tira os gatilhos das
+   contas demo, que ficariam intocáveis no banco depois que o pacote sai) —
+   a imagem de produção da 2.0 não tem a demo.
+5. Troque o código próprio conforme "Quebra de compatibilidade" (a trava de
+   arquitetura do starter aponta consulta que pula o escopo da conta).
+6. Suba a imagem nova; o container `migrate` roda `php artisan migrate --force`
+   (cria as contas, passa projetos, chaves e uploads para elas, instala os
+   gatilhos); depois reinicie Horizon e agendador e retome a fila
+   (`php artisan horizon:continue`, se pausou sem terminar).
+
+### Riscos de deploy conhecidos
+
+- **A migração das contas roda numa transação** (PostgreSQL): cria a conta
+  pessoal de cada pessoa e passa projetos e chaves, por faixas
+  (`ACCOUNTS_MIGRATION_CHUNK`), e só confirma no fim. As tabelas de projetos e
+  chaves ficam travadas até lá; a autenticação da API por chave espera. Numa
+  base grande, isso é uma **janela de manutenção**, não um deploy sem parada.
+  Se falhar, nada muda (e `migrate:rollback` desfaz depois de um sucesso).
+- **Fila com jobs da 1.x**: ver o passo 2 acima — sem esvaziar, os jobs
+  antigos falham depois da migração (ficam em `failed_jobs`).
+- **`demo:uninstall` antes de tirar a demo**: sem ele, os gatilhos das contas
+  demo continuam no banco e `demo@…`/`admin@…` seguem intocáveis.
+- **Pepper**: trocar a `APP_KEY` sem declarar a antiga como pepper anterior
+  (quando ela era o fallback) invalida todas as chaves de API emitidas.
+- **Projeto criado pelo `create-project`**: o `.env.example` aponta para o
+  PostgreSQL do Docker de desenvolvimento do monorepo (`DB_HOST=postgres`),
+  que o projeto não tem — as migrations ficam para depois (`--graceful`), até
+  o `.env` apontar para um banco. A imagem de produção do projeto instala os
+  pacotes do kit pelo Packagist (o mesmo Dockerfile do monorepo).
+
 ### Adicionado
+- **Pré-lançamento: imagem de produção de um projeto criado pelo
+  `create-project`.** O Dockerfile de produção dos dois starters tem um
+  estágio `packages` vazio, que o contexto de build nomeado do monorepo
+  substitui: no monorepo os pacotes vêm da pasta `packages/`; num projeto
+  criado a partir dos pacotes publicados, do Composer — o mesmo arquivo.
+  O `docker-compose.prod.yml` publicado sai sem o `additional_contexts` do
+  monorepo (`prepare-composer.php`). A simulação da instalação publicada, no
+  CI, constrói as imagens (app e nginx) do projeto criado, dos dois starters,
+  e passa as conferências de imagem limpa (`.github/images/check-livewire-app.sh`,
+  novo, e `check-react-app.sh`).
+- **Pré-lançamento: espelhos prontos para publicar.** `LICENSE` nos dois
+  starters; `SECURITY.md` em cada pasta publicada, apontando para o
+  monorepo; READMEs dos espelhos com o link do monorepo, das docs e a
+  instalação pelo Packagist (links relativos trocados por absolutos, que
+  valem no espelho); `.gitattributes` no starter Livewire.
 - **Starter React — fase F11c: E2E, imagem de produção, combinações e
   publicação preparada.** E2E em Playwright (`starters/react/tests/e2e`):
   cadastro com verificação de e-mail e login com segundo fator pelo Mailpit,
@@ -332,6 +412,22 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Mailpit e rodavam o hash com 64 MB. Agora forçados, como o CI já rodava.
 
 ### Segurança
+- **Recusas das telas de chaves de API e de projetos na trilha.** Nos dois
+  starters, toda recusa grava `denied` em `audit_events` com a ação tentada
+  (`api_key.created`, `api_key.rotated`, `api_key.revoked`,
+  `api_key.projects_synced`, `project.created`, `project.updated`,
+  `project.deleted`), quem, a conta e o alvo: o papel que não permite (o
+  mesmo 403 e a mesma mensagem), a chave ou o projeto que não está na conta
+  atual (o mesmo 404 — idêntico para "de outra conta" e "não existe", sem
+  revelar existência) e o projeto de fora da conta no vínculo da chave (o
+  mesmo erro de validação). Novo `Account\Support\AccountResourceGuard` no
+  `twstec/kit-accounts`. Na API v1, a chave autenticada que tenta além do que
+  pode — escopo que não tem, ou operação de conta com chave vinculada a
+  projetos — também grava `denied` (contexto `api`, `api_key.scope_denied` e
+  `api_key.account_key_required`); os 401 e 404 da API continuam só no
+  `request_logs`. Corrigido junto: criar chave pelo Livewire com projeto de
+  outra conta forjado respondia 500 no último passo; agora é o erro de
+  validação no primeiro.
 - **A pré-checagem de papel das ações de conta também fica na trilha.**
   Quem não é dono e forjava transferir a propriedade ou excluir a conta
   recebia 403 da pré-checagem da tela **sem** linha em `audit_events`; o
@@ -469,6 +565,10 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
    O mesmo para `App\Filament\…` (agora `Twstec\Kit\Admin\…`): um resource
    próprio que estende `BaseResource` ou uma config de dashboards publicada
    com os nomes antigos continuam funcionando.
+6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
+   `.env.example` antigo), as chaves de API já criadas no banco de dev foram
+   gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`
+   para que continuem autenticando (e migrem no primeiro uso), ou recrie-as.
 7. O build do front em container precisa enxergar `packages/` (o tema do
    `/admin` importa as fontes do pacote): acrescente
    `-v $(pwd)/../../packages:/packages` ao `docker run … npm run build`.
@@ -503,10 +603,6 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
    react-queue react-scheduler react-nginx`). Para o E2E do React, crie as
    pessoas fixas: `docker compose exec -T react-app php artisan tinker
    --execute="require 'tests/e2e/fixtures.php';"`.
-6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
-   `.env.example` antigo), as chaves de API já criadas no banco de dev foram
-   gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`
-   para que continuem autenticando (e migrem no primeiro uso), ou recrie-as.
 
 ## [1.1.1] — 2026-09-24
 

@@ -12,10 +12,24 @@
 #   dev   → desenvolvimento (código montado via volume bind)
 #   prod  → produção (código, vendor e assets DENTRO da imagem — imutável)
 #
-# O target prod precisa do contexto de build nomeado `packages` (a pasta
-# packages/ da raiz), além do contexto principal (o starter):
-#   docker build --build-context packages=../../packages --target prod \
-#     -f docker/php/Dockerfile .
+# O MESMO arquivo serve nos dois cenários do target prod:
+#
+# - DENTRO DO MONOREPO, os pacotes do kit vêm da pasta packages/ da raiz, pelo
+#   contexto de build nomeado `packages` (o docker-compose.prod.yml e o CI o
+#   passam):
+#     docker build --build-context packages=../../packages --target prod \
+#       -f docker/php/Dockerfile .
+# - NUM PROJETO CRIADO por `composer create-project` / `laravel new --using=`,
+#   não há packages/ nem path repository: os pacotes vêm do Composer
+#   (Packagist), como qualquer dependência, e o build é o comando simples:
+#     docker build --target prod -f docker/php/Dockerfile .
+#
+# Como: o estágio `packages` abaixo é VAZIO (só um arquivo-marcador); um
+# contexto nomeado com o mesmo nome o substitui (regra do BuildKit). Sem o
+# contexto, /packages não tem pacote nenhum e o Composer resolve tudo pelos
+# repositórios do composer.json. Se o
+# composer.json ainda tiver path repository (monorepo) e o contexto faltar, o
+# build para com a instrução, em vez de um erro de caminho do Composer.
 #
 # Base pinada: php:8.4.24-fpm-alpine (nunca usar `latest`).
 # Extensões: pgsql, redis, intl, bcmath, gd (re-encode de imagem do
@@ -122,6 +136,23 @@ CMD ["php-fpm"]
 # -----------------------------------------------------------------------------
 FROM composer:2.10.3 AS composer-bin
 
+# -----------------------------------------------------------------------------
+# Pacotes do kit de FORA do contexto principal — OPCIONAL. Vazio por padrão (o
+# projeto criado pelo create-project, com os pacotes do Packagist); o contexto
+# nomeado `packages` o substitui (o monorepo, com a pasta packages/).
+#
+# O estágio vazio leva UM arquivo-marcador, e não nada: com o estágio
+# realmente vazio, o cache do BuildKit reaproveitava a camada do
+# `COPY --from=packages` de um build anterior COM o contexto (conteúdo vazio
+# não entra na chave do cache) — um build sem o contexto saía com os pacotes
+# velhos do cache. Com o marcador, as duas origens têm conteúdo diferente e
+# nunca se confundem; a guarda abaixo reconhece "sem pacotes" por ele.
+# -----------------------------------------------------------------------------
+FROM scratch AS packages
+COPY <<EOF /.kit-packages-absent
+Sem o contexto de build `packages`: os pacotes do kit vêm do Composer.
+EOF
+
 FROM base AS composer-prod
 
 COPY --from=composer-bin /usr/bin/composer /usr/bin/composer
@@ -134,13 +165,15 @@ WORKDIR /app
 
 COPY . .
 
-# PACOTES DO KIT. O composer.json instala os pacotes por path repository
-# (`../../packages/<pacote>`), que visto de /app é /packages/<pacote>. Eles
-# chegam por um CONTEXTO DE BUILD NOMEADO, `packages` (a pasta packages/ da
-# raiz do repositório — ver docker-compose.prod.yml e o CI), porque o
-# contexto principal é o starter e não enxerga a pasta de cima. O
-# packages/.dockerignore deixa de fora o que é de desenvolvimento do pacote
-# (vendor, testes, lock).
+# PACOTES DO KIT. No monorepo, o composer.json instala os pacotes por path
+# repository (`../../packages/<pacote>`), que visto de /app é
+# /packages/<pacote>. Eles chegam pelo CONTEXTO DE BUILD NOMEADO `packages` (a
+# pasta packages/ da raiz do repositório — ver docker-compose.prod.yml e o
+# CI), porque o contexto principal é o starter e não enxerga a pasta de cima.
+# O packages/.dockerignore deixa de fora o que é de desenvolvimento do pacote
+# (vendor, testes, lock). Num projeto criado pelo create-project, o contexto
+# não é passado, /packages fica vazio (estágio `packages` acima) e os pacotes
+# vêm do Composer como qualquer dependência.
 #
 # COMPOSER_MIRROR_PATH_REPOS=1: em produção o pacote é COPIADO para
 # vendor/, nunca um link — a imagem final não leva /packages, e o vendor/
@@ -148,6 +181,8 @@ COPY . .
 COPY --from=packages . /packages/
 ENV COMPOSER_MIRROR_PATH_REPOS=1
 
+# Primeiro, a guarda do monorepo sem o contexto `packages` (ver o cabeçalho).
+#
 # O `.dockerignore` deixa o `storage/` inteiro de fora (uploads, backups e
 # sessões da máquina de quem fez o build nunca entram na imagem). A estrutura
 # vazia que o framework espera é recriada aqui, antes do `composer install`,
@@ -155,7 +190,11 @@ ENV COMPOSER_MIRROR_PATH_REPOS=1
 #
 # `check-platform-reqs` depois da instalação é redundante de propósito: deixa
 # no log do build a lista de extensões conferidas contra o PHP da imagem final.
-RUN mkdir -p \
+RUN if grep -Eq '"type": *"path"' composer.json && [ -e /packages/.kit-packages-absent ]; then \
+        echo 'composer.json com path repository (monorepo) e sem os pacotes: construa com --build-context packages=../../packages (o docker-compose.prod.yml do monorepo já passa).' >&2; \
+        exit 1; \
+    fi \
+    && mkdir -p \
         storage/app/private \
         storage/app/public \
         storage/framework/cache/data \
