@@ -614,7 +614,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build ${{ matrix.image }} (target prod)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           # Contexto = o starter; o Dockerfile da matriz é relativo a ele.
           # A pasta packages/ entra como contexto nomeado: o estágio do
@@ -700,7 +700,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Build ${{ matrix.image }} (target prod)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           # Contexto = o starter React; a pasta packages/ entra como contexto
           # nomeado, como na imagem do Livewire.
