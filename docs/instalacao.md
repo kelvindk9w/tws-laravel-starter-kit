@@ -9,7 +9,10 @@ escolhe o que entra:
 - **Backend:** `foundation` e `auth` vêm **sempre**. `accounts`, `uploads` e
   `admin` são **opcionais**, marcados um a um.
 - **Demonstração:** o pacote `twstec/kit-demo` (landings, vitrine `/ui`,
-  contas demo, massa fictícia) é só de desenvolvimento e sai com um comando.
+  contas demo, massa fictícia) **vive só no monorepo** — não é publicado no
+  Packagist. Quem clona o monorepo a tem (e a tira com um comando); quem cria
+  um projeto (`create-project` / `laravel new --using=`) recebe o starter
+  **limpo**, sem ela.
 
 | Módulo | Pacote | O que traz | Precisa de |
 | --- | --- | --- | --- |
@@ -18,7 +21,7 @@ escolhe o que entra:
 | Contas e API | `twstec/kit-accounts` | Contas com membros e convites, projetos, chaves de API e a API v1 | foundation, auth |
 | Uploads | `twstec/kit-uploads` | Upload validado pelo conteúdo, entrega por URL assinada, foto de perfil, `POST /api/v1/uploads` | foundation, auth, **accounts** (o upload pertence a uma conta) |
 | Painel `/admin` | `twstec/kit-admin` | O super admin (plugin do Filament): usuários, logs, trilha de auditoria, configurações, dashboards — e as telas de contas, chaves, projetos e uploads **quando esses módulos estão instalados** | foundation, auth (accounts e uploads são sugeridos, não exigidos) |
-| Demonstração | `twstec/kit-demo` | Landings, vitrine, contas demo, seeders de dado fictício | **todos** os módulos acima (require-dev) |
+| Demonstração | `twstec/kit-demo` | Landings, vitrine, contas demo, seeders de dado fictício — **só no monorepo, não publicado** | **todos** os módulos acima (require-dev do monorepo) |
 
 ## Criar um projeto
 
@@ -47,8 +50,10 @@ Durante o beta, peça a versão explicitamente (`twstec/starter-livewire:^2.0@be
 O que acontece: o Composer baixa o starter e os pacotes, copia o
 `.env.example` para `.env` e roda o `post-create-project-cmd` do starter, que
 chama o **instalador** (`php artisan tws:install --graceful`). Num terminal, o
-instalador pergunta os módulos e a demonstração; sem terminal (CI), mantém
-tudo como veio. Depois dele, o projeto tem a `APP_KEY` e, com o módulo de
+instalador pergunta os módulos; sem terminal (CI), mantém tudo como veio. O
+projeto nasce **sem a demonstração** (ela não é publicada: o `composer.json`
+publicado do starter não a cita): `/` é a página inicial do produto e os
+testes da demo pulam sozinhos. Depois dele, o projeto tem a `APP_KEY` e, com o módulo de
 contas, um pepper dedicado para as chaves de API. As migrations rodam se o
 banco do `.env` estiver acessível; senão, ficam para depois
 (`php artisan migrate`) — o `.env.example` aponta para o PostgreSQL do
@@ -67,7 +72,7 @@ php artisan tws:install
 
 1. Pergunta quais módulos opcionais você quer — os já instalados vêm
    marcados. Uploads sem Contas é recusado na hora (com a explicação).
-2. Se a demonstração estiver instalada: pergunta se ela fica. Se você tirou
+2. Se a demonstração estiver instalada (só no clone do monorepo): pergunta se ela fica. Se você tirou
    algum módulo, avisa que a demo exige todos e que ela vai sair junto (e pede
    confirmação).
 3. Mostra o plano (módulo por módulo: agora → depois) e pede confirmação.
@@ -207,10 +212,11 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
 
 Pronto e desligado: o workflow `.github/workflows/split.yml` copia, a cada
 tag `v2.*`, cada pacote e o starter para o repositório só-leitura dele
-(`kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`, `…-uploads`,
-`…-admin`, `…-demo`, `…-installer` e `kelvindk9w/twstec-starter-livewire`),
-com o `composer.json` preparado por `.github/release/prepare-composer.php`
-(sem path repositories, pacotes do kit em `^2.0`; no starter, `^2.0@beta`
-durante o beta e sem `composer.lock`). O job só roda com a variável do
+(7 destinos: `kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`,
+`…-uploads`, `…-admin`, `…-installer` e `kelvindk9w/twstec-starter-livewire`
+— a demonstração **não** é publicada), com o `composer.json` preparado por
+`.github/release/prepare-composer.php` (sem path repositories, pacotes do kit
+em `^2.0`; no starter, `^2.0@beta` durante o beta, sem `composer.lock` e sem
+nenhuma referência à demo). O job só roda com a variável do
 repositório `KIT_SPLIT_ENABLED=true` e usa o segredo `SPLIT_TOKEN`; nenhum dos
 dois existe ainda.

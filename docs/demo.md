@@ -44,7 +44,15 @@ nenhuma conta é protegida, o login não sugere credencial nenhuma e a galeria
 
 ## Como está instalada: só no desenvolvimento
 
-O `composer.json` do starter declara a demo em **`require-dev`** (por path
+**A demo vive só no monorepo.** Ela não é publicada no Packagist nem tem
+repositório só-leitura: quem cria um projeto a partir do starter publicado
+(`composer create-project twstec/starter-livewire` ou
+`laravel new --using=twstec/starter-livewire`) recebe o starter **limpo** — o
+`composer.json` publicado não a cita (`.github/release/prepare-composer.php`),
+`/` é a página inicial do produto e os testes da demo pulam sozinhos. O CI
+confere isso a cada push (simulação da instalação publicada).
+
+No monorepo, o `composer.json` do starter declara a demo em **`require-dev`** (por path
 repository, `../../packages/demo`). Quem clona o kit e roda `composer install`
 recebe a demo — é o ambiente de desenvolvimento de sempre, com a landing em
 `http://localhost:8180`, as contas demo e a massa fictícia.

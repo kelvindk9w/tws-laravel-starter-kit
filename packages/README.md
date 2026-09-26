@@ -37,7 +37,8 @@ um ponto só, `Twstec\Kit\Foundation\Kit::has()`, e é o que o starter e o
 opcional. Ver [docs/instalacao.md](../docs/instalacao.md).
 
 **Publicação.** O Packagist (e os repositórios só-leitura de cada pacote,
-`kelvindk9w/twstec-kit-<pacote>`) chega na fase F10b; o workflow de split
+`kelvindk9w/twstec-kit-<pacote>` — todos menos a `demo`, que vive só neste
+monorepo e não é publicada) chega na fase F10b; o workflow de split
 (`.github/workflows/split.yml`) está pronto e desligado. Até lá, o path
 repository é o caminho. Cada `composer.json` daqui já tem o que o Packagist
 lê (nome, descrição, licença, palavras-chave, autoload, `extra.laravel`,

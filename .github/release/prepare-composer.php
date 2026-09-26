@@ -12,7 +12,10 @@ declare(strict_types=1);
 // versão (`^2.0`; no starter, `^2.0@beta` enquanto a versão for pré-release,
 // porque a estabilidade mínima dele é `stable`) e tira os path repositories.
 // No starter, também tira o composer.lock (ele aponta para os caminhos do
-// monorepo; o projeto criado resolve o próprio lock).
+// monorepo; o projeto criado resolve o próprio lock) e a DEMONSTRAÇÃO
+// (twstec/kit-demo): ela vive só no monorepo e não é publicada — quem cria
+// um projeto recebe o starter limpo (a página inicial do produto; os testes
+// da demo pulam sozinhos, e o instalador não a encontra para perguntar).
 //
 // Uso:
 //   php .github/release/prepare-composer.php <pasta> <versão> [opções]
@@ -63,6 +66,13 @@ $constraint = "^{$major}.0".($isProject && $stability !== '' ? '@'.match ($stabi
     default => 'dev',
 } : '');
 
+// A demonstração não é publicada: fora do starter publicado, em qualquer seção.
+if ($isProject) {
+    foreach (['require', 'require-dev', 'suggest'] as $section) {
+        unset($composer[$section]['twstec/kit-demo']);
+    }
+}
+
 foreach (['require', 'require-dev'] as $section) {
     foreach ($composer[$section] ?? [] as $package => $current) {
         if (str_starts_with($package, 'twstec/kit-')) {
@@ -97,4 +107,9 @@ if ($isProject && is_file(rtrim($dir, '/').'/composer.lock')) {
     unlink(rtrim($dir, '/').'/composer.lock');
 }
 
-fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, $isProject ? ' (projeto; composer.lock removido)' : ''));
+if ($isProject && str_contains((string) json_encode($composer), 'kit-demo')) {
+    fwrite(STDERR, "o composer.json publicado do starter ainda cita a demonstração\n");
+    exit(1);
+}
+
+fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, $isProject ? ' (projeto; sem a demonstração; composer.lock removido)' : ''));

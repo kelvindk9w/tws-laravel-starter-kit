@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
+| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -136,8 +136,10 @@ PostgreSQL) e **não existem em produção** — ver [Demonstração](docs/demo.
 
 A demonstração inteira (landings, vitrine `/ui`, contato, catálogo e submissões
 no `/admin`, contas demo, massa fictícia) é o pacote **`twstec/kit-demo`**,
-declarado em `require-dev`: vem no `composer install` de quem clona o kit e
-**não** vai para a imagem de produção (`--no-dev`). Para começar o seu produto
+que **vive só neste monorepo** (declarado em `require-dev` do starter): vem no
+`composer install` de quem clona o kit, **não** vai para a imagem de produção
+(`--no-dev`) e **não é publicado** — quem cria um projeto com
+`composer create-project`/`laravel new --using=` recebe o starter limpo. Para começar o seu produto
 sem ela: `php artisan demo:uninstall --drop-tables` e
 `composer remove --dev twstec/kit-demo` — sem a demo, `/` mostra a página
 inicial mínima do produto e a suíte continua passando com o `pest` de sempre

@@ -1,5 +1,9 @@
 # twstec/kit-demo
 
+> **Só neste monorepo:** este pacote não é publicado no Packagist nem tem
+> repositório só-leitura. Quem cria um projeto a partir do starter publicado
+> recebe o starter limpo, sem a demonstração.
+
 A **demonstração** do TWS Laravel Starter Kit — tudo o que existe para
 *mostrar* o kit, e não para ser a base de um produto:
 

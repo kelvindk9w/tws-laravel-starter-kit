@@ -40,11 +40,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   pronto para o Packagist (homepage, suporte, autores, `branch-alias`); o
   starter vira `twstec/starter-livewire` (projeto; `post-create-project-cmd`
   chama o instalador) para `composer create-project` e
-  `laravel new --using=`; o workflow `split.yml` (tag `v2.*` → repositórios
+  `laravel new --using=`; o workflow `split.yml` (tag `v2.*` → 7 repositórios
   só-leitura `kelvindk9w/twstec-*`, desligado até a variável
   `KIT_SPLIT_ENABLED`); e a **simulação da instalação publicada** no CI — os
   pacotes empacotados com `composer archive` e o projeto criado só a partir
   deles, com build e suíte.
+- **A demonstração vive só no monorepo:** `twstec/kit-demo` não é publicada
+  (sem repositório só-leitura, fora do split). O `composer.json` publicado do
+  starter sai sem ela — quem cria um projeto recebe o starter limpo, com a
+  página inicial do produto (os testes da demo pulam). No monorepo nada muda:
+  ela segue em `require-dev` e o ambiente de desenvolvimento tem as landings.
 - **Uploads da conta** (`twstec/kit-uploads`). Todo upload passa a pertencer
   a uma **conta** (`account_id`) e guarda quem enviou (`created_by`); a web e
   a API gravam do mesmo jeito (a conta atual e quem agiu). O isolamento é o

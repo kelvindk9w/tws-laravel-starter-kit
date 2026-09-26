@@ -25,7 +25,9 @@ STEP=${1:-all}
 WORK=${2:-${RUNNER_TEMP:-/tmp}/kit-publicado}
 VERSION=${VERSION:-2.0.0-beta.1}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-PACKAGES="foundation auth accounts uploads admin demo installer"
+# A demonstração (packages/demo) NÃO é publicada: nem empacotada, nem no
+# starter publicado (prepare-composer.php a tira do require-dev).
+PACKAGES="foundation auth accounts uploads admin installer"
 
 # Arquivos de uma pasta do monorepo como o git os vê (versionados e novos
 # não ignorados): nada gerado localmente — vendor, lock de pacote, build.
@@ -87,6 +89,13 @@ package() {
     if grep -Eq '"type": *"path"|"url": *"\.\./' vendor/composer/installed.json; then echo 'vendor apontando para o monorepo (path)'; exit 1; fi
     grep -q '"type": *"artifact"\|"type": *"zip"' vendor/composer/installed.json
     grep -q '"twstec/kit-foundation": "\^2.0@beta"' composer.json
+
+    # Sem a demonstração: nem no composer.json, nem no vendor, nem nas rotas —
+    # "/" é a página inicial do produto (rota `home`).
+    if grep -q 'kit-demo' composer.json; then echo 'composer.json publicado cita a demo'; exit 1; fi
+    if [ -e vendor/twstec/kit-demo ]; then echo 'projeto publicado com a demo instalada'; exit 1; fi
+    php artisan route:list --json | grep -q '"name":"home"'
+    if php artisan route:list --json | grep -q '"name":"landing'; then echo 'projeto publicado com as rotas da demo'; exit 1; fi
 }
 
 build() {

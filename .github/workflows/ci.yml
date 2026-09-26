@@ -259,7 +259,9 @@ jobs:
         run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
 
       # Pacotes empacotados como o Packagist vai servir e o projeto criado só
-      # a partir deles (ver o cabeçalho). Pasta fora do checkout.
+      # a partir deles (ver o cabeçalho). Pasta fora do checkout. A demo não é
+      # publicada: o projeto nasce sem ela, com a página inicial do produto,
+      # e os testes dela pulam.
       - name: Instalação publicada (simulação) · pacotes, projeto, build e Pest
         working-directory: .
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado"
