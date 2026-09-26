@@ -3,6 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { PageHeader } from '@/components/page-header';
 import PasswordInput from '@/components/password-input';
+import { ProfilePhotoCard } from '@/components/profile-photo-card';
 import { SectionCard } from '@/components/section-card';
 import { TransactionPasswordForm } from '@/components/transaction-password-form';
 import { TwoFactorCard } from '@/components/two-factor-card';
@@ -28,6 +29,8 @@ import type { Theme } from '@/types';
 type Props = {
     passwordHint: string;
     transactionPasswordMinLength: number;
+    /** Foto de perfil — só com o pacote de uploads. */
+    photo: { maxKb: number; accept: string } | null;
     twoFactor: {
         available: boolean;
         enabled: boolean;
@@ -37,10 +40,10 @@ type Props = {
 
 /**
  * Perfil — os mesmos blocos do starter Livewire, na mesma tela: dados,
- * aparência, senha de login, senha de transação e verificação em duas
- * etapas. Cada bloco tem o próprio envio e o próprio botão.
+ * foto (com o pacote de uploads), aparência, senha de login, senha de
+ * transação e verificação em duas etapas. Cada bloco tem o próprio envio e o próprio botão.
  */
-export default function Profile({ passwordHint, twoFactor }: Props) {
+export default function Profile({ passwordHint, photo, twoFactor }: Props) {
     const { t } = useTrans();
     const { route } = useRoute();
     const { auth, app } = usePage().props;
@@ -155,6 +158,8 @@ export default function Profile({ passwordHint, twoFactor }: Props) {
                     )}
                 </Form>
             </SectionCard>
+
+            {photo && <ProfilePhotoCard photo={photo} />}
 
             <SectionCard
                 title={t('panel.profile.theme_heading')}

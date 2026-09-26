@@ -47,4 +47,24 @@ final class AvatarService
 
         return $upload;
     }
+
+    /**
+     * Tira a FOTO DE PERFIL: a pessoa volta às iniciais.
+     *
+     * Só desfaz o vínculo — como na troca, a foto que saiu fica sem uso e é
+     * apagada (banco e disco) pela limpeza (`uploads:prune-orphans`, depois
+     * do prazo de `uploads.prune.personal_after_hours`), não na hora: a
+     * imagem pode ainda estar na tela de quem removeu. Sem foto, nada muda.
+     *
+     * @param  AuthUser&Model  $person  Dona da foto.
+     */
+    public function remove(AuthUser&Model $person): void
+    {
+        if ($person->getAttribute('avatar_upload_id') === null) {
+            return;
+        }
+
+        $person->forceFill(['avatar_upload_id' => null])->save();
+        $person->unsetRelation('avatar');
+    }
 }

@@ -91,4 +91,15 @@ return [
     'loading' => 'Cargando',
     'session_expired' => 'Tu sesión expiró. Inténtalo de nuevo.',
 
+    // Starter React: textos das telas de contas que o Livewire não tem.
+    'projects' => [
+        'archive' => 'Archivar proyecto',
+        'unarchive' => 'Reactivar proyecto',
+    ],
+    'profile_photo' => [
+        'remove' => 'Quitar foto',
+        'remove_warning' => 'La foto sale de tu perfil y tus iniciales ocupan su lugar.',
+        'removed' => 'Foto de perfil eliminada.',
+    ],
+
 ];

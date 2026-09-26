@@ -7,6 +7,19 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Starter React — fase F11b: contas, membros, chaves de API, projetos e
+  foto de perfil.** Seletor de conta em todo o painel; página da conta
+  (renomear, membros com papéis pela regra do pacote, convites, transferir e
+  excluir com senha de transação + código); criar conta de empresa; tela
+  pública do convite (aceitar logado, entrar e voltar, criar o acesso já
+  verificado, estados de erro sem dado da conta); chaves de API (criar com
+  escopos e projetos, a secreta **uma vez** — só na resposta imediata, como
+  `flash` do Inertia —, rotacionar com transição, revogar, vínculo com
+  projetos); projetos (criar, renomear, arquivar/reativar, excluir); foto de
+  perfil (enviar, validada pelo conteúdo, e tirar). Tudo sobre as Actions e os
+  serviços dos pacotes, com a trilha gravada por eles; respostas Inertia dos
+  contratos de convite e troca de conta; rotas com parâmetro enviadas ao front
+  como modelo. `twstec/kit-uploads`: `AvatarService::remove()`.
 - **Starter React (`starters/react`, `twstec/starter-react`) — fase F11a:
   base e autenticação.** React 19 + Inertia 3 + TypeScript + Tailwind 4 +
   shadcn/ui a partir do kit oficial React do Laravel, com a autenticação do

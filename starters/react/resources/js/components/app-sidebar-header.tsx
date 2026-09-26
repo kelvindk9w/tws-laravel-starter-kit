@@ -1,3 +1,4 @@
+import { AccountSwitcher } from '@/components/account-switcher';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { LocaleSwitcher } from '@/components/locale-switcher';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -14,7 +15,11 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            <div className="ml-auto flex items-center gap-1">
+            <div className="ml-auto flex min-w-0 items-center gap-1">
+                {/* Celular e menu recolhido: a conta atual continua à vista. */}
+                <div className="max-w-44 min-w-0 md:hidden md:group-has-data-[collapsible=icon]/sidebar-wrapper:block md:group-has-data-[collapsible=icon]/sidebar-wrapper:max-w-56">
+                    <AccountSwitcher compact className="min-h-9 py-1" />
+                </div>
                 <LocaleSwitcher />
             </div>
         </header>

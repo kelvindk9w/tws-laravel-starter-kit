@@ -11,6 +11,10 @@ use Tests\TestCase;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 
+// Arranjo das telas de contas e os arquivos de teste de upload (bytes reais).
+require_once __DIR__.'/Support/Accounts.php';
+require_once __DIR__.'/Fixtures/uploads.php';
+
 // Pest 4. Feature: a aplicação Laravel completa + banco de teste — SQLite em
 // memória no phpunit.xml (padrão local) ou PostgreSQL no phpunit.pgsql.xml.
 pest()->extend(TestCase::class)

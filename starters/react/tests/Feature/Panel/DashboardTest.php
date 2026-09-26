@@ -38,13 +38,30 @@ it('sem o pacote de contas, a página abre com os atalhos (sem números)', funct
 });
 
 it('o menu lateral tem a arquitetura do Livewire, só com as telas que existem', function () {
+    $accounts = Kit::has('accounts');
+
     $this->actingAs(User::factory()->create())->get('/dashboard')
-        ->assertInertia(fn (Assert $page) => $page
-            ->where('navigation.0.label', __('panel.nav.groups.overview'))
-            ->where('navigation.0.items.0.label', __('panel.nav.dashboard'))
-            ->where('navigation.0.items.0.active', true)
-            ->where('navigation.1.label', __('panel.nav.groups.account'))
-            ->where('navigation.1.items', fn ($items) => collect($items)->pluck('href')->all() === [
-                '/notifications', '/profile', '/settings/transaction-password',
-            ]));
+        ->assertInertia(function (Assert $page) use ($accounts) {
+            $page->where('navigation.0.label', __('panel.nav.groups.overview'))
+                ->where('navigation.0.items.0.label', __('panel.nav.dashboard'))
+                ->where('navigation.0.items.0.active', true);
+
+            // Com o pacote de contas, o grupo "Desenvolvimento" (chaves e
+            // projetos) e a página da conta — na ordem do Livewire.
+            if ($accounts) {
+                $page->where('navigation.1.label', __('panel.nav.groups.development'))
+                    ->where('navigation.1.items', fn ($items) => collect($items)->pluck('href')->all() === ['/api-keys', '/projects'])
+                    ->where('navigation.2.label', __('panel.nav.groups.account'))
+                    ->where('navigation.2.items', fn ($items) => collect($items)->pluck('href')->all() === [
+                        '/account', '/notifications', '/profile', '/settings/transaction-password',
+                    ]);
+
+                return;
+            }
+
+            $page->where('navigation.1.label', __('panel.nav.groups.account'))
+                ->where('navigation.1.items', fn ($items) => collect($items)->pluck('href')->all() === [
+                    '/notifications', '/profile', '/settings/transaction-password',
+                ]);
+        });
 });

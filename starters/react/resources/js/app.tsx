@@ -16,7 +16,8 @@ void createInertiaApp({
         switch (true) {
             case name === 'welcome':
                 return null;
-            case name.startsWith('auth/'):
+            // O link de convite é público: o layout das telas de entrada.
+            case name.startsWith('auth/') || name.startsWith('invitations/'):
                 return AuthLayout;
             default:
                 return AppLayout;

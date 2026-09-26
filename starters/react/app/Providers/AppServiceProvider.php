@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Responses\Inertia\Accounts;
 use App\Http\Responses\Inertia\EmailVerificationResponse;
 use App\Http\Responses\Inertia\FailedPasswordResetResponse;
 use App\Http\Responses\Inertia\LoginResponse;
@@ -17,6 +18,7 @@ use App\Http\Responses\Inertia\TwoFactorRequiredResponse;
 use App\Http\Responses\Inertia\VerifyEmailResponse;
 use App\Providers\Filament\AdminPanelProvider;
 use Illuminate\Support\ServiceProvider;
+use Twstec\Kit\Accounts\Account\Contracts\Responses as AccountResponses;
 use Twstec\Kit\Auth\Contracts\Responses;
 use Twstec\Kit\Foundation\Kit;
 
@@ -47,12 +49,35 @@ class AppServiceProvider extends ServiceProvider
     ];
 
     /**
+     * As respostas HTTP do link de convite e da troca de conta
+     * (twstec/kit-accounts, opcional), na versão Inertia. A regra (Actions,
+     * trilha, recusas) já rodou antes; como nas de autenticação, o pacote as
+     * registra com `bindIf` e o registro daqui prevalece. Os nomes são só
+     * nomes (`::class` não carrega a classe): sem o pacote, nada é
+     * carregado.
+     *
+     * @var array<class-string, class-string>
+     */
+    public const ACCOUNT_RESPONSES = [
+        AccountResponses\AccountSwitchedResponse::class => Accounts\AccountSwitchedResponse::class,
+        AccountResponses\InvitationAcceptedResponse::class => Accounts\InvitationAcceptedResponse::class,
+        AccountResponses\InvitationDeclinedResponse::class => Accounts\InvitationDeclinedResponse::class,
+        AccountResponses\InvitationUnavailableResponse::class => Accounts\InvitationUnavailableResponse::class,
+    ];
+
+    /**
      * Register any application services.
      */
     public function register(): void
     {
         foreach (self::AUTH_RESPONSES as $contract => $implementation) {
             $this->app->bind($contract, $implementation);
+        }
+
+        if (Kit::has('accounts')) {
+            foreach (self::ACCOUNT_RESPONSES as $contract => $implementation) {
+                $this->app->bind($contract, $implementation);
+            }
         }
 
         // O painel /admin é OPCIONAL (twstec/kit-admin, que traz o Filament):

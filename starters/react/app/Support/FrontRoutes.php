@@ -17,8 +17,12 @@ use Illuminate\Support\Facades\Route;
  * (resources/js/lib/routes.ts). Nenhuma URL escrita no TypeScript, e a rota
  * de um módulo ausente simplesmente não está no mapa.
  *
- * Só nomes, nunca parâmetros: rota com parâmetro (link de e-mail, redefinição
- * de senha) chega pronta como prop da página que precisa dela.
+ * Rota com parâmetro (a chave, o membro, o convite de uma linha da lista) vai
+ * como MODELO, com o marcador do Laravel (`/api-keys/{key}/rotate`): o front
+ * troca o marcador pelo valor da linha (`route('panel.api-keys.rotate',
+ * { key: uuid })`). O servidor manda só o desenho do endereço, nunca um
+ * valor — o link de e-mail e a redefinição de senha continuam chegando
+ * prontos como prop da página que precisa deles.
  */
 final class FrontRoutes
 {
@@ -49,6 +53,44 @@ final class FrontRoutes
         'transaction-password.edit',
         'transaction-password.update',
         'settings.theme',
+
+        // Módulo de contas (twstec/kit-accounts): chaves, projetos, a página
+        // da conta, o seletor e o link de convite. Sem o módulo, as rotas não
+        // existem e não entram no mapa.
+        'panel.api-keys',
+        'panel.api-keys.code',
+        'panel.api-keys.store',
+        'panel.api-keys.rotate.code',
+        'panel.api-keys.rotate',
+        'panel.api-keys.revoke',
+        'panel.api-keys.projects',
+        'panel.projects',
+        'panel.projects.store',
+        'panel.projects.update',
+        'panel.projects.destroy',
+        'panel.account',
+        'panel.account.update',
+        'panel.account.leave',
+        'panel.account.transfer.code',
+        'panel.account.transfer',
+        'panel.account.delete.code',
+        'panel.account.destroy',
+        'panel.account.members.update',
+        'panel.account.members.destroy',
+        'panel.account.invitations.store',
+        'panel.account.invitations.resend',
+        'panel.account.invitations.revoke',
+        'panel.accounts.create',
+        'panel.accounts.store',
+        'accounts.switch',
+        'invitations.show',
+        'invitations.accept',
+        'invitations.register',
+        'invitations.decline',
+
+        // Foto de perfil (twstec/kit-uploads).
+        'panel.avatar.update',
+        'panel.avatar.destroy',
     ];
 
     /**
@@ -59,9 +101,17 @@ final class FrontRoutes
         $routes = [];
 
         foreach (self::NAMES as $name) {
-            if (Route::has($name)) {
-                $routes[$name] = route($name, absolute: false);
+            $route = Route::getRoutes()->getByName($name);
+
+            if ($route === null) {
+                continue;
             }
+
+            // Sem parâmetro: o endereço pronto. Com parâmetro: o modelo, com
+            // os marcadores `{nome}` que o front preenche.
+            $routes[$name] = $route->parameterNames() === []
+                ? route($name, absolute: false)
+                : '/'.ltrim($route->uri(), '/');
         }
 
         return $routes;

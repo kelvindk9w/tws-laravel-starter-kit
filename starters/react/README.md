@@ -127,7 +127,10 @@ idiomas), `auth.user` (lista fechada: uuid, código público, nome, e-mail,
 idioma, tema, foto, e três estados), `kit.modules` (módulos opcionais
 instalados — `Kit::has()`), `navigation` (o menu lateral, montado no servidor
 com a arquitetura de informação do Livewire), `routes`, `flash`,
-`translations` e `sidebarOpen`. **Nenhuma credencial** — um teste varre as
+`accountMenu` (o seletor de conta: a conta atual e as contas da pessoa, com
+o papel — só com o pacote de contas), `translations` e `sidebarOpen`. Rota com
+parâmetro chega em `routes` como modelo (`/api-keys/{key}/rotate`), preenchido
+no front (`route('panel.api-keys.rotate', { key })`). **Nenhuma credencial** — um teste varre as
 props de todas as telas atrás de senha, hash, token, código e pepper
 (`tests/Feature/Inertia/SharedPropsTest.php`).
 
@@ -141,9 +144,41 @@ só no build com o painel instalado). O starter React **não usa a
 demonstração do kit** (`twstec/kit-demo`): `/` é a página inicial mínima do
 produto.
 
+## Contas, chaves de API, projetos e foto (módulos opcionais)
+
+Com o `twstec/kit-accounts`: o **seletor de conta** em todo o painel, a
+**página da conta** (`/account`: dados, membros em tabela ou cartões,
+convites, transferir e excluir), **criar conta de empresa**
+(`/accounts/create`), **chaves de API** (`/api-keys`), **projetos**
+(`/projects`) e a **tela pública do convite** (`/invitations/{token}`). Com o
+`twstec/kit-uploads`: a **foto de perfil** no `/profile` (enviar e tirar).
+
+- A regra é do pacote: cada mudança de conta é uma Action (papel, trilha,
+  recusas `denied`); chaves pelo `ApiKeyService`, projetos pelo
+  `ProjectService`. A tela esconde o que o papel não permite e o servidor
+  recusa (403) o que vier por fora.
+- Ações sensíveis (criar e rotacionar chave, transferir e excluir a conta):
+  `…/code` confere o pedido (`stage=check`) e manda o código (`stage=send`,
+  com a senha de transação); o envio da ação traz o código, que vira o token
+  **no servidor** (`App\Http\Controllers\Panel\Concerns\ConfirmsSensitiveAction`).
+- **A secreta da chave** só existe na resposta imediata da criação/rotação,
+  como `flash` do Inertia (fora das props e do histórico do navegador); nunca
+  na listagem nem na sessão depois da resposta.
+- As respostas do link de convite e da troca de conta são as Inertia do
+  aplicativo (`App\Http\Responses\Inertia\Accounts`). O token do convite
+  não vai para as props: o front o lê do próprio endereço.
+- Componentes reutilizáveis em `resources/js/components` (seletor de conta,
+  diálogo de ação sensível, diálogo de confirmação, alternador tabela/cartões,
+  ação só com ícone + tooltip, revelação única da secreta, listas de membros e
+  convites, foto de perfil).
+
 ## Diferenças conhecidas para o Livewire (nesta fase)
 
-- Sem as telas de contas, chaves de API, projetos e a foto de perfil (F11b).
+- Projetos: além de renomear, o React **arquiva e reativa** (o
+  `ProjectService` já aceita o status; o Livewire só renomeia).
+- A foto de perfil pode ser **removida** (`AvatarService::remove()`); o
+  Livewire só troca.
+- A escolha tabela/cartões fica no navegador (no Livewire, na sessão).
 - `LoginPrefillProvider` (credenciais sugeridas no login, usado pela demo)
   não é lido: credencial não vai para as props.
 - `/mail-preview` é uma página Blade autossuficiente (os e-mails em si são os

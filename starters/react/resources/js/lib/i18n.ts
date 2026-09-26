@@ -48,8 +48,44 @@ export function translate(
         }, value);
 }
 
+/**
+ * Escolhe a forma pelo número, no formato do `trans_choice` do Laravel:
+ * `{1} :count pessoa|[2,*] :count pessoas` (valor exato ou intervalo, `*` sem
+ * limite) ou só `singular|plural`. `:count` entra sozinho.
+ */
+export function choose(line: string, count: number): string {
+    const segments = line.split('|');
+
+    for (const segment of segments) {
+        const exact = segment.match(/^\s*\{(-?\d+)\}\s?([\s\S]*)$/);
+
+        if (exact && Number(exact[1]) === count) {
+            return exact[2];
+        }
+
+        const range = segment.match(
+            /^\s*\[(-?\d+|\*),\s*(-?\d+|\*)\]\s?([\s\S]*)$/,
+        );
+
+        if (
+            range &&
+            (range[1] === '*' || count >= Number(range[1])) &&
+            (range[2] === '*' || count <= Number(range[2]))
+        ) {
+            return range[3];
+        }
+    }
+
+    const plain = segments.map((segment) =>
+        segment.replace(/^\s*(\{-?\d+\}|\[(-?\d+|\*),\s*(-?\d+|\*)\])\s?/, ''),
+    );
+
+    return plain.length > 1 && count !== 1 ? plain[1] : plain[0];
+}
+
 export function useTrans(): {
     t: (key: string, replacements?: Replacements) => string;
+    tc: (key: string, count: number, replacements?: Replacements) => string;
     locale: string;
 } {
     const { translations, app } = usePage().props;
@@ -60,5 +96,19 @@ export function useTrans(): {
         [translations],
     );
 
-    return { t, locale: app.locale };
+    const tc = useCallback(
+        (key: string, count: number, replacements: Replacements = {}) => {
+            const line = translate(translations, key);
+
+            return line === key
+                ? key
+                : translate({ line: choose(line, count) }, 'line', {
+                      count,
+                      ...replacements,
+                  });
+        },
+        [translations],
+    );
+
+    return { t, tc, locale: app.locale };
 }

@@ -4,13 +4,14 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 
 /**
- * Avatar da pessoa: a foto (só com o pacote de uploads) ou as iniciais.
+ * Avatar de uma pessoa (a logada ou um membro da conta): a foto — URL
+ * assinada, só com o pacote de uploads — ou as iniciais.
  */
 export function UserAvatar({
     user,
     className,
 }: {
-    user: User;
+    user: Pick<User, 'name' | 'avatarUrl'>;
     className?: string;
 }) {
     const getInitials = useInitials();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\AccountMenu;
 use App\Support\FrontRoutes;
 use App\Support\FrontTranslations;
 use App\Support\Navigation;
@@ -83,6 +84,11 @@ class HandleInertiaRequests extends Middleware
 
             // Menu lateral do painel — só para quem já entra no painel.
             'navigation' => fn (): array => $this->canSeePanel($request) ? Navigation::panel($request) : [],
+
+            // Seletor de conta (twstec/kit-accounts): a conta atual e as contas
+            // da pessoa, com o papel em cada. Sem o módulo (ou fora do
+            // painel), null — o seletor não aparece.
+            'accountMenu' => fn (): ?array => $this->canSeePanel($request) ? AccountMenu::for($request->user()) : null,
 
             // Endereços das rotas que o front usa, pelo NOME (nada de URL
             // escrita no TypeScript). Só as que existem nesta instalação.

@@ -2,14 +2,25 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Accounts\InvitationPageController;
+use App\Http\Controllers\Accounts\OpenAccountController;
 use App\Http\Controllers\Auth\AuthPageController;
+use App\Http\Controllers\Panel\AccountController;
+use App\Http\Controllers\Panel\AccountCreateController;
+use App\Http\Controllers\Panel\AccountInvitationsController;
+use App\Http\Controllers\Panel\AccountMembersController;
+use App\Http\Controllers\Panel\ApiKeysController;
 use App\Http\Controllers\Panel\DashboardController;
 use App\Http\Controllers\Panel\NotificationPreferencesController;
 use App\Http\Controllers\Panel\PasswordController;
 use App\Http\Controllers\Panel\ProfileController;
+use App\Http\Controllers\Panel\ProfilePhotoController;
+use App\Http\Controllers\Panel\ProjectsController;
 use App\Http\Controllers\Panel\TwoFactorPreferenceController;
 use App\Http\Controllers\ThemePreferenceController;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Accounts\Account\Http\Controllers\AccountSwitchController;
+use Twstec\Kit\Accounts\Account\Http\Controllers\InvitationController;
 use Twstec\Kit\Auth\Http\Controllers\AuthenticatedSessionController;
 use Twstec\Kit\Auth\Http\Controllers\EmailVerificationController;
 use Twstec\Kit\Auth\Http\Controllers\NewPasswordController;
@@ -18,6 +29,7 @@ use Twstec\Kit\Auth\Http\Controllers\RegisteredUserController;
 use Twstec\Kit\Auth\Http\Controllers\SensitiveActionController;
 use Twstec\Kit\Auth\Http\Controllers\TransactionPasswordController;
 use Twstec\Kit\Auth\Http\Controllers\TwoFactorChallengeController;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Http\Controllers\LocaleController;
 use Twstec\Kit\Foundation\Mail\Http\Controllers\MailPreviewController;
 
@@ -77,6 +89,33 @@ Route::middleware('guest')->group(function (): void {
         ->name('password.update');
 });
 
+// =============================================================================
+// MÓDULOS OPCIONAIS. As telas de contas, chaves e projetos (twstec/kit-accounts)
+// e a foto de perfil (twstec/kit-uploads) só são registradas com o pacote
+// instalado — Kit::has(), o ponto único de detecção. Sem o pacote, a rota não
+// existe (404), não entra no mapa de rotas do front e o menu não a mostra.
+// =============================================================================
+
+// =============================================================================
+// Convite para uma conta (link do e-mail) — PÚBLICO: quem abre pode estar
+// logado com o e-mail do convite, logado com outro, deslogado com conta ou
+// sem conta nenhuma. A tela (GET) é do starter; os envios vão para o
+// controller do pacote de contas, que traz o próprio `throttle:sensitive`.
+// Aceitar exige sessão; criar a conta pelo convite exige NÃO ter sessão.
+// Os mesmos endereços e nomes do starter Livewire.
+// =============================================================================
+if (Kit::has('accounts')) {
+    Route::get('invitations/{token}', [InvitationPageController::class, 'show'])->name('invitations.show');
+    Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'])
+        ->middleware('auth')
+        ->name('invitations.accept');
+    Route::post('invitations/{token}/register', [InvitationController::class, 'register'])
+        ->middleware('guest')
+        ->name('invitations.register');
+    Route::post('invitations/{token}/decline', [InvitationController::class, 'decline'])
+        ->name('invitations.decline');
+}
+
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
@@ -98,9 +137,9 @@ Route::middleware('auth')->group(function (): void {
 // do pacote; desligável por AUTH_EMAIL_VERIFICATION_REQUIRED).
 Route::middleware(['auth', 'verified'])->group(function (): void {
     // =====================================================================
-    // Painel do usuário (React + Inertia). As telas de contas, membros,
-    // chaves de API e projetos (twstec/kit-accounts) e a foto de perfil
-    // (twstec/kit-uploads) entram na F11b; o menu só mostra o que existe.
+    // Painel do usuário (React + Inertia). As telas dos módulos opcionais
+    // (contas, chaves, projetos, foto) ficam no fim do grupo, cada uma só
+    // com o seu pacote; o menu só mostra o que existe.
     // =====================================================================
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
@@ -130,4 +169,58 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('sensitive-actions.code');
     Route::post('sensitive-actions/confirm', [SensitiveActionController::class, 'confirm'])
         ->name('sensitive-actions.confirm');
+
+    if (Kit::has('accounts')) {
+        // Chaves de API da conta atual. Criar e rotacionar são ações
+        // sensíveis: `…/code` confere o pedido e manda o código; o envio da
+        // ação traz o código (o token nasce e morre no servidor).
+        Route::get('api-keys', [ApiKeysController::class, 'index'])->name('panel.api-keys');
+        Route::post('api-keys/code', [ApiKeysController::class, 'code'])->name('panel.api-keys.code');
+        Route::post('api-keys', [ApiKeysController::class, 'store'])->name('panel.api-keys.store');
+        Route::post('api-keys/{key}/rotate/code', [ApiKeysController::class, 'rotateCode'])->name('panel.api-keys.rotate.code');
+        Route::post('api-keys/{key}/rotate', [ApiKeysController::class, 'rotate'])->name('panel.api-keys.rotate');
+        Route::delete('api-keys/{key}', [ApiKeysController::class, 'revoke'])->name('panel.api-keys.revoke');
+        Route::put('api-keys/{key}/projects', [ApiKeysController::class, 'projects'])->name('panel.api-keys.projects');
+
+        // Projetos da conta atual (ProjectService).
+        Route::get('projects', [ProjectsController::class, 'index'])->name('panel.projects');
+        Route::post('projects', [ProjectsController::class, 'store'])->name('panel.projects.store');
+        Route::patch('projects/{project}', [ProjectsController::class, 'update'])->name('panel.projects.update');
+        Route::delete('projects/{project}', [ProjectsController::class, 'destroy'])->name('panel.projects.destroy');
+
+        // A página da conta atual (dados, membros, convites, transferência,
+        // exclusão) e a criação de uma conta de empresa. Toda mudança passa
+        // por uma Action do pacote (papel, trilha, recusas).
+        Route::get('account', [AccountController::class, 'show'])->name('panel.account');
+        Route::patch('account', [AccountController::class, 'update'])->name('panel.account.update');
+        Route::post('account/leave', [AccountController::class, 'leave'])->name('panel.account.leave');
+        Route::post('account/transfer/code', [AccountController::class, 'transferCode'])->name('panel.account.transfer.code');
+        Route::post('account/transfer', [AccountController::class, 'transfer'])->name('panel.account.transfer');
+        Route::post('account/delete/code', [AccountController::class, 'deleteCode'])->name('panel.account.delete.code');
+        Route::delete('account', [AccountController::class, 'destroy'])->name('panel.account.destroy');
+        Route::patch('account/members/{member}', [AccountMembersController::class, 'update'])->name('panel.account.members.update');
+        Route::delete('account/members/{member}', [AccountMembersController::class, 'destroy'])->name('panel.account.members.destroy');
+        Route::post('account/invitations', [AccountInvitationsController::class, 'store'])->name('panel.account.invitations.store');
+        Route::post('account/invitations/{invitation}/resend', [AccountInvitationsController::class, 'resend'])->name('panel.account.invitations.resend');
+        Route::delete('account/invitations/{invitation}', [AccountInvitationsController::class, 'destroy'])->name('panel.account.invitations.revoke');
+        Route::get('accounts/create', [AccountCreateController::class, 'create'])->name('panel.accounts.create');
+        Route::post('accounts', [AccountCreateController::class, 'store'])->name('panel.accounts.store');
+
+        // Troca de conta (o seletor): POST para o controller do pacote — só
+        // conta de que a pessoa é membro (senão 403 e `denied` na trilha).
+        Route::post('accounts/{account}/switch', [AccountSwitchController::class, 'store'])->name('accounts.switch');
+
+        // Link dos e-mails de conta: abre uma tela já na conta certa. Só com
+        // URL ASSINADA (ninguém monta um link que troca a conta de outra
+        // pessoa).
+        Route::get('accounts/{account}/open/{to}', OpenAccountController::class)
+            ->middleware('signed:relative')
+            ->name('accounts.open');
+    }
+
+    // Foto de perfil: a função global de upload seguro do kit, só imagem.
+    if (Kit::has('uploads')) {
+        Route::post('profile/avatar', [ProfilePhotoController::class, 'update'])->name('panel.avatar.update');
+        Route::delete('profile/avatar', [ProfilePhotoController::class, 'destroy'])->name('panel.avatar.destroy');
+    }
 });

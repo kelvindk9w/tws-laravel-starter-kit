@@ -40,6 +40,24 @@ export type NavGroup = {
 
 export type OptionalModule = 'accounts' | 'uploads' | 'admin';
 
+/** Papel fixo de uma pessoa numa conta (twstec/kit-accounts). */
+export type AccountRole = 'owner' | 'admin' | 'member';
+
+export type AccountMenuEntry = {
+    uuid: string;
+    name: string;
+    role: AccountRole;
+    /** Papel já traduzido (na conta pessoal, com "Conta pessoal"). */
+    roleLabel: string;
+    personal: boolean;
+};
+
+/** O seletor de conta (App\Support\AccountMenu) — só com o pacote de contas. */
+export type AccountMenu = {
+    current: AccountMenuEntry;
+    accounts: (AccountMenuEntry & { current: boolean })[];
+};
+
 export type Translations = Record<string, unknown>;
 
 export type SharedProps = {
@@ -56,6 +74,7 @@ export type SharedProps = {
         modules: Record<OptionalModule, boolean>;
     };
     navigation: NavGroup[];
+    accountMenu: AccountMenu | null;
     routes: Record<string, string>;
     flash: {
         status: string | null;
@@ -86,3 +105,15 @@ export type AuthLayoutProps = {
 };
 
 export type AppVariant = 'header' | 'sidebar';
+
+/**
+ * Dado de UMA resposta só do Inertia (`Inertia::flash`, `page.flash`): o
+ * Inertia não o guarda no histórico do navegador. É o único caminho da
+ * secreta de uma chave de API recém-criada ou rotacionada.
+ */
+export type FlashData = {
+    revealedKey?: {
+        publicKey: string;
+        secret: string;
+    };
+};

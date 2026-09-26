@@ -155,6 +155,7 @@ conta e não enxerga a foto pessoal: para ler a foto, `avatarUpload()` /
 | Onde | Componente | Caminho |
 | --- | --- | --- |
 | Painel do cliente (`/profile`) | Livewire (`App\Livewire\Profile::updateAvatar`) | `Avatar\AvatarService` → `SecureUploadService::handlePersonal` → `users.avatar_upload_id` |
+| Painel do cliente React (`/profile`) | `App\Http\Controllers\Panel\ProfilePhotoController` (starter React) | idem; tirar a foto: `AvatarService::remove()` |
 | Rota web `POST /settings/avatar` | `AvatarController` (pacote) | idem |
 | Super admin (`/admin/users`, `/admin/profile`) | `Twstec\Kit\Admin\Support\AvatarUpload` (pacote twstec/kit-admin) | `saveUploadedFileUsing` → `SecureUploadService::handlePersonal` (enviado pelo operador) → `users.avatar_upload_id`. Só vira foto de uma pessoa o upload **dela** (foto pessoal que ela enviou ou upload da conta pessoal dela), a foto atual ou o enviado agora, neste formulário |
 
@@ -162,7 +163,9 @@ Nenhum dos caminhos grava arquivo por conta própria: todos chamam o service, e
 por isso a mesma lei vale em todos (conteúdo validado, re-encode GD, nome do
 arquivo derivado do MIME real, registro em `uploads`, URL assinada). A foto
 trocada fica sem vínculo e sai na limpeza, depois do prazo — não na hora,
-para não quebrar a imagem que ainda está na tela de quem trocou.
+para não quebrar a imagem que ainda está na tela de quem trocou. Tirar a foto
+(`AvatarService::remove()`, usado pelo starter React) segue a mesma regra: só
+desfaz o vínculo, e a pessoa volta às iniciais.
 
 A validação de segurança também existe como **regra de validação**
 (`Twstec\Kit\Uploads\Rules\SafeFile`) para os formulários que não são Form

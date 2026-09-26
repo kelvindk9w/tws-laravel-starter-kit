@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { AccountSwitcher } from '@/components/account-switcher';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -29,6 +30,11 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
+                {/* A conta atual em todo o painel (com o pacote de contas);
+                    recolhido o menu, o seletor fica no cabeçalho. */}
+                <div className="px-1 pt-1 group-data-[collapsible=icon]:hidden">
+                    <AccountSwitcher />
+                </div>
             </SidebarHeader>
 
             <SidebarContent className="gap-4 pt-2">

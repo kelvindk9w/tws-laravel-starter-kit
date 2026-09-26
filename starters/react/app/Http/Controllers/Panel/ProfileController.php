@@ -12,6 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Twstec\Kit\Auth\PasswordPolicy;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * Perfil: dados (nome, idioma; o e-mail é só leitura), aparência, senha de
@@ -21,8 +22,8 @@ use Twstec\Kit\Auth\Services\TwoFactorLogin;
  * Cada bloco envia para a própria rota: dados aqui; senha de login no
  * PasswordController; senha de transação no controller do pacote
  * twstec/kit-auth (a MESMA regra do Livewire, sem cópia); segundo fator no
- * TwoFactorPreferenceController. A foto de perfil (twstec/kit-uploads) entra
- * na F11b.
+ * TwoFactorPreferenceController; foto de perfil (twstec/kit-uploads,
+ * opcional) no ProfilePhotoController.
  */
 final class ProfileController
 {
@@ -34,6 +35,11 @@ final class ProfileController
         return Inertia::render('settings/profile', [
             'passwordHint' => PasswordPolicy::hint(),
             'transactionPasswordMinLength' => (int) config('auth.transaction_password.min_length', 8),
+            // Foto de perfil: só com o pacote de uploads (sem ele, as iniciais).
+            'photo' => Kit::has('uploads') ? [
+                'maxKb' => (int) setting('uploads.types.image.max_kb'),
+                'accept' => 'image/jpeg,image/png,image/webp',
+            ] : null,
             'twoFactor' => [
                 'available' => TwoFactorLogin::available(),
                 'enabled' => $twoFactor->enabledFor($user),

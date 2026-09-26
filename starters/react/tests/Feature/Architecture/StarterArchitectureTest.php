@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Support\FrontRoutes;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Foundation\Kit;
 
 // Travas de arquitetura do starter React.
 
@@ -99,5 +101,92 @@ it('o front não mostra texto em inglês fixo nos componentes (i18n)', function 
         foreach (['Toggle sidebar', '>Close<', '>More<', '"Loading"', 'Log in', 'Sign up', 'Forgot your password', 'Remember me', 'Hide password', 'Show password'] as $text) {
             expect(str_contains($contents, $text))->toBeFalse("{$file}: \"{$text}\"");
         }
+    }
+});
+
+// -----------------------------------------------------------------------------
+// Telas de contas (F11b).
+// -----------------------------------------------------------------------------
+
+it('as telas de contas, chaves e projetos exigem sessão e e-mail confirmado', function (string $uri) {
+    $route = collect(Route::getRoutes()->getRoutes())
+        ->first(fn (RoutingRoute $r): bool => in_array('GET', $r->methods(), true) && $r->uri() === $uri);
+
+    expect($route)->not->toBeNull()
+        ->and($route->gatherMiddleware())->toContain('auth')->toContain('verified');
+})->with(['api-keys', 'projects', 'account', 'accounts/create'])->group('accounts');
+
+it('os envios sensíveis do painel (código e operação) passam pelo throttle:sensitive', function (string $method, string $uri) {
+    /** @var RoutingRoute $route */
+    $route = collect(Route::getRoutes()->getRoutes())
+        ->first(fn (RoutingRoute $r): bool => in_array($method, $r->methods(), true) && $r->uri() === $uri);
+
+    $resolved = collect(app('router')->gatherRouteMiddleware($route))
+        ->map(fn (mixed $middleware): string => is_string($middleware) ? $middleware : get_debug_type($middleware));
+
+    expect($resolved->contains(fn (string $m): bool => str_contains($m, 'ThrottleRequests') && str_ends_with($m, ':sensitive')))
+        ->toBeTrue("a rota {$method} {$uri} não passa pelo throttle:sensitive");
+})->with([
+    ['POST', 'api-keys/code'],
+    ['POST', 'api-keys'],
+    ['POST', 'api-keys/{key}/rotate/code'],
+    ['POST', 'api-keys/{key}/rotate'],
+    ['POST', 'account/transfer/code'],
+    ['POST', 'account/transfer'],
+    ['POST', 'account/delete/code'],
+    ['DELETE', 'account'],
+    ['POST', 'invitations/{token}/accept'],
+    ['POST', 'invitations/{token}/register'],
+    ['POST', 'invitations/{token}/decline'],
+])->group('accounts');
+
+it('os envios do link de convite e da troca de conta são os controllers do pacote', function (string $uri, string $controller) {
+    $route = collect(Route::getRoutes()->getRoutes())
+        ->first(fn (RoutingRoute $r): bool => in_array('POST', $r->methods(), true) && $r->uri() === $uri);
+
+    expect($route->getActionName())->toStartWith('Twstec\\Kit\\Accounts\\Account\\Http\\Controllers\\'.$controller);
+})->with([
+    ['invitations/{token}/accept', 'InvitationController@accept'],
+    ['invitations/{token}/register', 'InvitationController@register'],
+    ['invitations/{token}/decline', 'InvitationController@decline'],
+    ['accounts/{account}/switch', 'AccountSwitchController@store'],
+])->group('accounts');
+
+it('o React não grava a trilha de contas por conta própria: toda mudança de conta passa por uma Action do pacote', function () {
+    $proibidos = ['AccountAudit', 'AuditEvent', 'AuditLogger', 'AccountService', 'AccountMembership::', 'AccountInvitation::', 'Account::query', 'InvitationTokens'];
+
+    foreach (reactSourceFiles(['app']) as $file) {
+        $contents = (string) file_get_contents($file);
+
+        foreach ($proibidos as $nome) {
+            expect(str_contains($contents, $nome))->toBeFalse("{$file} usa {$nome} (a regra e a trilha são das Actions do pacote)");
+        }
+    }
+
+    // Os envios da página da conta chamam as Actions.
+    foreach (['AccountController', 'AccountMembersController', 'AccountInvitationsController', 'AccountCreateController'] as $controller) {
+        $contents = (string) file_get_contents(app_path("Http/Controllers/Panel/{$controller}.php"));
+
+        expect($contents)->toContain('Twstec\\Kit\\Accounts\\Account\\Actions\\');
+    }
+});
+
+it('rota com parâmetro chega ao front como MODELO, nunca com um valor', function () {
+    $mapa = FrontRoutes::all();
+
+    if (! Kit::has('accounts')) {
+        expect($mapa)->not->toHaveKey('panel.api-keys.rotate');
+
+        return;
+    }
+
+    expect($mapa['panel.api-keys.rotate'])->toBe('/api-keys/{key}/rotate')
+        ->and($mapa['invitations.accept'])->toBe('/invitations/{token}/accept')
+        ->and($mapa['accounts.switch'])->toBe('/accounts/{account}/switch')
+        ->and($mapa['panel.api-keys'])->toBe('/api-keys');
+
+    foreach ($mapa as $nome => $caminho) {
+        expect($caminho)->toStartWith('/')
+            ->and(preg_match('/[0-9a-f]{8}-[0-9a-f]{4}-/i', $caminho))->toBe(0, "{$nome} leva um valor");
     }
 });
