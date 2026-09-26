@@ -3,12 +3,32 @@
 declare(strict_types=1);
 
 use App\Support\FrontRoutes;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Twstec\Kit\Foundation\Kit;
 
 // Travas de arquitetura do starter React.
+
+/**
+ * A pilha FINAL da rota (o que o roteador executa, já sem o que a rota tirou
+ * com withoutMiddleware) — não só a lista declarada. Os apelidos
+ * (`throttle`, `auth`...) só viram classes depois que o kernel HTTP entrega
+ * a lista dele ao roteador; com o /admin instalado, o Filament já fez isso no
+ * boot, e sem ele ninguém fez — então o kernel é resolvido aqui, como numa
+ * requisição de verdade, e a conferência vale em toda combinação de módulos.
+ *
+ * @return Collection<int, string>
+ */
+function pilhaEfetivaDa(RoutingRoute $route): Collection
+{
+    app(HttpKernel::class);
+
+    return collect(app('router')->gatherRouteMiddleware($route))
+        ->map(fn (mixed $middleware): string => is_string($middleware) ? $middleware : get_debug_type($middleware));
+}
 
 /**
  * @return list<string>
@@ -56,10 +76,7 @@ it('os envios de autenticação são os controllers do pacote, com o throttle:se
     $route = collect(Route::getRoutes()->getRoutes())
         ->first(fn (RoutingRoute $r): bool => in_array($method, $r->methods(), true) && $r->uri() === $uri);
 
-    // A pilha FINAL da rota (o que o roteador executa, já sem o que a rota
-    // tirou com withoutMiddleware) — não só a lista declarada.
-    $resolved = collect(app('router')->gatherRouteMiddleware($route))
-        ->map(fn (mixed $middleware): string => is_string($middleware) ? $middleware : get_debug_type($middleware));
+    $resolved = pilhaEfetivaDa($route);
 
     expect($route)->not->toBeNull()
         ->and($route->getActionName())->toStartWith('Twstec\\Kit\\Auth\\Http\\Controllers\\'.$controller)
@@ -121,8 +138,7 @@ it('os envios sensíveis do painel (código e operação) passam pelo throttle:s
     $route = collect(Route::getRoutes()->getRoutes())
         ->first(fn (RoutingRoute $r): bool => in_array($method, $r->methods(), true) && $r->uri() === $uri);
 
-    $resolved = collect(app('router')->gatherRouteMiddleware($route))
-        ->map(fn (mixed $middleware): string => is_string($middleware) ? $middleware : get_debug_type($middleware));
+    $resolved = pilhaEfetivaDa($route);
 
     expect($resolved->contains(fn (string $m): bool => str_contains($m, 'ThrottleRequests') && str_ends_with($m, ':sensitive')))
         ->toBeTrue("a rota {$method} {$uri} não passa pelo throttle:sensitive");

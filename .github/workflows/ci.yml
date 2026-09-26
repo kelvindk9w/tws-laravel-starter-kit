@@ -22,11 +22,14 @@
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 #
-# STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs — nenhum
-# check novo. No do PostgreSQL: Pint, auditorias, build e a suíte contra o
-# PostgreSQL (banco tws_starter_react_test, criado no service do job). No do
-# SQLite: tipos (tsc), lint/formatação (Vite+, como no kit oficial), build e a
-# suíte no SQLite. A imagem de produção do React chega na fase F11c.
+# STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs. No do
+# PostgreSQL: Pint, auditorias, build, a suíte contra o PostgreSQL (banco
+# tws_starter_react_test, criado no service do job) e a simulação da
+# instalação publicada (`create-project twstec/starter-react`). No do SQLite:
+# tipos (tsc), lint/formatação (Vite+, como no kit oficial), build, a suíte no
+# SQLite e as MESMAS combinações de módulos do Livewire (abaixo), no checkout
+# do React. A imagem de produção do React é um JOB PRÓPRIO
+# (`images-react`, check novo e não obrigatório — ver o comentário dele).
 #
 # PACOTES: o starter instala os pacotes de packages/ por path repository. A
 # suíte de cada pacote (isolada, com Orchestra Testbench) roda como PASSOS
@@ -78,7 +81,7 @@ jobs:
     # sem atualizar a proteção de branch.
     name: Pint · Pest · auditorias · build
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -306,12 +309,21 @@ jobs:
         working-directory: .
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado"
 
+      # A mesma simulação com o starter React: `composer create-project
+      # twstec/starter-react` só a partir dos ZIPs, o instalador no
+      # post-create-project-cmd, o build do front e a suíte.
+      - name: Starter React · instalação publicada (simulação) · pacotes, projeto, build e Pest
+        working-directory: .
+        env:
+          STARTER: react
+        run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-react"
+
   # A mesma suíte no SQLite em memória — o `pest` puro de quem clona o kit.
   # Paralelo ao job acima; sem Pint/auditorias (já cobertos lá).
   tests-sqlite:
     name: Pest · SQLite (comando local padrão)
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
 
     defaults:
       run:
@@ -430,6 +442,83 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --force
+          ./vendor/bin/pest --ci
+
+      # AS COMBINAÇÕES DE MÓDULOS DO REACT (ver o cabeçalho), no checkout do
+      # React, em sequência, pelo instalador — as mesmas do Livewire. O banco
+      # das migrations do instalador é um SQLite descartável, só nos passos
+      # do instalador (env do passo; nada vai para o GITHUB_ENV, que valeria
+      # também para os passos do Livewire abaixo).
+      - name: Starter React · combinações · banco descartável do instalador
+        working-directory: starters/react
+        run: touch database/combinacoes.sqlite
+
+      - name: Starter React · Sem uploads · instalador
+        working-directory: starters/react
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/starters/react/database/combinacoes.sqlite
+          CACHE_STORE: file
+          SESSION_DRIVER: file
+          QUEUE_CONNECTION: sync
+        run: php artisan tws:install --no-interaction --without=uploads
+
+      - name: Starter React · Sem uploads · build e testes
+        working-directory: starters/react
+        run: |
+          npm run build
+          ./vendor/bin/pest --ci
+
+      - name: Starter React · Só o admin (sem contas nem uploads) · instalador
+        working-directory: starters/react
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/starters/react/database/combinacoes.sqlite
+          CACHE_STORE: file
+          SESSION_DRIVER: file
+          QUEUE_CONNECTION: sync
+        run: php artisan tws:install --no-interaction --without=accounts,uploads
+
+      - name: Starter React · Só o admin (sem contas nem uploads) · build e testes
+        working-directory: starters/react
+        run: |
+          npm run build
+          ./vendor/bin/pest --ci
+
+      - name: Starter React · Só a base (foundation + auth) · instalador
+        working-directory: starters/react
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/starters/react/database/combinacoes.sqlite
+          CACHE_STORE: file
+          SESSION_DRIVER: file
+          QUEUE_CONNECTION: sync
+        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads
+
+      - name: Starter React · Só a base (foundation + auth) · build e testes
+        working-directory: starters/react
+        run: |
+          npm run build
+          # Sem o admin não há Filament: o tema do /admin sai do build.
+          if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/pest --ci
+
+      - name: Starter React · Sem o admin (contas e uploads de volta) · instalador
+        working-directory: starters/react
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/starters/react/database/combinacoes.sqlite
+          CACHE_STORE: file
+          SESSION_DRIVER: file
+          QUEUE_CONNECTION: sync
+        run: php artisan tws:install --no-interaction --with=accounts,uploads --without=admin
+
+      - name: Starter React · Sem o admin (contas e uploads de volta) · build e testes
+        working-directory: starters/react
+        run: |
+          npm run build
+          # Sem o admin não há Filament: o tema do /admin sai do build.
+          if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
           ./vendor/bin/pest --ci
 
       # O PRODUTO SEM A DEMONSTRAÇÃO: o que acontece com quem tira a demo
@@ -584,3 +673,51 @@ jobs:
             php artisan --version
             if php artisan route:list --json | grep -q "landing"; then echo "na imagem: rotas da demo"; exit 1; fi
           '
+
+  # Imagens de PRODUÇÃO do STARTER REACT (starters/react/docker): o mesmo
+  # desenho e as mesmas conferências da imagem do Livewire, mais as do front
+  # React. JOB PRÓPRIO, e não entradas novas na matriz do job acima: aquele
+  # job gera dois checks obrigatórios da proteção de branch, e o nome de cada
+  # um vem dos valores da matriz — acrescentar uma chave (o starter) mudaria
+  # os nomes. Este job é check novo, não obrigatório.
+  images-react:
+    name: Imagens de produção do starter React (app · nginx)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: app
+            dockerfile: docker/php/Dockerfile
+          - image: nginx
+            dockerfile: docker/nginx/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.image }} (target prod)
+        uses: docker/build-push-action@v6
+        with:
+          # Contexto = o starter React; a pasta packages/ entra como contexto
+          # nomeado, como na imagem do Livewire.
+          context: starters/react
+          file: starters/react/${{ matrix.dockerfile }}
+          build-contexts: |
+            packages=packages
+          target: prod
+          push: false
+          load: ${{ matrix.image == 'app' }}
+          tags: tws-starter-react-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=prod-react-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=prod-react-${{ matrix.image }}
+
+      # Extensões, usuário, nada de ambiente/testes/E2E/storage/SQLite, pacotes
+      # copiados, sem a demo e sem o instalador, o front React no manifesto e
+      # o artisan de pé. Ver o script.
+      - name: Conferência da imagem do app
+        if: matrix.image == 'app'
+        run: sh .github/images/check-react-app.sh tws-starter-react-app:ci

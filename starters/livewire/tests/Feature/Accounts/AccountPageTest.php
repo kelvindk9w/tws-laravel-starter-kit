@@ -116,7 +116,43 @@ it('member: vê os membros, não vê nenhuma ação de gestão — e o servidor 
 
     Mail::assertNotQueued(AccountInvitationMail::class);
     expect($empresa->roleOf($admin))->toBe(AccountRole::Admin)
-        ->and(AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('outcome', 'denied')->count())->toBe(3);
+        // Cada recusa na trilha: as 3 das Actions (convite, papel, remoção) e
+        // as 3 das pré-checagens (renomear, transferir, excluir).
+        ->and(AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('outcome', 'denied')->pluck('action')->sort()->values()->all())
+        ->toBe(['account.deleted', 'account.invitation_created', 'account.member_removed', 'account.member_role_changed', 'account.ownership_transferred', 'account.renamed']);
+});
+
+it('pré-checagem forjada por quem não pode: o mesmo 403 e a recusa na trilha, com quem tentou', function (): void {
+    ['empresa' => $empresa, 'admin' => $admin, 'membro' => $membro, 'dono' => $dono] = contaComEquipe();
+    Mail::fake();
+    paginaDaConta($dono, $empresa)->set('inviteEmail', 'aberto@example.com')->set('inviteRole', 'member')->call('invite')->assertHasNoErrors();
+    $convite = Accounts::actingAs($empresa, fn () => AccountInvitation::query()->where('email', 'aberto@example.com')->sole());
+
+    // Admin forja as ações de dono; member forja as de gestão.
+    paginaDaConta($admin, $empresa)->set('transferTo', $membro->uuid)->call('requestTransfer')->assertForbidden();
+    paginaDaConta($admin, $empresa)->call('requestDelete')->assertForbidden();
+    paginaDaConta($membro, $empresa)->call('startRename')->assertForbidden();
+    paginaDaConta($membro, $empresa)->call('startRemove', $admin->uuid)->assertForbidden();
+    paginaDaConta($membro, $empresa)->call('startRevokeInvitation', $convite->uuid)->assertForbidden();
+
+    $recusas = AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('outcome', 'denied')->orderBy('id')->get();
+
+    expect($recusas->map(fn (AuditEvent $e): array => [$e->action, $e->actor_uuid, $e->reason])->all())->toBe([
+        ['account.ownership_transferred', $admin->uuid, __('accounts.authorization.denied')],
+        ['account.deleted', $admin->uuid, __('accounts.authorization.denied')],
+        ['account.renamed', $membro->uuid, __('accounts.authorization.denied')],
+        ['account.member_removed', $membro->uuid, __('accounts.authorization.denied')],
+        ['account.invitation_revoked', $membro->uuid, __('accounts.authorization.denied')],
+    ])
+        ->and($empresa->fresh()->owner->is($dono))->toBeTrue()
+        ->and($empresa->hasMember($admin))->toBeTrue()
+        ->and($convite->fresh()->revoked_at)->toBeNull();
+    Mail::assertNotQueued(VerificationCodeMail::class);
+
+    // Quem pode passa pela pré-checagem sem linha de recusa.
+    paginaDaConta($dono, $empresa)->set('transferTo', $membro->uuid)->call('requestTransfer')->assertSet('pendingAction', 'transfer');
+    paginaDaConta($dono, $empresa)->call('startRemove', $membro->uuid)->assertSet('removingUuid', $membro->uuid);
+    expect(AuditEvent::query()->where('outcome', 'denied')->count())->toBe(5);
 });
 
 it('admin: convida e mexe só em member; não vê transferir/excluir nem ação sobre o dono e o outro admin', function (): void {

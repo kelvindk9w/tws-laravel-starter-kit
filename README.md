@@ -43,10 +43,10 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`starters/react/`](starters/react) | O mesmo kit com o painel em React + Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel, e a autenticação dos pacotes (em construção: F11a entregue — autenticação e painel mínimo). |
+| [`starters/react/`](starters/react) | O mesmo kit com o painel em React + Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel, e a autenticação dos pacotes: as mesmas telas do Livewire, E2E próprio e imagem de produção própria (`twstec/starter-react`). |
 | [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
-| `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180 e o starter React na 8181 (serviços `react-*`, banco próprio). |
+| `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire em `localhost:8180` e o starter React em `127.0.0.1:8181` (serviços `react-*`, banco próprio; outro host para os cookies dos dois não colidirem). |
 
 Todos os comandos `docker compose` funcionam tanto da raiz quanto de dentro de
 `starters/livewire` (o Compose procura o `docker-compose.yml` nas pastas
@@ -112,7 +112,8 @@ pacote, roda as migrations e gera a `APP_KEY` e o pepper das chaves de API
 quando faltam. As telas, rotas e menus de um módulo ausente somem sozinhos.
 Tudo em [Instalação e módulos](docs/instalacao.md) — inclusive como criar um
 projeto novo depois da publicação (`composer create-project
-twstec/starter-livewire` / `laravel new --using=twstec/starter-livewire`) e
+twstec/starter-livewire` ou `twstec/starter-react` / `laravel new
+--using=twstec/starter-livewire` ou `--using=twstec/starter-react`) e
 como instalar só os pacotes num aplicativo Laravel que já existe.
 
 Conta criada pelo `/register` só entra no painel depois de confirmar o
@@ -267,7 +268,8 @@ packages/                # pacotes do kit (ver packages/README.md):
                          # (escolhe os módulos opcionais; só no dev)
 starters/react/          # o mesmo kit com o painel em React + Inertia +
                          # TypeScript + shadcn/ui (kit oficial do Laravel),
-                         # porta 8181 no dev — ver starters/react/README.md
+                         # http://127.0.0.1:8181 no dev — ver
+                         # starters/react/README.md
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,

@@ -164,6 +164,11 @@ export function SensitiveActionDialog({
                             }
                             autoComplete="off"
                             autoFocus
+                            aria-invalid={
+                                (errors.transaction_password ?? otherError)
+                                    ? true
+                                    : undefined
+                            }
                         />
                         <InputError
                             message={errors.transaction_password ?? otherError}
@@ -209,6 +214,13 @@ export function SensitiveActionDialog({
                             maxLength={6}
                             autoComplete="one-time-code"
                             autoFocus
+                            aria-invalid={
+                                (errors.code ??
+                                errors.transaction_password ??
+                                otherError)
+                                    ? true
+                                    : undefined
+                            }
                         />
                         <InputError
                             message={

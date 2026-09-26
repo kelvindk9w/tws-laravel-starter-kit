@@ -16,6 +16,8 @@
 # Uso: simulate-install.sh [etapa] [pasta]
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) | test (pest)
 #   VERSION (padrão 2.0.0-beta.1)
+#   STARTER (padrão livewire): livewire | react — qual starter vira o projeto
+#   (twstec/starter-livewire ou twstec/starter-react). Os pacotes são os mesmos.
 # =============================================================================
 set -eu
 # POSIX sh (roda também na imagem PHP Alpine do kit); pipefail onde houver.
@@ -24,6 +26,11 @@ set -eu
 STEP=${1:-all}
 WORK=${2:-${RUNNER_TEMP:-/tmp}/kit-publicado}
 VERSION=${VERSION:-2.0.0-beta.1}
+STARTER=${STARTER:-livewire}
+case "$STARTER" in
+    livewire|react) ;;
+    *) echo "starter desconhecido: $STARTER (livewire | react)"; exit 2 ;;
+esac
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 # A demonstração (packages/demo) NÃO é publicada: nem empacotada, nem no
 # starter publicado (prepare-composer.php a tira do require-dev).
@@ -51,7 +58,7 @@ copy() {
     done
 
     # O starter como o repositório só-leitura dele vai ficar.
-    copy_tree starters/livewire "$WORK/src/starter"
+    copy_tree "starters/$STARTER" "$WORK/src/starter"
     rm -rf "$WORK/tree"
 }
 
@@ -62,12 +69,12 @@ package() {
     done
 
     php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/starter" "$VERSION" --set-version
-    (cd "$WORK/src/starter" && composer archive --format=zip --dir="$WORK/artifacts" --file="twstec-starter-livewire-$VERSION" --no-interaction)
+    (cd "$WORK/src/starter" && composer archive --format=zip --dir="$WORK/artifacts" --file="twstec-starter-$STARTER-$VERSION" --no-interaction)
 
     ls -la "$WORK/artifacts"
 
     # O projeto, como `composer create-project` / `laravel new --using=`.
-    composer create-project "twstec/starter-livewire:$VERSION" "$WORK/app" \
+    composer create-project "twstec/starter-$STARTER:$VERSION" "$WORK/app" \
         --repository="{\"type\":\"artifact\",\"url\":\"$WORK/artifacts\"}" --add-repository \
         --no-interaction --no-progress
 
@@ -96,6 +103,20 @@ package() {
     if [ -e vendor/twstec/kit-demo ]; then echo 'projeto publicado com a demo instalada'; exit 1; fi
     php artisan route:list --json | grep -q '"name":"home"'
     if php artisan route:list --json | grep -q '"name":"landing'; then echo 'projeto publicado com as rotas da demo'; exit 1; fi
+
+    # O instalador rodou no post-create-project-cmd: chave da aplicação e,
+    # com o pacote de contas, o pepper dedicado das chaves de API.
+    grep -Eq '^APP_KEY=base64:.+' .env
+    grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env
+
+    # Starter React: o projeto é o do React (Inertia, sem Livewire no painel
+    # do usuário) e o composer.json publicado é do tipo projeto.
+    if [ "$STARTER" = react ]; then
+        grep -q '"name": "twstec/starter-react"' composer.json
+        grep -q '"type": "project"' composer.json
+        test -d vendor/inertiajs/inertia-laravel
+        test -f resources/js/app.tsx
+    fi
 }
 
 build() {

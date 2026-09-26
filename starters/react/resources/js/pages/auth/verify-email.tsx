@@ -39,6 +39,7 @@ export default function VerifyEmail({ email }: { email: string }) {
                         type="submit"
                         className="w-full"
                         disabled={processing}
+                        data-test="resend-verification"
                     >
                         {processing && <Spinner />}
                         {t('auth.email_verification.resend')}

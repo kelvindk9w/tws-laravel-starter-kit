@@ -7,6 +7,23 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Starter React — fase F11c: E2E, imagem de produção, combinações e
+  publicação preparada.** E2E em Playwright (`starters/react/tests/e2e`):
+  cadastro com verificação de e-mail e login com segundo fator pelo Mailpit,
+  perfil (idioma, tema, foto), senha de transação, contas (convidar → aceitar
+  criando o acesso → trocar de conta → transferir com senha de transação e
+  código → remover), chave de API com a secreta uma vez, projetos e o `/admin`
+  (login e ação auditada); pessoas fixas por `tests/e2e/fixtures.php`,
+  limpeza pelo `/admin` independente do idioma e varredura final. Imagem de
+  produção própria (`starters/react/docker`, app e nginx, no desenho da do
+  Livewire), conferida por `.github/images/check-react-app.sh` num job novo
+  do CI (**"Imagens de produção do starter React"**, não obrigatório; os 4
+  checks obrigatórios não mudaram). As combinações de módulos do Livewire
+  (sem uploads, só o `/admin`, só a base, sem o `/admin`) agora também no
+  React, e a instalação publicada simulada também com
+  `create-project twstec/starter-react` (`STARTER=react`). Publicação
+  preparada (continua desligada): `starters/react →
+  kelvindk9w/twstec-starter-react` no split.
 - **Starter React — fase F11b: contas, membros, chaves de API, projetos e
   foto de perfil.** Seletor de conta em todo o painel; página da conta
   (renomear, membros com papéis pela regra do pacote, convites, transferir e
@@ -167,6 +184,11 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   valendo (são da conta).
 
 ### Alterado
+- **Starter React no dev em `http://127.0.0.1:8181`** (antes `localhost:8181`):
+  cookie é por host, e em `localhost` o `XSRF-TOKEN` do React e o do Livewire
+  (`localhost:8180`) eram o mesmo cookie. O nginx de dev leva `localhost:8181`
+  para lá (308). Os serviços `react-*` passam a usar a imagem PHP do próprio
+  starter (`starters/react/docker/php/Dockerfile`). Nada muda na produção.
 - **Sem o pacote de contas, o aplicativo mantém as proteções da API** do
   `/api/health`: o `throttle:api` e o envelope de erro de `api/*`, que antes
   vinham só do `twstec/kit-accounts`, são ligados pelo `bootstrap/app.php`
@@ -310,6 +332,14 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Mailpit e rodavam o hash com 64 MB. Agora forçados, como o CI já rodava.
 
 ### Segurança
+- **A pré-checagem de papel das ações de conta também fica na trilha.**
+  Quem não é dono e forjava transferir a propriedade ou excluir a conta
+  recebia 403 da pré-checagem da tela **sem** linha em `audit_events`; o
+  mesmo valia para abrir renomear, remover membro e revogar convite no
+  Livewire. Agora a pré-checagem é o `authorize()` da própria Action
+  (`TransferOwnership`, `DeleteAccount`, `RenameAccount`, `RemoveMember`,
+  `RevokeInvitation`, no `twstec/kit-accounts`): o mesmo 403, a mesma
+  mensagem, e a recusa gravada como `denied`, nos dois starters.
 - **Foto de perfil no `/admin` só de upload da própria conta.** O campo de
   foto do cadastro de usuário e do perfil do admin vinculava como avatar
   qualquer upload cujo uuid chegasse no formulário, sem conferir o dono — o
@@ -466,6 +496,13 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
    [docs/instalacao.md](docs/instalacao.md)). Código próprio que usa telas ou
    classes de `accounts`, `uploads` ou `admin` deve perguntar
    `Kit::has('<módulo>')` antes, se você pretende tirar o módulo.
+12. Starter React no dev: no `starters/react/.env`, troque `APP_URL` (e
+   `PLATFORM_OFFICIAL_URL`) de `http://localhost:8181` para
+   `http://127.0.0.1:8181` e recrie os serviços `react-*`
+   (`docker compose up -d --build --force-recreate --no-deps react-app
+   react-queue react-scheduler react-nginx`). Para o E2E do React, crie as
+   pessoas fixas: `docker compose exec -T react-app php artisan tinker
+   --execute="require 'tests/e2e/fixtures.php';"`.
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

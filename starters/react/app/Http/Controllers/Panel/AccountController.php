@@ -35,7 +35,8 @@ use Twstec\Kit\Accounts\Accounts;
  *
  * A REGRA mora nas Actions do pacote de contas: cada uma confere o papel,
  * grava a trilha de auditoria (inclusive as recusas, como `denied`) e
- * responde 403 ao que o papel não permite. A tela só ESCONDE o que o papel
+ * responde 403 ao que o papel não permite — também na PRÉ-CHECAGEM
+ * (`authorize()`) que esta tela faz antes de mandar o código. A tela só ESCONDE o que o papel
  * não permite, pela mesma regra (MemberRules / AccountAbility), e nenhum
  * envio daqui grava a trilha por conta própria.
  *
@@ -115,9 +116,9 @@ final class AccountController implements HasMiddleware
      *
      * @throws ValidationException
      */
-    public function transferCode(Request $request): RedirectResponse
+    public function transferCode(Request $request, TransferOwnership $transfer): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::TransferOwnership);
+        $transfer->authorize($this->user($request));
         $request->validate(['transfer_to' => ['required', 'uuid']], [], ['transfer_to' => __('panel.account.transfer_to')]);
         $this->requireTransactionPassword($request, 'transfer_to', __('panel.account.sensitive_requires_password'));
 
@@ -132,9 +133,10 @@ final class AccountController implements HasMiddleware
      */
     public function transfer(Request $request, TransferOwnership $transfer): RedirectResponse
     {
-        // O papel antes do código (quem não pode nem gasta o código); a Action
-        // confere de novo, com a trilha.
-        Accounts::authorize(AccountAbility::TransferOwnership);
+        // O papel antes do código (quem não pode nem gasta o código), pela
+        // pré-checagem da própria Action: a recusa fica na trilha (`denied`).
+        // handle() confere de novo.
+        $transfer->authorize($this->user($request));
         $request->validate(['transfer_to' => ['required', 'uuid']], [], ['transfer_to' => __('panel.account.transfer_to')]);
 
         $token = $this->sensitiveToken($request);
@@ -153,9 +155,9 @@ final class AccountController implements HasMiddleware
      *
      * @throws ValidationException
      */
-    public function deleteCode(Request $request): RedirectResponse
+    public function deleteCode(Request $request, DeleteAccount $delete): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::DeleteAccount);
+        $delete->authorize($this->user($request));
         $this->requireTransactionPassword($request, 'delete_account', __('panel.account.sensitive_requires_password'));
 
         return $this->afterStage($request);
@@ -169,7 +171,7 @@ final class AccountController implements HasMiddleware
      */
     public function destroy(Request $request, DeleteAccount $delete): RedirectResponse
     {
-        Accounts::authorize(AccountAbility::DeleteAccount);
+        $delete->authorize($this->user($request));
         $nome = Accounts::currentOrFail()->displayName();
 
         $token = $this->sensitiveToken($request);

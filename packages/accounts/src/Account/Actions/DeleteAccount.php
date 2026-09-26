@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Accounts\Account\Actions;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Twstec\Kit\Accounts\Account\Actions\Concerns\GuardsAccountAction;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
@@ -35,6 +36,20 @@ final class DeleteAccount
         private readonly SensitiveActionService $sensitive,
         private readonly AccountAudit $audit,
     ) {}
+
+    /**
+     * PRÉ-CHECAGEM do papel, para a tela conferir ANTES de abrir a
+     * confirmação ou gastar o código (quem não pode nem começa). Recusa →
+     * 403 com a mesma mensagem de handle() e a linha `denied` na trilha,
+     * como qualquer recusa desta Action. handle() confere de novo.
+     *
+     * @throws AuthorizationException
+     */
+    public function authorize(AuthUser $actor): void
+    {
+        $account = $this->currentAccount();
+        $this->requireAbility(AccountAuditEvent::Deleted, $account, $actor, AccountAbility::DeleteAccount, $account);
+    }
 
     public function handle(AuthUser $actor, #[\SensitiveParameter] string $sensitiveToken): void
     {

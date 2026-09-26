@@ -35,7 +35,8 @@ use Twstec\Kit\Accounts\Accounts;
  * propriedade e excluir a conta. A REGRA mora nas Actions do pacote de
  * contas (Twstec\Kit\Accounts\Account\Actions), que conferem o papel, gravam
  * a trilha de auditoria (inclusive as recusas) e respondem 403 ao que o papel
- * não permite; esta tela só ESCONDE o que o papel não permite (pela mesma
+ * não permite — também na PRÉ-CHECAGEM (`authorize()` da Action) que esta
+ * tela faz antes de abrir uma confirmação; esta tela só ESCONDE o que o papel não permite (pela mesma
  * regra — MemberRules), valida o formulário e mostra o resultado.
  *
  * Transferir e excluir são AÇÕES SENSÍVEIS: senha de transação → código por
@@ -81,9 +82,9 @@ final class Show extends Component
     // Dados da conta
     // =========================================================================
 
-    public function startRename(): void
+    public function startRename(RenameAccount $rename): void
     {
-        Accounts::authorize(AccountAbility::UpdateAccount);
+        $rename->authorize($this->user());
         $this->resetValidation();
         $this->name = (string) $this->account()->name;
         $this->editingName = true;
@@ -132,9 +133,9 @@ final class Show extends Component
         session()->flash('account_status', __('panel.account.invitation_resent'));
     }
 
-    public function startRevokeInvitation(string $uuid): void
+    public function startRevokeInvitation(string $uuid, RevokeInvitation $revoke): void
     {
-        Accounts::authorize(AccountAbility::ManageMembers);
+        $revoke->authorize($this->user());
         $this->directory()->invitation($uuid);
         $this->revokingInvitationUuid = $uuid;
     }
@@ -172,9 +173,9 @@ final class Show extends Component
         session()->flash('account_status', __('panel.account.role_changed'));
     }
 
-    public function startRemove(string $uuid): void
+    public function startRemove(string $uuid, RemoveMember $remove): void
     {
-        Accounts::authorize(AccountAbility::ManageMembers);
+        $remove->authorize($this->user());
         $this->removingUuid = $uuid;
     }
 
@@ -219,18 +220,19 @@ final class Show extends Component
     // Transferir a propriedade e excluir a conta (ações sensíveis)
     // =========================================================================
 
-    public function requestTransfer(): void
+    public function requestTransfer(TransferOwnership $transfer): void
     {
-        Accounts::authorize(AccountAbility::TransferOwnership);
+        // A pré-checagem do papel é a da Action: a recusa fica na trilha.
+        $transfer->authorize($this->user());
         $this->validate(['transferTo' => ['required', 'uuid']], [], ['transferTo' => __('panel.account.transfer_to')]);
         $this->requireTransactionPassword('transferTo');
 
         $this->openSensitiveModal('transfer');
     }
 
-    public function requestDelete(): void
+    public function requestDelete(DeleteAccount $delete): void
     {
-        Accounts::authorize(AccountAbility::DeleteAccount);
+        $delete->authorize($this->user());
         $this->requireTransactionPassword('deleteAccount');
 
         $this->openSensitiveModal('delete');

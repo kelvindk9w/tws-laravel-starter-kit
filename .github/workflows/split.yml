@@ -1,12 +1,13 @@
 # PUBLICAÇÃO — split do monorepo para os repositórios só-leitura (DESLIGADO).
 #
-# A cada tag `v2.*`, copiaria cada pacote (packages/*) e o starter
-# (starters/livewire) para o repositório só-leitura dele, com a mesma tag — 7
-# destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
+# A cada tag `v2.*`, copiaria cada pacote (packages/*) e os starters
+# (starters/livewire e starters/react) para o repositório só-leitura de cada
+# um, com a mesma tag — 8 destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
 # monorepo, e o starter publicado sai sem ela (ver prepare-composer.php); o
 # Packagist lê esses repositórios (webhook) e publica a versão. Quem usa o kit
 # instala só o que escolheu (`composer require twstec/kit-auth`, ou
-# `composer create-project twstec/starter-livewire` / `laravel new --using=`).
+# `composer create-project twstec/starter-livewire` ou `twstec/starter-react`
+# / `laravel new --using=`).
 #
 # ESTÁ DESLIGADO até a fase F10b, que depende do dono: os repositórios vazios
 # criados na conta kelvindk9w (nomes na matriz), o segredo SPLIT_TOKEN (token
@@ -72,6 +73,10 @@ jobs:
             repository: twstec-kit-installer
           - path: starters/livewire
             repository: twstec-starter-livewire
+          # O starter React (F11c): o repositório espelho é criado pelo dono
+          # antes de ligar a publicação.
+          - path: starters/react
+            repository: twstec-starter-react
 
     env:
       TAG: ${{ inputs.tag || github.ref_name }}

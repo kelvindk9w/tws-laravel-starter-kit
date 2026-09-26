@@ -118,6 +118,12 @@ final class Accounts
     }
 
     /**
+     * Conferência de papel SEM trilha — para telas de chaves e projetos, que
+     * não passam por uma Action de conta. Para a pré-checagem de uma ação de
+     * conta, membros ou convites (transferir, excluir, renomear, remover,
+     * revogar), use o `authorize()` da própria Action: a recusa grava
+     * `denied` na trilha.
+     *
      * @throws AuthorizationException 403 quando o papel não permite.
      */
     public static function authorize(AccountAbility $ability, ?AuthUser $user = null): void

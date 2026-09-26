@@ -10,11 +10,17 @@ O backend é o mesmo do [starter Livewire](../livewire): os mesmos pacotes, as
 mesmas regras, as mesmas mensagens e o mesmo `/admin` (plugin Filament do
 `twstec/kit-admin`). Muda a interface do painel e das telas de autenticação.
 
-> **Fase F11a** (esta): base, autenticação e painel mínimo (painel inicial,
-> perfil, senha de transação, verificação em duas etapas, notificações).
-> **F11b:** seletor de conta, conta e membros, convites, chaves de API,
-> projetos e foto de perfil. **F11c:** E2E, imagem de produção e as
-> combinações de módulos no CI.
+Completo: autenticação, painel, perfil, senha de transação, verificação em
+duas etapas, notificações, seletor de conta, conta e membros, convites,
+chaves de API, projetos e foto de perfil — com E2E próprio (Playwright),
+imagem de produção própria e as combinações de módulos no CI.
+
+**Criar um projeto** (depois da publicação no Packagist):
+`composer create-project twstec/starter-react meu-app` ou
+`laravel new meu-app --using=twstec/starter-react`. O
+`post-create-project-cmd` chama o instalador (`php artisan tws:install`),
+que pergunta os módulos opcionais num terminal — ver
+[docs/instalacao.md](../../docs/instalacao.md#starter-react).
 
 ## Rodar (Docker de desenvolvimento, porta 8181)
 
@@ -48,9 +54,18 @@ docker compose up -d --force-recreate --no-deps react-app react-queue react-sche
 docker compose exec react-app php artisan migrate
 ```
 
-Aplicação: http://localhost:8181 · Mailpit: http://localhost:18025 ·
-super admin: http://localhost:8181/admin (promova com
+Aplicação: **http://127.0.0.1:8181** · Mailpit: http://localhost:18025 ·
+super admin: http://127.0.0.1:8181/admin (promova com
 `docker compose exec react-app php artisan user:make-admin email@exemplo.com`).
+
+**Por que 127.0.0.1 e não localhost:** cookie é por host, não por porta. Com o
+Livewire em `localhost:8180` e o React em `localhost:8181`, o cookie
+`XSRF-TOKEN` (nome fixo do Laravel, lido pelo front) era um só para os dois, e
+o primeiro envio depois de trocar de aba caía no "sessão expirou" (419). Em
+`127.0.0.1`, os cookies do React ficam separados. O `APP_URL` do
+`.env.example` já é esse, e o `docker/nginx/dev.conf` leva quem abrir
+`localhost:8181` ao mesmo caminho em `127.0.0.1:8181` (308: método e corpo
+mantidos). Só no dev: a produção atende pelo domínio da `APP_URL`.
 
 O serviço `react-db-init` cria `tws_starter_react` e `tws_starter_react_test`
 no PostgreSQL compartilhado, se faltarem, e sai — sem tocar no serviço
@@ -172,7 +187,7 @@ convites, transferir e excluir), **criar conta de empresa**
   ação só com ícone + tooltip, revelação única da secreta, listas de membros e
   convites, foto de perfil).
 
-## Diferenças conhecidas para o Livewire (nesta fase)
+## Diferenças conhecidas para o Livewire
 
 - Projetos: além de renomear, o React **arquiva e reativa** (o
   `ProjectService` já aceita o status; o Livewire só renomeia).
@@ -183,7 +198,60 @@ convites, transferir e excluir), **criar conta de empresa**
   não é lido: credencial não vai para as props.
 - `/mail-preview` é uma página Blade autossuficiente (os e-mails em si são os
   mesmos).
-- No Docker de dev, os dois starters em `localhost` dividem o cookie
-  `XSRF-TOKEN` (o nome é fixo no Laravel e cookie não separa por porta): com
-  as duas abas abertas, o primeiro envio depois de trocar de aba pode
-  receber o aviso de sessão vencida (419); o seguinte já passa.
+- No Docker de dev, o React roda em `127.0.0.1:8181` (e não em `localhost`)
+  para não dividir o cookie `XSRF-TOKEN` com o Livewire — ver "Rodar".
+
+## E2E (Playwright)
+
+Em `tests/e2e`, com o Playwright 1.63 do projeto, contra o dev
+(`http://127.0.0.1:8181`), com os e-mails de verdade lidos no Mailpit:
+cadastro com verificação de e-mail, login com segundo fator, perfil (idioma,
+tema gravado na conta, foto com URL assinada e arquivo falso recusado), senha
+de transação, contas (convidar → aceitar criando o acesso → trocar de conta →
+transferir a propriedade com senha de transação e código → remover membro),
+chave de API com a secreta mostrada uma vez, projetos, e o `/admin` (login e
+uma ação auditada).
+
+```bash
+# Pessoas fixas do E2E (idempotente): e2e@example.com e admin-e2e@example.com
+docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+
+# De starters/react (espere 61 s entre duas rodadas: limite de borda por IP)
+docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
+```
+
+**Sem lixo no banco:** cada teste que cria pessoas (sempre `e2e-…@example.com`)
+as apaga no fim, passando ou falhando, pelo `/admin` com a sessão do admin do
+E2E — com elas saem a conta pessoal, os projetos, as chaves e a foto — e apaga
+as mensagens delas no Mailpit. A limpeza não depende do idioma (acha a ação
+do Filament pelo nome e confere refazendo a busca). No fim da suíte, uma
+varredura (`tests/e2e/global-teardown.ts`) apaga qualquer `e2e-…` que um teste
+interrompido tenha deixado. Os seletores são ids e atributos `data-*`, não
+textos.
+
+## Produção (imagem Docker)
+
+A imagem de produção é do próprio starter, no mesmo desenho da do Livewire:
+`docker/php/Dockerfile` (target `prod`: PHP-FPM 8.4 com as extensões do kit,
+dependências de produção instaladas sobre o PHP da imagem final, os pacotes
+do kit **copiados** em `vendor/`, o front React compilado no estágio `assets`
+— Node 24 glibc, por causa dos binários nativos do Vite+ —, código de root e
+processo como `www-data`) e `docker/nginx/Dockerfile` (nginx com TLS
+autoassinado; `docker/nginx/prod.conf`). A pasta `packages/` do monorepo
+entra como contexto de build nomeado:
+
+```bash
+docker build --build-context packages=../../packages --target prod \
+  -f docker/php/Dockerfile -t meu-app:prod .
+docker build --target prod -f docker/nginx/Dockerfile -t meu-app-nginx:prod .
+```
+
+O `.dockerignore` deixa de fora todo arquivo de ambiente, testes (inclusive o
+E2E), storage local, bancos SQLite e artefatos de build. A demonstração e o
+instalador (require-dev) não entram. O CI constrói as duas imagens e confere
+a do app com `.github/images/check-react-app.sh` (job "Imagens de produção do
+starter React"). Para subir a stack completa: `docker-compose.prod.yml` e
+`.env.prod.example` (os mesmos do Livewire, com o banco `tws_starter_react`)
+— ver [docs/producao.md](../../docs/producao.md).
+

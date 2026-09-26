@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Accounts\Account\Actions;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Twstec\Kit\Accounts\Account\Actions\Concerns\FindsAccountMember;
 use Twstec\Kit\Accounts\Account\Actions\Concerns\GuardsAccountAction;
@@ -40,6 +41,20 @@ final class TransferOwnership
         private readonly SensitiveActionService $sensitive,
         private readonly AccountAudit $audit,
     ) {}
+
+    /**
+     * PRÉ-CHECAGEM do papel, para a tela conferir ANTES de abrir a
+     * confirmação ou gastar o código (quem não pode nem começa). Recusa →
+     * 403 com a mesma mensagem de handle() e a linha `denied` na trilha,
+     * como qualquer recusa desta Action. handle() confere de novo.
+     *
+     * @throws AuthorizationException
+     */
+    public function authorize(AuthUser $actor): void
+    {
+        $account = $this->currentAccount();
+        $this->requireAbility(AccountAuditEvent::OwnershipTransferred, $account, $actor, AccountAbility::TransferOwnership, $account);
+    }
 
     public function handle(AuthUser $actor, string $newOwnerUuid, #[\SensitiveParameter] string $sensitiveToken): Account
     {

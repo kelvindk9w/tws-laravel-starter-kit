@@ -302,6 +302,19 @@ de quem mexe em quem, token, limite, convite inválido/expirado/de outro
 e-mail) grava a mesma ação com `outcome = denied` e o motivo, antes de a
 exceção sair.
 
+**Pré-checagem de papel também fica na trilha.** As telas conferem o papel
+ANTES de abrir uma confirmação ou de mandar o código de uma ação sensível —
+quem não pode nem começa. Essa conferência é a da própria Action:
+`authorize($pessoa)` em `TransferOwnership`, `DeleteAccount`, `RenameAccount`,
+`RemoveMember` e `RevokeInvitation`. A recusa é o mesmo 403, com a mesma
+mensagem de `handle()`, e grava `denied` (a mesma ação, o motivo e quem
+tentou); quem pode passa sem linha nenhuma (a linha de sucesso é da
+operação). Os dois starters usam esse caminho: no Livewire, ao abrir renomear,
+remover, revogar, transferir e excluir; no React, no pedido do código e no
+envio de transferir e de excluir. `Accounts::authorize()` continua existindo
+para as telas de chaves e projetos, que não passam por uma Action de conta —
+ele responde 403 **sem** trilha.
+
 | Ação (`AccountAuditEvent`) | Quando |
 | --- | --- |
 | `account.created` / `account.renamed` / `account.deleted` | conta criada, renomeada, excluída |

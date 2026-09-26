@@ -172,9 +172,13 @@ services:
   # ===========================================================================
   # STARTER REACT (starters/react) — porta 8181.
   #
-  # A imagem PHP é a MESMA do starter Livewire (o Dockerfile de dev dele: as
-  # mesmas extensões, o mesmo uid/gid do host); muda só o código montado e o
-  # .env. A imagem de PRODUÇÃO do React é da fase F11c.
+  # A imagem PHP é a do próprio starter (starters/react/docker/php/Dockerfile,
+  # target dev — as mesmas extensões e o mesmo uid/gid do host que a do
+  # Livewire); o target prod é a imagem de produção do React.
+  #
+  # ENDEREÇO: http://127.0.0.1:8181 (APP_URL do .env do React), não
+  # localhost — cookie é por host, não por porta, e o XSRF-TOKEN dos dois
+  # starters seria o mesmo cookie. O dev.conf leva localhost:8181 para lá.
   # ===========================================================================
 
   # Cria os bancos do React no PostgreSQL compartilhado, se faltarem, e sai.
@@ -203,7 +207,7 @@ services:
 
   react-app:
     build:
-      context: ./starters/livewire
+      context: ./starters/react
       dockerfile: docker/php/Dockerfile
       target: dev
       args:
@@ -240,7 +244,7 @@ services:
 
   react-queue:
     build:
-      context: ./starters/livewire
+      context: ./starters/react
       dockerfile: docker/php/Dockerfile
       target: dev
       args:
@@ -263,7 +267,7 @@ services:
 
   react-scheduler:
     build:
-      context: ./starters/livewire
+      context: ./starters/react
       dockerfile: docker/php/Dockerfile
       target: dev
       args:

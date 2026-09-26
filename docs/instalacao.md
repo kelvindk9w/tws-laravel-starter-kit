@@ -6,8 +6,8 @@ escolhe o que entra:
 - **Frontend (escolha única, ao criar o projeto):** o starter **Livewire**
   (`starters/livewire`, pacote `twstec/starter-livewire`) ou o starter
   **React** (`starters/react`, pacote `twstec/starter-react` — React +
-  Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel; em
-  construção: fases F11a–F11c, ver [Starter React](#starter-react)). Os dois
+  Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel — ver
+  [Starter React](#starter-react)). Os dois
   usam os mesmos pacotes, com as mesmas regras e mensagens, e o mesmo `/admin`.
 - **Backend:** `foundation` e `auth` vêm **sempre**. `accounts`, `uploads` e
   `admin` são **opcionais**, marcados um a um.
@@ -74,17 +74,34 @@ contas do `twstec/kit-accounts` são a fonte única (o kit oficial não traz
 times, e nada dele é usado para isso). Detalhes em
 [starters/react/README.md](../starters/react/README.md).
 
-**Estado (F11a):** base, autenticação completa (login com limite de
-tentativas, cadastro, verificação de e-mail obrigatória, esqueci/redefinir
-senha, segundo fator por código de e-mail, logout) e o painel mínimo (painel
-inicial com os números da conta, perfil, senha de transação, verificação em
-duas etapas, notificações). Seletor de conta, conta e membros, chaves de API,
-projetos e foto de perfil chegam na F11b; E2E, imagem de produção e as
-combinações de módulos no CI, na F11c. A publicação do `twstec/starter-react`
-(Packagist) entra depois disso.
+**Estado:** completo, com as mesmas telas do Livewire — autenticação (login
+com limite de tentativas, cadastro, verificação de e-mail obrigatória,
+esqueci/redefinir senha, segundo fator por código de e-mail, logout), painel
+inicial, perfil (idioma, tema, foto), senha de transação, notificações,
+seletor de conta, conta e membros, convites, chaves de API e projetos. Tem E2E
+próprio (Playwright), imagem de produção própria (`starters/react/docker`,
+conferida no CI) e passa pelas mesmas combinações de módulos no CI.
+
+**Criar um projeto React (depois da publicação):**
+
+```bash
+composer create-project twstec/starter-react meu-app
+# ou
+laravel new meu-app --using=twstec/starter-react
+cd meu-app && npm install && npm run build
+```
+
+Como no Livewire, o `post-create-project-cmd` cria o SQLite local e chama o
+instalador (`php artisan tws:install --graceful`): num terminal ele pergunta
+os módulos opcionais (contas, uploads, `/admin`); sem terminal, mantém todos.
+Gera a `APP_KEY` e, com contas, o pepper dedicado das chaves de API. O React
+não tem a demonstração, então ela nunca é perguntada. Enquanto a publicação
+não é ligada, o CI simula exatamente isso a partir dos pacotes empacotados
+(`STARTER=react sh .github/release/simulate-install.sh`).
 
 **No monorepo (desenvolvimento):** o `docker-compose.yml` da raiz sobe o React
-na porta **8181**, ao lado do Livewire (8180), com o mesmo PostgreSQL, Redis e
+na porta **8181**, ao lado do Livewire (8180), com a imagem PHP do próprio
+starter (`starters/react/docker/php/Dockerfile`, target `dev`), o mesmo PostgreSQL, Redis e
 Mailpit — mas banco próprio (`tws_starter_react`, criado pelo serviço
 `react-db-init`), bancos próprios no Redis (`REDIS_DB=2`, `REDIS_CACHE_DB=3`)
 e cookie de sessão com nome próprio, para um não derrubar a sessão, a fila ou
@@ -100,15 +117,28 @@ docker compose up -d --force-recreate --no-deps react-app react-queue react-sche
 docker compose exec react-app php artisan migrate
 ```
 
-Aplicação: http://localhost:8181. O instalador `php artisan tws:install` é o
+Aplicação: **http://127.0.0.1:8181** (não `localhost`). Cookie é por host, não
+por porta: com os dois starters em `localhost`, o cookie `XSRF-TOKEN` (nome
+fixo do Laravel, lido pelo front) de um sobrescrevia o do outro, e o primeiro
+envio depois de trocar de aba caía no "sessão expirou". Com o React em
+`127.0.0.1`, cada starter tem os próprios cookies. O `APP_URL` do
+`.env.example` do React já é esse, e o nginx de desenvolvimento leva quem abrir
+`localhost:8181` ao mesmo caminho em `127.0.0.1:8181` (redirecionamento 308,
+que mantém o método). Nada disso existe na produção, que atende pelo domínio
+da `APP_URL`. Quem já tinha o `.env` do React: troque o `APP_URL` para
+`http://127.0.0.1:8181` e recrie os serviços `react-*`
+(`docker compose up -d --force-recreate --no-deps react-app react-queue react-scheduler`).
+
+O instalador `php artisan tws:install` é o
 mesmo (`docker compose exec react-app php artisan tws:install`); o React não
 usa a demonstração, então ela nunca é perguntada. Os módulos instalados chegam
 ao front na prop `kit.modules`, e o menu só mostra tela que existe.
 
 ## O instalador: `php artisan tws:install`
 
-Mora no pacote `twstec/kit-installer` (require-dev do starter; o starter React
-usará o mesmo). Pode rodar a qualquer momento, quantas vezes quiser.
+Mora no pacote `twstec/kit-installer` (require-dev dos dois starters — o
+mesmo pacote no Livewire e no React). Pode rodar a qualquer momento, quantas
+vezes quiser.
 
 ### Interativo
 
@@ -247,22 +277,31 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre —
   os testes de um módulo ausente **pulam sozinhos** (grupos `accounts`,
   `uploads`, `admin`; ver [testes](testes.md)).
+- **As mesmas combinações no starter React** (sem uploads, só o `/admin`, só
+  a base, sem o `/admin`), no mesmo job, no checkout do React: instalador,
+  build (sem o tema do `/admin` quando ele sai) e a suíte.
 - **A instalação publicada, simulada:** cada pacote vira um ZIP
   (`composer archive`, com o `composer.json` da versão publicada), o projeto é
   criado **só** a partir deles (`composer create-project` com repositório
   `artifact` — pacotes copiados, sem link para o monorepo) e roda o build e a
   suíte. Pega starter que só funciona dentro do monorepo. Script:
-  `.github/release/simulate-install.sh`.
+  `.github/release/simulate-install.sh` — uma vez com o Livewire e uma com o
+  React (`STARTER=react`).
+- **As imagens de produção** dos dois starters são construídas e conferidas
+  (o React num job próprio, `Imagens de produção do starter React`).
 
 ## Publicação (fase F10b)
 
 Pronto e desligado: o workflow `.github/workflows/split.yml` copia, a cada
-tag `v2.*`, cada pacote e o starter para o repositório só-leitura dele
-(7 destinos: `kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`,
-`…-uploads`, `…-admin`, `…-installer` e `kelvindk9w/twstec-starter-livewire`
-— a demonstração **não** é publicada), com o `composer.json` preparado por
-`.github/release/prepare-composer.php` (sem path repositories, pacotes do kit
-em `^2.0`; no starter, `^2.0@beta` durante o beta, sem `composer.lock` e sem
-nenhuma referência à demo). O job só roda com a variável do
+tag `v2.*`, cada pacote e cada starter para o repositório só-leitura dele
+(8 destinos: `kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`,
+`…-uploads`, `…-admin`, `…-installer`, `kelvindk9w/twstec-starter-livewire` e
+`kelvindk9w/twstec-starter-react` — a demonstração **não** é publicada), com o
+`composer.json` preparado por `.github/release/prepare-composer.php` (sem path
+repositories, pacotes do kit em `^2.0`; nos starters, `^2.0@beta` durante o
+beta, sem `composer.lock` e sem nenhuma referência à demo). O repositório
+espelho do React (`kelvindk9w/twstec-starter-react`) precisa ser criado,
+vazio, antes de ligar a publicação, e registrado no Packagist depois do
+primeiro split, como os outros. O job só roda com a variável do
 repositório `KIT_SPLIT_ENABLED=true` e usa o segredo `SPLIT_TOKEN`; nenhum dos
 dois existe ainda.

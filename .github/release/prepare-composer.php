@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Prepara o composer.json de um pacote do kit (ou do starter) para a versão
+// Prepara o composer.json de um pacote do kit (ou de um starter —
+// starters/livewire ou starters/react, ambos `type: project`) para a versão
 // PUBLICADA — o que o repositório só-leitura e o Packagist vão servir.
 //
 // No monorepo, os pacotes se acham por PATH REPOSITORY (`../foundation`,

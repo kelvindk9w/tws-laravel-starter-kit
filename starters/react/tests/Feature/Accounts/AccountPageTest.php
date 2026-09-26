@@ -93,9 +93,45 @@ it('member: vê os membros e nenhuma ação de gestão — e o servidor recusa c
     expect($empresa->roleOf($admin))->toBe(AccountRole::Admin)
         ->and($empresa->fresh()->name)->toBe('Equipe SA')
         ->and($empresa->fresh()->owner->is($dono))->toBeTrue()
-        // As Actions gravaram as 4 recusas (convite, papel, remoção, renomear).
+        // As Actions gravaram as 8 recusas: convite, papel, remoção, renomear
+        // e as 4 pré-checagens de dono (código e envio de transferir e de
+        // excluir).
         ->and(AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('outcome', 'denied')->pluck('action')->sort()->values()->all())
-        ->toBe(['account.invitation_created', 'account.member_removed', 'account.member_role_changed', 'account.renamed']);
+        ->toBe(['account.deleted', 'account.deleted', 'account.invitation_created', 'account.member_removed', 'account.member_role_changed', 'account.ownership_transferred', 'account.ownership_transferred', 'account.renamed']);
+})->group('accounts');
+
+it('pré-checagem forjada de transferir e excluir por quem não é dono: o mesmo 403 e a recusa na trilha, com quem tentou', function () {
+    ['empresa' => $empresa, 'admin' => $admin, 'membro' => $membro, 'dono' => $dono] = contaComEquipe();
+
+    foreach ([$admin, $membro] as $pessoa) {
+        entrarNa($pessoa, $empresa);
+        $this->post('/account/transfer/code', ['transfer_to' => $membro->uuid, 'stage' => 'check'])->assertForbidden();
+        $this->post('/account/transfer/code', ['transfer_to' => $membro->uuid, 'stage' => 'send', 'transaction_password' => SENHA_TRANSACAO])->assertForbidden();
+        $this->post('/account/transfer', ['transfer_to' => $membro->uuid, 'code' => '123456'])->assertForbidden();
+        $this->post('/account/delete/code', ['stage' => 'check'])->assertForbidden();
+        $this->delete('/account', ['code' => '123456'])->assertForbidden();
+    }
+
+    $recusas = AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('outcome', 'denied')->orderBy('id')->get();
+    $esperado = fn (User $p): array => [
+        ['account.ownership_transferred', $p->uuid, __('accounts.authorization.denied')],
+        ['account.ownership_transferred', $p->uuid, __('accounts.authorization.denied')],
+        ['account.ownership_transferred', $p->uuid, __('accounts.authorization.denied')],
+        ['account.deleted', $p->uuid, __('accounts.authorization.denied')],
+        ['account.deleted', $p->uuid, __('accounts.authorization.denied')],
+    ];
+
+    expect($recusas->map(fn (AuditEvent $e): array => [$e->action, $e->actor_uuid, $e->reason])->all())
+        ->toBe([...$esperado($admin), ...$esperado($membro)])
+        ->and($empresa->fresh()->owner->is($dono))->toBeTrue();
+    // Ninguém gastou código: a recusa veio antes.
+    Mail::assertNothingQueued();
+
+    // O dono passa pela pré-checagem sem linha de recusa.
+    entrarNa($dono, $empresa);
+    $this->post('/account/transfer/code', ['transfer_to' => $membro->uuid, 'stage' => 'check'])->assertRedirect('/account');
+    $this->post('/account/delete/code', ['stage' => 'check'])->assertRedirect('/account');
+    expect(AuditEvent::query()->where('outcome', 'denied')->count())->toBe(10);
 })->group('accounts');
 
 it('admin: convida e mexe só em member; não vê transferir/excluir nem ação sobre o dono e o outro admin', function () {

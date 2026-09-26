@@ -224,3 +224,31 @@ por minuto por IP — ver
 [Limite de requisições](seguranca.md#limite-de-requisições-rate-limit-e-contenção-da-trilha)).
 Uma rodada cabe folgada nele; duas rodadas seguidas, não. Espere 60 s entre
 uma rodada e a próxima, ou os últimos testes recebem 429.
+
+### E2E do starter React
+
+Em `starters/react/tests/e2e` (TypeScript, o mesmo Playwright 1.63), contra
+`http://127.0.0.1:8181` — o host é outro que o do Livewire para os cookies não
+colidirem (ver [instalação](instalacao.md#starter-react)). O React não tem a
+demonstração, então as pessoas fixas do E2E vêm de um script idempotente
+(`e2e@example.com`, a pessoa do painel, e `admin-e2e@example.com`, o admin que
+faz a limpeza):
+
+```bash
+docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+cd starters/react
+docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
+```
+
+Cobre: cadastro com verificação de e-mail e login com segundo fator (códigos e
+links lidos no Mailpit), perfil (idioma, tema gravado na conta, foto),
+senha de transação, contas (convidar → aceitar criando o acesso → trocar de
+conta → transferir com senha de transação e código → remover), chave de API
+com a secreta uma vez, projetos e o `/admin` (login e uma ação auditada). As
+pessoas criadas pelos testes (`e2e-…@example.com`) saem no `finally` pelo
+`/admin` (sem depender do idioma, `tests/e2e/support/cleanup.ts`), e uma
+varredura no fim da suíte (`tests/e2e/global-teardown.ts`) apaga qualquer
+resto — a rodada termina sem pessoa, conta, projeto, chave, convite, foto ou
+mensagem de teste no banco e no Mailpit. O mesmo limite de borda vale: 60 s
+entre duas rodadas.
