@@ -2,10 +2,20 @@
 # Docker Compose — DESENVOLVIMENTO (raiz do monorepo)
 #
 # Sobe, a partir da RAIZ do repositório, os serviços compartilhados
-# (PostgreSQL 18, Redis 8, Mailpit) e o starter Livewire (app PHP-FPM 8.4,
-# nginx na porta 8180, worker de fila e scheduler). O código do starter vive em
-# starters/livewire e é montado por volume; o .env dele é o
-# starters/livewire/.env. A porta 8181 fica reservada para o starter React.
+# (PostgreSQL 18, Redis 8, Mailpit), o starter Livewire (app PHP-FPM 8.4,
+# nginx na porta 8180, worker de fila e scheduler) e o starter React (os
+# serviços react-*: php-fpm, nginx na porta 8181, fila e scheduler). O código
+# de cada starter vive em starters/<starter> e é montado por volume; o .env de
+# cada um é o starters/<starter>/.env.
+#
+# STARTER REACT AO LADO DO LIVEWIRE: mesmo PostgreSQL, Redis e Mailpit, mas
+# BANCO PRÓPRIO (tws_starter_react, e tws_starter_react_test para a suíte —
+# criados pelo serviço de uma vez react-db-init, sem tocar no postgres), bancos
+# próprios no Redis (REDIS_DB/REDIS_CACHE_DB no .env do React) e cookie de
+# sessão com nome próprio. Subir, derrubar ou reconstruir os react-* não mexe
+# nos serviços do Livewire:
+#
+#   docker compose up -d react-nginx react-queue react-scheduler
 #
 # Os PACOTES do kit (packages/) são montados em /var/packages nos containers
 # PHP (app, queue, scheduler): o composer.json do starter os instala por path
@@ -156,6 +166,120 @@ services:
       - ./packages:/var/packages
     depends_on:
       - app
+    networks:
+      - backend
+
+  # ===========================================================================
+  # STARTER REACT (starters/react) — porta 8181.
+  #
+  # A imagem PHP é a MESMA do starter Livewire (o Dockerfile de dev dele: as
+  # mesmas extensões, o mesmo uid/gid do host); muda só o código montado e o
+  # .env. A imagem de PRODUÇÃO do React é da fase F11c.
+  # ===========================================================================
+
+  # Cria os bancos do React no PostgreSQL compartilhado, se faltarem, e sai.
+  # Idempotente; não mexe no serviço postgres (nem no banco do Livewire).
+  react-db-init:
+    image: postgres:18-alpine
+    environment:
+      PGHOST: postgres
+      PGUSER: ${DB_USERNAME:-tws}
+      PGPASSWORD: ${DB_PASSWORD:-tws_dev_password}
+      PGDATABASE: ${DB_DATABASE:-tws_starter}
+    command:
+      - sh
+      - -c
+      - |
+        for db in tws_starter_react tws_starter_react_test; do
+          psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$$db'" | grep -q 1 \
+            || psql -c "CREATE DATABASE $$db"
+        done
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  react-app:
+    build:
+      context: ./starters/livewire
+      dockerfile: docker/php/Dockerfile
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Opcional para o Compose: sem o .env do React (quem só usa o Livewire),
+    # o arquivo inteiro continua válido e os serviços do Livewire sobem.
+    env_file:
+      - path: ./starters/react/.env
+        required: false
+    volumes:
+      - ./starters/react:/var/www/html
+      # Pacotes do kit por path repository (`../../packages/…`), como no Livewire.
+      - ./packages:/var/packages
+    depends_on:
+      react-db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    networks:
+      - backend
+
+  react-nginx:
+    image: nginx:stable-alpine3.24
+    ports:
+      - "${DEV_REACT_WEB_PORT:-8181}:80"
+    volumes:
+      - ./starters/react:/var/www/html:ro
+      - ./starters/react/docker/nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - react-app
+    networks:
+      - backend
+
+  react-queue:
+    build:
+      context: ./starters/livewire
+      dockerfile: docker/php/Dockerfile
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Opcional para o Compose: sem o .env do React (quem só usa o Livewire),
+    # o arquivo inteiro continua válido e os serviços do Livewire sobem.
+    env_file:
+      - path: ./starters/react/.env
+        required: false
+    command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
+    volumes:
+      - ./starters/react:/var/www/html
+      - ./packages:/var/packages
+    depends_on:
+      - react-app
+      - redis
+    networks:
+      - backend
+
+  react-scheduler:
+    build:
+      context: ./starters/livewire
+      dockerfile: docker/php/Dockerfile
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    # Opcional para o Compose: sem o .env do React (quem só usa o Livewire),
+    # o arquivo inteiro continua válido e os serviços do Livewire sobem.
+    env_file:
+      - path: ./starters/react/.env
+        required: false
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+    volumes:
+      - ./starters/react:/var/www/html
+      - ./packages:/var/packages
+    depends_on:
+      - react-app
     networks:
       - backend
 

@@ -426,7 +426,10 @@ status e os dois aliases, e o pacote grava um aviso no log a cada boot.
    usam `password.reset` e `verification.verify`). Para JSON ou Inertia,
    registre a sua implementação de cada contrato de
    `Twstec\Kit\Auth\Contracts\Responses` num provider do app — o padrão é
-   `bindIf` e cede.
+   `bindIf` e cede. O starter React é o exemplo pronto: as 11 respostas
+   Inertia em `starters/react/app/Http/Responses/Inertia`, registradas no
+   `AppServiceProvider` dele (carga completa, com o `SafeRedirect`, para quem
+   entra ou sai; redirect comum, com o erro no campo, para o resto).
 5. **E-mails:** as classes (código, recuperação de senha, verificação) e os
    assuntos são do pacote; os corpos são views do front
    (`mail.messages.verification-code`, `mail.messages.password-reset`,

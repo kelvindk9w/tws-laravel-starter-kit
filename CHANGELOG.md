@@ -7,6 +7,30 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Starter React (`starters/react`, `twstec/starter-react`) — fase F11a:
+  base e autenticação.** React 19 + Inertia 3 + TypeScript + Tailwind 4 +
+  shadcn/ui a partir do kit oficial React do Laravel, com a autenticação do
+  `twstec/kit-auth` no lugar do Fortify: telas Inertia (login, cadastro,
+  verificação de e-mail, esqueci/redefinir senha, segundo fator por código de
+  e-mail), envios pelos controllers do pacote (com o `throttle:sensitive`
+  deles) e as **implementações Inertia dos 11 contratos de resposta** — quem
+  entra ou sai recebe carga completa (409 + `X-Inertia-Location`), o destino
+  guardado passa pelo `SafeRedirect`. Painel mínimo com a arquitetura de
+  informação do Livewire (menu lateral e avatar): painel inicial com os
+  números da conta (`AccountOverviewQuery`), perfil (nome, idioma, tema,
+  senha de login, senha de transação e o segundo fator como ação sensível,
+  com o token emitido e consumido no servidor) e notificações. i18n pt-BR/en/es
+  pelos arquivos de tradução do Laravel, enviados uma vez por idioma; tema
+  claro/escuro/sistema com o padrão da conta; props compartilhadas em lista
+  fechada, sem nenhuma credencial (teste que varre todas as telas); CSP estrita
+  sem `unsafe-eval` (o servidor do Vite só entra em `APP_ENV=local`, com o
+  `public/hot`); módulos opcionais detectados por `Kit::has()` e enviados ao
+  front; o mesmo `/admin`. Docker de dev: serviços `react-*` na porta 8181, com
+  banco (`tws_starter_react`), bancos do Redis e cookie de sessão próprios. CI:
+  passos do React dentro dos dois jobs de teste (Pint, auditorias, tipos,
+  lint/formatação, build, Pest no SQLite e no PostgreSQL), sem check novo. Ver
+  [starters/react/README.md](starters/react/README.md) e
+  [docs/instalacao.md](docs/instalacao.md#starter-react).
 - **Módulos opcionais e o instalador `php artisan tws:install`.**
   `twstec/kit-foundation` e `twstec/kit-auth` vêm sempre; contas e API
   (`twstec/kit-accounts`), uploads (`twstec/kit-uploads`, que exige contas) e

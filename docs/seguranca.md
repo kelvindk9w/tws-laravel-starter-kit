@@ -389,3 +389,16 @@ própria (`admin*`, o do Horizon, `v2`) ficam em `security.headers.surfaces`, a
 configuração trocada no /admin em `security.admin.runtime_config`, e os caminhos
 do endpoint de atualização do Livewire em `security.validation.livewire_paths` —
 o módulo de segurança não traz esses caminhos escritos no código.
+
+**Starter React** (`starters/react`): a mesma CSP base serve as páginas React
+— o build do Vite carrega módulos da própria origem, o React não usa `eval`
+nem `new Function` em produção e os dados da página (Inertia 3) vão num
+`<script type="application/json">`, que não executa. O único script inline é
+o do tema no `<head>` (coberto pelo `'unsafe-inline'` que a base já tem).
+Exceção restrita ao desenvolvimento: com o servidor do Vite no ar
+(`npm run dev`), em `APP_ENV=local` e só enquanto o `public/hot` existe, a
+origem dele entra em `script-src`, `style-src`, `font-src` e `img-src`, e ela
+mais o WebSocket do HMR em `connect-src` (`App\Support\ViteDevServerCsp`, no
+`config/security.php` do starter). Nunca `'unsafe-eval'`; fora de `local`, ou
+com conteúdo estranho no `public/hot`, a CSP não muda. O `/admin` do React é o
+mesmo Filament, com a mesma exceção documentada acima.

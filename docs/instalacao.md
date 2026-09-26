@@ -3,9 +3,12 @@
 O kit é um conjunto de pacotes e um starter (o aplicativo pronto). Você
 escolhe o que entra:
 
-- **Frontend:** o starter **Livewire** (`starters/livewire`, pacote
-  `twstec/starter-livewire`). O starter React é uma fase futura; a escolha do
-  starter é feita uma vez, ao criar o projeto.
+- **Frontend (escolha única, ao criar o projeto):** o starter **Livewire**
+  (`starters/livewire`, pacote `twstec/starter-livewire`) ou o starter
+  **React** (`starters/react`, pacote `twstec/starter-react` — React +
+  Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel; em
+  construção: fases F11a–F11c, ver [Starter React](#starter-react)). Os dois
+  usam os mesmos pacotes, com as mesmas regras e mensagens, e o mesmo `/admin`.
 - **Backend:** `foundation` e `auth` vêm **sempre**. `accounts`, `uploads` e
   `admin` são **opcionais**, marcados um a um.
 - **Demonstração:** o pacote `twstec/kit-demo` (landings, vitrine `/ui`,
@@ -58,6 +61,49 @@ contas, um pepper dedicado para as chaves de API. As migrations rodam se o
 banco do `.env` estiver acessível; senão, ficam para depois
 (`php artisan migrate`) — o `.env.example` aponta para o PostgreSQL do
 `docker-compose.yml`.
+
+## Starter React
+
+`starters/react` (`twstec/starter-react`) é o mesmo kit com o painel do
+usuário em React 19 + Inertia 3 + TypeScript + Tailwind 4 + shadcn/ui, a
+partir do [kit oficial React do Laravel](https://github.com/laravel/react-starter-kit).
+A autenticação é a do `twstec/kit-auth` (sem o Fortify do kit oficial): as
+telas são páginas React, os envios são os controllers do pacote e as
+respostas são as implementações Inertia dos contratos de resposta dele. As
+contas do `twstec/kit-accounts` são a fonte única (o kit oficial não traz
+times, e nada dele é usado para isso). Detalhes em
+[starters/react/README.md](../starters/react/README.md).
+
+**Estado (F11a):** base, autenticação completa (login com limite de
+tentativas, cadastro, verificação de e-mail obrigatória, esqueci/redefinir
+senha, segundo fator por código de e-mail, logout) e o painel mínimo (painel
+inicial com os números da conta, perfil, senha de transação, verificação em
+duas etapas, notificações). Seletor de conta, conta e membros, chaves de API,
+projetos e foto de perfil chegam na F11b; E2E, imagem de produção e as
+combinações de módulos no CI, na F11c. A publicação do `twstec/starter-react`
+(Packagist) entra depois disso.
+
+**No monorepo (desenvolvimento):** o `docker-compose.yml` da raiz sobe o React
+na porta **8181**, ao lado do Livewire (8180), com o mesmo PostgreSQL, Redis e
+Mailpit — mas banco próprio (`tws_starter_react`, criado pelo serviço
+`react-db-init`), bancos próprios no Redis (`REDIS_DB=2`, `REDIS_CACHE_DB=3`)
+e cookie de sessão com nome próprio, para um não derrubar a sessão, a fila ou
+o cache do outro:
+
+```bash
+cd starters/react && cp .env.example .env
+# composer install e npm install/build: ver starters/react/README.md
+cd ../.. && export UID GID=$(id -g)
+docker compose up -d react-nginx react-queue react-scheduler
+docker compose exec react-app php artisan key:generate --force
+docker compose up -d --force-recreate --no-deps react-app react-queue react-scheduler
+docker compose exec react-app php artisan migrate
+```
+
+Aplicação: http://localhost:8181. O instalador `php artisan tws:install` é o
+mesmo (`docker compose exec react-app php artisan tws:install`); o React não
+usa a demonstração, então ela nunca é perguntada. Os módulos instalados chegam
+ao front na prop `kit.modules`, e o menu só mostra tela que existe.
 
 ## O instalador: `php artisan tws:install`
 

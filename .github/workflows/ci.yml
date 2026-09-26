@@ -22,6 +22,12 @@
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 #
+# STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs — nenhum
+# check novo. No do PostgreSQL: Pint, auditorias, build e a suíte contra o
+# PostgreSQL (banco tws_starter_react_test, criado no service do job). No do
+# SQLite: tipos (tsc), lint/formatação (Vite+, como no kit oficial), build e a
+# suíte no SQLite. A imagem de produção do React chega na fase F11c.
+#
 # PACOTES: o starter instala os pacotes de packages/ por path repository. A
 # suíte de cada pacote (isolada, com Orchestra Testbench) roda como PASSOS
 # dentro dos jobs de teste — não é check novo —, e o Pint confere o pacote no
@@ -118,7 +124,9 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: starters/livewire/package-lock.json
+          cache-dependency-path: |
+            starters/livewire/package-lock.json
+            starters/react/package-lock.json
 
       - name: Dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -258,6 +266,38 @@ jobs:
       - name: Testes (Pest · PostgreSQL 18)
         run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
 
+      # STARTER REACT (starters/react — ver o cabeçalho): estilo, auditorias,
+      # build e a suíte contra o PostgreSQL, com banco de teste próprio.
+      - name: Starter React · dependências PHP
+        working-directory: starters/react
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Starter React · estilo (Pint)
+        working-directory: starters/react
+        run: ./vendor/bin/pint --test
+
+      - name: Starter React · auditoria de dependências (PHP e Node)
+        working-directory: starters/react
+        run: |
+          composer audit --no-interaction
+          npm ci --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+
+      - name: Starter React · build do frontend
+        working-directory: starters/react
+        run: npm run build
+
+      - name: Starter React · banco de teste e ambiente
+        working-directory: starters/react
+        run: |
+          PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d tws_starter_test -c 'CREATE DATABASE tws_starter_react_test'
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Starter React · testes (Pest · PostgreSQL 18)
+        working-directory: starters/react
+        run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
+
       # Pacotes empacotados como o Packagist vai servir e o projeto criado só
       # a partir deles (ver o cabeçalho). Pasta fora do checkout. A demo não é
       # publicada: o projeto nasce sem ela, com a página inicial do produto,
@@ -292,7 +332,9 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: starters/livewire/package-lock.json
+          cache-dependency-path: |
+            starters/livewire/package-lock.json
+            starters/react/package-lock.json
 
       - name: Dependências PHP
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -366,6 +408,29 @@ jobs:
       - name: Pacote installer · testes (Pest)
         working-directory: packages/installer
         run: ./vendor/bin/pest --ci
+
+      # STARTER REACT (starters/react): dependências, checagem de tipos
+      # (tsc), lint e formatação (Vite+ do kit oficial), build e a suíte no
+      # SQLite em memória — o comando local padrão. Antes dos passos que mexem
+      # no checkout do Livewire.
+      - name: Starter React · dependências PHP
+        working-directory: starters/react
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Starter React · tipos (tsc), lint/formatação e build
+        working-directory: starters/react
+        run: |
+          npm ci --ignore-scripts
+          npm run types:check
+          npm run check
+          npm run build
+
+      - name: Starter React · testes (Pest · SQLite)
+        working-directory: starters/react
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          ./vendor/bin/pest --ci
 
       # O PRODUTO SEM A DEMONSTRAÇÃO: o que acontece com quem tira a demo
       # (`composer remove --dev twstec/kit-demo`, docs/demo.md). O build do

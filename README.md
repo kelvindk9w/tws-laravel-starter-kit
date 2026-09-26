@@ -43,9 +43,10 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
+| [`starters/react/`](starters/react) | O mesmo kit com o painel em React + Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel, e a autenticação dos pacotes (em construção: F11a entregue — autenticação e painel mínimo). |
 | [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
-| `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
+| `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180 e o starter React na 8181 (serviços `react-*`, banco próprio). |
 
 Todos os comandos `docker compose` funcionam tanto da raiz quanto de dentro de
 `starters/livewire` (o Compose procura o `docker-compose.yml` nas pastas
@@ -264,6 +265,9 @@ packages/                # pacotes do kit (ver packages/README.md):
   demo/                  # twstec/kit-demo — a demonstração (só no dev)
   installer/             # twstec/kit-installer — php artisan tws:install
                          # (escolhe os módulos opcionais; só no dev)
+starters/react/          # o mesmo kit com o painel em React + Inertia +
+                         # TypeScript + shadcn/ui (kit oficial do Laravel),
+                         # porta 8181 no dev — ver starters/react/README.md
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,
