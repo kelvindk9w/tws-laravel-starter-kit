@@ -17,6 +17,7 @@ use Livewire\WithFileUploads;
 use Twstec\Kit\Auth\PasswordPolicy;
 use Twstec\Kit\Auth\Services\TransactionPasswordService;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Uploads\Avatar\AvatarService;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Rules\SafeFile;
@@ -166,9 +167,17 @@ final class Profile extends Component
      * conteúdo + re-encode GD), pelo AvatarService do pacote de uploads — a
      * foto é da PESSOA (upload pessoal, sem conta) e aparece em todas as
      * contas dela.
+     *
+     * Só com o pacote de uploads (twstec/kit-uploads, opcional) instalado —
+     * sem ele a ação não existe (404), e o service é pedido ao container só
+     * depois dessa pergunta.
      */
-    public function updateAvatar(AvatarService $avatars): void
+    public function updateAvatar(): void
     {
+        abort_unless(Kit::has('uploads'), 404);
+
+        $avatars = app(AvatarService::class);
+
         $maxKb = (int) setting('uploads.types.image.max_kb');
 
         // SafeFile vem PRIMEIRO, com bail: a validação por conteúdo do kit é

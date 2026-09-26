@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Logging\Enums\RequestLogStatus;
 use Twstec\Kit\Foundation\Support\Platform;
 
@@ -39,7 +40,9 @@ it('página completa carrega o branding via platform() no layout', function () {
         ->get('/dashboard')
         ->assertOk()
         ->assertSee(platform()->name)
-        ->assertSee(__('panel.nav.api_keys'));
+        // O menu lateral do painel (a primeira tela dele: chaves, com o pacote
+        // de contas; perfil, sem ele).
+        ->assertSee(__(Kit::has('accounts') ? 'panel.nav.api_keys' : 'panel.nav.profile'));
 });
 
 it('sem PLATFORM_PRIMARY_COLOR o layout NÃO injeta --brand (primária neutra dos tokens)', function () {
@@ -80,7 +83,7 @@ it('mostra os contadores de chaves ativas e projetos do próprio usuário', func
         ->test(Dashboard::class)
         ->assertViewHas('activeKeysCount', 1)
         ->assertViewHas('projectsCount', 1);
-});
+})->group('accounts');
 
 // =============================================================================
 // Tráfego real da conta (request_logs). O dashboard mostra o que
@@ -119,7 +122,7 @@ it('conta as requisições dos últimos 7 dias apenas do próprio tenant', funct
     Livewire::actingAs($user)
         ->test(Dashboard::class)
         ->assertViewHas('recentRequestsCount', 2);
-});
+})->group('accounts');
 
 it('monta a série diária completa de 30 dias, com zero nos dias sem tráfego', function () {
     $user = User::factory()->create();
@@ -135,7 +138,7 @@ it('monta a série diária completa de 30 dias, com zero nos dias sem tráfego',
         ->and($chart['values'])->toHaveCount(30)
         ->and(array_sum($chart['values']))->toBe(2)
         ->and(end($chart['values']))->toBe(2);
-});
+})->group('accounts');
 
 it('lista as 5 últimas chamadas da API com endpoint e status', function () {
     $user = User::factory()->create();
@@ -153,7 +156,7 @@ it('lista as 5 últimas chamadas da API com endpoint e status', function () {
     $component->assertSee('/api/v1/uploads/1')
         ->assertSee('201')
         ->assertDontSee('/api/v1/uploads/7');
-});
+})->group('accounts');
 
 it('mostra o estado vazio do gráfico e da lista quando não há tráfego', function () {
     $user = User::factory()->create();
@@ -163,4 +166,4 @@ it('mostra o estado vazio do gráfico e da lista quando não há tráfego', func
         ->assertSee(__('panel.dashboard.chart_empty_title'))
         ->assertSee(__('panel.dashboard.recent_calls_empty_title'))
         ->assertSee(__('panel.common.never'));
-});
+})->group('accounts');

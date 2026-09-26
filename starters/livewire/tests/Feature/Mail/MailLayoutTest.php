@@ -69,4 +69,4 @@ it('não vaza segredo nenhum no aviso de chave de API inativa', function (): voi
     expect($html)
         ->toContain('pk_live_3f9a2c81b7d4e6520a1c8f37')
         ->not->toContain('sk_');
-});
+})->group('accounts');

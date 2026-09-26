@@ -44,6 +44,7 @@ use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 use Twstec\Kit\Foundation\Identifiers\UuidColumn;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
@@ -346,25 +347,28 @@ final class AuditEventResource extends BaseResource
                         filled($data['value'] ?? null),
                         fn (Builder $q): Builder => UuidColumn::where($q, 'actor_uuid', (string) $data['value']),
                     )),
-                // A conta em que a ação aconteceu (`tenant_uuid`): escolhe entre
-                // as contas que aparecem na trilha, pelo código público (e o
-                // nome, na conta de empresa). O valor é o uuid e passa pelo
-                // UuidColumn, como o filtro de quem agiu.
-                SelectFilter::make('account')
-                    ->label(__('admin.audit.filter_account'))
-                    ->options(fn (): array => Account::query()
-                        ->whereIn('uuid', AuditEvent::query()->whereNotNull('tenant_uuid')->distinct()->select('tenant_uuid'))
-                        ->orderBy('codigo_publico')
-                        ->get(['uuid', 'codigo_publico', 'name'])
-                        ->mapWithKeys(fn (Account $account): array => [
-                            (string) $account->uuid => trim($account->codigo_publico.' '.($account->name ?? '')),
-                        ])
-                        ->all())
-                    ->searchable()
-                    ->query(fn (Builder $query, array $data): Builder => $query->when(
-                        filled($data['value'] ?? null),
-                        fn (Builder $q): Builder => UuidColumn::where($q, 'tenant_uuid', (string) $data['value']),
-                    )),
+                // Só com o twstec/kit-accounts: sem ele não há contas.
+                ...(Kit::has('accounts') ? [
+                    // A conta em que a ação aconteceu (`tenant_uuid`): escolhe entre
+                    // as contas que aparecem na trilha, pelo código público (e o
+                    // nome, na conta de empresa). O valor é o uuid e passa pelo
+                    // UuidColumn, como o filtro de quem agiu.
+                    SelectFilter::make('account')
+                        ->label(__('admin.audit.filter_account'))
+                        ->options(fn (): array => Account::query()
+                            ->whereIn('uuid', AuditEvent::query()->whereNotNull('tenant_uuid')->distinct()->select('tenant_uuid'))
+                            ->orderBy('codigo_publico')
+                            ->get(['uuid', 'codigo_publico', 'name'])
+                            ->mapWithKeys(fn (Account $account): array => [
+                                (string) $account->uuid => trim($account->codigo_publico.' '.($account->name ?? '')),
+                            ])
+                            ->all())
+                        ->searchable()
+                        ->query(fn (Builder $query, array $data): Builder => $query->when(
+                            filled($data['value'] ?? null),
+                            fn (Builder $q): Builder => UuidColumn::where($q, 'tenant_uuid', (string) $data['value']),
+                        )),
+                ] : []),
                 Filter::make('subject')
                     ->label(__('admin.audit.filter_subject'))
                     ->schema([

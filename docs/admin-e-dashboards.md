@@ -7,6 +7,12 @@ no .env — nada hardcoded). Toda string via `__()` (pt-BR/en/es). Tema
 claro/escuro/sistema no painel do usuário (toggle de 3 estados no topo,
 default = preferência do SO).
 
+> **Módulos opcionais.** As telas de chaves, projetos e conta do painel do
+> usuário são do `twstec/kit-accounts`, a foto de perfil do `twstec/kit-uploads`
+> e o super admin inteiro do `twstec/kit-admin` — os três opcionais. Sem um
+> deles, as telas somem (rota, menu e atalhos) e o `/admin` mostra só o que
+> existe. Ver [instalação e módulos](instalacao.md#o-que-some-em-cada-combinação).
+
 ## Painel do usuário (Livewire 4)
 
 | Rota | Tela |

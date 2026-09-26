@@ -22,6 +22,7 @@ nem interface — e um teste de arquitetura na suíte do pacote garante isso.
 | `Support` | `Platform` (a configuração da plataforma, tipada) e o helper `platform()`; guarda de segredos críticos; guardas de produção |
 | `Backup` | `backup:run` que recusa backup sem criptografia em produção |
 | `Money`, `Identifiers` | Dinheiro em centavos (formatação e cast) e identificadores públicos (UUID nas rotas, código público) |
+| `Kit` (raiz) | Quais módulos do kit estão instalados — o ponto ÚNICO de detecção: `Kit::has('accounts')`, a diretiva `@kit('uploads') … @else … @endkit` nas views, as dependências entre módulos (`uploads` exige `accounts`) e, só para testes, `Kit::pretendAbsent()`. Instalado = registrado pelo Composer **e** com o provider carregável. Ver [docs/instalacao.md](../../docs/instalacao.md) |
 
 ## Instalação
 

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Twstec\Kit\Foundation\Kit;
+
 // =============================================================================
 // Configurações editáveis pelo super admin pela UI.
 //
@@ -12,6 +14,10 @@ declare(strict_types=1);
 //
 // NUNCA adicionar aqui chaves de segredos/credenciais (APP_KEY, DB, mail...):
 // a tabela settings não é cofre. Apenas parâmetros operacionais ajustáveis.
+//
+// As chaves de um módulo OPCIONAL (chaves de API: twstec/kit-accounts;
+// uploads: twstec/kit-uploads) só entram com o módulo instalado — sem ele, a
+// tela não mostra um campo que não mudaria nada.
 // =============================================================================
 
 return [
@@ -30,12 +36,16 @@ return [
     'overrides' => [
         // Expiração de chaves de API por inatividade: meses sem uso
         // até desativar + dias de aviso prévio por e-mail.
-        'api_keys.inactivity.months' => ['type' => 'int', 'min' => 1, 'max' => 36, 'group' => 'api_keys', 'span' => 3],
-        'api_keys.inactivity.warning_days' => ['type' => 'int', 'min' => 1, 'max' => 90, 'group' => 'api_keys', 'span' => 3],
+        ...(Kit::has('accounts') ? [
+            'api_keys.inactivity.months' => ['type' => 'int', 'min' => 1, 'max' => 36, 'group' => 'api_keys', 'span' => 3],
+            'api_keys.inactivity.warning_days' => ['type' => 'int', 'min' => 1, 'max' => 90, 'group' => 'api_keys', 'span' => 3],
+        ] : []),
 
         // Limites de upload.
-        'uploads.types.image.max_kb' => ['type' => 'int', 'min' => 64, 'max' => 51200, 'group' => 'uploads', 'span' => 4],
-        'uploads.types.pdf.max_kb' => ['type' => 'int', 'min' => 64, 'max' => 102400, 'group' => 'uploads', 'span' => 4],
+        ...(Kit::has('uploads') ? [
+            'uploads.types.image.max_kb' => ['type' => 'int', 'min' => 64, 'max' => 51200, 'group' => 'uploads', 'span' => 4],
+            'uploads.types.pdf.max_kb' => ['type' => 'int', 'min' => 64, 'max' => 102400, 'group' => 'uploads', 'span' => 4],
+        ] : []),
 
         // Rate limits: requisições por minuto.
         'security.rate_limit.api' => ['type' => 'int', 'min' => 1, 'max' => 10000, 'group' => 'rate_limit', 'span' => 3],

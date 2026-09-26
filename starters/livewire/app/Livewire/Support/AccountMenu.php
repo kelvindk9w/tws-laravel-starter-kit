@@ -8,6 +8,7 @@ use Twstec\Kit\Accounts\Account\Models\AccountMembership;
 use Twstec\Kit\Accounts\Account\Queries\AccountDirectory;
 use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Auth\Contracts\AuthUser;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * O que o SELETOR DE CONTA mostra (<x-account-switcher>): a conta atual e
@@ -17,6 +18,9 @@ use Twstec\Kit\Auth\Contracts\AuthUser;
  * Como a Navigation, é a única estrutura das views do painel que precisa de
  * dado: fica aqui, não no Blade. A troca em si é um POST para a rota do
  * pacote (accounts.switch), que só aceita conta de que a pessoa é membro.
+ *
+ * Sem o pacote de contas (twstec/kit-accounts, opcional) não há conta: o menu
+ * é vazio e o seletor não aparece.
  */
 final class AccountMenu
 {
@@ -25,7 +29,7 @@ final class AccountMenu
      */
     public static function for(?AuthUser $user): array
     {
-        if ($user === null) {
+        if ($user === null || ! Kit::has('accounts')) {
             return ['current' => null, 'accounts' => []];
         }
 

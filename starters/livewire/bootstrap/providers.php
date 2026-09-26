@@ -1,7 +1,6 @@
 <?php
 
 use App\Providers\AppServiceProvider;
-use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
 
 return [
@@ -14,10 +13,11 @@ return [
     // assinada, foto de perfil e o POST /api/v1/uploads), do
     // twstec/kit-uploads — os quatro pela descoberta automática de pacotes
     // do Laravel. O painel /admin (twstec/kit-admin) entra como plugin no
-    // AdminPanelProvider. A demonstração do kit (twstec/kit-demo, só no
+    // App\Providers\Filament\AdminPanelProvider, que o AppServiceProvider
+    // registra só com o pacote instalado (o /admin é OPCIONAL; sem ele, nem o
+    // Filament está instalado). A demonstração do kit (twstec/kit-demo, só no
     // ambiente de desenvolvimento — require-dev) também entra pela descoberta
     // automática: nada aqui a nomeia.
     AppServiceProvider::class,
-    AdminPanelProvider::class,
     HorizonServiceProvider::class,
 ];

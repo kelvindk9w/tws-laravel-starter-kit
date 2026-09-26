@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
 use Twstec\Kit\Admin\Access\AdminAccess;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * Horizon: supervisor de filas + dashboard /horizon.
@@ -27,6 +28,10 @@ use Twstec\Kit\Admin\Access\AdminAccess;
  * payload de job falho, métricas. Revogar acesso tem de revogar em todas as
  * superfícies, ou não é revogação. Os dois pontos passam a ler o MESMO
  * critério, que é o que impede que voltem a divergir.
+ *
+ * SEM O /admin (twstec/kit-admin não instalado): não há o critério do painel,
+ * e o gate FECHA — ninguém vê o /horizon fora do ambiente local. Para abrir,
+ * declare aqui o critério do seu aplicativo.
  */
 class HorizonServiceProvider extends HorizonApplicationServiceProvider
 {
@@ -39,7 +44,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     {
         Gate::define(
             'viewHorizon',
-            fn (?User $user = null): bool => AdminAccess::allows($user),
+            fn (?User $user = null): bool => Kit::has('admin') && AdminAccess::allows($user),
         );
     }
 }

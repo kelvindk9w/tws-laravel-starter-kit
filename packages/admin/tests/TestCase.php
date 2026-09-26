@@ -35,6 +35,7 @@ use Twstec\Kit\Admin\Tests\Fixtures\User;
 use Twstec\Kit\Auth\Providers\AuthServiceProvider;
 use Twstec\Kit\Foundation\Audit\Providers\AuditServiceProvider;
 use Twstec\Kit\Foundation\FoundationServiceProvider;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Mail\Providers\MailServiceProvider;
 use Twstec\Kit\Foundation\Settings\Providers\SettingsServiceProvider;
 use Twstec\Kit\Uploads\UploadsServiceProvider;
@@ -146,6 +147,9 @@ abstract class TestCase extends Testbench
 
         AdminPanelProvider::$before = null;
         AdminPanelProvider::$after = null;
+
+        // Módulo fingido ausente (Kit::pretendAbsent) não vaza para o próximo teste.
+        Kit::flushFakes();
 
         parent::tearDown();
     }

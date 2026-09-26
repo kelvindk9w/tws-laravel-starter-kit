@@ -4,6 +4,18 @@
     "description": "Autenticação do TWS Laravel Starter Kit, sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, verificação em duas etapas por e-mail, senha de transação, ação sensível com token de uso único, política de senha, status da conta e contratos de resposta para qualquer front.",
     "type": "library",
     "license": "MIT",
+    "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+    "authors": [
+        {
+            "name": "TWS",
+            "homepage": "https://github.com/kelvindk9w"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+        "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth",
+        "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+    },
     "keywords": ["laravel", "authentication", "two-factor", "security", "starter-kit"],
     "require": {
         "php": "^8.4",
@@ -34,6 +46,9 @@
             "providers": [
                 "Twstec\\Kit\\Auth\\Providers\\AuthServiceProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "2.x-dev"
         }
     },
     "scripts": {

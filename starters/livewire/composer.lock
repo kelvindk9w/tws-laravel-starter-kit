@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3dd450ee35f75f3278e06b139ab1f38c",
+    "content-hash": "9d447b2f74e7192e79725045711c2c68",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8472,7 +8472,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/accounts",
-                "reference": "5c278fa24d4f362a421d5aec21c1387b616d593e"
+                "reference": "c29abe11f5c793a6e5f4f82612ab76e675ea2511"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -8491,6 +8491,9 @@
                     "providers": [
                         "Twstec\\Kit\\Accounts\\AccountsServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -8520,7 +8523,14 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Contas e API do TWS Laravel Starter Kit, sem telas: projetos, chaves de API com par pública/secreta, hash com pepper, escopos, vínculo chave-projeto, rotação com período de graça, expiração por inatividade, autenticação e limites da API e a API v1.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "api",
                 "api-keys",
@@ -8528,6 +8538,11 @@
                 "starter-kit",
                 "tenancy"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/accounts",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -8538,22 +8553,26 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/admin",
-                "reference": "5fb2cdf144aa3e4bff1c6ff971493e111c48d20a"
+                "reference": "3d187e2c2959f55dbe2e3a43efb5b901a0a64043"
             },
             "require": {
                 "filament/filament": "^5.7",
                 "laravel/framework": "^13.17",
                 "livewire/livewire": "^4.4",
                 "php": "^8.4",
-                "twstec/kit-accounts": "2.x-dev",
                 "twstec/kit-auth": "2.x-dev",
-                "twstec/kit-foundation": "2.x-dev",
-                "twstec/kit-uploads": "2.x-dev"
+                "twstec/kit-foundation": "2.x-dev"
             },
             "require-dev": {
                 "laravel/pint": "^1.27",
                 "orchestra/testbench": "^11.0",
-                "pestphp/pest": "^4.7"
+                "pestphp/pest": "^4.7",
+                "twstec/kit-accounts": "2.x-dev",
+                "twstec/kit-uploads": "2.x-dev"
+            },
+            "suggest": {
+                "twstec/kit-accounts": "Contas, chaves de API e projetos: com ele, o painel ganha as telas de contas, chaves e projetos, o filtro por conta da trilha e o modo sistema.",
+                "twstec/kit-uploads": "Uploads seguros: com ele, o painel ganha a tela de uploads, o widget dos últimos uploads e o campo de foto de perfil."
             },
             "type": "library",
             "extra": {
@@ -8561,6 +8580,9 @@
                     "providers": [
                         "Twstec\\Kit\\Admin\\AdminServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -8587,7 +8609,14 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Painel de super admin do TWS Laravel Starter Kit como plugin do Filament 5: usuários, chaves de API, projetos, uploads, logs de requisição, trilha de auditoria e configurações, login com verificação em duas etapas por e-mail, variantes de dashboard, trilha de auditoria de toda ação do painel (falha fechada) e as proteções de acesso (allowlist de IP, só admin com conta ativa) ligadas pelo pacote.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "admin",
                 "audit-trail",
@@ -8596,6 +8625,11 @@
                 "security",
                 "starter-kit"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/admin",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -8606,7 +8640,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/auth",
-                "reference": "6b50e90622e3cd29522439b6df1581912fd39ec0"
+                "reference": "9b5e1e4c7ec07d04f040b36664131bce3dc7d348"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -8624,6 +8658,9 @@
                     "providers": [
                         "Twstec\\Kit\\Auth\\Providers\\AuthServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -8651,7 +8688,14 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Autenticação do TWS Laravel Starter Kit, sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, verificação em duas etapas por e-mail, senha de transação, ação sensível com token de uso único, política de senha, status da conta e contratos de resposta para qualquer front.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "authentication",
                 "laravel",
@@ -8659,6 +8703,11 @@
                 "starter-kit",
                 "two-factor"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -8669,7 +8718,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/foundation",
-                "reference": "bb5012f4d5aa2ff178d8681bea118e6713d4ee53"
+                "reference": "df99dd7d4f225441c4e0e2a3c23510b271d0a75a"
             },
             "require": {
                 "ext-bcmath": "*",
@@ -8692,6 +8741,9 @@
                         "Twstec\\Kit\\Foundation\\Mail\\Providers\\MailServiceProvider",
                         "Twstec\\Kit\\Foundation\\Settings\\Providers\\SettingsServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -8720,7 +8772,14 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Base de segurança e infraestrutura do TWS Laravel Starter Kit: filtro de ataques, limites, cabeçalhos, hosts e proxies, trilha de requisições e de auditoria com redação LGPD, identificadores, dinheiro, idioma, configurações no banco, e-mail e guarda de segredos e de backup.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "audit",
                 "laravel",
@@ -8728,6 +8787,11 @@
                 "security",
                 "starter-kit"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/foundation",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -8738,7 +8802,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/uploads",
-                "reference": "50b2cd94ff453d05d699f7dbc6fb3013af76d065"
+                "reference": "eaaa8dc2b1eb5b04bc4f0dac2de14debec3790e2"
             },
             "require": {
                 "ext-fileinfo": "*",
@@ -8760,6 +8824,9 @@
                     "providers": [
                         "Twstec\\Kit\\Uploads\\UploadsServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -8786,7 +8853,14 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Uploads seguros do TWS Laravel Starter Kit, sem telas: validação pelo conteúdo real (magic bytes), allowlist e limite por tipo, recusa de executável, script embutido e PDF com ações automáticas, reprocessamento de imagem, nome seguro, entrega por URL assinada com validade, foto de perfil e o POST /api/v1/uploads.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "file-validation",
                 "laravel",
@@ -8794,6 +8868,11 @@
                 "starter-kit",
                 "uploads"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/uploads",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -12471,7 +12550,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/demo",
-                "reference": "fe08f56a5b91167bf8331b4de072ae2d5f544617"
+                "reference": "439da47927dc9da5e730d34f03800e03a148df81"
             },
             "require": {
                 "fakerphp/faker": "^1.23",
@@ -12496,6 +12575,9 @@
                     "providers": [
                         "Twstec\\Kit\\Demo\\DemoServiceProvider"
                     ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
                 }
             },
             "autoload": {
@@ -12522,12 +12604,97 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
             "description": "Demonstração do TWS Laravel Starter Kit, para o ambiente de DESENVOLVIMENTO: as landings (/ e /v2), a vitrine de componentes (/ui), o formulário de contato, o catálogo de produtos e a caixa de submissões de exemplo no /admin, as contas demo de credenciais públicas (protegidas contra alteração, inclusive no banco) e os seeders de dado fictício. Instale só em require-dev — nunca numa instalação com dado real.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "demo",
                 "laravel",
                 "starter-kit"
             ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/demo",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
+            "name": "twstec/kit-installer",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/installer",
+                "reference": "cc6dbedbb91afe6acf65b7c1fa5f5883f6f5c148"
+            },
+            "require": {
+                "laravel/framework": "^13.17",
+                "laravel/prompts": "^0.3",
+                "php": "^8.4",
+                "twstec/kit-foundation": "2.x-dev"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Installer\\InstallerServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Installer\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Installer\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
+            "description": "Instalador do TWS Laravel Starter Kit (php artisan tws:install): escolhe os módulos opcionais (contas, uploads, painel /admin) e a demonstração, aplica com o Composer, roda as migrations e gera a APP_KEY e o pepper das chaves de API quando faltam. Ferramenta de desenvolvimento — instale em require-dev.",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+            "keywords": [
+                "installer",
+                "laravel",
+                "starter-kit"
+            ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/installer",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
             "transport-options": {
                 "relative": true
             }
@@ -12607,12 +12774,13 @@
         "twstec/kit-auth": 20,
         "twstec/kit-demo": 20,
         "twstec/kit-foundation": 20,
+        "twstec/kit-installer": 20,
         "twstec/kit-uploads": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3"
+        "php": "^8.4"
     },
     "platform-dev": {},
     "platform-overrides": {

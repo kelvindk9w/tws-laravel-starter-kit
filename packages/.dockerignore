@@ -17,3 +17,7 @@
 # (require-dev do starter): a imagem de produção (`composer install --no-dev`)
 # não a instala, e o código dela nem entra no contexto do build.
 demo
+
+# O INSTALADOR (twstec/kit-installer, o `php artisan tws:install`) também é
+# de desenvolvimento (require-dev): fica fora da imagem pelo mesmo motivo.
+installer

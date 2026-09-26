@@ -24,6 +24,7 @@
             </p>
         </div>
 
+        @kit('accounts')
         <div class="flex flex-wrap gap-2">
             <x-button :href="route('panel.api-keys')" size="sm">
                 <x-ui-icon name="plus" class="h-4 w-4" />
@@ -31,7 +32,10 @@
             </x-button>
             <x-button :href="route('panel.projects')" variant="secondary" size="sm">{{ __('panel.dashboard.new_project') }}</x-button>
         </div>
+        @endkit
     </div>
+
+    @kit('accounts')
 
     {{-- Métricas -------------------------------------------------------- --}}
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -122,4 +126,30 @@
             </x-table>
         @endif
     </section>
+    @else
+    {{-- Sem o pacote de contas (twstec/kit-accounts): não há chaves, projetos
+         nem API. A tela abre com os atalhos da conta da pessoa. --}}
+    <x-card :title="__('panel.dashboard.essentials_title')" :description="__('panel.dashboard.essentials_hint')">
+        <ul class="grid gap-3 sm:grid-cols-3" data-dashboard-essentials>
+            @foreach ([
+                ['route' => 'panel.profile', 'icon' => 'user-circle', 'label' => __('panel.nav.profile'), 'hint' => __('panel.dashboard.essentials_profile')],
+                ['route' => 'transaction-password.edit', 'icon' => 'lock-closed', 'label' => __('panel.nav.transaction_password'), 'hint' => __('panel.dashboard.essentials_transaction_password')],
+                ['route' => 'panel.notifications', 'icon' => 'bell', 'label' => __('panel.nav.notifications'), 'hint' => __('panel.dashboard.essentials_notifications')],
+            ] as $atalho)
+                <li>
+                    <a
+                        href="{{ route($atalho['route']) }}"
+                        class="flex h-full items-start gap-3 rounded-lg border border-border bg-surface p-4 transition-colors duration-150 ease-(--ease-out) hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                    >
+                        <x-ui-icon :name="$atalho['icon']" class="mt-0.5 h-5 w-5 shrink-0 text-text-muted" />
+                        <span class="min-w-0">
+                            <span class="block font-medium text-gray-900 dark:text-gray-100">{{ $atalho['label'] }}</span>
+                            <span class="mt-1 block text-caption text-text-muted">{{ $atalho['hint'] }}</span>
+                        </span>
+                    </a>
+                </li>
+            @endforeach
+        </ul>
+    </x-card>
+    @endkit
 </div>

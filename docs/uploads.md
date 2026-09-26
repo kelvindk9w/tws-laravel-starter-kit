@@ -6,6 +6,10 @@ namespace `Twstec\Kit\Uploads\` (até a 1.x era `app/Core/Uploads`; os nomes
 única**: todo upload do sistema passa pelo `SecureUploadService::handle()` —
 nenhum controller faz `store()` direto de arquivo.
 
+> **Módulo opcional** (exige o `twstec/kit-accounts`: o upload pertence a uma
+> conta). Sem ele, o perfil não tem foto e o `/admin` não tem a tela de
+> uploads — ver [instalação e módulos](instalacao.md).
+
 O pacote não tem telas. O formulário do perfil (Livewire), o campo de foto do
 `/admin` (Filament) e a rota web do avatar são do starter; o pacote traz o
 serviço, a validação, o model, a migration, a configuração, as traduções, a

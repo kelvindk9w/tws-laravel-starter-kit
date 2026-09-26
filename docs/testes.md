@@ -86,6 +86,44 @@ do produto é o `pest` de sempre, sem filtro de grupo. O CI roda os dois jeitos.
 docker compose exec -T -w /var/packages/demo app ./vendor/bin/pest   # suíte do pacote
 ```
 
+## Módulos opcionais: um teste por módulo, pulando sozinho
+
+`accounts`, `uploads` e `admin` são opcionais ([instalação](instalacao.md)).
+Todo teste do starter que exercita um deles fica no **grupo com o nome do
+módulo** — as pastas e os arquivos inteiros em `tests/Pest.php`
+(`pest()->group('accounts')->in('Feature/Tenancy', …)`), os casos soltos com
+`->group('accounts')` no próprio teste; um teste que usa dois módulos fica nos
+dois grupos. Sem o módulo instalado (`Kit::has`), o teste **pula**, com o
+motivo (`tests/TestCase.php`) — a suíte de qualquer combinação é o `pest` de
+sempre, sem `--exclude-group`.
+
+Regras para escrever teste novo:
+
+- Precisa de um módulo opcional? Ponha no grupo dele. Uma proteção que vale em
+  qualquer combinação (sessão encerrada, verificação de e-mail, allowlist)
+  merece também uma prova numa tela da base (perfil, notificações) — os
+  testes de `AccountStatusEnforcementTest`, `EmailVerificationTest` e
+  `AdminLivewireEndpointBarrierTest` têm os dois.
+- Dataset com telas de módulo opcional: acrescente-as só com o módulo
+  (`...(Kit::has('accounts') ? ['chaves de API' => '/api-keys'] : [])`).
+- Teste que varre `app/` com `class_exists`: pule as classes que só carregam
+  com um módulo (`TestCase::appClassLoadable()` — hoje, o PanelProvider do
+  `/admin`, que estende o Filament).
+- `tests/Feature/Modules/OptionalModulesTest.php` prova, em toda combinação,
+  que existe exatamente o que está instalado (rotas, menu, `/admin`, model de
+  usuário, configurações editáveis, agendamento) e, com `Kit::pretendAbsent`,
+  que é a detecção quem decide (uma tela registrada sem perguntar reprova ali).
+
+O CI roda a suíte nas combinações principais (completo, sem a demo, sem
+uploads, só o `/admin`, só a base, sem o `/admin`). Para rodar uma combinação
+localmente, numa CÓPIA do starter (nunca no do repositório — o instalador
+mexe no `composer.json`):
+
+```bash
+php artisan tws:install --no-interaction --without=accounts,uploads,admin --no-demo
+npm run build && ./vendor/bin/pest
+```
+
 ## Testes contra o PostgreSQL
 
 O `pest` puro roda em **SQLite em memória** (`phpunit.xml`): rápido e sem

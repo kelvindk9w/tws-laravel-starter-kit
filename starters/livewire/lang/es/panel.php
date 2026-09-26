@@ -76,6 +76,14 @@ return [
         'recent_calls_empty_description' => 'Crea una clave de API y haz la primera solicitud para ver la traza de auditoría aquí.',
         'call_endpoint' => 'Endpoint',
         'call_when' => 'Cuándo',
+
+        // Sin el paquete de cuentas (twstec/kit-accounts): no hay claves,
+        // proyectos ni API — el panel abre con los atajos de la cuenta.
+        'essentials_title' => 'Tu cuenta',
+        'essentials_hint' => 'Los ajustes que protegen y personalizan tu acceso.',
+        'essentials_profile' => 'Nombre, idioma, contraseña de acceso y verificación en dos pasos.',
+        'essentials_transaction_password' => 'Autoriza las acciones sensibles de tu cuenta.',
+        'essentials_notifications' => 'Elige qué correos quieres recibir.',
     ],
 
     // Perfil.

@@ -7,6 +7,44 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Não publicado]
 
 ### Adicionado
+- **Módulos opcionais e o instalador `php artisan tws:install`.**
+  `twstec/kit-foundation` e `twstec/kit-auth` vêm sempre; contas e API
+  (`twstec/kit-accounts`), uploads (`twstec/kit-uploads`, que exige contas) e
+  o painel `/admin` (`twstec/kit-admin`) passam a ser **opcionais**. O
+  instalador (pacote novo `twstec/kit-installer`, em `require-dev` do
+  starter) pergunta os módulos e a demonstração (Laravel Prompts) ou recebe
+  `--with`/`--without`/`--no-demo`, e aplica: `demo:uninstall` antes de a
+  demo sair, `composer remove`/`require`, `optimize:clear`, o `.env` (do
+  `.env.example` se faltar), a `APP_KEY` e o pepper dedicado das chaves de
+  API quando faltam (a `APP_KEY` que já existia vai para os peppers
+  anteriores — nenhuma chave emitida deixa de autenticar) e `migrate`.
+  Idempotente; recusa `APP_ENV=production` sem `--force`. Ver
+  [docs/instalacao.md](docs/instalacao.md).
+- **Detecção de módulos num ponto só:** `Twstec\Kit\Foundation\Kit::has()`
+  e a diretiva `@kit('uploads') … @else … @endkit`. O starter pergunta antes de
+  registrar rota, item de menu ou bloco de tela de um módulo opcional; sem o
+  módulo, a rota não existe (404), o menu não a mostra e o painel inicial abre
+  com os atalhos da conta. O model de usuário compõe o acesso ao `/admin` e a
+  foto de perfil por nomes do próprio aplicativo
+  (`app/Support/optional-modules.php`), que viram a peça do pacote ou uma
+  peça neutra.
+- **O `/admin` se adapta aos pacotes instalados:** sem contas, sem as telas de
+  contas, chaves e projetos (e o que delas dependia nos dashboards, na trilha
+  e na guarda de exclusão); sem uploads, sem a tela de uploads, o widget e o
+  campo de foto. `twstec/kit-accounts` e `twstec/kit-uploads` saem do
+  `require` do `twstec/kit-admin` (ficam em `suggest`).
+- **CI das combinações:** o job do SQLite passa, com o instalador, pelas
+  combinações sem uploads, só o `/admin`, só a base e sem o `/admin` (build do
+  front e `pest` em cada uma), depois do "sem a demo" que já existia.
+- **Preparação da publicação (desligada):** `composer.json` de cada pacote
+  pronto para o Packagist (homepage, suporte, autores, `branch-alias`); o
+  starter vira `twstec/starter-livewire` (projeto; `post-create-project-cmd`
+  chama o instalador) para `composer create-project` e
+  `laravel new --using=`; o workflow `split.yml` (tag `v2.*` → repositórios
+  só-leitura `kelvindk9w/twstec-*`, desligado até a variável
+  `KIT_SPLIT_ENABLED`); e a **simulação da instalação publicada** no CI — os
+  pacotes empacotados com `composer archive` e o projeto criado só a partir
+  deles, com build e suíte.
 - **Uploads da conta** (`twstec/kit-uploads`). Todo upload passa a pertencer
   a uma **conta** (`account_id`) e guarda quem enviou (`created_by`); a web e
   a API gravam do mesmo jeito (a conta atual e quem agiu). O isolamento é o
@@ -87,6 +125,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   valendo (são da conta).
 
 ### Alterado
+- **Sem o pacote de contas, o aplicativo mantém as proteções da API** do
+  `/api/health`: o `throttle:api` e o envelope de erro de `api/*`, que antes
+  vinham só do `twstec/kit-accounts`, são ligados pelo `bootstrap/app.php`
+  quando ele não está instalado. Com ele, nada muda.
+- **Sem o `/admin`, o `/horizon` fecha** fora do ambiente local (o critério de
+  acesso é o do painel). Com ele, nada muda.
+- **Scripts do Composer:** `filament:upgrade`/`filament:assets` passam por
+  `php artisan tws:filament-assets`, que só chama o Filament quando ele está
+  instalado; o `filament/filament` sai do `require` do starter (vem pelo
+  `twstec/kit-admin`). O `filament.css` só entra no build com o `/admin`.
+- A migration de usuários do aplicativo só cria a chave estrangeira de
+  `avatar_upload_id` quando a tabela `uploads` existe (instalação sem uploads).
 - **A demonstração virou o pacote `twstec/kit-demo`** (`packages/demo`,
   namespace `Twstec\Kit\Demo`), instalado **só no desenvolvimento**: o
   starter o declara em `require-dev`. As landings (`/`, `/v2`), a vitrine
@@ -366,6 +416,14 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
    `bootstrap/providers.php` para desligar a demo agora tira o pacote
    (`php artisan demo:uninstall --drop-tables` e
    `composer remove --dev twstec/kit-demo`).
+11. Módulos opcionais: instalar as dependências PHP de novo (o
+   `composer.json` do starter passa a exigir `twstec/kit-installer` em
+   `require-dev` e deixa de declarar o `filament/filament`, que vem pelo
+   admin) e `php artisan config:clear`. Nada muda num clone completo; para
+   tirar módulos, `php artisan tws:install` (ver
+   [docs/instalacao.md](docs/instalacao.md)). Código próprio que usa telas ou
+   classes de `accounts`, `uploads` ou `admin` deve perguntar
+   `Kit::has('<módulo>')` antes, se você pretende tirar o módulo.
 6. Se o `.env` de desenvolvimento tem `API_KEYS_HASH_PEPPER=` vazio (vindo do
    `.env.example` antigo), as chaves de API já criadas no banco de dev foram
    gravadas com pepper vazio: acrescente `API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY=true`

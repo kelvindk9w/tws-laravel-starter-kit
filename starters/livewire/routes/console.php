@@ -1,23 +1,47 @@
 <?php
 
+use Composer\InstalledVersions;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Twstec\Kit\Foundation\Kit;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
 // =============================================================================
+// Assets do Filament nos scripts do Composer (composer.json → scripts).
+//
+// O Filament vem com o painel /admin (twstec/kit-admin), que é OPCIONAL: sem
+// ele, `filament:upgrade` e `filament:assets` não existem, e um script do
+// Composer que chama comando inexistente derruba o `composer install` (e o
+// build da imagem de produção). Os scripts chamam este comando, que só
+// repassa ao Filament quando ele está instalado.
+// =============================================================================
+Artisan::command('tws:filament-assets {--upgrade : filament:upgrade (depois do dump do autoload e do update)}', function (): int {
+    if (! InstalledVersions::isInstalled('filament/filament')) {
+        $this->components->info(__('ui.console.filament_skipped'));
+
+        return 0;
+    }
+
+    return $this->call($this->option('upgrade') ? 'filament:upgrade' : 'filament:assets', ['--ansi' => true]);
+})->purpose(__('ui.console.filament_assets'));
+
+// =============================================================================
 // Expiração de chaves de API por inatividade: diário, em UTC.
 // Aviso prévio por e-mail + desativação — ver ProcessApiKeyInactivity e
 // config/api_keys.php (API_KEYS_INACTIVITY_*). onOneServer/withoutOverlapping
-// evitam execução dupla em deploys com múltiplos schedulers.
+// evitam execução dupla em deploys com múltiplos schedulers. O comando é do
+// pacote twstec/kit-accounts: sem ele, não há chaves nem o agendamento.
 // =============================================================================
-Schedule::command('api-keys:process-inactivity')
-    ->daily()
-    ->withoutOverlapping()
-    ->onOneServer();
+if (Kit::has('accounts')) {
+    Schedule::command('api-keys:process-inactivity')
+        ->daily()
+        ->withoutOverlapping()
+        ->onOneServer();
+}
 
 // =============================================================================
 // Backups: dump lógico do PostgreSQL (pg_dump) em zip

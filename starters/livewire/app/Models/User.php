@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\OptionalAdminPanelAccess;
+use App\Models\Concerns\OptionalProfilePhoto;
+use App\Models\Contracts\OptionalAdminPanelUser;
 use Database\Factories\UserFactory;
-use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -13,12 +15,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Twstec\Kit\Admin\Concerns\AccessesAdminPanel;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Models\Concerns\KitAuthenticatable;
 use Twstec\Kit\Foundation\Identifiers\HasPublicCode;
 use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
-use Twstec\Kit\Uploads\Concerns\HasAvatar;
 
 /**
  * Usuário da plataforma — o model é do APLICATIVO e compõe o que cada pacote
@@ -45,16 +45,24 @@ use Twstec\Kit\Uploads\Concerns\HasAvatar;
  * `avatarUrl()`): trait HasAvatar, do pacote twstec/kit-uploads (a coluna
  * `avatar_upload_id` é da migration de usuários do aplicativo).
  *
+ * MÓDULOS OPCIONAIS: o /admin e a foto de perfil vêm de pacotes que quem
+ * instala pode deixar de fora (`php artisan tws:install`). Por isso o model
+ * não nomeia as peças deles direto: usa OptionalAdminPanelUser,
+ * OptionalAdminPanelAccess e OptionalProfilePhoto, que viram a peça do pacote
+ * quando ele está instalado e uma peça neutra quando não está (sem painel;
+ * sem foto — `avatarUrl()` null, as telas desenham as iniciais). Ver
+ * app/Support/optional-modules.php.
+ *
  * NOME ANTIGO: até a 1.x este model era App\Core\Auth\Models\User. O nome
  * antigo continua resolvendo para esta classe (app/Support/legacy-aliases.php)
  * — payload de fila serializado antes da atualização o carrega.
  */
 #[Fillable(['name', 'email', 'password', 'locale'])]
 #[Hidden(['password', 'transaction_password', 'remember_token'])]
-class User extends Authenticatable implements AuthUser, FilamentUser, HasLocalePreference
+class User extends Authenticatable implements AuthUser, HasLocalePreference, OptionalAdminPanelUser
 {
     /** @use HasFactory<UserFactory> */
-    use AccessesAdminPanel, HasAvatar, HasFactory, HasPublicCode, HasUuids, KitAuthenticatable, Notifiable, RoutesByUuid;
+    use HasFactory, HasPublicCode, HasUuids, KitAuthenticatable, Notifiable, OptionalAdminPanelAccess, OptionalProfilePhoto, RoutesByUuid;
 
     /**
      * Prefixo do código público legível: USR-xxxxxx.

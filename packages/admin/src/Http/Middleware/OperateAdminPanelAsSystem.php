@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * O /admin opera em MODO SISTEMA, declarado: o operador da plataforma vê
@@ -22,6 +23,9 @@ use Twstec\Kit\Accounts\Accounts;
  * Não depende de ADMIN_PROTECTIONS: sem o modo sistema, o painel não teria
  * conta atual e as telas de projetos e chaves falhariam (o escopo das contas
  * não devolve tudo por falta de conta).
+ *
+ * Sem o twstec/kit-accounts instalado não há contas nem escopo: o middleware
+ * só deixa passar.
  */
 final class OperateAdminPanelAsSystem
 {
@@ -31,7 +35,9 @@ final class OperateAdminPanelAsSystem
         // Livewire reaplica os middlewares persistentes num pipeline à parte,
         // ANTES de rodar o componente — um modo sistema só em volta do $next
         // acabaria antes da ação. O fim da requisição o desfaz sozinho.
-        Accounts::systemModeForRequest('admin');
+        if (Kit::has('accounts')) {
+            Accounts::systemModeForRequest('admin');
+        }
 
         return $next($request);
     }

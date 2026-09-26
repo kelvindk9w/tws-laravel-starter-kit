@@ -36,6 +36,7 @@ use Twstec\Kit\Admin\Resources\Uploads\UploadResource;
 use Twstec\Kit\Admin\Resources\Users\UserResource;
 use Twstec\Kit\Admin\Support\AdminPanelHardening;
 use Twstec\Kit\Admin\Support\InitialsAvatarProvider;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 use Twstec\Kit\Foundation\Security\Middleware\EnsureAdminIpAllowed;
 use Twstec\Kit\Foundation\Security\Middleware\UseEvalBundleForAdmin;
@@ -47,7 +48,8 @@ use Twstec\Kit\Foundation\Security\Middleware\UseEvalBundleForAdmin;
  * cores, fonte, tema e o que mais acrescentar); este plugin traz o produto:
  *
  * - os resources (usuários, chaves de API, projetos, uploads, logs de
- *   requisição, auditoria), as páginas (perfil, configurações), o login com
+ *   requisição, auditoria — os de módulo opcional só com o módulo
+ *   instalado, ver RESOURCES), as páginas (perfil, configurações), o login com
  *   verificação em duas etapas por e-mail (provedor MFA próprio, o motor é o
  *   do twstec/kit-auth) e as variantes de dashboard (DashboardRegistry);
  * - a navegação (ordem dos grupos), o menu do usuário, o avatar de iniciais
@@ -73,6 +75,26 @@ use Twstec\Kit\Foundation\Security\Middleware\UseEvalBundleForAdmin;
 final class AdminPlugin implements Plugin
 {
     public const ID = 'twstec-kit-admin';
+
+    /**
+     * Resources do painel => o módulo OPCIONAL de que dependem (null = só da
+     * base do kit). O painel se adapta ao que está instalado (Kit::has): sem
+     * `twstec/kit-accounts`, não há telas de contas, chaves nem projetos;
+     * sem `twstec/kit-uploads`, não há tela de uploads (nem o campo de foto
+     * — ver Support\AvatarUpload). Resource ausente não é registrado: nem
+     * menu, nem rota.
+     *
+     * @var array<class-string, string|null>
+     */
+    public const RESOURCES = [
+        AccountResource::class => 'accounts',
+        ApiKeyResource::class => 'accounts',
+        AuditEventResource::class => null,
+        ProjectResource::class => 'accounts',
+        RequestLogResource::class => null,
+        UploadResource::class => 'uploads',
+        UserResource::class => null,
+    ];
 
     public static function make(): self
     {
@@ -105,15 +127,7 @@ final class AdminPlugin implements Plugin
             // EmailCodeAuthentication). Opcional — só pede o código de quem
             // ligou; ligar/desligar fica no perfil (Pages\Profile).
             ->multiFactorAuthentication([EmailCodeAuthentication::make()])
-            ->resources([
-                AccountResource::class,
-                ApiKeyResource::class,
-                AuditEventResource::class,
-                ProjectResource::class,
-                RequestLogResource::class,
-                UploadResource::class,
-                UserResource::class,
-            ])
+            ->resources(self::resources())
             ->pages([
                 Profile::class,
                 Settings::class,
@@ -181,6 +195,20 @@ final class AdminPlugin implements Plugin
     }
 
     public function boot(Panel $panel): void {}
+
+    /**
+     * Os resources que valem nesta aplicação: os da base e os dos módulos
+     * opcionais instalados.
+     *
+     * @return list<class-string>
+     */
+    public static function resources(): array
+    {
+        return array_keys(array_filter(
+            self::RESOURCES,
+            static fn (?string $module): bool => $module === null || Kit::has($module),
+        ));
+    }
 
     /**
      * A pilha de sessão/cookies/CSRF do painel (a mesma de um painel de

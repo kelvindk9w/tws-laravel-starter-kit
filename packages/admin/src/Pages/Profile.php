@@ -85,7 +85,8 @@ final class Profile extends Page implements HasForms
     {
         return $schema
             ->components([
-                AvatarUpload::field()->label(__('panel.profile.avatar_heading')),
+                // Foto de perfil: só com o twstec/kit-uploads.
+                ...(AvatarUpload::available() ? [AvatarUpload::field()->label(__('panel.profile.avatar_heading'))] : []),
                 TextInput::make('name')
                     ->label(__('panel.common.name'))
                     ->required()

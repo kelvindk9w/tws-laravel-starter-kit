@@ -43,7 +43,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
-| [`packages/`](packages) | Os pacotes de backend do kit. Já extraídos: [`foundation`](packages/foundation) (`twstec/kit-foundation`), [`auth`](packages/auth) (`twstec/kit-auth`), [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament). |
+| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire na porta 8180. |
 
@@ -92,6 +92,27 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 ```
 
 Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
+
+### Escolher os módulos
+
+`foundation` e `auth` vêm sempre; **contas e API** (`accounts`), **uploads**
+e o **painel `/admin`** são opcionais, e a **demonstração** é só de
+desenvolvimento. O clone vem com tudo; para tirar o que não quer (ou pôr de
+volta), rode o instalador — interativo, ou com opções:
+
+```bash
+docker compose exec app php artisan tws:install
+# ou, sem perguntas: só a base, sem a demo
+docker compose exec app php artisan tws:install --no-interaction --without=accounts,uploads,admin --no-demo
+```
+
+Ele faz o `composer remove`/`require`, tira a demo do banco antes de tirar o
+pacote, roda as migrations e gera a `APP_KEY` e o pepper das chaves de API
+quando faltam. As telas, rotas e menus de um módulo ausente somem sozinhos.
+Tudo em [Instalação e módulos](docs/instalacao.md) — inclusive como criar um
+projeto novo depois da publicação (`composer create-project
+twstec/starter-livewire` / `laravel new --using=twstec/starter-livewire`) e
+como instalar só os pacotes num aplicativo Laravel que já existe.
 
 Conta criada pelo `/register` só entra no painel depois de confirmar o
 e-mail — em dev o link chega no Mailpit (desligável com
@@ -151,6 +172,7 @@ E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
 
 | Assunto | Documento |
 | --- | --- |
+| Instalação e módulos opcionais: o instalador, as combinações, pacotes avulsos, publicação | [docs/instalacao.md](docs/instalacao.md) |
 | Convenções do código (nada hardcoded, dinheiro inteiro, identificadores, i18n) | [docs/convencoes.md](docs/convencoes.md) |
 | Segurança: cadeia de middlewares, filtro de ataques, rate limit, nginx, proxies, CSP | [docs/seguranca.md](docs/seguranca.md) |
 | Logs e LGPD: redaction, onde ver os logs, append-only, health check | [docs/logs-lgpd.md](docs/logs-lgpd.md) |
@@ -237,6 +259,9 @@ packages/                # pacotes do kit (ver packages/README.md):
   admin/                 # twstec/kit-admin — o super admin /admin como plugin
                          # do Filament: telas, dashboards, trilha de auditoria
                          # das ações e as proteções do painel
+  demo/                  # twstec/kit-demo — a demonstração (só no dev)
+  installer/             # twstec/kit-installer — php artisan tws:install
+                         # (escolhe os módulos opcionais; só no dev)
 starters/livewire/       # o aplicativo:
   docker/
     php/Dockerfile       # PHP-FPM 8.4 multi-stage (dev/prod): pgsql, redis,

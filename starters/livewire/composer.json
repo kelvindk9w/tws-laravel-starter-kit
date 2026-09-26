@@ -1,13 +1,17 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "twstec/starter-livewire",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "TWS Laravel Starter Kit — starter Livewire: aplicativo Laravel 13 completo (painel do usuário em Livewire 4, autenticação com verificação em duas etapas, segurança e auditoria ligadas pelos pacotes) sobre os pacotes twstec/kit-*. Contas e API, uploads e o painel /admin são opcionais: escolha com `php artisan tws:install`.",
+    "keywords": ["laravel", "livewire", "starter-kit", "security", "lgpd"],
     "license": "MIT",
+    "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+    "support": {
+        "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+        "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+    },
     "require": {
-        "php": "^8.3",
-        "filament/filament": "^5.7",
+        "php": "^8.4",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.48",
         "laravel/tinker": "^3.0",
@@ -29,7 +33,8 @@
         "pestphp/pest": "^4.7",
         "pestphp/pest-plugin-laravel": "^4.1",
         "phpunit/phpunit": "^12.5.12",
-        "twstec/kit-demo": "2.x-dev"
+        "twstec/kit-demo": "2.x-dev",
+        "twstec/kit-installer": "2.x-dev"
     },
     "autoload": {
         "psr-4": {
@@ -39,6 +44,7 @@
         },
         "files": [
             "app/Support/legacy-aliases.php",
+            "app/Support/optional-modules.php",
             "app/Support/ui-helpers.php"
         ]
     },
@@ -67,23 +73,23 @@
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
-            "@php artisan filament:upgrade"
+            "@php artisan tws:filament-assets --upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan filament:upgrade"
+            "@php artisan tws:filament-assets --upgrade"
         ],
         "post-install-cmd": [
             "@php artisan livewire:publish --assets --ansi",
-            "@php artisan filament:assets --ansi"
+            "@php artisan tws:filament-assets"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
         "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan tws:install --graceful --ansi"
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
@@ -163,6 +169,16 @@
             "options": {
                 "versions": {
                     "twstec/kit-uploads": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/installer",
+            "options": {
+                "versions": {
+                    "twstec/kit-installer": "2.x-dev"
                 },
                 "reference": "config"
             }

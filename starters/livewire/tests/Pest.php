@@ -4,6 +4,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Twstec\Kit\Accounts\Account\CurrentAccount;
+use Twstec\Kit\Foundation\Kit;
 
 // Configuração do Pest 4.
 // Feature: roda com a aplicação Laravel completa + banco de teste — SQLite em
@@ -36,8 +37,50 @@ pest()->extend(TestCase::class)
 // pela requisição de verdade (GET do painel e endpoint do Livewire) está em
 // tests/Feature/Accounts/AdminSystemModeTest.php.
 pest()->in('Feature/Admin')->beforeEach(function (): void {
-    app(CurrentAccount::class)->push(CurrentAccount::systemFrame('teste do /admin (Livewire::test)'));
+    // Sem o pacote de contas não há conta nem modo sistema (o painel se adapta).
+    if (Kit::has('accounts')) {
+        app(CurrentAccount::class)->push(CurrentAccount::systemFrame('teste do /admin (Livewire::test)'));
+    }
 });
+
+// MÓDULOS OPCIONAIS: os testes de um módulo que quem instala pode deixar de
+// fora (twstec/kit-accounts, twstec/kit-uploads, twstec/kit-admin) ficam no
+// grupo com o nome dele — as pastas inteiras aqui, os casos soltos com
+// `->group(...)` no próprio arquivo. Sem o módulo, o grupo PULA sozinho
+// (tests/TestCase.php): cada combinação roda o `pest` de sempre. Um teste que
+// usa dois módulos fica nos dois grupos.
+pest()->group('accounts')->in(
+    'Feature/Accounts',
+    'Feature/Api',
+    'Feature/ApiKeys',
+    'Feature/Tenancy',
+    'Feature/Uploads',
+    'Feature/Panel/ApiKeysTest.php',
+    'Feature/Panel/ProjectsTest.php',
+    'Feature/Security/ApiRateLimitTest.php',
+    'Feature/Database/AccountDatabaseGuardsTest.php',
+    'Feature/Architecture/AccountModelsTest.php',
+    'Feature/Admin/AccountOwnerDeletionTest.php',
+    'Feature/Admin/AccountResourceTest.php',
+    'Feature/Admin/OrphanedKeysOnDeletionTest.php',
+    'Feature/Localization/AccountsPackageTranslationsOverrideTest.php',
+    'Feature/Localization/UploadsPackageTranslationsOverrideTest.php',
+);
+
+pest()->group('uploads')->in(
+    'Feature/Uploads',
+    'Feature/Localization/UploadsPackageTranslationsOverrideTest.php',
+);
+
+pest()->group('admin')->in(
+    'Feature/Admin',
+    'Feature/Accounts/AdminSystemModeTest.php',
+    'Feature/Architecture/AdminAuditTest.php',
+    'Feature/Localization/AdminPackageTranslationsOverrideTest.php',
+    'Feature/Security/AdminIpAllowlistTest.php',
+    'Feature/Security/AdminLivewireEndpointBarrierTest.php',
+    'Feature/Uploads/AdminAvatarTest.php',
+);
 
 // Helpers compartilhados da suíte de API Keys/Tenancy.
 require_once __DIR__.'/Feature/ApiKeys/Helpers.php';

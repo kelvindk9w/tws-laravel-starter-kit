@@ -108,11 +108,11 @@ it('código certo autentica, com ID de sessão novo, e leva ao painel', function
 it('depois do código, volta à página que a pessoa tentou abrir (SafeRedirect)', function () {
     $user = tfaUser();
 
-    $this->get('/api-keys')->assertRedirect(route('login'));
+    $this->get('/notifications')->assertRedirect(route('login'));
     tfaPassword($user);
 
     $this->post(route('two-factor.challenge'), ['code' => tfaLastCode()])
-        ->assertRedirect(url('/api-keys'));
+        ->assertRedirect(url('/notifications'));
 });
 
 it('"manter conectado" só vale depois do segundo fator', function () {

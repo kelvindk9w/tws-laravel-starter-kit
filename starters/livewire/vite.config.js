@@ -14,6 +14,12 @@ import tailwindcss from '@tailwindcss/vite';
 const demoVite = resolve('vendor/twstec/kit-demo/vite.js');
 const demo = existsSync(demoVite) ? (await import(pathToFileURL(demoVite).href)).default() : null;
 
+// Tema do /admin (resources/css/filament.css): só com o painel instalado. O
+// /admin (twstec/kit-admin, que traz o Filament) é OPCIONAL — sem ele o
+// filament.css não tem o que importar (o preset do Filament e as fontes do
+// pacote) e fica fora do build.
+const admin = existsSync(resolve('vendor/filament/filament')) && existsSync(resolve('vendor/twstec/kit-admin'));
+
 export default defineConfig({
     plugins: [
         // Antes do Tailwind: a demo acrescenta as fontes dela ao CSS do app.
@@ -23,7 +29,7 @@ export default defineConfig({
             // apontado por ->viteTheme() no AdminPanelProvider.
             input: [
                 'resources/css/app.css',
-                'resources/css/filament.css',
+                ...(admin ? ['resources/css/filament.css'] : []),
                 'resources/js/app.js',
                 ...(demo?.input ?? []),
             ],

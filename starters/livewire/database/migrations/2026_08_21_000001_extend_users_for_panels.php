@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\Schema;
 //   só admin + conta ativa entram (ver User::canAccessPanel). Promoção SÓ via
 //   comando artisan `user:make-admin` — nunca por mass assignment.
 // - avatar_upload_id: avatar do perfil (registro da tabela uploads,
-//   que passou pela validação de segurança + re-encode GD).
+//   que passou pela validação de segurança + re-encode GD). A chave
+//   estrangeira só existe com a tabela `uploads` — o pacote
+//   twstec/kit-uploads é OPCIONAL; sem ele a coluna fica vazia para sempre
+//   (ninguém envia foto), e a instalação continua de pé.
 // - notification_preferences: JSON de preferências de notificação por e-mail
 //   (esqueleto — preparado para as notificações do projeto que herdar o
 //   kit, ainda sem motor). Chaves/defaults em config/notifications.php.
@@ -24,8 +27,11 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->boolean('is_admin')->default(false)->after('status');
-            $table->foreignId('avatar_upload_id')->nullable()->after('is_admin')
-                ->constrained('uploads')->nullOnDelete();
+            $avatar = $table->foreignId('avatar_upload_id')->nullable()->after('is_admin');
+
+            if (Schema::hasTable('uploads')) {
+                $avatar->constrained('uploads')->nullOnDelete();
+            }
             $table->json('notification_preferences')->nullable()->after('avatar_upload_id');
         });
     }
@@ -33,7 +39,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('avatar_upload_id');
+            Schema::hasTable('uploads')
+                ? $table->dropConstrainedForeignId('avatar_upload_id')
+                : $table->dropColumn('avatar_upload_id');
             $table->dropColumn(['is_admin', 'notification_preferences']);
         });
     }

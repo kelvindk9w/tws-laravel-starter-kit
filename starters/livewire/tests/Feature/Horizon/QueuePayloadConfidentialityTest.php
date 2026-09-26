@@ -10,6 +10,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Tests\TestCase;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
@@ -93,6 +94,12 @@ it('todo Mailable e Notification enfileirável do app criptografa o payload', fu
         }
 
         $classe = 'App\\'.str_replace(['/', '.php'], ['\\', ''], substr($arquivo->getPathname(), strlen(app_path()) + 1));
+
+        // Classe que só carrega com um módulo opcional instalado (o
+        // PanelProvider do /admin estende o Filament) — ver TestCase.
+        if (! TestCase::appClassLoadable($classe)) {
+            continue;
+        }
 
         if (! class_exists($classe)) {
             continue;

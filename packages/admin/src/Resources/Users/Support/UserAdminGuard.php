@@ -9,6 +9,7 @@ use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Support\UserModel;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * Guardas do CRUD de usuários do /admin.
@@ -21,7 +22,8 @@ use Twstec\Kit\Auth\Support\UserModel;
  *    excluído — o painel ficaria sem dono e só o comando `user:make-admin`
  *    (que exige shell no servidor) recuperaria o acesso;
  * 4. quem é DONO de conta com outros membros não é excluído — a propriedade
- *    é transferida antes (twstec/kit-accounts).
+ *    é transferida antes (twstec/kit-accounts; sem o pacote, não há contas
+ *    e a regra não se aplica).
  *
  * Cada método devolve NULL quando a ação é permitida ou a mensagem
  * traduzida do motivo quando não é.
@@ -67,7 +69,7 @@ final class UserAdminGuard
 
         // Dono de conta com outros membros: a propriedade é transferida antes
         // (a mesma regra que o pacote de contas aplica no model e no banco).
-        return app(AccountService::class)->deletionDenial($record);
+        return Kit::has('accounts') ? app(AccountService::class)->deletionDenial($record) : null;
     }
 
     /**

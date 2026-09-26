@@ -9,6 +9,14 @@ a documentação por assunto está em [`docs/`](../../docs). O ambiente de
 desenvolvimento (`docker-compose.yml`) fica na raiz do repositório, e os
 comandos `docker compose` funcionam também daqui de dentro.
 
+**Módulos opcionais.** `twstec/kit-foundation` e `twstec/kit-auth` vêm
+sempre; contas e API (`twstec/kit-accounts`), uploads (`twstec/kit-uploads`)
+e o `/admin` (`twstec/kit-admin`) são opcionais — escolha com
+`php artisan tws:install` (pacote `twstec/kit-installer`, em `require-dev`).
+Sem um módulo, as telas, rotas e menus dele somem sozinhos: o aplicativo
+pergunta `Twstec\Kit\Foundation\Kit::has()` antes de registrá-los. Ver
+[docs/instalacao.md](../../docs/instalacao.md).
+
 A **demonstração** do kit (landings em `/` e `/v2`, vitrine `/ui`, contato,
 catálogo e submissões no `/admin`, contas demo e massa fictícia) não mora
 aqui: é o pacote [`twstec/kit-demo`](../../packages/demo), declarado em

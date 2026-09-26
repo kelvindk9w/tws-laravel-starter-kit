@@ -145,7 +145,7 @@ it('LGPD: excluída pelo /admin, a foto e os uploads da conta pessoal saem do ba
         ->and($linha->changes['uploads']['before'])->toBe(2)
         ->and(json_encode($linha->changes))->not->toContain('.pdf')
         ->and(AuditEvent::query()->where('action', 'upload.files_deleted')->exists())->toBeTrue();
-});
+})->group('admin');
 
 it('LGPD: excluir a CONTA pela página da conta apaga os uploads dela (banco e disco)', function (): void {
     $daEmpresa = enviaNaConta($this->empresa, $this->ana, 'da-empresa.pdf');

@@ -13,6 +13,7 @@ use Twstec\Kit\Admin\Widgets\Support\MetricFormat;
 use Twstec\Kit\Admin\Widgets\Support\MetricStat;
 use Twstec\Kit\Admin\Widgets\Support\Period;
 use Twstec\Kit\Auth\Support\UserModel;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
@@ -21,6 +22,8 @@ use Twstec\Kit\Foundation\Logging\Models\RequestLog;
  *
  * Dois deles são INVERTIDOS (`->inverted()`): em taxa de erro e latência,
  * subir é ruim — e a cor tem de dizer isso sem legenda.
+ *
+ * As chaves novas são do twstec/kit-accounts: sem ele, o card não aparece.
  */
 final class GrowthStats extends BaseStatsWidget
 {
@@ -66,12 +69,14 @@ final class GrowthStats extends BaseStatsWidget
                 ->icon(Heroicon::OutlinedBolt)
                 ->hint(__('admin.dashboards.growth.latency_hint')),
 
-            MetricStat::make(
-                __('admin.dashboards.growth.new_api_keys'),
-                Metric::count(fn () => ApiKey::query(), $period),
-            )
-                ->icon(Heroicon::OutlinedKey)
-                ->hint(__('admin.dashboards.growth.new_api_keys_hint')),
+            ...(Kit::has('accounts') ? [
+                MetricStat::make(
+                    __('admin.dashboards.growth.new_api_keys'),
+                    Metric::count(fn () => ApiKey::query(), $period),
+                )
+                    ->icon(Heroicon::OutlinedKey)
+                    ->hint(__('admin.dashboards.growth.new_api_keys_hint')),
+            ] : []),
         ];
     }
 }

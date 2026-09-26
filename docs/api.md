@@ -1,5 +1,9 @@
 # API e chaves de API
 
+> **Módulo opcional** (`twstec/kit-accounts`, com as contas). Sem ele não há
+> API v1 nem chaves; o `/api/health` continua com o limite e o envelope de
+> erro, ligados pelo aplicativo — ver [instalação e módulos](instalacao.md).
+
 Motor de chaves de API, resolução de tenant e a API v1 no pacote
 **`twstec/kit-accounts`** ([`packages/accounts`](../packages/accounts/README.md),
 namespaces `Twstec\Kit\Accounts\ApiKeys\…` e `Twstec\Kit\Accounts\Tenancy\…`).

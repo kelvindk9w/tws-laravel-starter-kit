@@ -155,7 +155,7 @@ it('registra navegação do super admin (/admin)', function () {
     $this->actingAs($admin)->get('/admin')->assertOk();
 
     expect(RequestLog::query()->where('endpoint', 'admin')->exists())->toBeTrue();
-});
+})->group('admin');
 
 it('não registra assets estáticos nem health checks (config excluded_paths)', function () {
     Route::get('/build/_test/app.css', fn () => response('/* css */', 200, ['Content-Type' => 'text/css']));

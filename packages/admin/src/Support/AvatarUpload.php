@@ -10,6 +10,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Foundation\Identifiers\UuidColumn;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Models\Upload;
 use Twstec\Kit\Uploads\Rules\SafeFile;
@@ -49,10 +50,23 @@ use Twstec\Kit\Uploads\Services\SecureUploadService;
  * A foto é servida por URL ASSINADA e de curta duração: o campo declara
  * `visibility('private')`, que é o que faz o Filament pedir `temporaryUrl()`
  * ao disco em vez de montar uma URL pública.
+ *
+ * SÓ COM O twstec/kit-uploads: sem o pacote não existe foto de perfil — as
+ * telas não mostram o campo (available()) e stateFor/denialFor/applyTo não
+ * fazem nada; o avatar do painel fica nas iniciais (InitialsAvatarProvider).
  */
 final class AvatarUpload
 {
     public const DIRECTORY = 'avatars';
+
+    /**
+     * A foto de perfil existe nesta aplicação (twstec/kit-uploads instalado)?
+     * As telas só chamam field() quando sim.
+     */
+    public static function available(): bool
+    {
+        return Kit::has('uploads');
+    }
 
     /**
      * O campo do formulário. `$name` não é coluna do model: o valor é lido
@@ -110,7 +124,7 @@ final class AvatarUpload
     {
         $uuids = self::uuidsIn($state);
 
-        if ($uuids === []) {
+        if ($uuids === [] || ! self::available()) {
             return null;
         }
 
@@ -137,6 +151,10 @@ final class AvatarUpload
      */
     public static function applyTo(Model&AuthUser $user, mixed $state): void
     {
+        if (! self::available()) {
+            return;
+        }
+
         $valores = self::valuesIn($state);
 
         if ($valores === []) {
@@ -179,7 +197,7 @@ final class AvatarUpload
     {
         // Consulta direta, não `$user->avatar->path`: a relação pode estar
         // carregada e desatualizada na instância autenticada.
-        return $user === null ? null : $user->avatar()->value('path');
+        return $user === null || ! self::available() ? null : $user->avatar()->value('path');
     }
 
     /**

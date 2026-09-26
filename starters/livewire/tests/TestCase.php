@@ -2,9 +2,11 @@
 
 namespace Tests;
 
+use App\Providers\Filament\AdminPanelProvider;
 use Composer\InstalledVersions;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use RuntimeException;
+use Twstec\Kit\Foundation\Kit;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -13,6 +15,15 @@ abstract class TestCase extends BaseTestCase
      * tudo em tests/Demo e os casos do produto marcados com `->group('demo')`.
      */
     public const DEMO_GROUP = 'demo';
+
+    /*
+     * MÓDULOS OPCIONAIS (twstec/kit-accounts, twstec/kit-uploads,
+     * twstec/kit-admin — escolhidos no `php artisan tws:install`): o teste
+     * que exercita um deles fica no grupo com o NOME DO MÓDULO (`accounts`,
+     * `uploads`, `admin`) — por pasta, em tests/Pest.php, ou caso a caso com
+     * `->group(...)`. Sem o módulo instalado (Kit::has), o teste PULA, com o
+     * motivo: a suíte de qualquer combinação é o `pest` de sempre.
+     */
 
     /**
      * A demonstração é um pacote de desenvolvimento (require-dev) que pode
@@ -27,6 +38,45 @@ abstract class TestCase extends BaseTestCase
         if (in_array(self::DEMO_GROUP, $this->groups(), true) && ! self::demoInstalled()) {
             $this->markTestSkipped('Demonstração do kit (twstec/kit-demo) não instalada.');
         }
+
+        foreach (Kit::OPTIONAL as $module) {
+            if (in_array($module, $this->groups(), true) && ! Kit::has($module)) {
+                $this->markTestSkipped(sprintf('Módulo opcional %s (%s) não instalado.', $module, Kit::package($module)));
+            }
+        }
+    }
+
+    /**
+     * Módulo fingido ausente (Kit::pretendAbsent) não vaza para o próximo
+     * teste.
+     */
+    protected function tearDown(): void
+    {
+        Kit::flushFakes();
+
+        parent::tearDown();
+    }
+
+    /**
+     * Classes do APLICATIVO que só carregam com um módulo opcional instalado
+     * (estendem ou implementam uma classe dele) => o módulo. Sem o módulo o
+     * aplicativo não as registra; os testes que varrem app/ com class_exists
+     * as pulam em vez de derrubar a suíte.
+     *
+     * @var array<class-string, string>
+     */
+    public const MODULE_ONLY_APP_CLASSES = [
+        AdminPanelProvider::class => 'admin',
+    ];
+
+    /**
+     * A classe do aplicativo carrega nesta instalação?
+     */
+    public static function appClassLoadable(string $class): bool
+    {
+        $module = self::MODULE_ONLY_APP_CLASSES[$class] ?? null;
+
+        return $module === null || Kit::has($module);
     }
 
     /**

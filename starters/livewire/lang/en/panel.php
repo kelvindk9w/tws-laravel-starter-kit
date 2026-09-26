@@ -76,6 +76,14 @@ return [
         'recent_calls_empty_description' => 'Create an API key and make the first request to see the audit trail here.',
         'call_endpoint' => 'Endpoint',
         'call_when' => 'When',
+
+        // Without the accounts package (twstec/kit-accounts): no keys,
+        // projects or API — the panel opens with the account shortcuts.
+        'essentials_title' => 'Your account',
+        'essentials_hint' => 'The settings that protect and personalize your access.',
+        'essentials_profile' => 'Name, language, login password and two-step verification.',
+        'essentials_transaction_password' => 'Authorizes the sensitive actions of your account.',
+        'essentials_notifications' => 'Choose which emails you want to receive.',
     ],
 
     // Profile.

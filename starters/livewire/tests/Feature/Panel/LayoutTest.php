@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Twstec\Kit\Foundation\Kit;
 
 // =============================================================================
 // Layout unificado: o painel do usuário usa o MESMO cabeçalho e o MESMO rodapé
@@ -68,7 +69,7 @@ it('painel mostra o menu lateral "Minha conta" com o item atual marcado', functi
     );
 
     expect($matches)->toBe(2);
-});
+})->group('accounts');
 
 it('a gaveta do mobile leva o site E o "Minha conta" quando há sessão', function () {
     $user = User::factory()->create();
@@ -91,7 +92,8 @@ it('cada item da conta aparece nos DOIS markups: coluna do desktop e gaveta', fu
     $response = $this->actingAs(User::factory()->create())->get('/dashboard')->assertOk();
 
     // Uma lista (App\Livewire\Support\Navigation), dois markups.
-    foreach (['dashboard', 'api_keys', 'projects', 'notifications', 'profile'] as $item) {
+    // Chaves e projetos são telas do pacote de contas (opcional).
+    foreach (['dashboard', ...(Kit::has('accounts') ? ['api_keys', 'projects'] : []), 'notifications', 'profile'] as $item) {
         expect(substr_count((string) $response->getContent(), __('panel.nav.'.$item)))
             ->toBeGreaterThanOrEqual(2);
     }

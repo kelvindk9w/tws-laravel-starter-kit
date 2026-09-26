@@ -27,7 +27,7 @@ it('permite admin no dashboard', function () {
     $admin = User::factory()->create(['is_admin' => true]);
 
     $this->actingAs($admin)->get('/horizon')->assertOk();
-});
+})->group('admin');
 
 it('rotas do Horizon respeitam a IP allowlist do admin (EnsureAdminIpAllowed)', function () {
     expect(config('horizon.middleware'))->toContain(EnsureAdminIpAllowed::class);

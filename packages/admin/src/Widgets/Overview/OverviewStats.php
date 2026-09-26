@@ -14,6 +14,7 @@ use Twstec\Kit\Admin\Widgets\Support\Metric;
 use Twstec\Kit\Admin\Widgets\Support\MetricStat;
 use Twstec\Kit\Admin\Widgets\Support\Period;
 use Twstec\Kit\Auth\Support\UserModel;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 /**
@@ -21,6 +22,9 @@ use Twstec\Kit\Foundation\Logging\Models\RequestLog;
  * credenciais vivas e projetos. Cada card mostra o TOTAL acumulado e compara
  * o que ENTROU no período com o período anterior — é a diferença entre "temos
  * 1.240 usuários" e "estamos crescendo".
+ *
+ * Chaves e projetos são do twstec/kit-accounts: sem ele, o widget mostra só
+ * pessoas e requisições.
  */
 final class OverviewStats extends BaseStatsWidget
 {
@@ -45,6 +49,18 @@ final class OverviewStats extends BaseStatsWidget
                 ->icon(Heroicon::OutlinedArrowsRightLeft)
                 ->hint(__('admin.dashboards.overview.requests_hint')),
 
+            ...(Kit::has('accounts') ? $this->accountMetrics($period) : []),
+        ];
+    }
+
+    /**
+     * Chaves ativas e projetos (twstec/kit-accounts).
+     *
+     * @return list<MetricStat>
+     */
+    private function accountMetrics(Period $period): array
+    {
+        return [
             MetricStat::make(
                 __('admin.dashboards.overview.api_keys'),
                 Metric::count(fn () => ApiKey::query(), $period),

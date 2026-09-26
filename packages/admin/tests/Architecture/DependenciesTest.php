@@ -178,19 +178,70 @@ it('as views do pacote não nomeiam o aplicativo nem usam componente Blade dele'
     expect($violations)->toBe([]);
 });
 
-it('declara no composer.json as dependências que usa — os quatro pacotes do kit, o Laravel, o Filament e o Livewire', function (): void {
+it('declara no composer.json as dependências que usa — foundation e auth obrigatórios, accounts e uploads opcionais, o Laravel, o Filament e o Livewire', function (): void {
     $composer = json_decode((string) file_get_contents(adminRoot().'/composer.json'), true);
 
+    // accounts e uploads são OPCIONAIS para o painel (ele se adapta ao que
+    // está instalado — ver AdminPlugin::RESOURCES): sugeridos, e instalados
+    // só para a suíte do pacote.
     expect(array_keys($composer['require']))->toBe([
         'php',
         'filament/filament',
         'laravel/framework',
         'livewire/livewire',
-        'twstec/kit-accounts',
         'twstec/kit-auth',
         'twstec/kit-foundation',
-        'twstec/kit-uploads',
-    ]);
+    ])
+        ->and(array_keys($composer['suggest']))->toBe(['twstec/kit-accounts', 'twstec/kit-uploads'])
+        ->and($composer['require-dev'])->toHaveKeys(['twstec/kit-accounts', 'twstec/kit-uploads']);
+});
+
+it('só usa accounts e uploads onde pergunta antes se o módulo está instalado', function (): void {
+    // Todo arquivo que nomeia uma classe de accounts ou uploads está na lista
+    // revisada abaixo — e cada um confere Kit::has() (ou é uma tela, widget ou
+    // campo que só é registrado quando o módulo existe). Arquivo novo que
+    // passe a nomear um dos dois reprova aqui até ser revisado.
+    $registradosSoComOModulo = [
+        // Registrados só com o módulo (AdminPlugin::RESOURCES e os dashboards).
+        'src/Resources/Accounts/AccountResource.php',
+        'src/Resources/ApiKeys/ApiKeyResource.php',
+        'src/Resources/Projects/ProjectResource.php',
+        'src/Resources/Uploads/UploadResource.php',
+        'src/Widgets/Growth/RecentProjectsTable.php',
+        'src/Widgets/Overview/LatestUploads.php',
+    ];
+
+    $perguntamAntes = [
+        'src/Http/Middleware/OperateAdminPanelAsSystem.php',
+        'src/Resources/AuditEvents/AuditEventResource.php',
+        'src/Resources/Users/Support/UserAdminGuard.php',
+        'src/Support/AvatarUpload.php',
+        'src/Widgets/Growth/GrowthStats.php',
+        'src/Widgets/Overview/OverviewStats.php',
+    ];
+
+    $usam = [];
+
+    foreach ((new Finder)->files()->in(adminRoot().'/src')->name('*.php') as $file) {
+        $path = str_replace(adminRoot().'/', '', $file->getRealPath());
+
+        foreach (adminClassNamesIn($file->getContents())['all'] as $name) {
+            if (str_starts_with($name, 'Twstec\\Kit\\Accounts\\') || str_starts_with($name, 'Twstec\\Kit\\Uploads\\')) {
+                $usam[$path] = true;
+            }
+        }
+    }
+
+    $usam = array_keys($usam);
+    $revisados = [...$registradosSoComOModulo, ...$perguntamAntes];
+    sort($usam);
+    sort($revisados);
+
+    expect($usam)->toBe($revisados);
+
+    foreach ($perguntamAntes as $path) {
+        expect((string) file_get_contents(adminRoot().'/'.$path))->toMatch('/Kit::has\\(|AvatarUpload::available\\(/');
+    }
 });
 
 it('a leitura por tokens pega o que deve pegar (a trava não é cega)', function (): void {

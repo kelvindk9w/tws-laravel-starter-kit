@@ -9,6 +9,7 @@ use Twstec\Kit\Admin\Widgets\Growth\RecentProjectsTable;
 use Twstec\Kit\Admin\Widgets\Growth\RequestsGoalProgress;
 use Twstec\Kit\Admin\Widgets\Growth\TopEndpointsChart;
 use Twstec\Kit\Admin\Widgets\Growth\UsersGrowthChart;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * VARIANTE B — "Crescimento & API" (SaaS).
@@ -39,7 +40,8 @@ final class GrowthDashboard extends BaseDashboard
             UsersGrowthChart::class,
             TopEndpointsChart::class,
             RequestsGoalProgress::class,
-            RecentProjectsTable::class,
+            // Projetos são do twstec/kit-accounts.
+            ...(Kit::has('accounts') ? [RecentProjectsTable::class] : []),
         ];
     }
 }

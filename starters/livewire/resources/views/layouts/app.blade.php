@@ -21,15 +21,20 @@
             :groups="Navigation::account()"
             mobile="none"
         >
-            {{-- A conta atual em todo o painel, e a troca de conta. --}}
-            <x-slot:header>
-                <x-account-switcher />
-            </x-slot:header>
+            {{-- A conta atual em todo o painel, e a troca de conta — só com o
+                 pacote de contas (twstec/kit-accounts) instalado. --}}
+            @kit('accounts')
+                <x-slot:header>
+                    <x-account-switcher />
+                </x-slot:header>
+            @endkit
         </x-side-nav>
 
         <main class="min-w-0 flex-1">
             {{-- No celular a coluna some: o seletor abre o conteúdo. --}}
-            <x-account-switcher class="mb-6 lg:hidden" />
+            @kit('accounts')
+                <x-account-switcher class="mb-6 lg:hidden" />
+            @endkit
 
             {{ $slot }}
         </main>

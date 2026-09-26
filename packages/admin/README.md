@@ -8,15 +8,18 @@ e-mail, variantes de dashboard, a trilha de auditoria de toda ação do painel
 aplicativo.
 
 É a camada de cima do kit e o único pacote com telas: depende do
-[`twstec/kit-uploads`](../uploads), do [`twstec/kit-accounts`](../accounts), do
 [`twstec/kit-auth`](../auth), do [`twstec/kit-foundation`](../foundation), do
-Laravel e do Filament (com o Livewire, que o Filament usa). Não conhece o
+Laravel e do Filament (com o Livewire, que o Filament usa). O
+[`twstec/kit-accounts`](../accounts) e o [`twstec/kit-uploads`](../uploads) são
+**sugeridos** (`suggest`), não exigidos: o painel se adapta ao que está
+instalado (abaixo). Não conhece o
 aplicativo — o model de usuário é o configurado em
 `auth.providers.users.model` — e um teste de arquitetura na suíte do pacote
 garante isso.
 
-- **Requisitos:** PHP 8.4+, Laravel 13, Filament 5, Livewire 4 e os quatro
-  pacotes do kit 2.x.
+- **Requisitos:** PHP 8.4+, Laravel 13, Filament 5, Livewire 4,
+  `twstec/kit-foundation` e `twstec/kit-auth` 2.x (e, se quiser as telas
+  deles, `twstec/kit-accounts` e `twstec/kit-uploads` 2.x).
 - **Licença:** MIT.
 
 ## O que o pacote traz
@@ -34,6 +37,24 @@ garante isso.
 | `Resources\Users\Support\UserAdminGuard`, `MarkEmailVerifiedAction` | Guardas de servidor (conta protegida, a própria conta, o último admin ativo) e a ação de suporte |
 | `Support\AvatarUpload` | O campo de foto: grava pela função global de upload (foto pessoal) e só vincula upload da própria pessoa |
 | `Console\MakeAdminUser` | `php artisan user:make-admin email [--remove]` — o resgate de acesso, auditado no contexto console |
+
+## Módulos opcionais: o painel se adapta
+
+O plugin pergunta ao ponto único de detecção do kit
+(`Twstec\Kit\Foundation\Kit::has()`) o que está instalado e só registra o que
+existe (`AdminPlugin::RESOURCES` diz qual tela é de qual módulo):
+
+| Sem… | O painel |
+| --- | --- |
+| `twstec/kit-accounts` | Sem as telas de contas, chaves de API e projetos (nem menu, nem rota); sem o filtro por conta na trilha de auditoria; os dashboards sem os cards de chaves/projetos e sem a tabela de projetos recentes; sem o modo sistema das contas (não há contas); a guarda de exclusão de usuário não consulta contas |
+| `twstec/kit-uploads` | Sem a tela de uploads e o widget dos últimos uploads; sem o campo de foto no cadastro de usuário e no perfil do admin (o avatar são as iniciais) |
+
+Uma trava de arquitetura da suíte (`DependenciesTest`) confere que todo
+arquivo do pacote que nomeia uma classe de `accounts` ou `uploads` é uma tela
+registrada só com o módulo ou pergunta `Kit::has()` antes. A suíte finge a
+ausência (`Kit::pretendAbsent`) e sobe o painel de novo (`OptionalModulesTest`);
+a prova com os pacotes ausentes de verdade é a suíte do starter em cada
+combinação, no CI.
 
 ## Instalação
 

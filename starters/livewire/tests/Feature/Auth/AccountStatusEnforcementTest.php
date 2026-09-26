@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Enums\UserStatus;
+use Twstec\Kit\Foundation\Kit;
 
 // =============================================================================
 // STATUS DA CONTA VALE A CADA REQUISIÇÃO, NÃO SÓ NO LOGIN
@@ -52,8 +53,8 @@ it('conta desativada com sessão aberta perde as páginas do painel na próxima 
     $this->assertGuest();
 })->with([
     'dashboard' => '/dashboard',
-    'chaves de API' => '/api-keys',
-    'projetos' => '/projects',
+    // Telas do pacote de contas (twstec/kit-accounts, opcional): só com ele.
+    ...(Kit::has('accounts') ? ['chaves de API' => '/api-keys', 'projetos' => '/projects'] : []),
     'perfil' => '/profile',
     'notificações' => '/notifications',
     'senha de transação' => '/settings/transaction-password',
@@ -102,6 +103,23 @@ it('conta desativada não executa ação Livewire do painel pelo endpoint real',
 
     expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->exists()))->toBeFalse();
     $this->assertGuest();
+})->with(statusesInativos())->group('accounts');
+
+it('conta desativada não executa ação Livewire do perfil pelo endpoint real (em qualquer combinação de módulos)', function (UserStatus $status): void {
+    $user = User::factory()->create(['name' => 'Nome antes']);
+
+    // A mesma prova da ação de projetos, numa tela que existe sem nenhum
+    // módulo opcional instalado.
+    $html = $this->actingAs($user)->get('/profile')->assertOk()->getContent();
+    $snapshot = livewireSnapshotFrom((string) $html, 'profile');
+
+    $user->forceFill(['status' => $status])->save();
+
+    livewireCall($this, $snapshot, 'updateProfile', ['name' => 'Nome depois do bloqueio'])
+        ->assertRedirect(route('login'));
+
+    expect($user->fresh()->name)->toBe('Nome antes');
+    $this->assertGuest();
 })->with(statusesInativos());
 
 it('conta ativa continua operando o painel, inclusive a ação Livewire', function (): void {
@@ -114,7 +132,7 @@ it('conta ativa continua operando o painel, inclusive a ação Livewire', functi
 
     expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->where('name', 'Projeto ativo')->exists()))->toBeTrue();
     $this->assertAuthenticatedAs($user);
-});
+})->group('accounts');
 
 it('a mensagem do encerramento sai no idioma da conta', function (): void {
     $user = User::factory()->create(['locale' => 'en']);
@@ -143,7 +161,7 @@ it('a mensagem sobrevive ao redirecionamento seguido pelo cliente do Livewire', 
     $this->flushHeaders()->get(route('login'))
         ->assertOk()
         ->assertSee(__('auth.account_inactive'));
-});
+})->group('accounts');
 
 it('visitante e páginas públicas seguem intactos', function (): void {
     $this->get('/')->assertOk();
@@ -175,4 +193,4 @@ it('chave de API emitida antes do bloqueio para de funcionar na chamada seguinte
     $this->getJson('/api/v1/projects', headersApi($key, $secret))
         ->assertUnauthorized()
         ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
-})->with(statusesInativos());
+})->with(statusesInativos())->group('accounts');

@@ -4,11 +4,19 @@
     "description": "Demonstração do TWS Laravel Starter Kit, para o ambiente de DESENVOLVIMENTO: as landings (/ e /v2), a vitrine de componentes (/ui), o formulário de contato, o catálogo de produtos e a caixa de submissões de exemplo no /admin, as contas demo de credenciais públicas (protegidas contra alteração, inclusive no banco) e os seeders de dado fictício. Instale só em require-dev — nunca numa instalação com dado real.",
     "type": "library",
     "license": "MIT",
-    "keywords": [
-        "laravel",
-        "demo",
-        "starter-kit"
+    "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+    "authors": [
+        {
+            "name": "TWS",
+            "homepage": "https://github.com/kelvindk9w"
+        }
     ],
+    "support": {
+        "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+        "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/demo",
+        "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+    },
+    "keywords": ["laravel", "demo", "starter-kit"],
     "require": {
         "php": "^8.4",
         "fakerphp/faker": "^1.23",
@@ -44,6 +52,9 @@
             "providers": [
                 "Twstec\\Kit\\Demo\\DemoServiceProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "2.x-dev"
         }
     },
     "scripts": {

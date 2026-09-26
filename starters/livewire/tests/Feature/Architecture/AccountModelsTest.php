@@ -5,11 +5,13 @@ declare(strict_types=1);
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\Finder\Finder;
+use Tests\TestCase;
 use Twstec\Kit\Accounts\Account\Concerns\BelongsToAccount;
 use Twstec\Kit\Accounts\Account\Models\AccountMembership;
 use Twstec\Kit\Accounts\Account\Scopes\AccountScope;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
@@ -40,7 +42,7 @@ function modelsDoKit(): array
 
         $classe = $ns[1].'\\'.$cl[1];
 
-        if (class_exists($classe) && is_subclass_of($classe, Model::class) && ! (new ReflectionClass($classe))->isAbstract()) {
+        if (TestCase::appClassLoadable($classe) && class_exists($classe) && is_subclass_of($classe, Model::class) && ! (new ReflectionClass($classe))->isAbstract()) {
             $classes[] = $classe;
         }
     }
@@ -70,7 +72,7 @@ it('todo model com account_id carrega o escopo da conta atual', function (): voi
     }
 
     // A descoberta não é cega: os models da conta de hoje estão lá.
-    expect($comConta)->toContain(Project::class, ApiKey::class, Upload::class)
+    expect($comConta)->toContain(Project::class, ApiKey::class, ...(Kit::has('uploads') ? [Upload::class] : []))
         ->and($semEscopo)->toBe([]);
 });
 
@@ -79,8 +81,9 @@ it('registro SEM conta só nos models revisados (hoje: a foto pessoal dos upload
     // sistema declarado — quando ele sobrescreve allowsRecordWithoutAccount().
     // Um model novo que abrir essa porta reprova aqui até ser revisado.
     $revisados = [
-        // A foto de perfil é da PESSOA, não de uma conta (ver HasAvatar).
-        Upload::class,
+        // A foto de perfil é da PESSOA, não de uma conta (ver HasAvatar) —
+        // com o pacote de uploads (opcional) instalado.
+        ...(Kit::has('uploads') ? [Upload::class] : []),
     ];
 
     $abrem = [];

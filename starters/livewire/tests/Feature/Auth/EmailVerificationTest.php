@@ -14,6 +14,7 @@ use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Notifications\ResetPasswordNotification;
 use Twstec\Kit\Auth\Notifications\VerifyEmailNotification;
 use Twstec\Kit\Auth\Support\EmailVerification;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // =============================================================================
@@ -34,8 +35,8 @@ function rotasDoPainel(): array
 {
     return [
         'dashboard' => '/dashboard',
-        'chaves de API' => '/api-keys',
-        'projetos' => '/projects',
+        // Telas do pacote de contas (twstec/kit-accounts, opcional): só com ele.
+        ...(Kit::has('accounts') ? ['chaves de API' => '/api-keys', 'projetos' => '/projects'] : []),
         'perfil' => '/profile',
         'notificações' => '/notifications',
         'senha de transação' => '/settings/transaction-password',
@@ -174,6 +175,20 @@ it('conta sem e-mail confirmado não executa ação Livewire do painel pelo endp
         ->assertRedirect(route('verification.notice'));
 
     expect(comoSistema(fn () => Project::query()->where('account_id', contaPessoal($user)->id)->exists()))->toBeFalse();
+})->group('accounts');
+
+it('conta sem e-mail confirmado não executa ação Livewire do perfil pelo endpoint real (em qualquer combinação de módulos)', function (): void {
+    $user = User::factory()->create(['name' => 'Nome antes']);
+
+    $html = $this->actingAs($user)->get('/profile')->assertOk()->getContent();
+    $snapshot = livewireSnapshotFrom((string) $html, 'profile');
+
+    $user->forceFill(['email_verified_at' => null])->save();
+
+    livewireCall($this, $snapshot, 'updateProfile', ['name' => 'Nome sem verificação'])
+        ->assertRedirect(route('verification.notice'));
+
+    expect($user->fresh()->name)->toBe('Nome antes');
 });
 
 it('a mensagem de JSON sai no idioma da conta', function (): void {
@@ -299,9 +314,9 @@ it('o link confirma o e-mail, dispara Verified e libera o painel', function (): 
 it('depois de confirmar, volta para a página que a pessoa tentou abrir', function (): void {
     $user = User::factory()->unverified()->create();
 
-    $this->actingAs($user)->get('/projects')->assertRedirect(route('verification.notice'));
+    $this->actingAs($user)->get('/notifications')->assertRedirect(route('verification.notice'));
 
-    $this->get(EmailVerification::verificationUrl($user))->assertRedirect(url('/projects'));
+    $this->get(EmailVerification::verificationUrl($user))->assertRedirect(url('/notifications'));
 });
 
 it('destino guardado fora da aplicação não é obedecido: cai no painel (SafeRedirect)', function (): void {
@@ -413,13 +428,13 @@ it('chave de API de conta sem e-mail confirmado não autentica', function (): vo
     $this->getJson('/api/v1/projects', headersApi($key, $secret))
         ->assertUnauthorized()
         ->assertJsonPath('error.message', __('api_keys.auth.invalid'));
-});
+})->group('accounts');
 
 it('conta sem e-mail confirmado não chega à tela de criar chave', function (): void {
     $user = User::factory()->unverified()->create();
 
     $this->actingAs($user)->get('/api-keys')->assertRedirect(route('verification.notice'));
-});
+})->group('accounts');
 
 // -----------------------------------------------------------------------------
 // Flag desligada
@@ -444,7 +459,7 @@ it('com a exigência desligada, conta sem e-mail confirmado opera painel e API',
     $this->actingAs($user)->get('/dashboard')->assertOk();
     $this->actingAs($user)->get(route('verification.notice'))->assertRedirect(route('dashboard'));
     $this->getJson('/api/v1/projects', headersApi($key, $secret))->assertOk();
-});
+})->group('accounts');
 
 it('a exigência vem ligada por padrão', function (): void {
     expect(config('auth.email_verification.required'))->toBeTrue()
@@ -495,13 +510,13 @@ it('user:make-admin marca o e-mail como confirmado ao promover', function (): vo
     $this->artisan('user:make-admin', ['email' => 'promovido@example.com', '--remove' => true])->assertSuccessful();
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-});
+})->group('admin');
 
 it('o /admin não trava por verificação de e-mail', function (): void {
     $admin = User::factory()->unverified()->create(['is_admin' => true]);
 
     $this->actingAs($admin)->get('/admin')->assertOk();
-});
+})->group('admin');
 
 it('a migration marca como confirmadas as contas que já existiam', function (): void {
     $antiga = User::factory()->unverified()->create();

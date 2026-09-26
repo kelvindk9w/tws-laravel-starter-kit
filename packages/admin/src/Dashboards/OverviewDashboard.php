@@ -8,6 +8,7 @@ use Twstec\Kit\Admin\Widgets\Overview\LatestUploads;
 use Twstec\Kit\Admin\Widgets\Overview\OverviewStats;
 use Twstec\Kit\Admin\Widgets\Overview\RequestsStatusChart;
 use Twstec\Kit\Admin\Widgets\Overview\RequestsTrendChart;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * VARIANTE A — "Visão Geral" (Analytics).
@@ -40,7 +41,8 @@ final class OverviewDashboard extends BaseDashboard
             OverviewStats::class,
             RequestsTrendChart::class,
             RequestsStatusChart::class,
-            LatestUploads::class,
+            // Uploads são do twstec/kit-uploads.
+            ...(Kit::has('uploads') ? [LatestUploads::class] : []),
         ]);
     }
 }

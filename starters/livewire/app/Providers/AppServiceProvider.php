@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Livewire\Support\SiteLinks;
+use App\Providers\Filament\AdminPanelProvider;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
+use Twstec\Kit\Foundation\Kit;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
         // Links do site acrescentados por extensões (cabeçalho e rodapé
         // públicos — ver SiteLinks). Um por aplicação: nada vaza entre testes.
         $this->app->singleton(SiteLinks::class);
+
+        // O painel /admin é OPCIONAL (twstec/kit-admin, que traz o Filament):
+        // o PanelProvider do aplicativo só é registrado com o pacote
+        // instalado. Fica aqui, e não no bootstrap/providers.php, porque o
+        // `make:provider` reescreve aquele arquivo e apagaria a condição.
+        if (Kit::has('admin')) {
+            $this->app->register(AdminPanelProvider::class);
+        }
     }
 
     /**

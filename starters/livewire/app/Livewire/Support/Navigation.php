@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\Support;
 
+use Twstec\Kit\Foundation\Kit;
+
 /**
  * Mapa de navegação do site — UMA verdade para todos os markups.
  *
@@ -23,6 +25,11 @@ namespace App\Livewire\Support;
  * Formato de um item:
  *   ['label' => 'Perfil', 'href' => '/profile', 'icon' => 'user-circle',
  *    'active' => bool, 'anchor' => 'perfil'|null]
+ *
+ * MÓDULOS OPCIONAIS: item de tela de um módulo opcional declara o módulo
+ * (`'module' => 'accounts'`) e só aparece com ele instalado (Kit::has — a
+ * mesma pergunta que decide se a rota existe, em routes/web.php). Grupo que
+ * fica sem item some.
  */
 final class Navigation
 {
@@ -70,14 +77,14 @@ final class Navigation
             [
                 'label' => __('panel.nav.groups.development'),
                 'items' => [
-                    ['route' => 'panel.api-keys', 'label' => __('panel.nav.api_keys'), 'icon' => 'key'],
-                    ['route' => 'panel.projects', 'label' => __('panel.nav.projects'), 'icon' => 'folder'],
+                    ['route' => 'panel.api-keys', 'label' => __('panel.nav.api_keys'), 'icon' => 'key', 'module' => 'accounts'],
+                    ['route' => 'panel.projects', 'label' => __('panel.nav.projects'), 'icon' => 'folder', 'module' => 'accounts'],
                 ],
             ],
             [
                 'label' => __('panel.nav.groups.account'),
                 'items' => [
-                    ['route' => 'panel.account', 'label' => __('panel.nav.account'), 'icon' => 'user-group'],
+                    ['route' => 'panel.account', 'label' => __('panel.nav.account'), 'icon' => 'user-group', 'module' => 'accounts'],
                     ['route' => 'panel.notifications', 'label' => __('panel.nav.notifications'), 'icon' => 'bell'],
                     ['route' => 'panel.profile', 'label' => __('panel.nav.profile'), 'icon' => 'user-circle'],
                     ['route' => 'transaction-password.edit', 'label' => __('panel.nav.transaction_password'), 'icon' => 'lock-closed'],
@@ -85,7 +92,15 @@ final class Navigation
             ],
         ];
 
-        return array_map(static fn (array $group): array => [
+        $groups = array_map(static fn (array $group): array => [
+            'label' => $group['label'],
+            'items' => array_values(array_filter(
+                $group['items'],
+                static fn (array $item): bool => ! isset($item['module']) || Kit::has($item['module']),
+            )),
+        ], $groups);
+
+        return array_values(array_map(static fn (array $group): array => [
             'label' => $group['label'],
             'items' => array_map(static fn (array $item): array => [
                 'label' => $item['label'],
@@ -93,6 +108,6 @@ final class Navigation
                 'icon' => $item['icon'],
                 'active' => request()->routeIs($item['route']),
             ], $group['items']),
-        ], $groups);
+        ], array_filter($groups, static fn (array $group): bool => $group['items'] !== [])));
     }
 }

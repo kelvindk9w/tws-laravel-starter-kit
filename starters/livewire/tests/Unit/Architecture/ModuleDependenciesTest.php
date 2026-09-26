@@ -148,8 +148,10 @@ const PRODUCT_DEMO_JUNCTIONS = [];
 
 /**
  * Pacotes do kit que são PRODUTO (a demo não pode aparecer em nenhum deles).
+ * O instalador conhece a demo só pelo NOME DO PACOTE (para tirá-la), nunca
+ * pelo namespace. Pacote opcional não instalado fica de fora da leitura.
  */
-const PRODUCT_PACKAGES = ['kit-foundation', 'kit-auth', 'kit-accounts', 'kit-uploads', 'kit-admin'];
+const PRODUCT_PACKAGES = ['kit-foundation', 'kit-auth', 'kit-accounts', 'kit-uploads', 'kit-admin', 'kit-installer'];
 
 /**
  * Prefixos de nome da demonstração: o atual e o antigo (F1b).
@@ -564,6 +566,11 @@ it('declara a demonstração só como dependência de desenvolvimento', function
 
     // E nenhum pacote do produto depende dela.
     foreach (PRODUCT_PACKAGES as $package) {
+        // Módulo opcional não instalado (ver tws:install): nada a conferir.
+        if (! is_dir(base_path("vendor/twstec/{$package}"))) {
+            continue;
+        }
+
         $manifesto = base_path("vendor/twstec/{$package}/composer.json");
         $dados = json_decode((string) file_get_contents($manifesto), true);
 
@@ -780,7 +787,7 @@ it('usa os nomes novos das classes do painel /admin, nunca os apelidos App\\Fila
 
     expect($antigos)->not->toBeEmpty()
         ->and($violations)->toBe([]);
-});
+})->group('admin');
 
 it('deixa app/Core vazio: todo o backend do kit mora nos pacotes', function (): void {
     // Desde a extração do pacote uploads (F6), nenhum arquivo do aplicativo

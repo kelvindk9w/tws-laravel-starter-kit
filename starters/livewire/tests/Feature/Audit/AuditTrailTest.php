@@ -179,7 +179,7 @@ it('o escopo do /admin fecha ao fim da chamada Livewire', function () {
     $alvo->forceFill(['name' => 'Fora do Painel'])->save();
 
     expect(AuditEvent::query()->where('subject_uuid', $alvo->uuid)->count())->toBe(1);
-});
+})->group('admin');
 
 // -----------------------------------------------------------------------------
 // Falha fechada
@@ -214,7 +214,7 @@ it('FALHA FECHADA: se a linha da trilha não pode ser gravada, a mudança do adm
         // A segunda camada (arquivo) registra a ação que não pôde ser gravada.
         ->and($falha['context']['action'] ?? null)->toBe('user.updated')
         ->and($falha['context']['subject_uuid'] ?? null)->toBe($alvo->uuid);
-});
+})->group('admin');
 
 // -----------------------------------------------------------------------------
 // Console: user:make-admin
@@ -239,7 +239,7 @@ it('user:make-admin grava user.admin_granted e user.admin_revoked no contexto co
         ->and($concedido->changes['is_admin'])->toBe(['before' => false, 'after' => true])
         ->and($revogado->changes['is_admin'])->toBe(['before' => true, 'after' => false])
         ->and($revogado->user_agent)->toContain('--remove');
-});
+})->group('admin');
 
 it('user:make-admin: conta demo e e-mail inexistente ficam como denied, sem o e-mail digitado na trilha', function () {
     config()->set('ui.demo_login.enabled', true);
@@ -258,7 +258,7 @@ it('user:make-admin: conta demo e e-mail inexistente ficam como denied, sem o e-
         ->and(json_encode($recusas->map->getAttributes()))->not->toContain('ninguem-aqui@example.com')
         ->and(json_encode($recusas->map->getAttributes()))->not->toContain((string) $demo->email)
         ->and($demo->fresh()->is_admin)->toBeFalse();
-})->group('demo');
+})->group('demo')->group('admin');
 
 // -----------------------------------------------------------------------------
 // Retenção

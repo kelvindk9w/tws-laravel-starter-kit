@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\View\Factory as ViewFactory;
 use LogicException;
 use Spatie\Backup\Commands\BackupCommand;
@@ -152,6 +153,7 @@ final class FoundationServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom($this->path('database/migrations'));
 
         $this->registerViews();
+        $this->registerModuleDirective();
 
         if ($this->app->runningInConsole()) {
             $this->publishes(
@@ -294,6 +296,18 @@ final class FoundationServiceProvider extends ServiceProvider
 
         $this->callAfterResolving('view', function (ViewFactory $factory) use ($views): void {
             $factory->addLocation($views);
+        });
+    }
+
+    /**
+     * `@kit('uploads') … @else … @endkit` nas views: o bloco só aparece com o
+     * módulo opcional instalado. A pergunta é a mesma de todo o resto do
+     * kit — Kit::has() —, para uma tela nunca decidir por conta própria.
+     */
+    private function registerModuleDirective(): void
+    {
+        $this->callAfterResolving('blade.compiler', function (BladeCompiler $blade): void {
+            $blade->if('kit', static fn (string $module): bool => Kit::has($module));
         });
     }
 

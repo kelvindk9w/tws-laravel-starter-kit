@@ -132,7 +132,7 @@ it('faz upload do avatar pela função global de upload seguro', function () {
         ->and($user->fresh()->avatar_upload_id)->toBe($upload->id);
 
     Storage::disk('uploads-test')->assertExists((string) $upload->path);
-});
+})->group('uploads');
 
 it('rejeita avatar que não é imagem de verdade (validação por conteúdo)', function () {
     $user = User::factory()->create();
@@ -145,7 +145,7 @@ it('rejeita avatar que não é imagem de verdade (validação por conteúdo)', f
 
     expect(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
-});
+})->group('uploads');
 
 it('texto renomeado para .png é recusado com a mensagem da validação por conteúdo', function () {
     $user = User::factory()->create();
@@ -170,4 +170,4 @@ it('texto renomeado para .png é recusado com a mensagem da validação por cont
         ->and(array_values(__('uploads.rejected')))->toContain($erros[0])
         ->and(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
-});
+})->group('uploads');

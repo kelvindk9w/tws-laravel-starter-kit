@@ -26,6 +26,7 @@ use Twstec\Kit\Demo\Filament\Resources\Products\Pages\ListProducts;
 use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Logging\Models\RequestLog;
 
 // =============================================================================
@@ -207,7 +208,7 @@ it('revogar chave de API grava api_key.revoked, sem o hash da secreta', function
         ->and($evento->changes['status'])->toBe(['before' => 'active', 'after' => 'revoked'])
         ->and(json_encode($evento->getAttributes()))->not->toContain($secret)
         ->and(json_encode($evento->getAttributes()))->not->toContain((string) $key->getRawOriginal('secret_hash'));
-});
+})->group('accounts');
 
 it('produto: criar, editar e excluir gravam product.created/updated/deleted', function () {
     Livewire::test(CreateProduct::class)
@@ -233,26 +234,31 @@ it('produto: criar, editar e excluir gravam product.created/updated/deleted', fu
 })->group('demo');
 
 it('configurações: cada chave alterada vira setting.changed com o de/para; chave intocada não gera linha', function () {
+    // A expiração das chaves de API é do pacote de contas (opcional); sem
+    // ele, a mesma prova com o limite das rotas sensíveis.
+    $chave = Kit::has('accounts') ? 'api_keys.inactivity.months' : 'security.rate_limit.sensitive';
+    $campo = 'data.'.str_replace('.', '_', $chave);
+
     Livewire::test(Settings::class)
-        ->set('data.api_keys_inactivity_months', 6)
+        ->set($campo, 6)
         ->call('save')
         ->assertHasNoFormErrors();
 
     Livewire::test(Settings::class)
-        ->set('data.api_keys_inactivity_months', 9)
+        ->set($campo, 9)
         ->call('save');
 
     Livewire::test(Settings::class)
-        ->set('data.api_keys_inactivity_months', null)
+        ->set($campo, null)
         ->call('save');
 
     $linhas = AuditEvent::query()->where('action', 'setting.changed')->orderBy('id')->get();
 
     expect($linhas)->toHaveCount(3)
         ->and($linhas->pluck('changes')->all())->toBe([
-            ['api_keys.inactivity.months' => ['before' => null, 'after' => 6]],
-            ['api_keys.inactivity.months' => ['before' => 6, 'after' => 9]],
-            ['api_keys.inactivity.months' => ['before' => 9, 'after' => null]],
+            [$chave => ['before' => null, 'after' => 6]],
+            [$chave => ['before' => 6, 'after' => 9]],
+            [$chave => ['before' => 9, 'after' => null]],
         ])
         ->and($linhas->every(fn (AuditEvent $e): bool => $e->context === AuditContext::Admin
             && $e->actor_uuid === $this->admin->uuid

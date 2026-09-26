@@ -112,8 +112,8 @@ final class UserResource extends BaseResource
                             ->unique(ignoreRecord: true),
                         // A foto passa pela função global de upload do kit
                         // (SecureUploadService) e é servida por URL assinada
-                        // — ver AvatarUpload.
-                        AvatarUpload::field()->columnSpanFull(),
+                        // — ver AvatarUpload. Só com o twstec/kit-uploads.
+                        ...(AvatarUpload::available() ? [AvatarUpload::field()->columnSpanFull()] : []),
                     ]),
                 Section::make(__('admin.users.section_access'))
                     ->columnSpanFull()

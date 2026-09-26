@@ -1,0 +1,113 @@
+# PUBLICAÇÃO — split do monorepo para os repositórios só-leitura (DESLIGADO).
+#
+# A cada tag `v2.*`, copiaria cada pacote (packages/*) e o starter
+# (starters/livewire) para o repositório só-leitura dele, com a mesma tag; o
+# Packagist lê esses repositórios (webhook) e publica a versão. Quem usa o kit
+# instala só o que escolheu (`composer require twstec/kit-auth`, ou
+# `composer create-project twstec/starter-livewire` / `laravel new --using=`).
+#
+# ESTÁ DESLIGADO até a fase F10b, que depende do dono: os repositórios vazios
+# criados na conta kelvindk9w (nomes na matriz), o segredo SPLIT_TOKEN (token
+# com escrita SÓ nesses repositórios) e o registro de cada um no Packagist,
+# com o webhook. O job só roda com a VARIÁVEL do repositório
+# KIT_SPLIT_ENABLED = true (Settings → Secrets and variables → Actions →
+# Variables), que não existe: a tag dispara o workflow e o job sai como
+# "skipped". Ligar = criar a variável; desligar de novo = apagá-la. (Um
+# `if: false` literal faria o mesmo, mas o actionlint o recusa como condição
+# constante.)
+#
+# Antes da cópia, o composer.json de cada pasta vira o da versão publicada
+# (.github/release/prepare-composer.php): sem os path repositories do
+# monorepo, com os pacotes do kit em `^2.0` (no starter, `^2.0@beta` enquanto
+# a versão for pré-release) e, no starter, sem o composer.lock. É exatamente o
+# que a simulação da instalação publicada, no CI, instala e testa
+# (.github/release/simulate-install.sh).
+name: Publicação (split) — desligada
+
+on:
+  push:
+    tags: ['v2.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag a publicar (ex.: v2.0.0-beta.1) — precisa existir no monorepo'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: split-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  split:
+    name: Split · ${{ matrix.path }}
+    # DESLIGADO até a F10b (ver o cabeçalho): sem a variável, não roda.
+    if: vars.KIT_SPLIT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - path: packages/foundation
+            repository: twstec-kit-foundation
+          - path: packages/auth
+            repository: twstec-kit-auth
+          - path: packages/accounts
+            repository: twstec-kit-accounts
+          - path: packages/uploads
+            repository: twstec-kit-uploads
+          - path: packages/admin
+            repository: twstec-kit-admin
+          - path: packages/demo
+            repository: twstec-kit-demo
+          # O instalador (require-dev do starter): sem ele publicado, o
+          # `composer create-project` do starter não resolve.
+          - path: packages/installer
+            repository: twstec-kit-installer
+          - path: starters/livewire
+            repository: twstec-starter-livewire
+
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      SPLIT_OWNER: kelvindk9w
+
+    steps:
+      # Só tag de versão 2.x (a entrada manual também passa por aqui).
+      - name: Tag válida
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v2\.[0-9]+\.[0-9]+(-(alpha|beta|RC|rc)\.[0-9]+)?$'; then
+            echo "tag inválida: $TAG"; exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: composer.json da versão publicada
+        run: php .github/release/prepare-composer.php "${{ matrix.path }}" "$TAG"
+
+      - name: Cópia para ${{ env.SPLIT_OWNER }}/${{ matrix.repository }}
+        uses: symplify/monorepo-split-github-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        with:
+          package_directory: ${{ matrix.path }}
+          repository_organization: ${{ env.SPLIT_OWNER }}
+          repository_name: ${{ matrix.repository }}
+          branch: main
+          tag: ${{ env.TAG }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com

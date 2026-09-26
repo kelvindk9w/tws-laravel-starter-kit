@@ -89,7 +89,7 @@ it('EFEITO NA ALLOWLIST DO ADMIN: com proxy confiável, a lista volta a comparar
         ->withServerVariables(['REMOTE_ADDR' => '10.0.0.9'])
         ->get('/admin', ['X-Forwarded-For' => '203.0.113.7'])
         ->assertOk();
-});
+})->group('admin');
 
 it('EFEITO NO RATE LIMITING: com proxy confiável, cada cliente tem o seu balde', function (): void {
     config()->set('security.proxies.trusted', ['10.0.0.0/8']);
@@ -159,7 +159,7 @@ it('a allowlist do admin não pode ser burlada por X-Forwarded-For de origem nã
         ->withServerVariables(['REMOTE_ADDR' => '192.0.2.50'])
         ->get('/admin', ['X-Forwarded-For' => '203.0.113.7'])
         ->assertForbidden();
-});
+})->group('admin');
 
 it('o rate limiting não pode ser zerado trocando de X-Forwarded-For quando ninguém é confiável', function (): void {
     config()->set('security.rate_limit.api', 1);

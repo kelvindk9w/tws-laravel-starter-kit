@@ -6,6 +6,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Twstec\Kit\Foundation\Http\Exceptions\ApiErrorRenderer;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -31,6 +33,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // `scope` e `account.key` — é instalada pelo pacote
         // twstec/kit-accounts (Twstec\Kit\Accounts\AccountsServiceProvider),
         // junto com as rotas /api/v1 dele.
+        //
+        // SEM O PACOTE DE CONTAS (opcional — `php artisan tws:install`), a
+        // API do aplicativo é só o /api/health, e o `throttle:api` (o
+        // limitador `api` do twstec/kit-foundation: por IP, sem chave) é
+        // posto aqui. A proteção não some com o módulo.
+        if (! Kit::has('accounts')) {
+            $middleware->throttleApi();
+        }
 
         // Locale da interface web: usuário logado → preferência da
         // conta; visitante → cookie; fallback → padrão da plataforma (pt-BR).
@@ -64,6 +74,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // twstec/kit-accounts, dono da API (ver ApiErrorRenderer, do
         // foundation, e docs/api.md). Um render próprio declarado aqui roda
         // ANTES do dele e prevalece.
+        //
+        // Sem o pacote de contas (opcional), o envelope é ligado aqui, com o
+        // mesmo renderizador do foundation: os erros de `api/*` (inclusive o
+        // 429 da borda no /api/health) continuam sem detalhe interno.
+        if (! Kit::has('accounts')) {
+            $exceptions->render(static fn (Throwable $e, Request $request) => app(ApiErrorRenderer::class)($e, $request));
+        }
 
         // Captura a mensagem da exceção para o request log finalizar como ERRO
         // com o motivo (redigido depois pelo RequestLogging — LGPD).

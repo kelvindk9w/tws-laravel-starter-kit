@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverviewQuery;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * Dashboard do painel do usuário (Livewire).
@@ -18,6 +19,9 @@ use Twstec\Kit\Accounts\Tenancy\Queries\AccountOverviewQuery;
  *
  * Os números e listas vêm do AccountOverviewQuery (backend, reutilizável por
  * qualquer tela); este componente só os apresenta.
+ *
+ * Sem o pacote de contas (twstec/kit-accounts, opcional) não há conta, chave,
+ * projeto nem API: a tela abre com os atalhos da conta da pessoa.
  */
 final class Dashboard extends Component
 {
@@ -28,7 +32,7 @@ final class Dashboard extends Component
 
         return view('livewire.dashboard', [
             'user' => $user,
-            ...app(AccountOverviewQuery::class)->forCurrentAccount()->toArray(),
+            ...(Kit::has('accounts') ? app(AccountOverviewQuery::class)->forCurrentAccount()->toArray() : []),
         ])->title(__('panel.dashboard.title'));
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Foundation\Kit;
 
 /**
  * Agregador do `db:seed`.
@@ -21,7 +22,8 @@ use Twstec\Kit\Accounts\Accounts;
  * MODO SISTEMA declarado (contas com membros): um seeder grava em várias
  * contas, e dado de conta sem conta atual é exceção. Os seeders rodam dentro
  * de `Accounts::asSystem('db:seed', …)` e, gravando dado de conta, informam a
- * conta de cada linha.
+ * conta de cada linha. Sem o pacote de contas (twstec/kit-accounts é
+ * opcional), não há conta nem modo sistema: os seeders rodam direto.
  *
  * SEM WithoutModelEvents (e isso é decisão, não esquecimento): os models do
  * kit preenchem `uuid` (HasUuids/booted) e `codigo_publico` (HasPublicCode) no
@@ -41,10 +43,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Accounts::asSystem('db:seed', function (): void {
+        $seed = function (): void {
             foreach (app()->tagged(self::EXTENSION_TAG) as $seeder) {
                 $this->call($seeder::class);
             }
-        });
+        };
+
+        Kit::has('accounts') ? Accounts::asSystem('db:seed', $seed) : $seed();
     }
 }

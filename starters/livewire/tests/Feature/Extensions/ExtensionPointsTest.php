@@ -186,7 +186,7 @@ it('extensão acrescenta widget a uma variante de dashboard na posição pedida'
         LatestUploads::class,
         GrowthStats::class,
     ]);
-});
+})->group('admin');
 
 it('telas de extensão no /admin só entram na trilha quando o namespace é registrado', function (): void {
     config()->set('audit.admin_extension_namespaces', []);
@@ -198,13 +198,13 @@ it('telas de extensão no /admin só entram na trilha quando o namespace é regi
     config()->set('audit.admin_extension_namespaces', ['Extensao\\Filament\\']);
 
     expect(AdminAudit::covers('Extensao\\Filament\\Tela'))->toBeTrue();
-});
+})->group('admin');
 
 it('o rótulo do tipo de ataque é traduzido e cai no genérico quando desconhecido', function (): void {
     expect(AttackLabel::for('xss'))->toBe(__('admin.submissions.attack_xss'))
         ->and(AttackLabel::for('tipo-novo'))->toBe(__('admin.submissions.attack_unknown'))
         ->and(AttackLabel::for(null))->toBe(__('admin.submissions.attack_unknown'));
-});
+})->group('admin');
 
 it('a página inicial do produto mostra a plataforma e o caminho para entrar', function (): void {
     $html = view('home')->render();

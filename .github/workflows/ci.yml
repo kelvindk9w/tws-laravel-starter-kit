@@ -33,6 +33,25 @@
 # termina tirando-a (`composer remove --dev`) e rodando o build e a suíte do
 # produto sem ela; a conferência da imagem do app prova que ela não chega à
 # produção.
+#
+# MÓDULOS OPCIONAIS (accounts, uploads, admin — `php artisan tws:install`): o
+# job do SQLite, depois do "sem a demo", passa pelas combinações principais
+# NO PRÓPRIO CHECKOUT, uma depois da outra, com o instalador (não
+# interativo): sem uploads; só o admin (sem contas nem uploads); só a base
+# (foundation + auth); sem o admin (contas e uploads de volta — o caminho do
+# `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre
+# (os testes do módulo ausente pulam sozinhos). São PASSOS de um job que já é
+# check obrigatório — nenhum check novo, e uma combinação quebrada deixa o
+# check vermelho. (Um job novo com matriz seria mais rápido, mas não seria
+# obrigatório sem mexer na proteção de branch.)
+#
+# INSTALAÇÃO PUBLICADA (simulação): no fim do job do PostgreSQL, cada pacote
+# vira um ZIP (`composer archive`, com o composer.json da versão publicada) e
+# o projeto é criado SÓ a partir deles (`composer create-project` com
+# repositório `artifact`, pacotes copiados, sem link para o monorepo) — build e
+# suíte. Pega starter que só funciona dentro do monorepo. Ver
+# .github/release/simulate-install.sh; a publicação real (split) está em
+# .github/workflows/split.yml, desligada.
 name: CI
 
 on:
@@ -53,7 +72,7 @@ jobs:
     # sem atualizar a proteção de branch.
     name: Pint · Pest · auditorias · build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     defaults:
       run:
@@ -203,6 +222,22 @@ jobs:
         working-directory: packages/demo
         run: ./vendor/bin/pest --ci
 
+      # Pacote twstec/kit-installer (o `php artisan tws:install`, require-dev
+      # do starter): idem; acha o foundation pelo path repository. O Composer
+      # da suíte é de mentira — ela prova as escolhas, a ordem dos passos, a
+      # recusa em produção e a idempotência sem mexer em projeto nenhum.
+      - name: Pacote installer · dependências
+        working-directory: packages/installer
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote installer · estilo (Pint)
+        working-directory: packages/installer
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote installer · testes (Pest)
+        working-directory: packages/installer
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -223,12 +258,18 @@ jobs:
       - name: Testes (Pest · PostgreSQL 18)
         run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
 
+      # Pacotes empacotados como o Packagist vai servir e o projeto criado só
+      # a partir deles (ver o cabeçalho). Pasta fora do checkout.
+      - name: Instalação publicada (simulação) · pacotes, projeto, build e Pest
+        working-directory: .
+        run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado"
+
   # A mesma suíte no SQLite em memória — o `pest` puro de quem clona o kit.
   # Paralelo ao job acima; sem Pint/auditorias (já cobertos lá).
   tests-sqlite:
     name: Pest · SQLite (comando local padrão)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     defaults:
       run:
@@ -316,6 +357,14 @@ jobs:
         working-directory: packages/demo
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote installer · dependências
+        working-directory: packages/installer
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote installer · testes (Pest)
+        working-directory: packages/installer
+        run: ./vendor/bin/pest --ci
+
       # O PRODUTO SEM A DEMONSTRAÇÃO: o que acontece com quem tira a demo
       # (`composer remove --dev twstec/kit-demo`, docs/demo.md). O build do
       # frontend continua de pé sem as entradas da demo, e a suíte do starter
@@ -331,6 +380,55 @@ jobs:
 
       - name: Sem a demo · testes (Pest · SQLite)
         run: ./vendor/bin/pest --ci
+
+      # AS COMBINAÇÕES DE MÓDULOS (ver o cabeçalho), no checkout, em
+      # sequência, pelo instalador. O banco das migrations do instalador é um
+      # SQLite descartável (o .env de teste aponta para o PostgreSQL do
+      # docker, que não existe aqui); cache em arquivo pelo mesmo motivo.
+      - name: Combinações · banco descartável do instalador
+        run: |
+          touch database/combinacoes.sqlite
+          {
+            echo "DB_CONNECTION=sqlite"
+            echo "DB_DATABASE=$PWD/database/combinacoes.sqlite"
+            echo "CACHE_STORE=file"
+            echo "SESSION_DRIVER=file"
+            echo "QUEUE_CONNECTION=sync"
+          } >> "$GITHUB_ENV"
+
+      - name: Sem uploads · instalador
+        run: php artisan tws:install --no-interaction --without=uploads --no-demo
+
+      - name: Sem uploads · build e testes
+        run: |
+          npm run build
+          ./vendor/bin/pest --ci --parallel
+
+      - name: Só o admin (sem contas nem uploads) · instalador
+        run: php artisan tws:install --no-interaction --without=accounts,uploads
+
+      - name: Só o admin (sem contas nem uploads) · build e testes
+        run: |
+          npm run build
+          ./vendor/bin/pest --ci --parallel
+
+      - name: Só a base (foundation + auth) · instalador
+        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads
+
+      - name: Só a base (foundation + auth) · build e testes
+        run: |
+          npm run build
+          # Sem o admin não há Filament: o tema do /admin sai do build.
+          if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/pest --ci --parallel
+
+      - name: Sem o admin (contas e uploads de volta) · instalador
+        run: php artisan tws:install --no-interaction --with=accounts,uploads --without=admin
+
+      - name: Sem o admin (contas e uploads de volta) · build e testes
+        run: |
+          npm run build
+          ./vendor/bin/pest --ci --parallel
 
   # Imagens de PRODUÇÃO (app PHP-FPM e nginx), construídas de ponta a ponta a
   # cada push e PR — sem enviar para registry nenhum.
@@ -410,6 +508,8 @@ jobs:
             # entradas das landings e as imagens no build do frontend, nem as
             # rotas dela.
             if [ -e vendor/twstec/kit-demo ]; then echo "na imagem: vendor/twstec/kit-demo"; exit 1; fi
+            # O instalador (twstec/kit-installer, require-dev) também não.
+            if [ -e vendor/twstec/kit-installer ]; then echo "na imagem: vendor/twstec/kit-installer"; exit 1; fi
             if grep -q "twstec/kit-demo" vendor/composer/installed.json; then echo "na imagem: twstec/kit-demo instalado"; exit 1; fi
             if grep -q "kit-demo" public/build/manifest.json; then echo "na imagem: assets da demo no build"; exit 1; fi
             if [ -e public/build/assets/img ]; then echo "na imagem: imagens da demo no build"; exit 1; fi

@@ -193,10 +193,25 @@ function placementMethodCalls(string $contents): array
     return $calls;
 }
 
+/**
+ * O arquivo está ao alcance desta instalação? Só um arquivo de PACOTE OPCIONAL
+ * não instalado (vendor/twstec/<pacote>/ ausente — ver `php artisan
+ * tws:install`) fica de fora; qualquer outro arquivo da lista que suma
+ * continua reprovando (file_get_contents falha alto).
+ */
+function placementPathInstalled(string $path): bool
+{
+    if (preg_match('#^vendor/twstec/([^/]+)/#', $path, $match) === 1) {
+        return is_dir(base_path("vendor/twstec/{$match[1]}"));
+    }
+
+    return true;
+}
+
 it('mantém os controllers de autenticação só com HTTP (a regra está nas Actions)', function (): void {
     $violations = [];
 
-    foreach (THIN_AUTH_CONTROLLERS as $path) {
+    foreach (array_filter(THIN_AUTH_CONTROLLERS, placementPathInstalled(...)) as $path) {
         $contents = (string) file_get_contents(base_path($path));
 
         foreach (placementClassNames($contents) as $name) {
@@ -222,7 +237,7 @@ it('mantém os controllers de autenticação só com HTTP (a regra está nas Act
 it('mantém telas e controllers com serviço de backend sem chamar model direto', function (): void {
     $violations = [];
 
-    foreach (SERVICE_BACKED_ENTRY_POINTS as $path) {
+    foreach (array_filter(SERVICE_BACKED_ENTRY_POINTS, placementPathInstalled(...)) as $path) {
         foreach (placementModelStaticCalls((string) file_get_contents(base_path($path))) as $call) {
             $violations[] = "{$path} chama {$call}";
         }

@@ -180,7 +180,7 @@ it('no esquema do starter: conta pessoal com o mesmo id e uuid, dados movidos, t
     $uploads->up();
 
     $conferir();
-});
+})->group('uploads');
 
 it('pessoa criada depois da migração: conta pessoal nova não colide com as migradas (sequência ajustada)', function (): void {
     ['criar' => $criar, 'mover' => $mover, 'convites' => $convites, 'uploads' => $uploads] = migracoesDeContas();
@@ -201,4 +201,4 @@ it('pessoa criada depois da migração: conta pessoal nova não colide com as mi
 
     expect((int) $conta->id)->toBeGreaterThan($maiorAntes)
         ->and($conta->uuid)->toBe($nova->uuid);
-});
+})->group('uploads');

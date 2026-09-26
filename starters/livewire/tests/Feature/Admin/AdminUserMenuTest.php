@@ -70,7 +70,7 @@ it('com foto de perfil o avatar é a foto do usuário', function () {
     expect(Filament::getUserAvatarUrl($this->admin->fresh()))
         ->toBe($this->admin->fresh()->avatarUrl())
         ->not->toStartWith('data:image/svg+xml');
-});
+})->group('uploads');
 
 it('as iniciais são a primeira e a última palavra do nome, com queda para "?"', function () {
     expect(InitialsAvatarProvider::initials('Ana Lima'))->toBe('AL')

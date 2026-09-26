@@ -53,7 +53,7 @@ describe('uuid malformado na URL do /admin', function () {
         'edição de produto' => '/admin/products/'.UUID_MALFORMADO.'/edit',
         'detalhe de log de requisição' => '/admin/request-logs/'.UUID_MALFORMADO,
     ]);
-});
+})->group('admin');
 
 describe('uuid malformado na API', function () {
     beforeEach(function () {
@@ -77,7 +77,7 @@ describe('uuid malformado na API', function () {
 
         naConta($user, fn () => app(ApiKeyService::class)->resolveProjectIds([UUID_MALFORMADO]));
     })->throws(InvalidArgumentException::class, 'projects');
-});
+})->group('accounts');
 
 describe('uuid malformado nas ações do painel (Livewire)', function () {
     it('projetos: 404 uniforme', function () {
@@ -93,7 +93,7 @@ describe('uuid malformado nas ações do painel (Livewire)', function () {
             ->call('startRevoke', UUID_MALFORMADO)
             ->assertNotFound();
     });
-});
+})->group('accounts');
 
 // -----------------------------------------------------------------------------
 // Filtros e busca do /admin
@@ -144,7 +144,7 @@ describe('filtros dos logs de requisição', function () {
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
     });
-});
+})->group('admin');
 
 describe('busca das tabelas do /admin não diferencia maiúsculas', function () {
     beforeEach(function () {
@@ -169,7 +169,7 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->searchTable('ESTOQUE')
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outra]);
-    });
+    })->group('accounts');
 
     it('projetos', function () {
         $alvo = projetoDe($this->admin, 'loja virtual');
@@ -179,7 +179,7 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->searchTable('Loja VIRTUAL')
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
-    });
+    })->group('accounts');
 
     it('uploads', function () {
         $dados = ['user_id' => $this->admin->id, 'disk' => 'local', 'mime' => 'application/pdf', 'size' => 10, 'sha256' => hash('sha256', 'x')];
@@ -190,7 +190,7 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->searchTable('CONTRATO')
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
-    });
+    })->group('uploads');
 
     it('logs de requisição', function () {
         $alvo = logDeRequisicao('/api/v1/relatorios');
@@ -221,4 +221,4 @@ describe('busca das tabelas do /admin não diferencia maiúsculas', function () 
             ->assertCanSeeTableRecords([$alvo])
             ->assertCanNotSeeTableRecords([$outro]);
     })->group('demo');
-});
+})->group('admin');

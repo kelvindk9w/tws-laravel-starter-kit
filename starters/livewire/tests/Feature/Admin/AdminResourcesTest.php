@@ -61,7 +61,7 @@ it('lista chaves de API de TODOS os tenants (visão global) sem expor a secreta'
         ->assertSee('Chave Visível')
         ->assertSee('dono@example.com')
         ->assertDontSee('sk_'); // a secreta JAMAIS aparece (só hash no banco)
-});
+})->group('accounts');
 
 it('revoga chave de qualquer tenant pela ação administrativa', function () {
     $dono = User::factory()->create();
@@ -71,7 +71,7 @@ it('revoga chave de qualquer tenant pela ação administrativa', function () {
         ->callTableAction('revoke', $key);
 
     expect($key->fresh()->status)->toBe(ApiKeyStatus::Revoked);
-});
+})->group('accounts');
 
 it('não oferece revogação para chave já revogada', function () {
     $dono = User::factory()->create();
@@ -80,7 +80,7 @@ it('não oferece revogação para chave já revogada', function () {
 
     Livewire::test(ListApiKeys::class)
         ->assertTableActionHidden('revoke', $key);
-});
+})->group('accounts');
 
 it('lista projetos com dono e contagem de chaves vinculadas', function () {
     $dono = User::factory()->create();
@@ -90,7 +90,7 @@ it('lista projetos com dono e contagem de chaves vinculadas', function () {
         ->assertOk()
         ->assertCanSeeTableRecords([$projeto])
         ->assertSee('Projeto Admin');
-});
+})->group('accounts');
 
 it('lista request logs e destaca órfãos (sem tenant = possível ataque)', function () {
     $logOrfao = RequestLog::query()->create([
@@ -159,7 +159,7 @@ it('lista uploads com dono, tipo e tamanho', function () {
         ->assertCanSeeTableRecords([$upload])
         ->assertSee('documento.png')
         ->assertSee('image/png');
-});
+})->group('accounts')->group('uploads');
 
 // R4: com o filtro de ataques em modo observe, a tentativa não vira linha
 // BLOQUEADA — o painel precisa mostrar o selo pela coluna `attack_type`.

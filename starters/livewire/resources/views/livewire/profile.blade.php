@@ -66,7 +66,9 @@
         </div>
     </x-card>
 
-    {{-- Avatar (função global de upload seguro) ------------------------------- --}}
+    {{-- Avatar (função global de upload seguro) — só com o pacote de uploads
+         (twstec/kit-uploads) instalado; sem ele, o avatar são as iniciais. --}}
+    @kit('uploads')
     <x-card :title="__('panel.profile.avatar_heading')" :description="__('panel.profile.avatar_hint')">
         @if (session('avatar_status'))
             <x-alert type="success" class="mb-4">{{ session('avatar_status') }}</x-alert>
@@ -97,6 +99,7 @@
             <x-button type="submit" :disabled="! $avatar">{{ __('panel.profile.save_avatar') }}</x-button>
         </form>
     </x-card>
+    @endkit
 
     {{-- Senha de login -------------------------------------------------------- --}}
     <x-card :title="__('panel.profile.password_heading')" :description="__('panel.profile.password_hint', ['rules' => \Twstec\Kit\Auth\PasswordPolicy::hint()])">

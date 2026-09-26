@@ -77,4 +77,10 @@ return [
         'create' => 'Crear cuenta de empresa',
     ],
 
+    // Comandos de consola de la aplicación (routes/console.php).
+    'console' => [
+        'filament_assets' => 'Publica los assets de Filament cuando el panel /admin (twstec/kit-admin) está instalado',
+        'filament_skipped' => 'Filament no está instalado (el panel /admin es opcional): nada que publicar.',
+    ],
+
 ];

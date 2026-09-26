@@ -24,6 +24,7 @@ use Twstec\Kit\Auth\Http\Controllers\RegisteredUserController;
 use Twstec\Kit\Auth\Http\Controllers\SensitiveActionController;
 use Twstec\Kit\Auth\Http\Controllers\TransactionPasswordController;
 use Twstec\Kit\Auth\Http\Controllers\TwoFactorChallengeController;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Http\Controllers\LocaleController;
 use Twstec\Kit\Foundation\Mail\Http\Controllers\MailPreviewController;
 use Twstec\Kit\Uploads\Http\Controllers\AvatarController;
@@ -87,6 +88,13 @@ Route::middleware('guest')->group(function (): void {
 });
 
 // =============================================================================
+// MÓDULOS OPCIONAIS. As telas de contas, chaves e projetos (twstec/kit-accounts)
+// e a foto de perfil (twstec/kit-uploads) só são registradas com o pacote
+// instalado — Kit::has(), o ponto único de detecção. Sem o pacote, a rota não
+// existe (404) e o menu não a mostra (App\Livewire\Support\Navigation).
+// =============================================================================
+
+// =============================================================================
 // Convite para uma conta (link do e-mail) — PÚBLICO: quem abre pode estar
 // logado com o e-mail do convite, logado com outro, deslogado com conta ou
 // sem conta nenhuma. A tela (GET) é do starter; os envios vão para o
@@ -95,15 +103,17 @@ Route::middleware('guest')->group(function (): void {
 // O token no caminho não vai para a trilha de requisições (ela grava o
 // padrão da rota, não o caminho real).
 // =============================================================================
-Route::get('invitations/{token}', [InvitationPageController::class, 'show'])->name('invitations.show');
-Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'])
-    ->middleware('auth')
-    ->name('invitations.accept');
-Route::post('invitations/{token}/register', [InvitationController::class, 'register'])
-    ->middleware('guest')
-    ->name('invitations.register');
-Route::post('invitations/{token}/decline', [InvitationController::class, 'decline'])
-    ->name('invitations.decline');
+if (Kit::has('accounts')) {
+    Route::get('invitations/{token}', [InvitationPageController::class, 'show'])->name('invitations.show');
+    Route::post('invitations/{token}/accept', [InvitationController::class, 'accept'])
+        ->middleware('auth')
+        ->name('invitations.accept');
+    Route::post('invitations/{token}/register', [InvitationController::class, 'register'])
+        ->middleware('guest')
+        ->name('invitations.register');
+    Route::post('invitations/{token}/decline', [InvitationController::class, 'decline'])
+        ->name('invitations.decline');
+}
 
 Route::middleware('auth')->group(function (): void {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
@@ -136,25 +146,28 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     // UI direta: tudo se resolve na mesma tela, modais em vez de navegação.
     // =====================================================================
     Route::get('dashboard', Dashboard::class)->name('dashboard');
-    Route::get('api-keys', ApiKeysIndex::class)->name('panel.api-keys');
-    Route::get('projects', ProjectsIndex::class)->name('panel.projects');
     Route::get('notifications', NotificationPreferences::class)->name('panel.notifications');
     Route::get('profile', Profile::class)->name('panel.profile');
 
-    // Contas com membros: a página da conta atual (membros, convites,
-    // transferência, exclusão) e a criação de uma conta de empresa.
-    Route::get('account', AccountShow::class)->name('panel.account');
-    Route::get('accounts/create', AccountCreate::class)->name('panel.accounts.create');
+    if (Kit::has('accounts')) {
+        Route::get('api-keys', ApiKeysIndex::class)->name('panel.api-keys');
+        Route::get('projects', ProjectsIndex::class)->name('panel.projects');
 
-    // Troca de conta (o seletor): POST para o controller do pacote — só
-    // conta de que a pessoa é membro.
-    Route::post('accounts/{account}/switch', [AccountSwitchController::class, 'store'])->name('accounts.switch');
+        // Contas com membros: a página da conta atual (membros, convites,
+        // transferência, exclusão) e a criação de uma conta de empresa.
+        Route::get('account', AccountShow::class)->name('panel.account');
+        Route::get('accounts/create', AccountCreate::class)->name('panel.accounts.create');
 
-    // Link dos e-mails de conta: abre uma tela já na conta certa. Só com URL
-    // ASSINADA (ninguém monta um link que troca a conta de outra pessoa).
-    Route::get('accounts/{account}/open/{to}', OpenAccountController::class)
-        ->middleware('signed:relative')
-        ->name('accounts.open');
+        // Troca de conta (o seletor): POST para o controller do pacote — só
+        // conta de que a pessoa é membro.
+        Route::post('accounts/{account}/switch', [AccountSwitchController::class, 'store'])->name('accounts.switch');
+
+        // Link dos e-mails de conta: abre uma tela já na conta certa. Só com URL
+        // ASSINADA (ninguém monta um link que troca a conta de outra pessoa).
+        Route::get('accounts/{account}/open/{to}', OpenAccountController::class)
+            ->middleware('signed:relative')
+            ->name('accounts.open');
+    }
 
     // Senha de transação (hash separado da senha de login).
     // Rota standalone mantida; o painel Livewire (Perfil) usa o
@@ -173,7 +186,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     // Avatar do perfil: mesma função global de upload seguro da API
     // (SecureUploadService), restrita a imagens — re-encode GD antes de gravar.
-    Route::post('settings/avatar', [AvatarController::class, 'update'])
-        ->middleware('throttle:sensitive')
-        ->name('settings.avatar');
+    if (Kit::has('uploads')) {
+        Route::post('settings/avatar', [AvatarController::class, 'update'])
+            ->middleware('throttle:sensitive')
+            ->name('settings.avatar');
+    }
 });
