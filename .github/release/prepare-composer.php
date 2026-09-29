@@ -27,6 +27,13 @@ declare(strict_types=1);
 // desenvolvimento do pacote raiz, e o Pest não tem o que fazer no projeto de
 // quem usa o kit.
 //
+// O DOCKER DE DESENVOLVIMENTO do projeto criado: no monorepo, o compose de
+// desenvolvimento do starter e o Dev Container ficam em docker/dev/ (um
+// compose.yaml na raiz de starters/<starter> mudaria o `docker compose` de
+// quem roda o monorepo dali); no starter publicado, vão para onde o Docker e o
+// VS Code os procuram: compose.yaml na raiz e .devcontainer/devcontainer.json.
+// O script falha se faltar algum.
+//
 // Ainda no starter, o docker-compose.prod.yml publicado sai SEM o contexto de
 // build `packages` (`additional_contexts: packages: ../../packages`, que só
 // existe no monorepo): no projeto criado não há pasta packages/, e o
@@ -158,6 +165,32 @@ if ($isProject && is_file($compose)) {
     file_put_contents($compose, $yaml);
 }
 
+// O Docker de desenvolvimento do starter, no lugar publicado.
+if ($isProject && ! $isKit) {
+    $root = rtrim($dir, '/');
+    $moves = [
+        'docker/dev/compose.yaml' => 'compose.yaml',
+        'docker/dev/devcontainer.json' => '.devcontainer/devcontainer.json',
+    ];
+
+    foreach ($moves as $from => $to) {
+        if (! is_file("{$root}/{$from}") && ! is_file("{$root}/{$to}")) {
+            fwrite(STDERR, "o starter não tem o Docker de desenvolvimento: falta {$from}\n");
+            exit(1);
+        }
+
+        if (is_file("{$root}/{$from}")) {
+            @mkdir(dirname("{$root}/{$to}"), 0777, true);
+            rename("{$root}/{$from}", "{$root}/{$to}");
+        }
+    }
+
+    if (str_contains((string) file_get_contents("{$root}/compose.yaml"), '../../packages')) {
+        fwrite(STDERR, "o compose.yaml de desenvolvimento publicado cita o monorepo\n");
+        exit(1);
+    }
+}
+
 if ($isKit && (($composer['extra']['twstec-kit']['constraint'] ?? null) !== $constraint || isset($composer['require-dev']) || str_contains((string) json_encode($composer), '2.x-dev'))) {
     fwrite(STDERR, "o composer.json publicado do twstec/kit ainda tem o que é do monorepo (2.x-dev ou require-dev)\n");
     exit(1);
@@ -170,6 +203,6 @@ if ($isProject && str_contains((string) json_encode($composer), 'kit-demo')) {
 
 fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, match (true) {
     $isKit => ' (comando único: baixa o starter escolhido com essa restrição; sem a suíte)',
-    $isProject => ' (projeto; sem a demonstração; composer.lock removido; compose de produção sem o contexto do monorepo)',
+    $isProject => ' (projeto; sem a demonstração; composer.lock removido; compose de produção sem o contexto do monorepo; Docker de desenvolvimento em compose.yaml e .devcontainer/)',
     default => '',
 }));

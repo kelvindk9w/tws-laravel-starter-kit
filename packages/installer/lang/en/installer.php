@@ -79,6 +79,22 @@ return [
         'env_missing' => 'No .env or .env.example: APP_KEY and pepper were not generated.',
     ],
 
+    // Development Docker of the created project (compose.yaml at the root).
+    'dev' => [
+        'step' => 'Development Docker',
+        'configured' => 'project :name, number :slot — :url',
+        'kept' => 'already configured (COMPOSE_PROJECT_NAME=:name)',
+        'name_invalid' => 'Invalid project name in TWS_KIT_NAME: :name. Use lowercase letters, digits and hyphen, starting with a letter, 2 to 40 characters (suggestion: :suggestion). Nothing was changed.',
+        'name_taken' => 'There is already a Docker project called :name on this machine (containers or volumes, even stopped). Use another name in TWS_KIT_NAME — suggestion: :suggestion. Nothing was changed.',
+        'slot_invalid' => 'Invalid project number in TWS_KIT_SLOT: :slot. Use 0 to 99. Nothing was changed.',
+        'slot_busy' => 'Number :slot (TWS_KIT_SLOT) is in use — ports :occupants. The first number with all four ports free is :suggestion. Nothing was changed.',
+        'no_free_slot' => 'No number from 0 to 99 has all four ports free (site 808N, e-mails 802N, Vite 803N, database 804N). Stop projects you are not using and run again. Nothing was changed.',
+        'expose_invalid' => 'Invalid value in TWS_KIT_EXPOSE_DB: :value. Use 1 (publish the database) or 0. Nothing was changed.',
+        'migrate_on_up' => 'on the first docker compose up -d (the project database runs in Docker)',
+        'other_program' => 'another program',
+        'next' => 'Start the project: docker compose up -d — then open :url (e-mails at :mail).',
+    ],
+
     'summary' => [
         'heading' => 'Done',
         'removed' => 'removed',

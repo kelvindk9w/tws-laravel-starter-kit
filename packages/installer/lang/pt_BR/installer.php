@@ -80,6 +80,22 @@ return [
         'env_missing' => 'Sem .env nem .env.example: APP_KEY e pepper não foram gerados.',
     ],
 
+    // Docker de desenvolvimento do projeto criado (compose.yaml na raiz).
+    'dev' => [
+        'step' => 'Docker de desenvolvimento',
+        'configured' => 'projeto :name, número :slot — :url',
+        'kept' => 'já configurado (COMPOSE_PROJECT_NAME=:name)',
+        'name_invalid' => 'Nome de projeto inválido em TWS_KIT_NAME: :name. Use letras minúsculas, números e hífen, começando por letra, de 2 a 40 caracteres (sugestão: :suggestion). Nada foi alterado.',
+        'name_taken' => 'Já existe um projeto Docker chamado :name nesta máquina (containers ou volumes, mesmo parado). Use outro nome em TWS_KIT_NAME — sugestão: :suggestion. Nada foi alterado.',
+        'slot_invalid' => 'Número de projeto inválido em TWS_KIT_SLOT: :slot. Use de 0 a 99. Nada foi alterado.',
+        'slot_busy' => 'O número :slot (TWS_KIT_SLOT) está em uso — portas :occupants. O primeiro número com as quatro portas livres é :suggestion. Nada foi alterado.',
+        'no_free_slot' => 'Nenhum número de 0 a 99 tem as quatro portas livres (site 808N, e-mails 802N, Vite 803N, banco 804N). Pare projetos que não está usando e rode de novo. Nada foi alterado.',
+        'expose_invalid' => 'Valor inválido em TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar o banco) ou 0. Nada foi alterado.',
+        'migrate_on_up' => 'no primeiro docker compose up -d (o banco do projeto roda no Docker)',
+        'other_program' => 'outro programa',
+        'next' => 'Suba o projeto: docker compose up -d — depois abra :url (e-mails em :mail).',
+    ],
+
     'summary' => [
         'heading' => 'Pronto',
         'removed' => 'removido',

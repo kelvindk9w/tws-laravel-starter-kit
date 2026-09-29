@@ -6,27 +6,42 @@ Base estrutural reutilizável para projetos Laravel — segurança primeiro, Doc
 
 ## Criar um projeto
 
-Um comando só:
+**Só com o Docker Desktop** (sem PHP, Composer nem Node na máquina): baixe o
+[twstec-kit](https://github.com/kelvindk9w/twstec-kit) (Code → Download ZIP),
+entre na pasta e rode `docker compose run --rm instalar` e depois
+`docker compose up -d`. Passo a passo, para quem está começando:
+[Primeiros passos para iniciantes](starters/kit/README.md#primeiros-passos-para-iniciantes-só-com-o-docker).
+
+**Com PHP e Composer na máquina,** um comando só:
 
 ```bash
 composer create-project "twstec/kit:^2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
 ```
 
-Um menu pergunta:
+Os dois caminhos fazem as mesmas perguntas, todas com a resposta sugerida
+(Enter aceita):
 
-1. **a interface** — Livewire ou React (Inertia + TypeScript + shadcn/ui);
-2. **os módulos opcionais** — contas com membros e API, uploads e foto de
+1. **o nome e o número do projeto** — o nome vira o endereço
+   `http://<nome>.localhost:<porta>`, os containers e o banco; o número define
+   todas as portas com o mesmo final (site `808N`, e-mails `802N`, Vite
+   `803N`, banco `804N`), e o sugerido é o primeiro com as quatro livres —
+   vários projetos na mesma máquina, sem colisão;
+2. **a interface** — Livewire ou React (Inertia + TypeScript + shadcn/ui);
+3. **os módulos opcionais** — contas com membros e API, uploads e foto de
    perfil, painel `/admin`. A base (segurança, auditoria, idioma, e-mail) e a
    autenticação vêm sempre; uploads exige contas, e o menu não aceita a
    combinação sem elas.
 
 Sai o projeto pronto: o starter escolhido **só com os pacotes marcados**, a
-`APP_KEY` e o pepper das chaves de API gerados e o banco preparado — ou, se o
-banco do `.env` não responder, a instrução exata do que ajustar. Sem
+`APP_KEY` e o pepper das chaves de API gerados, e o **Docker de
+desenvolvimento** (`docker compose up -d`: site, PostgreSQL, Redis, Mailpit,
+fila, agendador e Vite com recarga ao vivo) com o Dev Container do VS Code. Sem
 terminal (CI, scripts), a escolha vai pelo ambiente:
 `TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project …`
 (no Windows, `$env:TWS_KIT_STACK = "react"` antes). O comando único chega na
-**2.0.0-beta.2**; ver [twstec/kit](starters/kit/README.md).
+**2.0.0-beta.2**; o caminho só com o Docker, o nome e o número do projeto e
+o Docker de desenvolvimento em todo projeto criado, na versão seguinte. Ver
+[twstec/kit](starters/kit/README.md) e [Instalação](docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
 
 Os comandos por starter continuam valendo:
 `composer create-project "twstec/starter-livewire:^2.0@beta" meu-projeto`

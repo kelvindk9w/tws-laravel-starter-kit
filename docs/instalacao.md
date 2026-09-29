@@ -26,6 +26,46 @@ escolhe o que entra:
 | Painel `/admin` | `twstec/kit-admin` | O super admin (plugin do Filament): usuários, logs, trilha de auditoria, configurações, dashboards — e as telas de contas, chaves, projetos e uploads **quando esses módulos estão instalados** | foundation, auth (accounts e uploads são sugeridos, não exigidos) |
 | Demonstração | `twstec/kit-demo` | Landings, vitrine, contas demo, seeders de dado fictício — **só no monorepo, não publicado** | **todos** os módulos acima (require-dev do monorepo) |
 
+## Criar um projeto só com o Docker (sem PHP na máquina)
+
+Quem tem só o **Docker Desktop** baixa o espelho
+[`kelvindk9w/twstec-kit`](https://github.com/kelvindk9w/twstec-kit) (GitHub →
+**Code → Download ZIP**, ou `git clone`), entra na pasta e roda:
+
+```bash
+docker compose run --rm instalar   # o menu (o mesmo do comando único, abaixo)
+docker compose up -d               # sobe o projeto
+```
+
+O `compose.yaml` do `twstec/kit` tem um só serviço, `instalar`: uma imagem
+(`twstec-kit-instalar`, a mesma para todos os projetos da máquina) com PHP
+8.4 e as extensões dos starters, o Composer, o Node 24 (Debian: os binários
+nativos do front do React são de glibc) e a linha de comando do Docker. Ele
+monta a pasta em `/app` e roda o **mesmo** `post-create-project-cmd` do
+comando único — o menu, o starter, o `composer update`, o instalador do
+starter — e depois `npm ci` e `npm run build`. O projeto é montado **na
+própria pasta**, que deixa de ser o `twstec/kit`.
+
+- **Dono dos arquivos:** tudo roda com o uid/gid de quem é dono da pasta na
+  máquina (`TWS_KIT_UID`/`TWS_KIT_GID` vencem) — nada fica com dono root no
+  Linux e no WSL. Numa pasta do Windows montada no Docker (que aparece como
+  root no container), vale 1000; o Windows não usa esse dono.
+- **Windows:** o roteiro do container é `sh`; o build da imagem tira os finais
+  de linha CRLF dele, e o `.gitattributes` do `twstec/kit` força LF num clone
+  com `autocrlf`. O resto é PHP e YAML. Numa pasta do Windows, o instalador
+  liga `DEV_VITE_POLLING=true` (o Vite passa a conferir os arquivos de tempos
+  em tempos, porque a mudança não chega sozinha ao container).
+- **Socket do Docker:** montado **só** no container do instalador e só
+  durante a instalação. É por ele que o menu vê os projetos e as portas em uso
+  (abaixo). A rede do container é a padrão do Docker e não há volume: nada
+  fica para trás além da imagem `twstec-kit-instalar` (um volume de cache
+  compartilhado entre as pastas faria o Compose avisar, a cada projeto novo,
+  que o volume "é de outro projeto").
+- **Sem terminal:** `docker compose run --rm -T instalar`, com as variáveis
+  `TWS_KIT_*` (tabela abaixo) no ambiente — o `compose.yaml` as repassa.
+
+O CI prova esse caminho (abaixo, "Como o CI garante").
+
 ## Criar um projeto: o comando único
 
 ```bash
@@ -33,14 +73,24 @@ composer create-project "twstec/kit:^2.0@beta" meu-projeto   # durante o beta; n
 ```
 
 O pacote `twstec/kit` ([starters/kit](../starters/kit/README.md)) é o ponto
-de entrada. Num terminal, um menu (Laravel Prompts) pergunta:
+de entrada. Num terminal, um menu (Laravel Prompts) pergunta — toda pergunta
+já vem com a resposta sugerida, e Enter aceita:
 
-1. **a interface** — Livewire ou React;
-2. **os módulos opcionais** — contas com membros e API, uploads e foto, painel
+1. **o nome do projeto** — o da pasta (a do ZIP do `twstec/kit` vira
+   `meu-projeto`), com `-2`, `-3`… se já existir projeto Docker com ele; o que
+   a pessoa digita vira nome válido ("Loja da Maria" → `loja-da-maria`), e o
+   nome de um projeto Docker que já existe é recusado com outra sugestão (ver
+   [o Docker de desenvolvimento](#o-docker-de-desenvolvimento-do-projeto-criado));
+2. **o número do projeto** — as portas; o sugerido é o primeiro com as quatro
+   livres, e o menu mostra antes quem usa os outros ("0 já é usado por
+   loja-da-maria"); um número com porta ocupada é recusado dizendo quem ocupa
+   e o próximo livre;
+3. **a interface** — Livewire ou React;
+4. **os módulos opcionais** — contas com membros e API, uploads e foto, painel
    `/admin` (todos marcados de início). `foundation` e `auth` vêm sempre.
    Uploads exige contas: com Uploads marcado e Contas não, o Enter mostra o
    motivo e a pergunta continua aberta;
-3. **a confirmação** do plano.
+5. **a confirmação** do plano.
 
 Depois, sem perguntar mais nada:
 
@@ -55,12 +105,13 @@ Depois, sem perguntar mais nada:
    `post-create-project-cmd`, que chama o instalador do starter
    (`php artisan tws:install --graceful`) com a escolha no ambiente — ele não
    pergunta de novo, gera a `APP_KEY` e, com contas, o pepper dedicado das
-   chaves de API, e roda as migrations;
-5. o banco é conferido: se o do `.env` não respondeu (o `.env.example` aponta
-   para o PostgreSQL do `docker-compose.yml` de desenvolvimento do kit), a
-   mensagem final diz o que ajustar (`DB_*`, ou SQLite: `DB_CONNECTION=sqlite`
-   sem `DB_DATABASE` — o `database/database.sqlite` já existe) e o comando
-   (`php artisan migrate`).
+   chaves de API, e grava no `.env` o Docker de desenvolvimento do projeto (o
+   nome e o número vão em `TWS_KIT_NAME`/`TWS_KIT_SLOT`);
+5. o resumo: o endereço do site e dos e-mails e o `docker compose up -d`, que
+   cria o banco e roda as migrations. (Num starter sem o `compose.yaml` de
+   desenvolvimento, o banco do `.env` é conferido como antes: se não
+   respondeu, a mensagem diz o que ajustar — `DB_*`, ou SQLite — e o comando,
+   `php artisan migrate`.)
 
 **Sem terminal** (CI, scripts, `composer create-project -n`), a escolha vai
 por variáveis de ambiente — o Composer não repassa opções próprias ao script
@@ -69,6 +120,9 @@ e no Windows:
 
 | Variável | Valores | Padrão |
 | --- | --- | --- |
+| `TWS_KIT_NAME` | nome do projeto: letras minúsculas, números e hífen, começando por letra (2 a 40) | o da pasta, sem colidir com projeto Docker que já existe |
+| `TWS_KIT_SLOT` | número do projeto, `0` a `99` | o primeiro com as quatro portas livres |
+| `TWS_KIT_EXPOSE_DB` | `1` publica o banco em `127.0.0.1:804N` | `0` |
 | `TWS_KIT_STACK` | `livewire` ou `react` | `livewire` |
 | `TWS_KIT_WITHOUT` | opcionais que ficam de fora, separados por vírgula | nenhum |
 | `TWS_KIT_WITH` | opcionais que entram (o padrão já é todos) | todos |
@@ -89,10 +143,12 @@ composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
 
 Qualquer uma dessas variáveis (mesmo vazia) desliga o menu; sem nenhuma e sem
-terminal, vale o padrão seguro: Livewire com todos os módulos. Escolha
-inválida (interface ou módulo desconhecido, `foundation`/`auth` de fora,
-uploads sem contas, o mesmo módulo nas duas listas) é recusada **antes** de
-baixar qualquer coisa.
+terminal, vale o padrão seguro: o nome da pasta, o primeiro número livre,
+Livewire com todos os módulos. Escolha inválida (interface ou módulo
+desconhecido, `foundation`/`auth` de fora, uploads sem contas, o mesmo módulo
+nas duas listas, nome fora do padrão ou de um projeto Docker que já existe,
+número fora de 0–99 ou com alguma porta ocupada) é recusada **antes** de
+baixar qualquer coisa, com o motivo e a sugestão.
 
 **Windows:** nada depende de bash (é PHP puro). Sem WSL, o menu sai em listas
 numeradas (o Question Helper do Symfony Console), com as mesmas perguntas e a
@@ -109,6 +165,100 @@ instalador) para ali e diz o passo e os **comandos exatos** para terminar sem
 recomeçar (`composer update`, `composer run-script
 post-create-project-cmd`…) — ou para apagar a pasta e rodar de novo. O código
 de saída do `create-project` é diferente de 0.
+
+## O Docker de desenvolvimento do projeto criado
+
+Todo projeto criado — pelo caminho só com o Docker, pelo comando único ou
+pelos comandos por starter — nasce com:
+
+- **`compose.yaml`** (na raiz): `app` (PHP-FPM 8.4, a imagem `workspace` do
+  starter: o `dev` com o Composer e o git), `nginx` (o site), `init` (de uma
+  vez: o `vendor/` se faltar e as migrations — o app sobe depois dele),
+  `queue`, `scheduler`, `vite` (Node 24, a recarga ao vivo), `postgres`,
+  `redis`, `mailpit` e `db-init` (o banco `tws_starter_test` da suíte contra
+  o PostgreSQL). `docker compose up -d` sobe tudo.
+- **`.devcontainer/devcontainer.json`**: o VS Code ("Reopen in Container")
+  entra no container `app` do mesmo `compose.yaml`, com o projeto em
+  `/var/www/html`.
+
+No monorepo, os dois ficam em `starters/<starter>/docker/dev/` (um
+`compose.yaml` na raiz do starter mudaria o `docker compose` de quem roda o
+monorepo dali); a publicação (`prepare-composer.php`) os põe no lugar. O
+ambiente de desenvolvimento do monorepo (o `docker-compose.yml` da raiz,
+Livewire na 8180 e React em 127.0.0.1:8181) não muda.
+
+**O nome** do projeto vira o `COMPOSE_PROJECT_NAME` (containers, volumes e
+rede com o prefixo do projeto), o endereço `http://<nome>.localhost:<porta>`,
+o banco (`DB_DATABASE`, com `_` no lugar do `-`) e o cookie de sessão
+(`SESSION_COOKIE=<nome>_session`). Cada projeto no **seu** host: cookie é por
+host, não por porta — dois projetos em `localhost` dividiriam a sessão e o
+`XSRF-TOKEN`. O nginx de desenvolvimento leva quem abrir `localhost:<porta>`
+(ou `127.0.0.1`) ao endereço do projeto (308). Um nome que já existe como
+projeto Docker (containers, volumes ou redes com o rótulo do Compose, mesmo
+parado) é recusado: reusá-lo trocaria os containers de um pelos do outro, e o
+banco novo cairia no volume velho, com outra senha.
+
+**O número** define as quatro portas, com o mesmo final:
+
+| Serviço | Porta (número N, 0–9) | Centena seguinte (10–19) | Publicada |
+| --- | --- | --- | --- |
+| Site (nginx) | 808N | 818N | sempre, em 127.0.0.1 |
+| E-mails (Mailpit, web) | 802N | 812N | sempre, em 127.0.0.1 |
+| Vite | 803N | 813N | sempre, em 127.0.0.1 |
+| Banco (PostgreSQL) | 804N | 814N | só com `COMPOSE_PROFILES=db-port` |
+| Redis | — | — | nunca |
+
+De 0 a 9 cabem dez projetos; ocupados os dez, segue a centena seguinte com o
+mesmo padrão (10 = `8180/8120/8130/8140`), até 99 (`8989/8929/8939/8949`).
+O número sugerido é o primeiro em que **as quatro** estão livres ao mesmo
+tempo (a do banco também, mesmo sem publicá-la: publicar depois não pode
+colidir).
+
+**Como as portas são conferidas:**
+
+- pelo **Docker** (`docker inspect` de todos os containers, inclusive os
+  parados — um projeto parado volta a usar as portas quando sobe): as portas
+  publicadas e **quem** as usa (o projeto do Compose), para o menu dizer "0
+  já é usado por loja-da-maria"; e os nomes dos projetos (containers, volumes
+  e redes com o rótulo do Compose);
+- o que mais ocupa a porta: **fora de container** (o comando único na
+  máquina), tentando abri-la (127.0.0.1 e, fora do Windows, 0.0.0.0);
+  **dentro do container do instalador**, abrir a porta ali não diz nada
+  sobre a máquina — quem tenta é o próprio Docker, com um container
+  descartável (a imagem do instalador, `sleep`) com as portas publicadas em
+  127.0.0.1, apagado logo depois. **Limitação:** no Docker Desktop com WSL,
+  um programa que escuta só dentro da distribuição WSL (fora do Docker) não
+  impede o Docker de publicar a porta e não é visto; programas do Windows, do
+  macOS e do Linux nativo são. Sem o Docker (não instalado, ou sem acesso ao
+  socket), o menu avisa: os nomes dos outros projetos não são conferidos, e as
+  portas só pelo que dá para abrir.
+
+**No `.env`** — o instalador (`tws:install`) grava, **uma vez** (enquanto não
+houver `COMPOSE_PROJECT_NAME`): `COMPOSE_PROJECT_NAME`, `COMPOSE_PROFILES`
+(`db-port` ou vazio), `DEV_SLOT`, `DEV_SITE_PORT`, `DEV_MAIL_PORT`,
+`DEV_VITE_PORT`, `DEV_DB_PORT`, `DEV_UID`/`DEV_GID` (o dono dos arquivos: os
+containers gravam como ele), `DEV_VITE_POLLING`, `APP_URL` e
+`PLATFORM_OFFICIAL_URL`, `SESSION_COOKIE`, `DB_*` (host `postgres`, banco do
+projeto, **senha gerada**), `REDIS_PASSWORD` (**gerada**) e o Mailpit
+(`MAIL_HOST=mailpit`). Nada de senha fixa do kit: o `.env.example` traz a do
+desenvolvimento do monorepo, e o projeto criado recebe outra. Com o Docker de
+desenvolvimento configurado, as migrations ficam para o primeiro
+`docker compose up -d` (o banco do projeto ainda não existe durante a
+criação). **Trocar depois:** edite o `.env` e rode `docker compose up -d`
+(trocando a porta do site, troque também a do `APP_URL`); trocar o nome cria
+containers e volumes novos, com o banco vazio. Tudo é publicado só em
+`127.0.0.1` (`DEV_BIND`); o Mailpit é só local.
+
+**Comandos por starter e `tws:install`:** sem `TWS_KIT_NAME`/`TWS_KIT_SLOT`, o
+`tws:install` do `create-project` do starter usa o nome da pasta (sem colidir)
+e o primeiro número livre — não pergunta. Com elas, confere como o menu: nome
+em uso ou número com porta ocupada param a instalação antes de qualquer
+mudança. No monorepo (sem `compose.yaml` na raiz do starter), nada disso
+acontece.
+
+**A imagem de produção não muda:** o estágio `workspace` é à parte (o `prod`
+parte do `base`), e o `.dockerignore` deixa o `compose.yaml`, o
+`.devcontainer/` e o `docker/dev/` fora do contexto da imagem.
 
 ## Criar um projeto a partir de um starter
 
@@ -434,6 +584,15 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   escolhido, nada do `twstec/kit` sobrou, e os módulos **desmarcados** não
   estão no `composer.json`, no vendor, no registro do Composer nem na imagem
   de produção. A suíte do próprio `twstec/kit` roda nos dois jobs.
+- **O caminho só com o Docker, simulado** (`simulate-install.sh docker`, no
+  job do SQLite, depois da simulação do comando único com o Livewire só com a
+  base): o ZIP do `twstec/kit` como o GitHub serve, `docker compose run --rm
+  -T instalar` com a escolha pelo ambiente e os ZIPs no lugar do Packagist,
+  as conferências (o projeto do starter com o `compose.yaml` e o
+  `.devcontainer/`, o `.env` com o nome, as portas e as senhas geradas, os
+  arquivos com o dono da máquina), `docker compose up -d`, o site respondendo
+  em `http://<nome>.localhost:<porta>/up` (e `localhost` levando para lá) e
+  `docker compose down -v --rmi local`.
 - **As imagens de produção** dos dois starters são construídas e conferidas
   (o React num job próprio, `Imagens de produção do starter React`).
 

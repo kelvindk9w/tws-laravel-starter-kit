@@ -1,0 +1,57 @@
+# =============================================================================
+# O INSTALADOR do TWS Laravel Starter Kit, só com o Docker (sem PHP, Composer
+# nem Node na máquina):
+#
+#   docker compose run --rm instalar
+#
+# Rode DENTRO desta pasta (a do ZIP baixado do GitHub, ou do clone do
+# twstec-kit). O mesmo menu do `composer create-project twstec/kit` pergunta o
+# nome e o número do projeto, a interface e os módulos, e monta o projeto
+# NESTA MESMA PASTA — que deixa de ser o twstec-kit e passa a ser o seu
+# projeto, com o Docker de desenvolvimento pronto. Depois:
+#
+#   docker compose up -d
+#
+# Sem perguntas (scripts, CI): docker compose run --rm -T instalar, com as
+# variáveis TWS_KIT_* no ambiente (ver o README).
+#
+# O socket do Docker é montado SÓ neste container de uma vez (e só durante a
+# instalação): é por ele que o menu vê os projetos e as portas que já estão em
+# uso, para sugerir um nome e um número que não colidem. A rede é a padrão do
+# Docker e não há volume: nada fica para trás além da imagem do instalador
+# (twstec-kit-instalar, a mesma para todos os projetos). Um volume de cache
+# com nome fixo, compartilhado entre as pastas, faria o Compose avisar a cada
+# projeto novo que o volume "é de outro projeto".
+# =============================================================================
+
+services:
+  instalar:
+    build:
+      context: docker/instalar
+    # A mesma imagem para todos os projetos da máquina. Mudou o Dockerfile?
+    # Suba a versão (aqui e em TWS_KIT_PROBE_IMAGE; um teste confere que as
+    # duas batem).
+    image: twstec-kit-instalar:1
+    network_mode: bridge
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+      # O roteiro do instalador, sempre o desta versão do kit.
+      - ./docker/instalar/entrypoint.sh:/opt/twstec-kit/entrypoint.sh:ro
+    environment:
+      - TWS_KIT_IN_DOCKER=1
+      # O nome desta pasta, como o Compose o vê: a base do nome sugerido.
+      - TWS_KIT_FOLDER=${COMPOSE_PROJECT_NAME}
+      # A imagem do container descartável que confere as portas.
+      - TWS_KIT_PROBE_IMAGE=twstec-kit-instalar:1
+      # As escolhas sem perguntas, se estiverem no ambiente de quem chamou.
+      - TWS_KIT_NAME
+      - TWS_KIT_SLOT
+      - TWS_KIT_EXPOSE_DB
+      - TWS_KIT_STACK
+      - TWS_KIT_WITH
+      - TWS_KIT_WITHOUT
+      - TWS_KIT_LOCALE
+      - TWS_KIT_UID
+      - TWS_KIT_GID

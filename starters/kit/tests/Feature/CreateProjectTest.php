@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Twstec\Kit\Setup\Choice;
 use Twstec\Kit\Setup\CreateProject;
 use Twstec\Kit\Setup\Output;
+use Twstec\Kit\Setup\Tests\Fixtures\FakeHost;
 use Twstec\Kit\Setup\Tests\Fixtures\FakeRunner;
 
 // =============================================================================
@@ -17,6 +18,7 @@ use Twstec\Kit\Setup\Tests\Fixtures\FakeRunner;
 beforeEach(function (): void {
     $this->project = temporaryDirectory();
     $this->runner = new FakeRunner;
+    $this->host = new FakeHost;
     $this->stream = fopen('php://memory', 'w+');
 
     $kit = json_decode((string) file_get_contents(dirname(__DIR__, 2).'/composer.json'), true);
@@ -35,8 +37,10 @@ beforeEach(function (): void {
     mkdir($this->project.'/vendor');
     file_put_contents($this->project.'/vendor/autoload.php', "<?php\n");
 
+    // A pasta, como a pessoa a vê (a pasta temporária tem nome aleatório):
+    // a base do nome sugerido do projeto.
     $this->create = function (array $env = [], ?Closure $menu = null, string $locale = 'en'): int {
-        return (new CreateProject($this->project, translator($locale), $this->runner, new Output($this->stream, false), $env, $menu))->run();
+        return (new CreateProject($this->project, translator($locale), $this->runner, new Output($this->stream, false), ['TWS_KIT_FOLDER' => 'meu-app', ...$env], $this->host, $menu))->run();
     };
 
     $this->output = function (): string {
@@ -99,8 +103,17 @@ it('React sem uploads pelo ambiente: o starter React, sem o pacote desmarcado, e
 
     $installer = array_values(array_filter($this->runner->calls, fn (array $call): bool => ($call[1][1] ?? '') === 'post-create-project-cmd'))[0];
 
-    expect($installer[2])->toBe(['TWS_KIT_WITH' => 'accounts,admin', 'TWS_KIT_WITHOUT' => 'uploads', 'APP_LOCALE' => 'en'])
-        ->and(($this->output)())->toContain('Choice (no questions): React');
+    expect($installer[2])->toBe([
+        'TWS_KIT_WITH' => 'accounts,admin',
+        'TWS_KIT_WITHOUT' => 'uploads',
+        'APP_LOCALE' => 'en',
+        // O Docker de desenvolvimento: o nome da pasta e o primeiro número
+        // livre, sem o banco publicado.
+        'TWS_KIT_NAME' => 'meu-app',
+        'TWS_KIT_SLOT' => '0',
+        'TWS_KIT_EXPOSE_DB' => '0',
+    ])
+        ->and(($this->output)())->toContain('Choice (no questions): project meu-app, number 0; React');
 });
 
 it('só a base: nenhum módulo opcional no composer.json', function (): void {
@@ -266,3 +279,74 @@ it('a pasta do instalador que não sai (arquivo preso): o projeto fica pronto, c
         chmod($setup, 0755);
     }
 })->skip(function_exists('posix_getuid') && posix_getuid() === 0, 'como root, a permissão não impede apagar');
+
+// --- o Docker de desenvolvimento do projeto ----------------------------------
+
+it('número (TWS_KIT_SLOT) com porta ocupada: recusado ANTES de baixar qualquer coisa', function (): void {
+    $this->host->withProject('loja-da-maria', 0);
+
+    expect(($this->create)(['TWS_KIT_SLOT' => '0']))->toBe(1)
+        ->and($this->runner->calls)->toBe([])
+        ->and(($this->output)())->toContain('number 0 is in use — loja-da-maria')->toContain('Nothing was installed');
+});
+
+it('nome (TWS_KIT_NAME) de um projeto Docker que já existe: recusado ANTES de baixar qualquer coisa', function (): void {
+    $this->host->withProject('loja', 3);
+
+    expect(($this->create)(['TWS_KIT_NAME' => 'loja']))->toBe(1)
+        ->and($this->runner->calls)->toBe([])
+        ->and(($this->output)())->toContain('there is already a Docker project called loja')->toContain('suggestion: loja-2');
+});
+
+it('sem variável, com outro projeto no 0: o nome da pasta e o número 1 vão para o instalador', function (): void {
+    $this->host->withProject('outro', 0);
+
+    ($this->create)(['TWS_KIT_EXPOSE_DB' => '1']);
+
+    $installer = array_values(array_filter($this->runner->calls, fn (array $call): bool => ($call[1][1] ?? '') === 'post-create-project-cmd'))[0];
+
+    expect($installer[2])->toMatchArray(['TWS_KIT_NAME' => 'meu-app', 'TWS_KIT_SLOT' => '1', 'TWS_KIT_EXPOSE_DB' => '1'])
+        ->and(($this->output)())->toContain('Choice (no questions): project meu-app, number 1;');
+});
+
+it('starter com o Docker de desenvolvimento (compose.yaml): o resumo dá o endereço, os e-mails e o docker compose up -d — sem conferir banco da máquina', function (): void {
+    $this->runner->withCompose = true;
+
+    expect(($this->create)(['TWS_KIT_SLOT' => '4']))->toBe(0);
+
+    expect(($this->output)())->toContain('The project database runs in Docker')
+        ->toContain('Development Docker: project meu-app, number 4')
+        ->toContain('Site: http://meu-app.localhost:8084')
+        ->toContain('Sent e-mails (Mailpit): http://meu-app.localhost:8024')
+        ->toContain('COMPOSE_PROFILES=db-port')
+        ->toContain("    cd {$this->project}\n    docker compose up -d\n")
+        ->not->toContain('composer dev');
+
+    expect(array_filter($this->runner->calls, fn (array $call): bool => $call[0] === 'php'))->toBe([]);
+});
+
+it('no container do instalador: fala "desta pasta" e dos comandos do Docker (sem cd)', function (): void {
+    $this->runner->withCompose = true;
+
+    expect(($this->create)(['TWS_KIT_IN_DOCKER' => '1']))->toBe(0);
+
+    expect(($this->output)())->toContain('creating the project in this folder')
+        ->toContain('Project ready in this folder')
+        ->toContain("Next steps:\n    docker compose up -d\n")
+        ->not->toContain('    cd ');
+});
+
+it('no container, falha depois de montar o projeto: recomeçar do ZIP (sem comandos de composer na máquina)', function (): void {
+    $this->runner->failing['update'] = 1;
+
+    expect(($this->create)(['TWS_KIT_IN_DOCKER' => '1']))->toBe(1);
+
+    expect(($this->output)())->toContain('The project in this folder is incomplete')
+        ->toContain('Download the twstec-kit ZIP again, into a new folder')
+        ->not->toContain('    composer update');
+});
+
+it('no container, desistir no menu: nada instalado, e o comando para rodar de novo', function (): void {
+    expect(($this->create)(['TWS_KIT_IN_DOCKER' => '1'], fn (): ?Choice => null))->toBe(1)
+        ->and(($this->output)())->toContain('Run `docker compose run --rm instalar` again whenever you want.');
+});

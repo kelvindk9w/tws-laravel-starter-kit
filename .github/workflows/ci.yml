@@ -366,7 +366,7 @@ jobs:
   tests-sqlite:
     name: Pest · SQLite (comando local padrão)
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
 
     defaults:
       run:
@@ -482,6 +482,23 @@ jobs:
           KIT_STACK: livewire
           KIT_WITHOUT: accounts,uploads,admin
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-livewire"
+
+      # O CAMINHO SÓ COM O DOCKER (sem PHP na máquina), com os ZIPs do passo
+      # acima: o ZIP do twstec/kit aberto numa pasta, `docker compose run --rm
+      # -T instalar` (o instalador em container, com a escolha pelo ambiente e
+      # os ZIPs no lugar do Packagist), as conferências (o projeto com o
+      # compose.yaml de desenvolvimento, o .env com o nome, as portas e as
+      # senhas geradas, os arquivos com o dono da máquina), `docker compose up
+      # -d`, o site respondendo em http://<nome>.localhost:<porta>/up e o
+      # `down -v --rmi local`.
+      - name: Comando único · caminho só com o Docker (instalar, subir e o site no ar) · Livewire só a base
+        working-directory: .
+        env:
+          STARTER: kit
+          KIT_STACK: livewire
+          KIT_WITHOUT: accounts,uploads,admin
+          DOCKER_NAME: ci-docker
+        run: sh .github/release/simulate-install.sh docker "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
       # STARTER REACT (starters/react): dependências, checagem de tipos
       # (tsc), lint e formatação (Vite+ do kit oficial), build e a suíte no

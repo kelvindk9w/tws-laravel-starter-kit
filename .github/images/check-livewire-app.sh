@@ -37,7 +37,8 @@ docker run --rm -e KIT_MODULES --entrypoint sh "$IMAGE" -c '
 
     # Nada de ambiente, testes nem node_modules.
     for proibido in .env .env.example .env.prod.example tests phpunit.xml phpunit.pgsql.xml \
-        playwright.config.js node_modules public/hot docker-compose.yml docker-compose.prod.yml docker; do
+        playwright.config.js node_modules public/hot docker-compose.yml docker-compose.prod.yml docker \
+        compose.yaml compose.override.yaml .devcontainer; do
         if [ -e "/var/www/html/$proibido" ]; then echo "na imagem: $proibido"; exit 1; fi
     done
 

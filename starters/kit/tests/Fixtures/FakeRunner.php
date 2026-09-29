@@ -36,6 +36,12 @@ final class FakeRunner implements Runner
      */
     public int $databaseStatus = 0;
 
+    /**
+     * O starter "baixado" traz o Docker de desenvolvimento (compose.yaml na
+     * raiz, como o publicado)?
+     */
+    public bool $withCompose = false;
+
     public function composer(array $arguments, string $cwd, array $env = []): int
     {
         $this->calls[] = ['composer', $arguments, $env, $cwd];
@@ -48,6 +54,10 @@ final class FakeRunner implements Runner
         if ($step === 'create-project') {
             [$package] = explode(':', $arguments[1]);
             self::writeStarter($arguments[2], $this->downloadedName ?? $package);
+
+            if ($this->withCompose) {
+                file_put_contents($arguments[2].'/compose.yaml', "services: {}\n");
+            }
         }
 
         if ($step === 'run-script post-root-package-install' && ! is_file($cwd.'/.env')) {

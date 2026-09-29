@@ -25,7 +25,9 @@
 #
 # Uso: simulate-install.sh [etapa] [pasta]
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
-#           test (pest) | image (docker: imagens de produção e conferências)
+#           test (pest) | image (docker: imagens de produção e conferências) |
+#           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
+#           abaixo; depois de copy e package)
 #   VERSION (padrão 2.0.0-beta.1)
 #   STARTER (padrão livewire): livewire | react | kit — qual pacote vira o
 #   projeto: twstec/starter-livewire, twstec/starter-react ou o COMANDO ÚNICO
@@ -36,6 +38,20 @@
 #     KIT_WITHOUT (padrão vazio): opcionais de fora   → TWS_KIT_WITHOUT
 #   e as conferências passam a exigir que os módulos DESMARCADOS não estejam
 #   no projeto (composer.json, vendor, registro do Composer, imagem).
+#
+# A ETAPA docker (STARTER=kit): o caminho de quem só tem o Docker. O ZIP do
+# twstec/kit (o mesmo que o GitHub serve no "Download ZIP" do espelho:
+# `composer archive` respeita o export-ignore, como o GitHub) é aberto numa
+# pasta, e lá dentro roda `docker compose run --rm -T instalar` — o instalador
+# em container, com a escolha pelo ambiente (KIT_STACK, KIT_WITHOUT e
+# DOCKER_NAME/DOCKER_SLOT → TWS_KIT_NAME/TWS_KIT_SLOT). Os ZIPs dos pacotes
+# entram no lugar do Packagist (a pasta deles montada em /packages, o
+# repositório `artifact` relativo `../packages` visto de /app). Depois:
+# conferências (o projeto do starter com o compose.yaml de desenvolvimento, o
+# .env com o nome e as portas, os arquivos com o dono da máquina), `docker
+# compose up -d`, o site respondendo em http://<nome>.localhost:<porta> (e
+# localhost levando para lá), a suíte dentro do container (DOCKER_PEST=1) e,
+# por fim, `docker compose down -v --rmi local` (KEEP_DOCKER=1 mantém no ar).
 # =============================================================================
 set -eu
 # POSIX sh (roda também na imagem PHP Alpine do kit); pipefail onde houver.
@@ -218,6 +234,72 @@ run_tests() {
 # com APP_KEY, banco SQLite, node_modules, public/build, logs e os testes —
 # o .dockerignore tem de deixar tudo isso de fora. A conferência é a mesma do
 # job de imagens do CI (.github/images/check-<starter>-app.sh).
+# O caminho só com o Docker (ver o cabeçalho).
+docker_path() {
+    if [ "$STARTER" != kit ]; then echo 'a etapa docker é do comando único (STARTER=kit)'; exit 2; fi
+
+    zip="$WORK/packages/twstec-kit-$VERSION.zip"
+    folder="$WORK/zip/twstec-kit-main"
+    name=${DOCKER_NAME:-sim-$KIT_STACK}
+    test -f "$zip"
+    rm -rf "$WORK/zip"
+    mkdir -p "$folder"
+    (cd "$folder" && unzip -q "$zip")
+
+    # O ZIP tem o instalador em container, e não tem a suíte do pacote.
+    test -f "$folder/compose.yaml"
+    test -f "$folder/docker/instalar/Dockerfile"
+    if [ -e "$folder/tests" ]; then echo 'o ZIP do twstec-kit leva a suíte'; exit 1; fi
+
+    cd "$folder"
+    # Os ZIPs no lugar do Packagist (o que o --add-repository faria).
+    docker compose run --rm -T instalar composer config repositories.zips '{"type":"artifact","url":"../packages"}'
+
+    TWS_KIT_STACK="$KIT_STACK" TWS_KIT_WITHOUT="$KIT_WITHOUT" TWS_KIT_NAME="$name" TWS_KIT_SLOT="${DOCKER_SLOT:-}" \
+        docker compose run --rm -T -v "$WORK/packages:/packages:ro" instalar
+
+    # O projeto é o do starter, com o Docker de desenvolvimento, e nada do
+    # twstec/kit sobrou.
+    grep -q "\"name\": \"twstec/starter-$STACK\"" composer.json
+    test -f compose.yaml
+    test -f .devcontainer/devcontainer.json
+    if [ -e kit-setup ] || [ -e docker/instalar ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi
+    grep -qx "COMPOSE_PROJECT_NAME=$name" .env
+    grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
+    grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
+    grep -Eq '^APP_KEY=base64:.+' .env
+    test -f public/build/manifest.json
+    for modulo in $LEFT_OUT; do
+        if [ -e "vendor/twstec/kit-$modulo" ]; then echo "módulo desmarcado instalado: $modulo"; exit 1; fi
+    done
+
+    # Os arquivos são de quem é dono da pasta na máquina (nada de root).
+    dono=$(stat -c %u .)
+    estranhos=$(find . -path ./node_modules -prune -o ! -user "$dono" -print | head -n 5)
+    if [ -n "$estranhos" ]; then echo "arquivos com outro dono: $estranhos"; exit 1; fi
+
+    port=$(sed -n 's/^DEV_SITE_PORT=//p' .env)
+    docker compose up -d
+    ok=0
+    for _ in $(seq 1 90); do
+        if [ "$(curl -s -o /dev/null -w '%{http_code}' "http://$name.localhost:$port/up")" = 200 ]; then ok=1; break; fi
+        sleep 5
+    done
+    if [ "$ok" != 1 ]; then docker compose ps -a; docker compose logs --tail 80; echo "o site não respondeu em http://$name.localhost:$port"; exit 1; fi
+    echo "site no ar: http://$name.localhost:$port/up → 200"
+    test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
+    docker compose ps --format '{{.Service}} {{.State}}'
+
+    if [ "${DOCKER_PEST:-0}" = 1 ]; then
+        docker compose exec -T app ./vendor/bin/pest --ci
+    fi
+
+    if [ "${KEEP_DOCKER:-0}" != 1 ]; then
+        docker compose down -v --rmi local
+    fi
+    echo "caminho só com o Docker ($KIT_STACK;$CHOSEN): ok"
+}
+
 image() {
     cd "$WORK/app"
     tag="kit-publicado-$STARTER-$STACK"
@@ -259,6 +341,7 @@ case "$STEP" in
     build) build ;;
     test) run_tests ;;
     image) image ;;
+    docker) docker_path ;;
     all) copy; package; build; run_tests; image ;;
     *) echo "etapa desconhecida: $STEP"; exit 2 ;;
 esac

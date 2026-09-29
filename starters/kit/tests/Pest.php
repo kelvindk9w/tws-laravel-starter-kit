@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Laravel\Prompts\Prompt;
+use Twstec\Kit\Setup\Choice;
+use Twstec\Kit\Setup\Tests\Fixtures\FakeHost;
 use Twstec\Kit\Setup\Translator;
 
 // A suíte do comando único não sobe aplicação nenhuma: é PHP puro, o Laravel
@@ -14,6 +16,17 @@ use Twstec\Kit\Setup\Translator;
 function translator(string $locale = 'en'): Translator
 {
     return new Translator($locale, dirname(__DIR__).'/kit-setup/lang');
+}
+
+/**
+ * A escolha pelo ambiente, na pasta "meu-app", numa máquina de mentira (vazia,
+ * salvo a pedida).
+ *
+ * @return array{0: ?Choice, 1: ?string}
+ */
+function envChoice(array $env, ?FakeHost $host = null): array
+{
+    return Choice::fromEnvironment($env, ['livewire', 'react'], 'livewire', translator(), $host ?? new FakeHost, 'meu-app');
 }
 
 /**

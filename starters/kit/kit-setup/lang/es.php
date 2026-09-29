@@ -10,6 +10,25 @@ return [
     'aborted' => 'No se instaló nada. Borre la carpeta :dir y ejecute el comando de nuevo cuando quiera.',
     'confirm' => '¿Crear el proyecto así?',
 
+    'name' => [
+        'label' => 'Nombre del proyecto',
+        'hint' => 'Letras minúsculas, números y guion. Se vuelve la dirección http://<nombre>.localhost, el nombre de los contenedores y el de la base de datos.',
+    ],
+
+    'slot' => [
+        'label' => 'Número del proyecto (los puertos)',
+        'hint' => 'Todos los puertos terminan en él: sitio 808N, correos 802N, Vite 803N, base de datos 804N. De 0 a 9; después, 10 a 99 (la centena siguiente: 818N…).',
+        'intro' => 'Cada proyecto usa un número, y sus puertos terminan en ese número (el 2 es el sitio en el 8082, los correos en el 8022…).',
+        'used' => ':slot ya lo usa :owners',
+        'next_hundred' => 'De 0 a 9 no hay número con los cuatro puertos libres: la sugerencia es :slot, en la centena siguiente (mismo patrón, 818N, 812N…).',
+        'invalid' => 'Escriba un número de 0 a 99.',
+    ],
+
+    'dev' => [
+        'docker_unavailable' => 'Docker no respondió desde aquí: los nombres de los otros proyectos no se pueden comprobar, y los puertos solo por lo que se puede abrir en esta máquina.',
+        'other_program' => 'otro programa',
+    ],
+
     'stack' => [
         'label' => '¿Qué interfaz?',
         'hint' => 'El panel del usuario. Los paquetes, las reglas y el /admin son los mismos en las dos.',
@@ -29,8 +48,8 @@ return [
     ],
 
     'plan' => [
-        'summary' => "Interfaz: :stack\nMódulos opcionales: :modules",
-        'from_environment' => 'Elección (sin preguntas): :stack; módulos opcionales: :modules.',
+        'summary' => "Proyecto: :name — :site (correos: :mail)\nInterfaz: :stack\nMódulos opcionales: :modules",
+        'from_environment' => 'Elección (sin preguntas): proyecto :name, número :slot; :stack; módulos opcionales: :modules.',
     ],
 
     'errors' => [
@@ -42,6 +61,15 @@ return [
         'missing_dependency' => ':module necesita :needs.',
         'missing_dependency_env' => 'Deje fuera los dos (TWS_KIT_WITHOUT=:both) o mantenga lo que falta.',
         'nothing_installed' => 'No se instaló nada. Corrija las variables, borre la carpeta :dir y ejecute el comando de nuevo.',
+        'in_variable' => 'En :variable:',
+        'name_format' => 'el nombre ":name" no sirve: use letras minúsculas, números y guion, empezando por letra (sugerencia: :suggestion).',
+        'name_length' => 'el nombre ":name" debe tener de 2 a 40 caracteres (sugerencia: :suggestion).',
+        'name_taken' => 'ya existe un proyecto Docker llamado :name en esta máquina (contenedores o volúmenes, aunque esté detenido). Use otro nombre — sugerencia: :suggestion.',
+        'slot_invalid' => 'número de proyecto inválido: :slot. Use de 0 a 99 (:variable).',
+        'slot_busy' => 'el número :slot está en uso — :occupants.',
+        'slot_suggestion' => 'El primer número con los cuatro puertos libres es :suggestion.',
+        'no_free_slot' => 'Ningún número de 0 a 99 tiene los cuatro puertos libres. Detenga proyectos que no esté usando (docker compose stop, en la carpeta de cada uno) y ejecute de nuevo.',
+        'expose_invalid' => 'Valor inválido en TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar la base de datos) o 0.',
     ],
 
     'steps' => [
@@ -50,7 +78,7 @@ return [
         'modules' => 'Módulos en composer.json: :modules',
         'env' => 'Preparando el .env (post-root-package-install del starter)',
         'install' => 'Instalando las dependencias (composer update)',
-        'installer' => 'Claves y base de datos por el instalador del starter (tws:install, sin volver a preguntar)',
+        'installer' => 'Claves, Docker de desarrollo y base de datos por el instalador del starter (tws:install, sin volver a preguntar)',
     ],
 
     'failures' => [
@@ -67,6 +95,7 @@ return [
         'ready' => 'Base de datos lista: migraciones aplicadas.',
         'unreachable' => 'La base de datos del .env (DB_CONNECTION=:connection, DB_HOST=:host) no respondió: las migraciones quedaron para después.',
         'how' => 'Ajuste las variables DB_* del .env — el docker-compose.yml de desarrollo del kit usa PostgreSQL; para SQLite, DB_CONNECTION=sqlite y borre la línea DB_DATABASE (el archivo database/database.sqlite ya existe) — y ejecute:',
+        'docker' => 'La base de datos del proyecto corre en Docker: el primer `docker compose up -d` crea la base y ejecuta las migraciones solo.',
     ],
 
     'done' => [
@@ -74,5 +103,31 @@ return [
         'stack' => 'Interfaz: :stack',
         'modules' => 'Módulos: :modules',
         'next' => 'Próximos pasos:',
+        'docker' => 'Docker de desarrollo: proyecto :name, número :slot (los puertos terminan en :slot; todo en el .env).',
+        'site' => 'Sitio: :url',
+        'mail' => 'Correos enviados (Mailpit): :url',
+        'database_exposed' => 'Base de datos: publicada en el puerto :port de esta máquina (127.0.0.1), con la contraseña del .env.',
+        'database_internal' => 'Base de datos y Redis: solo dentro de Docker (para publicar la base en el puerto :port, COMPOSE_PROFILES=db-port en el .env).',
+        'open' => 'Después, abra :url en el navegador (la primera subida tarda unos minutos: construye las imágenes).',
+    ],
+
+    // Dentro del contenedor del instalador (docker compose run --rm instalar):
+    // la carpeta es la del ZIP, y el camino es el de Docker.
+    'docker' => [
+        'intro' => 'TWS Laravel Starter Kit — creando el proyecto en esta carpeta',
+        'aborted' => 'No se instaló nada. Ejecute `docker compose run --rm instalar` de nuevo cuando quiera.',
+        'errors' => [
+            'nothing_installed' => 'No se instaló nada. Corrija las variables y ejecute `docker compose run --rm instalar` de nuevo.',
+        ],
+        'failures' => [
+            'download' => 'No fue posible descargar el starter :package (vea el mensaje de Composer arriba). No se instaló nada: revise la conexión y ejecute `docker compose run --rm instalar` de nuevo.',
+            'unexpected' => 'El paquete descargado no es el starter esperado (:package). No se instaló nada: ejecute `docker compose run --rm instalar` de nuevo.',
+            'replace' => 'No fue posible montar el proyecto en esta carpeta (:reason). Descargue el ZIP de twstec-kit de nuevo, en una carpeta nueva, y ejecute el instalador.',
+            'incomplete' => 'El proyecto en esta carpeta quedó incompleto: el paso ":step" falló (vea la salida arriba).',
+            'restart' => 'Descargue el ZIP de twstec-kit de nuevo, en una carpeta nueva, y ejecute `docker compose run --rm instalar` (borre esta carpeta).',
+        ],
+        'done' => [
+            'heading' => 'Proyecto listo en esta carpeta',
+        ],
     ],
 ];

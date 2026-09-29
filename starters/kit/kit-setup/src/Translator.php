@@ -61,6 +61,14 @@ final class Translator
     }
 
     /**
+     * A chave existe (e é um texto)?
+     */
+    public function has(string $key): bool
+    {
+        return $this->get($key) !== $key;
+    }
+
+    /**
      * @param  array<string, string>  $replace
      */
     public function get(string $key, array $replace = []): string

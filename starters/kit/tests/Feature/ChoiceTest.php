@@ -7,11 +7,6 @@ use Twstec\Kit\Setup\Choice;
 // A escolha pelo ambiente (TWS_KIT_STACK, TWS_KIT_WITH, TWS_KIT_WITHOUT) — o
 // caminho sem perguntas, igual no Linux, no macOS e no Windows.
 
-function envChoice(array $env): array
-{
-    return Choice::fromEnvironment($env, ['livewire', 'react'], 'livewire', translator());
-}
-
 it('sem variável nenhuma: o padrão seguro — Livewire, todos os módulos', function (): void {
     [$choice, $error] = envChoice([]);
 
@@ -47,5 +42,10 @@ it('reconhece quando há escolha no ambiente (mesmo vazia) — aí o menu não a
     expect(Choice::inEnvironment([]))->toBeFalse()
         ->and(Choice::inEnvironment(['TWS_KIT_WITHOUT' => false]))->toBeFalse()
         ->and(Choice::inEnvironment(['TWS_KIT_WITHOUT' => '']))->toBeTrue()
-        ->and(Choice::inEnvironment(['TWS_KIT_STACK' => 'react']))->toBeTrue();
+        ->and(Choice::inEnvironment(['TWS_KIT_STACK' => 'react']))->toBeTrue()
+        ->and(Choice::inEnvironment(['TWS_KIT_NAME' => 'loja']))->toBeTrue()
+        ->and(Choice::inEnvironment(['TWS_KIT_SLOT' => '2']))->toBeTrue()
+        ->and(Choice::inEnvironment(['TWS_KIT_EXPOSE_DB' => '1']))->toBeTrue()
+        // A pasta (o compose do instalador informa) não é escolha.
+        ->and(Choice::inEnvironment(['TWS_KIT_FOLDER' => 'x', 'TWS_KIT_IN_DOCKER' => '1']))->toBeFalse();
 });

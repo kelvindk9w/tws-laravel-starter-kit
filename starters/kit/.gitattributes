@@ -1,5 +1,10 @@
-# O que NÃO vai no arquivo que o Composer baixa no `create-project` — o
-# projeto criado recebe o starter escolhido, não a suíte deste pacote.
+# Finais de linha: sempre LF, também num clone no Windows (com autocrlf) — o
+# roteiro do instalador em container é sh, e CRLF o quebraria.
+* text=auto eol=lf
+
+# O que NÃO vai no arquivo que o Composer baixa no `create-project` (nem no
+# ZIP do GitHub) — o projeto criado recebe o starter escolhido, não a suíte
+# deste pacote.
 /tests export-ignore
 /phpunit.xml export-ignore
 /.gitattributes export-ignore

@@ -7,11 +7,13 @@ use Laravel\Prompts\Prompt;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Twstec\Kit\Setup\Menu;
+use Twstec\Kit\Setup\Tests\Fixtures\FakeHost;
 
 // =============================================================================
-// O MENU (Laravel Prompts) com as teclas de mentira do próprio Prompts: a
-// interface, os módulos e a confirmação. E a regra que ele não deixa passar:
-// Uploads marcado com Contas desmarcado.
+// O MENU (Laravel Prompts) com as teclas de mentira do próprio Prompts: o nome
+// e o número do projeto (as duas primeiras perguntas — Enter aceita a
+// sugestão; ver DevQuestionsTest), a interface, os módulos e a confirmação. E
+// a regra que ele não deixa passar: Uploads marcado com Contas desmarcado.
 // =============================================================================
 
 /**
@@ -24,19 +26,30 @@ function fakeKeys(array $keys): void
     Prompt::terminal()->shouldReceive('cols')->andReturn(240);
 }
 
-function menu(?bool $fallback = null, $input = null, $output = null): Menu
+function menu(?bool $fallback = null, $input = null, $output = null, ?FakeHost $host = null, string $folder = 'meu-app'): Menu
 {
-    return new Menu(translator(), ['livewire' => 'twstec/starter-livewire', 'react' => 'twstec/starter-react'], 'livewire', $fallback, $input, $output);
+    return new Menu(translator(), ['livewire' => 'twstec/starter-livewire', 'react' => 'twstec/starter-react'], 'livewire', $host ?? new FakeHost, $folder, $fallback, $input, $output);
 }
 
+/**
+ * Enter no nome e no número: aceita as sugestões.
+ */
+const ACCEPT_NAME_AND_SLOT = [Key::ENTER, Key::ENTER];
+
 it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
-    fakeKeys([Key::ENTER, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, Key::ENTER]);
 
     $choice = menu(false)->ask();
 
     expect($choice->stack)->toBe('livewire')
-        ->and($choice->modules)->toBe(['accounts', 'uploads', 'admin']);
+        ->and($choice->modules)->toBe(['accounts', 'uploads', 'admin'])
+        ->and($choice->name)->toBe('meu-app')
+        ->and($choice->slot)->toBe(0)
+        ->and($choice->exposeDatabase)->toBeFalse();
 
+    Prompt::assertStrippedOutputContains('Project name');
+    Prompt::assertStrippedOutputContains('Project number (the ports)');
+    Prompt::assertStrippedOutputContains('Project: meu-app — http://meu-app.localhost:8080 (e-mails: http://meu-app.localhost:8020)');
     Prompt::assertStrippedOutputContains('Which interface?');
     Prompt::assertStrippedOutputContains('Always included: Foundation');
     Prompt::assertStrippedOutputContains('Which optional modules?');
@@ -44,7 +57,7 @@ it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
 });
 
 it('React, sem uploads: seta, espaço no segundo módulo, e confirma', function (): void {
-    fakeKeys([Key::DOWN, Key::ENTER, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::DOWN, Key::ENTER, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
 
     $choice = menu(false)->ask();
 
@@ -56,6 +69,7 @@ it('React, sem uploads: seta, espaço no segundo módulo, e confirma', function 
 
 it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua até a escolha valer', function (): void {
     fakeKeys([
+        ...ACCEPT_NAME_AND_SLOT,
         Key::ENTER,          // Livewire
         Key::SPACE,          // desmarca Contas (Uploads continua marcado)
         Key::ENTER,          // tenta seguir: recusado
@@ -72,7 +86,7 @@ it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua at�
 });
 
 it('desmarcar contas e uploads juntos vale (só a base e o /admin)', function (): void {
-    fakeKeys([Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
 
     expect(menu(false)->ask()->modules)->toBe(['admin']);
 
@@ -89,7 +103,7 @@ it('a regra do menu, sozinha', function (array $values, ?string $error): void {
 ]);
 
 it('recusar a confirmação desiste (null)', function (): void {
-    fakeKeys([Key::ENTER, Key::ENTER, 'n', Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, 'n', Key::ENTER]);
 
     expect(menu(false)->ask())->toBeNull();
 });
@@ -102,10 +116,11 @@ it('Ctrl+C desiste sem derrubar o processo (null)', function (): void {
 
 it('Windows (sem stty): as mesmas perguntas em listas numeradas, com a mesma recusa de uploads sem contas', function (): void {
     $input = new ArrayInput([]);
-    // Interface 2 (React); módulos só "2" (Uploads, sem Contas) → recusado;
-    // de novo "0,1" (Contas e Uploads); confirma.
+    // Nome e número: Enter (as sugestões); interface 2 (React); módulos só
+    // "2" (Uploads, sem Contas) → recusado; de novo "0,1" (Contas e
+    // Uploads); confirma.
     $stream = fopen('php://memory', 'r+');
-    fwrite($stream, "1\n1\n0,1\ny\n");
+    fwrite($stream, "\n\n1\n1\n0,1\ny\n");
     rewind($stream);
     $input->setStream($stream);
     $output = new BufferedOutput;
@@ -115,6 +130,8 @@ it('Windows (sem stty): as mesmas perguntas em listas numeradas, com a mesma rec
 
     expect($choice->stack)->toBe('react')
         ->and($choice->modules)->toBe(['accounts', 'uploads'])
-        ->and($output->fetch())->toContain('Which interface?')
+        ->and($choice->name)->toBe('meu-app')
+        ->and($choice->slot)->toBe(0)
+        ->and($output->fetch())->toContain('Project name')->toContain('Which interface?')
         ->toContain('needs Accounts with members');
 });

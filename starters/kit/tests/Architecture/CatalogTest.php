@@ -92,3 +92,17 @@ it('o create.php carrega TODAS as classes antes de começar (o composer update t
         expect($entry)->toContain("'Twstec\\\\Kit\\\\Setup\\\\".str_replace('/', '\\\\', $relative)."'");
     }
 });
+
+it('o Docker de desenvolvimento (nome, número, portas) é o MESMO código no twstec/kit e no instalador', function () use ($root, $monorepo): void {
+    $kit = glob($root.'/kit-setup/src/Dev/*.php');
+    $installer = glob($monorepo.'/packages/installer/src/Dev/*.php');
+
+    expect(array_map('basename', $kit))->toBe(array_map('basename', $installer))
+        ->and($kit)->not->toBe([]);
+
+    foreach ($kit as $file) {
+        $ours = str_replace('namespace Twstec\Kit\Setup\Dev;', 'namespace Twstec\Kit\Installer\Dev;', (string) file_get_contents($file));
+
+        expect((string) file_get_contents($monorepo.'/packages/installer/src/Dev/'.basename($file)))->toBe($ours, basename($file).' divergiu');
+    }
+})->skip(! is_dir($monorepo.'/packages/installer'), 'fora do monorepo');

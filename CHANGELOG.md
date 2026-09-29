@@ -4,6 +4,58 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+### Adicionado
+
+- **Criar um projeto só com o Docker Desktop, sem PHP na máquina:** baixe o
+  espelho `twstec-kit` (GitHub → Code → Download ZIP, ou `git clone`), entre na
+  pasta e rode `docker compose run --rm instalar`. O mesmo menu do comando
+  único roda num container (imagem `twstec-kit-instalar`: PHP 8.4 com as
+  extensões dos starters, Composer, Node 24 e a linha de comando do Docker) e
+  monta o projeto **na própria pasta**; depois, `docker compose up -d`. Os
+  arquivos saem com o dono da pasta na máquina (nunca root); o roteiro não
+  quebra com CRLF; a rede é a padrão do Docker e não fica volume para trás.
+  Sem terminal: `docker compose run --rm -T instalar` com as variáveis
+  `TWS_KIT_*`.
+- **Duas perguntas novas no começo do menu, com a resposta sugerida (Enter
+  aceita):** o **nome do projeto** (vira `COMPOSE_PROJECT_NAME`, o endereço
+  `http://<nome>.localhost:<porta>`, o banco e o cookie de sessão; o nome de
+  um projeto Docker que já existe é recusado com outra sugestão) e o **número
+  do projeto**, que define todas as portas com o mesmo final — site `808N`,
+  e-mails `802N`, Vite `803N`, banco `804N`; ocupados de 0 a 9, a centena
+  seguinte (`818N`…). O número sugerido é o primeiro com as quatro portas
+  livres, e o menu mostra quem usa os outros ("0 já é usado por
+  loja-da-maria"). Pelo ambiente: `TWS_KIT_NAME`, `TWS_KIT_SLOT` e
+  `TWS_KIT_EXPOSE_DB`.
+- **Todo projeto criado já vem com o Docker de desenvolvimento** (pelos dois
+  caminhos e pelos comandos por starter): `compose.yaml` com app, nginx,
+  PostgreSQL, Redis, Mailpit, fila, agendador, Vite (recarga ao vivo) e as
+  migrations na primeira subida; `.devcontainer/devcontainer.json` para o VS
+  Code. O `tws:install` grava no `.env` o nome, as portas, o dono dos arquivos
+  e senhas geradas para o banco e o Redis (nada da senha fixa do
+  `.env.example`); tudo publicado só em `127.0.0.1`, o Redis nunca, o banco só
+  com `COMPOSE_PROFILES=db-port`. O nome e o número de um projeto criado ficam
+  reservados até o primeiro `up`.
+- **Guia "Primeiros passos para iniciantes"** no README do `twstec-kit` (e o
+  link no README do monorepo).
+- Starters: estágio `workspace` no `docker/php/Dockerfile` (o `dev` com o
+  Composer e o git), para o desenvolvimento do projeto criado. O `dev` do
+  monorepo e a imagem de produção não mudam.
+- CI: o caminho só com o Docker, simulado no job do SQLite (instalar, subir e
+  o site respondendo), depois da simulação do comando único.
+
+### Alterado
+
+- O menu do comando único tem cinco perguntas (nome, número, interface,
+  módulos, confirmação). Com o Docker de desenvolvimento configurado, o
+  `tws:install` deixa as migrations para o `docker compose up -d`.
+- O teste do `X-Forwarded-Host` do starter Livewire compara com o host da
+  `APP_URL` (e não com `localhost` fixo): passa num projeto com o endereço
+  `<nome>.localhost`.
+- O teto do job `Pest · SQLite (comando local padrão)` subiu de 75 para 90
+  minutos.
+
 ## [2.0.0-beta.2] — 2026-09-29
 
 Segunda versão de testes da 2.0: comando único com menu para criar o
@@ -800,7 +852,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.1...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.2...desenvolvimento
 [2.0.0-beta.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
