@@ -1,13 +1,15 @@
 # PUBLICAÇÃO — split do monorepo para os repositórios só-leitura (DESLIGADO).
 #
-# A cada tag `v2.*`, copiaria cada pacote (packages/*) e os starters
-# (starters/livewire e starters/react) para o repositório só-leitura de cada
-# um, com a mesma tag — 8 destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
+# A cada tag `v2.*`, copiaria cada pacote (packages/*), os starters
+# (starters/livewire e starters/react) e o comando único (starters/kit →
+# twstec/kit) para o repositório só-leitura de cada um, com a mesma tag — 9
+# destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
 # monorepo, e o starter publicado sai sem ela (ver prepare-composer.php); o
 # Packagist lê esses repositórios (webhook) e publica a versão. Quem usa o kit
-# instala só o que escolheu (`composer require twstec/kit-auth`, ou
-# `composer create-project twstec/starter-livewire` ou `twstec/starter-react`
-# / `laravel new --using=`).
+# instala só o que escolheu (`composer create-project twstec/kit`, o comando
+# único com o menu; ou `composer create-project twstec/starter-livewire` /
+# `twstec/starter-react` / `laravel new --using=`; ou `composer require
+# twstec/kit-auth` num aplicativo que já existe).
 #
 # ESTÁ DESLIGADO até a fase F10b, que depende do dono: os repositórios vazios
 # criados na conta kelvindk9w (nomes na matriz), o segredo SPLIT_TOKEN (token
@@ -23,9 +25,11 @@
 # (.github/release/prepare-composer.php): sem os path repositories do
 # monorepo, com os pacotes do kit em `^2.0` (no starter, `^2.0@beta` enquanto
 # a versão for pré-release) e, no starter, sem o composer.lock e com o
-# docker-compose.prod.yml sem o contexto de build `packages` do monorepo. É exatamente o
+# docker-compose.prod.yml sem o contexto de build `packages` do monorepo; no
+# twstec/kit, com a restrição do starter que ele baixa
+# (`extra.twstec-kit.constraint`) e sem a suíte dele. É exatamente o
 # que a simulação da instalação publicada, no CI, instala e testa
-# (.github/release/simulate-install.sh).
+# (.github/release/simulate-install.sh — inclusive `STARTER=kit`).
 name: Publicação (split) — desligada
 
 on:
@@ -45,10 +49,50 @@ concurrency:
   group: split-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
+env:
+  # A conta dos repositórios espelho (split) e do endereço que o Packagist lê.
+  SPLIT_OWNER: kelvindk9w
+
 jobs:
+  # A LISTA DOS ESPELHOS, num lugar só: o split copia cada pasta para o
+  # repositório dela, e o aviso ao Packagist (último job) percorre a mesma
+  # lista — um espelho novo entra aqui e nos dois.
+  mirrors:
+    name: Espelhos
+    if: vars.KIT_SPLIT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      include: ${{ steps.list.outputs.include }}
+    steps:
+      # Ordem = ordem da publicação (max-parallel 1): os pacotes, o
+      # instalador (require-dev dos starters: sem ele publicado, o
+      # create-project do starter não resolve), os starters (o React: o
+      # espelho foi criado pelo dono) e por último o comando único
+      # (`composer create-project twstec/kit`), que baixa o starter escolhido
+      # no menu. Todo espelho precisa estar no token SPLIT_TOKEN.
+      - name: Lista
+        id: list
+        run: |
+          cat <<'JSON' > "$RUNNER_TEMP/mirrors.json"
+          [
+            {"path": "packages/foundation", "repository": "twstec-kit-foundation"},
+            {"path": "packages/auth", "repository": "twstec-kit-auth"},
+            {"path": "packages/accounts", "repository": "twstec-kit-accounts"},
+            {"path": "packages/uploads", "repository": "twstec-kit-uploads"},
+            {"path": "packages/admin", "repository": "twstec-kit-admin"},
+            {"path": "packages/installer", "repository": "twstec-kit-installer"},
+            {"path": "starters/livewire", "repository": "twstec-starter-livewire"},
+            {"path": "starters/react", "repository": "twstec-starter-react"},
+            {"path": "starters/kit", "repository": "twstec-kit"}
+          ]
+          JSON
+          echo "include=$(jq -c . "$RUNNER_TEMP/mirrors.json")" >> "$GITHUB_OUTPUT"
+
   split:
     name: Split · ${{ matrix.path }}
     # DESLIGADO até a F10b (ver o cabeçalho): sem a variável, não roda.
+    needs: mirrors
     if: vars.KIT_SPLIT_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -57,31 +101,10 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        include:
-          - path: packages/foundation
-            repository: twstec-kit-foundation
-          - path: packages/auth
-            repository: twstec-kit-auth
-          - path: packages/accounts
-            repository: twstec-kit-accounts
-          - path: packages/uploads
-            repository: twstec-kit-uploads
-          - path: packages/admin
-            repository: twstec-kit-admin
-          # O instalador (require-dev do starter): sem ele publicado, o
-          # `composer create-project` do starter não resolve.
-          - path: packages/installer
-            repository: twstec-kit-installer
-          - path: starters/livewire
-            repository: twstec-starter-livewire
-          # O starter React (F11c): o repositório espelho é criado pelo dono
-          # antes de ligar a publicação.
-          - path: starters/react
-            repository: twstec-starter-react
+        include: ${{ fromJSON(needs.mirrors.outputs.include) }}
 
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
-      SPLIT_OWNER: kelvindk9w
 
     steps:
       # Só tag de versão 2.x (a entrada manual também passa por aqui).
@@ -117,3 +140,65 @@ jobs:
           tag: ${{ env.TAG }}
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+  # O PACKAGIST fica sabendo da versão nova. Os espelhos não têm webhook (o
+  # split empurra com o SPLIT_TOKEN, e o Packagist não os acompanha sozinho:
+  # "not auto-updated"); então, depois que TODOS os splits passam, este job
+  # chama a API documentada do Packagist para cada espelho da lista:
+  #   POST https://packagist.org/api/update-package
+  #   Authorization: Bearer <usuário>:<token>   (fora da URL e do log)
+  #   {"repository": "https://github.com/<conta>/<espelho>"}
+  # O endpoint aceita o token SAFE do perfil no Packagist (o recomendado para
+  # CI). O dono cria o segredo PACKAGIST_API_TOKEN e a variável
+  # PACKAGIST_USERNAME; sem eles, o job avisa no log e sai sem falhar (o
+  # split já está feito — dá para atualizar à mão no Packagist). Com eles,
+  # cada chamada tenta de novo em erro de rede ou 5xx, e qualquer resposta de
+  # erro deixa o job VERMELHO, com o espelho e o status (nunca o token).
+  packagist:
+    name: Avisar o Packagist
+    needs: [mirrors, split]
+    if: vars.KIT_SPLIT_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PACKAGIST_USERNAME: ${{ vars.PACKAGIST_USERNAME }}
+      PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+      MIRRORS: ${{ needs.mirrors.outputs.include }}
+    steps:
+      - name: update-package de cada espelho
+        run: |
+          if [ -z "$PACKAGIST_USERNAME" ] || [ -z "$PACKAGIST_API_TOKEN" ]; then
+            echo "::warning title=Packagist não avisado::Faltam a variável PACKAGIST_USERNAME e/ou o segredo PACKAGIST_API_TOKEN. O split foi feito; atualize os pacotes à mão no Packagist ou configure os dois (docs/instalacao.md, seção Publicação)."
+            exit 0
+          fi
+
+          repositories=$(printf '%s' "$MIRRORS" | jq -r '.[].repository')
+          if [ -z "$repositories" ]; then
+            echo "::error title=Packagist não avisado::a lista dos espelhos veio vazia"
+            exit 1
+          fi
+
+          # O cabeçalho vai por arquivo (nada de token na linha de comando
+          # nem na URL), só legível pelo job e apagado na saída; sem `set -x`.
+          header="$RUNNER_TEMP/packagist-auth"
+          trap 'rm -f "$header" "$RUNNER_TEMP/packagist-response"' EXIT
+          umask 077
+          printf 'Authorization: Bearer %s:%s\n' "$PACKAGIST_USERNAME" "$PACKAGIST_API_TOKEN" > "$header"
+
+          failed=0
+          for repository in $repositories; do
+            url="https://github.com/$SPLIT_OWNER/$repository"
+            body=$(jq -cn --arg url "$url" '{repository: $url}')
+            status=$(curl -sS -o "$RUNNER_TEMP/packagist-response" -w '%{http_code}' \
+              --retry 3 --retry-delay 5 --retry-all-errors --max-time 30 \
+              -X POST -H @"$header" -H 'Content-Type: application/json' \
+              --data "$body" https://packagist.org/api/update-package) || status=000
+            if [ "${status#2}" != "$status" ] && jq -e '.status == "success"' "$RUNNER_TEMP/packagist-response" >/dev/null 2>&1; then
+              echo "ok: $url"
+            else
+              echo "::error title=Packagist recusou::$url → HTTP $status: $(head -c 300 "$RUNNER_TEMP/packagist-response" 2>/dev/null)"
+              failed=1
+            fi
+          done
+
+          exit "$failed"

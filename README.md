@@ -4,6 +4,41 @@ Base estrutural reutilizável para projetos Laravel — segurança primeiro, Doc
 
 **Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Pest 4 · Playwright · Livewire 4 (painel do usuário) · Filament 5 (super admin) · Horizon (filas) · spatie/laravel-backup (backup → R2) · nginx+php-fpm.
 
+## Criar um projeto
+
+Um comando só:
+
+```bash
+composer create-project "twstec/kit:^2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
+```
+
+Um menu pergunta:
+
+1. **a interface** — Livewire ou React (Inertia + TypeScript + shadcn/ui);
+2. **os módulos opcionais** — contas com membros e API, uploads e foto de
+   perfil, painel `/admin`. A base (segurança, auditoria, idioma, e-mail) e a
+   autenticação vêm sempre; uploads exige contas, e o menu não aceita a
+   combinação sem elas.
+
+Sai o projeto pronto: o starter escolhido **só com os pacotes marcados**, a
+`APP_KEY` e o pepper das chaves de API gerados e o banco preparado — ou, se o
+banco do `.env` não responder, a instrução exata do que ajustar. Sem
+terminal (CI, scripts), a escolha vai pelo ambiente:
+`TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project …`
+(no Windows, `$env:TWS_KIT_STACK = "react"` antes). O comando único chega na
+**2.0.0-beta.2**; ver [twstec/kit](starters/kit/README.md).
+
+Os comandos por starter continuam valendo:
+`composer create-project "twstec/starter-livewire:^2.0@beta" meu-projeto`
+(ou `twstec/starter-react`, ou `laravel new meu-projeto
+--using=twstec/starter-livewire`). Num **aplicativo Laravel que já existe**:
+`composer require "twstec/kit-foundation:^2.0@beta"`,
+`composer require --dev "twstec/kit-installer:^2.0@beta"` (durante o beta; na
+estável, só o instalador) e `php artisan tws:add`, que mostra os pacotes que faltam e instala os
+escolhidos. Tudo em [Instalação e módulos](docs/instalacao.md).
+
+O resto deste README é o **desenvolvimento do próprio kit** (o monorepo).
+
 ## O que é e por que existe
 
 Todo projeto novo começa refazendo as mesmas peças — autenticação, 2FA,
@@ -43,8 +78,9 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | Pasta | O que tem |
 | --- | --- |
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
+| [`starters/kit/`](starters/kit) | O comando único, `twstec/kit`: `composer create-project twstec/kit` pergunta a interface e os módulos e entrega o projeto do starter escolhido. Não é um aplicativo — ele dá lugar ao starter. |
 | [`starters/react/`](starters/react) | O mesmo kit com o painel em React + Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel, e a autenticação dos pacotes: as mesmas telas do Livewire, E2E próprio e imagem de produção própria (`twstec/starter-react`). |
-| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`, o `php artisan tws:install`). |
+| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`: o `php artisan tws:install`, que escolhe os módulos de um starter, e o `php artisan tws:add`, que acrescenta pacotes a um aplicativo que já existe). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire em `localhost:8180` e o starter React em `127.0.0.1:8181` (serviços `react-*`, banco próprio; outro host para os cookies dos dois não colidirem). |
 
@@ -111,10 +147,10 @@ Ele faz o `composer remove`/`require`, tira a demo do banco antes de tirar o
 pacote, roda as migrations e gera a `APP_KEY` e o pepper das chaves de API
 quando faltam. As telas, rotas e menus de um módulo ausente somem sozinhos.
 Tudo em [Instalação e módulos](docs/instalacao.md) — inclusive como criar um
-projeto novo depois da publicação (`composer create-project
-twstec/starter-livewire` ou `twstec/starter-react` / `laravel new
---using=twstec/starter-livewire` ou `--using=twstec/starter-react`) e
-como instalar só os pacotes num aplicativo Laravel que já existe.
+projeto novo (o comando único `composer create-project twstec/kit`, ou
+`twstec/starter-livewire` / `twstec/starter-react` / `laravel new
+--using=`) e como acrescentar os pacotes a um aplicativo Laravel que já
+existe (`php artisan tws:add`).
 
 Conta criada pelo `/register` só entra no painel depois de confirmar o
 e-mail — em dev o link chega no Mailpit (desligável com

@@ -54,6 +54,15 @@
 # check vermelho. (Um job novo com matriz seria mais rápido, mas não seria
 # obrigatório sem mexer na proteção de branch.)
 #
+# COMANDO ÚNICO (starters/kit, `composer create-project twstec/kit`): a
+# suíte dele (menu, escolha pelo ambiente, troca dos arquivos, falhas limpas)
+# roda como PASSOS nos dois jobs de teste, como a dos pacotes; e a
+# instalação publicada é simulada também por ele (abaixo): no job do
+# PostgreSQL, a escolha React sem uploads; no do SQLite, Livewire só com a
+# base — cada uma com o build, a suíte e as imagens de produção do projeto
+# criado, e a prova de que o módulo desmarcado não chegou ao projeto nem à
+# imagem.
+#
 # INSTALAÇÃO PUBLICADA (simulação): no fim do job do PostgreSQL, cada pacote
 # vira um ZIP (`composer archive`, com o composer.json da versão publicada) e
 # o projeto é criado SÓ a partir deles (`composer create-project` com
@@ -83,7 +92,7 @@ jobs:
     # sem atualizar a proteção de branch.
     name: Pint · Pest · auditorias · build
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 85
 
     defaults:
       run:
@@ -251,6 +260,21 @@ jobs:
         working-directory: packages/installer
         run: ./vendor/bin/pest --ci
 
+      # O comando único (twstec/kit — starters/kit): a suíte dele não baixa
+      # nada (Composer de mentira, projeto numa pasta temporária, o menu com
+      # as teclas de mentira do Laravel Prompts).
+      - name: Comando único (twstec/kit) · dependências
+        working-directory: starters/kit
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Comando único (twstec/kit) · estilo (Pint)
+        working-directory: starters/kit
+        run: ./vendor/bin/pint --test
+
+      - name: Comando único (twstec/kit) · testes (Pest)
+        working-directory: starters/kit
+        run: ./vendor/bin/pest --ci
+
       - name: Auditoria de dependências PHP
         run: composer audit --no-interaction
 
@@ -324,12 +348,25 @@ jobs:
           STARTER: react
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-react"
 
+      # O COMANDO ÚNICO: `composer create-project twstec/kit` só a partir dos
+      # ZIPs (os dois starters empacotados), sem terminal — a escolha do menu
+      # pelo ambiente: React sem uploads. Confere que o projeto é o do React,
+      # que nada do twstec/kit sobrou e que o módulo desmarcado não está no
+      # composer.json, no vendor nem na imagem; build, suíte e imagens.
+      - name: Comando único · instalação publicada (simulação) · React sem uploads · build, Pest e imagens de produção
+        working-directory: .
+        env:
+          STARTER: kit
+          KIT_STACK: react
+          KIT_WITHOUT: uploads
+        run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-react"
+
   # A mesma suíte no SQLite em memória — o `pest` puro de quem clona o kit.
   # Paralelo ao job acima; sem Pint/auditorias (já cobertos lá).
   tests-sqlite:
     name: Pest · SQLite (comando local padrão)
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 75
 
     defaults:
       run:
@@ -426,6 +463,25 @@ jobs:
       - name: Pacote installer · testes (Pest)
         working-directory: packages/installer
         run: ./vendor/bin/pest --ci
+
+      - name: Comando único (twstec/kit) · dependências
+        working-directory: starters/kit
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Comando único (twstec/kit) · testes (Pest)
+        working-directory: starters/kit
+        run: ./vendor/bin/pest --ci
+
+      # O comando único com a outra interface e a menor combinação: Livewire
+      # só com a base (foundation + auth). ANTES dos passos que mexem nos
+      # checkouts dos starters (a simulação copia os arquivos do checkout).
+      - name: Comando único · instalação publicada (simulação) · Livewire só a base · build, Pest e imagens de produção
+        working-directory: .
+        env:
+          STARTER: kit
+          KIT_STACK: livewire
+          KIT_WITHOUT: accounts,uploads,admin
+        run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
       # STARTER REACT (starters/react): dependências, checagem de tipos
       # (tsc), lint e formatação (Vite+ do kit oficial), build e a suíte no

@@ -1,0 +1,76 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "twstec/kit",
+    "type": "project",
+    "description": "TWS Laravel Starter Kit — o comando único: `composer create-project twstec/kit meu-projeto` pergunta a interface (Livewire ou React) e os módulos opcionais (contas e API, uploads, painel /admin) e entrega o projeto pronto, com o starter escolhido e só os pacotes marcados.",
+    "keywords": [
+        "laravel",
+        "starter-kit",
+        "installer",
+        "livewire",
+        "react",
+        "security",
+        "lgpd"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+    "authors": [
+        {
+            "name": "TWS",
+            "homepage": "https://github.com/kelvindk9w"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+        "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/starters/kit",
+        "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+    },
+    "require": {
+        "php": "^8.4",
+        "laravel/prompts": "^0.3"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.27",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Twstec\\Kit\\Setup\\": "kit-setup/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Twstec\\Kit\\Setup\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-create-project-cmd": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php kit-setup/create.php"
+        ],
+        "test": "pest",
+        "lint": "pint --test"
+    },
+    "extra": {
+        "twstec-kit": {
+            "constraint": "2.x-dev",
+            "starters": {
+                "livewire": "twstec/starter-livewire",
+                "react": "twstec/starter-react"
+            },
+            "default-starter": "livewire"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "platform": {
+            "php": "8.4.24"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

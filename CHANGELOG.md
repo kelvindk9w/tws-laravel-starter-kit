@@ -4,6 +4,98 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+Esta seção vira a **2.0.0-beta.2** quando a tag for criada (a data entra
+junto).
+
+### Adicionado
+
+- **Comando único: `composer create-project "twstec/kit:^2.0@beta"
+  meu-projeto`.** Pacote novo `twstec/kit` (`starters/kit`, tipo projeto). Um
+  menu (Laravel Prompts) pergunta a interface (Livewire ou React) e os módulos
+  opcionais (contas com membros e API, uploads e foto, painel `/admin`;
+  `foundation` e `auth` vêm sempre). O menu não aceita uploads sem contas: o
+  Enter mostra o motivo e a pergunta continua aberta. Depois, o starter
+  escolhido é baixado pelo mesmo Composer e toma o lugar do `twstec/kit`, o
+  `composer.json` dele perde os módulos não marcados (eles nem chegam a ser
+  instalados) e rodam os passos do `create-project` do starter, com o
+  `tws:install` recebendo a escolha sem perguntar de novo: `APP_KEY`, pepper
+  das chaves de API e migrations. Se o banco do `.env` não responder, a
+  mensagem final diz o que ajustar e o comando a rodar.
+  - **Sem terminal:** `TWS_KIT_STACK` (`livewire`/`react`),
+    `TWS_KIT_WITHOUT` e `TWS_KIT_WITH` no ambiente (padrão: Livewire com todos
+    os módulos); `TWS_KIT_LOCALE` escolhe o idioma do menu (pt_BR, en, es).
+    Escolha inválida é recusada antes de baixar qualquer coisa.
+  - **Windows:** PHP puro, sem bash; sem WSL, o menu sai em listas numeradas
+    (Question Helper do Symfony Console), com a mesma validação.
+  - **Falha limpa:** antes de o starter ser montado, nada fica instalado (a
+    mensagem manda apagar a pasta e rodar de novo); depois, a mensagem diz o
+    passo que falhou e os comandos exatos para terminar. O `create-project`
+    sai com código diferente de 0.
+- **`php artisan tws:add`** (`twstec/kit-installer`): acrescenta pacotes do
+  kit a um aplicativo Laravel que já existe. Mostra o que está instalado e o
+  que falta; a autenticação vem junto de qualquer módulo; recusa o módulo cujo
+  pré-requisito falta, com a explicação e o comando certo (`tws:add uploads`
+  sem contas → "adicione os dois juntos: `php artisan tws:add accounts
+  uploads`"); recusa contas enquanto o model de usuário do aplicativo não
+  implementar o contrato da autenticação do kit (o pacote de contas o usa já
+  no boot: num aplicativo recém-criado, ele deixaria de subir), com o caminho —
+  `tws:add auth`, ajustar o model, `tws:add accounts`; instala com
+  `composer require` (o foundation e a autenticação
+  viram requisito direto do projeto), publica a configuração de cada módulo
+  sem sobrescrever, gera a `APP_KEY` se faltar e o pepper com contas, roda as
+  migrations e resume o que só o aplicativo pode fazer (model de usuário,
+  foto, painel do Filament, primeiro admin). Recusa produção sem `--force`.
+- **`tws:install` lê `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`** quando `--with`/
+  `--without` faltam (a opção vence), e com elas não pergunta. Serve ao
+  comando único e a quem cria o projeto direto pelo starter sem terminal
+  (`TWS_KIT_WITHOUT=admin composer create-project twstec/starter-livewire …`).
+- **CI:** a suíte do `twstec/kit` (menu, escolha pelo ambiente, troca dos
+  arquivos, falhas limpas, catálogo igual ao do foundation) roda nos dois jobs
+  de teste. A simulação da instalação publicada ganhou o comando único
+  (`STARTER=kit`), com os dois starters empacotados: React sem uploads no job
+  do PostgreSQL e Livewire só com a base no do SQLite, cada uma com build,
+  suíte e imagens de produção do projeto criado. Ela confere também que o
+  projeto é o do starter escolhido, que nada do `twstec/kit` sobrou e que os
+  módulos desmarcados não estão no `composer.json`, no vendor, no registro do
+  Composer nem na imagem.
+- **Publicação:** 9º espelho, `starters/kit → kelvindk9w/twstec-kit`. O
+  `prepare-composer.php` grava no `twstec/kit` publicado a restrição do
+  starter que ele baixa (`^2.0@beta` durante o beta) e tira a suíte dele
+  (`require-dev`, `autoload-dev`, scripts de teste).
+- **Packagist atualizado pelo split:** depois que todos os splits passam, o
+  `split.yml` chama a API `update-package` do Packagist para cada espelho
+  (os espelhos não têm webhook e apareciam como "not auto-updated"). Token no
+  segredo `PACKAGIST_API_TOKEN` (o SAFE basta) e usuário na variável
+  `PACKAGIST_USERNAME`; sem eles, o passo avisa e não falha o split. A lista
+  dos espelhos passou a ficar num job só ("Espelhos"), usada pelo split e pelo
+  aviso.
+
+### Alterado
+
+- As conferências da imagem de produção (`.github/images/check-*-app.sh`)
+  recebem os módulos do projeto em `KIT_MODULES` (padrão: todos, o starter do
+  monorepo, sem mudança para o job de imagens) e reprovam módulo não escolhido
+  no vendor ou no registro do Composer; as fontes e o tema do `/admin` só são
+  exigidos com o `/admin`.
+- O instalador acha a restrição de versão do kit também num aplicativo que só
+  tem o instalador em `require-dev` (antes, só pela do foundation em
+  `require`).
+- Tetos dos jobs obrigatórios: PostgreSQL 65 → 85 min, SQLite 55 → 75 min
+  (uma simulação a mais em cada, com imagens).
+
+### Para publicar a 2.0.0-beta.2
+
+- O mantenedor cria o segredo `PACKAGIST_API_TOKEN` (token SAFE do
+  Packagist) e a variável `PACKAGIST_USERNAME`, para o split avisar o
+  Packagist.
+- O mantenedor inclui o repositório `kelvindk9w/twstec-kit` (já criado) no
+  token do segredo `SPLIT_TOKEN`, antes da tag; depois do primeiro split,
+  registra `https://github.com/kelvindk9w/twstec-kit` no Packagist (vendor
+  `twstec`) e roda de novo o job "Avisar o Packagist" (nessa primeira vez ele
+  fica vermelho só para esse espelho, ainda não registrado).
+
 ## [2.0.0-beta.1] — 2026-09-29
 
 Primeira versão de testes da 2.0: o kit vira monorepo com pacotes
@@ -708,6 +800,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.1...desenvolvimento
 [2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0

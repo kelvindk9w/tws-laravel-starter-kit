@@ -18,6 +18,15 @@ declare(strict_types=1);
 // um projeto recebe o starter limpo (a página inicial do produto; os testes
 // da demo pulam sozinhos, e o instalador não a encontra para perguntar).
 //
+// O COMANDO ÚNICO (twstec/kit, starters/kit — também `type: project`) não
+// requer pacote do kit: ele baixa o starter escolhido no create-project, com
+// a restrição gravada em `extra.twstec-kit.constraint` (no monorepo,
+// `2.x-dev`), que aqui vira a da versão publicada (`^2.0@beta` durante o
+// beta). E sai sem o que é da suíte dele (require-dev, autoload-dev e os
+// scripts de teste): o create-project instala as dependências de
+// desenvolvimento do pacote raiz, e o Pest não tem o que fazer no projeto de
+// quem usa o kit.
+//
 // Ainda no starter, o docker-compose.prod.yml publicado sai SEM o contexto de
 // build `packages` (`additional_contexts: packages: ../../packages`, que só
 // existe no monorepo): no projeto criado não há pasta packages/, e o
@@ -81,6 +90,19 @@ if ($isProject) {
     }
 }
 
+// O comando único: a restrição do starter que ele baixa, e nada da suíte.
+$isKit = ($composer['name'] ?? null) === 'twstec/kit';
+
+if ($isKit) {
+    if (! isset($composer['extra']['twstec-kit']['starters'])) {
+        fwrite(STDERR, "o composer.json do twstec/kit não tem extra.twstec-kit.starters\n");
+        exit(1);
+    }
+
+    $composer['extra']['twstec-kit']['constraint'] = $constraint;
+    unset($composer['require-dev'], $composer['autoload-dev'], $composer['scripts']['test'], $composer['scripts']['lint']);
+}
+
 foreach (['require', 'require-dev'] as $section) {
     foreach ($composer[$section] ?? [] as $package => $current) {
         if (str_starts_with($package, 'twstec/kit-')) {
@@ -136,9 +158,18 @@ if ($isProject && is_file($compose)) {
     file_put_contents($compose, $yaml);
 }
 
+if ($isKit && (($composer['extra']['twstec-kit']['constraint'] ?? null) !== $constraint || isset($composer['require-dev']) || str_contains((string) json_encode($composer), '2.x-dev'))) {
+    fwrite(STDERR, "o composer.json publicado do twstec/kit ainda tem o que é do monorepo (2.x-dev ou require-dev)\n");
+    exit(1);
+}
+
 if ($isProject && str_contains((string) json_encode($composer), 'kit-demo')) {
     fwrite(STDERR, "o composer.json publicado do starter ainda cita a demonstração\n");
     exit(1);
 }
 
-fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, $isProject ? ' (projeto; sem a demonstração; composer.lock removido; compose de produção sem o contexto do monorepo)' : ''));
+fwrite(STDOUT, sprintf("%s: pacotes do kit em %s%s\n", $composer['name'], $constraint, match (true) {
+    $isKit => ' (comando único: baixa o starter escolhido com essa restrição; sem a suíte)',
+    $isProject => ' (projeto; sem a demonstração; composer.lock removido; compose de produção sem o contexto do monorepo)',
+    default => '',
+}));

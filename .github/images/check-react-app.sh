@@ -18,6 +18,11 @@
 set -eu
 
 IMAGE="${1:?informe a imagem: sh .github/images/check-react-app.sh <imagem>}"
+# Os módulos do kit que o projeto TEM (os outros não podem estar na imagem).
+# Padrão: todos — o starter do monorepo. A simulação da instalação publicada
+# pelo comando único (`create-project twstec/kit`) passa a escolha dela.
+KIT_MODULES="${KIT_MODULES:-foundation auth accounts uploads admin}"
+export KIT_MODULES
 
 # Extensões: filas (pcntl) e imagem/MIME real do twstec/kit-uploads.
 for ext in pcntl gd fileinfo; do
@@ -27,7 +32,7 @@ for ext in pcntl gd fileinfo; do
     fi
 done
 
-docker run --rm --entrypoint sh "$IMAGE" -c '
+docker run --rm -e KIT_MODULES --entrypoint sh "$IMAGE" -c '
     set -e
     cd /var/www/html
     # O processo não roda como root.
@@ -54,7 +59,8 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
 
     # Pacotes do kit COPIADOS para o vendor (nunca link para fora da imagem)
     # e sem o que é de desenvolvimento deles.
-    for pacote in kit-foundation kit-auth kit-accounts kit-uploads kit-admin; do
+    for modulo in $KIT_MODULES; do
+        pacote="kit-$modulo"
         test -d "vendor/twstec/$pacote/src"
         test ! -L "vendor/twstec/$pacote"
         for proibido in tests vendor composer.lock phpunit.xml; do
@@ -62,8 +68,16 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
         done
     done
 
+    # Os módulos que o projeto NÃO tem não viajam: nem o pacote, nem o
+    # registro dele no Composer.
+    for modulo in accounts uploads admin; do
+        case " $KIT_MODULES " in *" $modulo "*) continue ;; esac
+        if [ -e "vendor/twstec/kit-$modulo" ]; then echo "na imagem: vendor/twstec/kit-$modulo (módulo não escolhido)"; exit 1; fi
+        if grep -Eq "\"name\": *\"twstec/kit-$modulo\"" vendor/composer/installed.json; then echo "na imagem: twstec/kit-$modulo instalado (módulo não escolhido)"; exit 1; fi
+    done
+
     # O tema do /admin é compilado com as fontes do twstec/kit-admin.
-    test -f vendor/twstec/kit-admin/resources/css/sources.css
+    case " $KIT_MODULES " in *" admin "*) test -f vendor/twstec/kit-admin/resources/css/sources.css ;; esac
 
     # A demonstração e o instalador (require-dev) não vão para produção.
     for pacote in kit-demo kit-installer; do
@@ -79,7 +93,10 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
     test -f public/build/manifest.json
     grep -q "\"resources/js/app.tsx\"" public/build/manifest.json
     grep -q "\"resources/css/app.css\"" public/build/manifest.json
-    grep -q "\"resources/css/filament.css\"" public/build/manifest.json
+    case " $KIT_MODULES " in
+        *" admin "*) grep -q "\"resources/css/filament.css\"" public/build/manifest.json ;;
+        *) if grep -q "\"resources/css/filament.css\"" public/build/manifest.json; then echo "na imagem: tema do /admin sem o /admin"; exit 1; fi ;;
+    esac
     if grep -q "kit-demo" public/build/manifest.json; then echo "na imagem: assets da demo no build"; exit 1; fi
 
     # Sobe: o artisan responde e as rotas são as do produto (nada da demo).

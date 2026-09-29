@@ -1,0 +1,6 @@
+# O que NÃO vai no arquivo que o Composer baixa no `create-project` — o
+# projeto criado recebe o starter escolhido, não a suíte deste pacote.
+/tests export-ignore
+/phpunit.xml export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore

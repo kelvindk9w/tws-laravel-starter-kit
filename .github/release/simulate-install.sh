@@ -27,8 +27,15 @@
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
 #           test (pest) | image (docker: imagens de produção e conferências)
 #   VERSION (padrão 2.0.0-beta.1)
-#   STARTER (padrão livewire): livewire | react — qual starter vira o projeto
-#   (twstec/starter-livewire ou twstec/starter-react). Os pacotes são os mesmos.
+#   STARTER (padrão livewire): livewire | react | kit — qual pacote vira o
+#   projeto: twstec/starter-livewire, twstec/starter-react ou o COMANDO ÚNICO
+#   twstec/kit (que baixa o starter escolhido — os dois vão empacotados).
+#   Os pacotes do kit são os mesmos.
+#   Com STARTER=kit, a escolha que o menu faria, pelo ambiente (sem terminal):
+#     KIT_STACK (padrão livewire): livewire | react   → TWS_KIT_STACK
+#     KIT_WITHOUT (padrão vazio): opcionais de fora   → TWS_KIT_WITHOUT
+#   e as conferências passam a exigir que os módulos DESMARCADOS não estejam
+#   no projeto (composer.json, vendor, registro do Composer, imagem).
 # =============================================================================
 set -eu
 # POSIX sh (roda também na imagem PHP Alpine do kit); pipefail onde houver.
@@ -38,14 +45,33 @@ STEP=${1:-all}
 WORK=${2:-${RUNNER_TEMP:-/tmp}/kit-publicado}
 VERSION=${VERSION:-2.0.0-beta.1}
 STARTER=${STARTER:-livewire}
+KIT_STACK=${KIT_STACK:-livewire}
+KIT_WITHOUT=${KIT_WITHOUT:-}
 case "$STARTER" in
-    livewire|react) ;;
-    *) echo "starter desconhecido: $STARTER (livewire | react)"; exit 2 ;;
+    livewire|react) STACK=$STARTER; KIT_WITHOUT= ;;
+    kit)
+        case "$KIT_STACK" in
+            livewire|react) STACK=$KIT_STACK ;;
+            *) echo "interface desconhecida: $KIT_STACK (livewire | react)"; exit 2 ;;
+        esac ;;
+    *) echo "starter desconhecido: $STARTER (livewire | react | kit)"; exit 2 ;;
 esac
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 # A demonstração (packages/demo) NÃO é publicada: nem empacotada, nem no
 # starter publicado (prepare-composer.php a tira do require-dev).
 PACKAGES="foundation auth accounts uploads admin installer"
+# Os módulos opcionais escolhidos (sem o comando único: todos) e os
+# desmarcados — que não podem chegar ao projeto.
+CHOSEN=
+LEFT_OUT=
+for modulo in accounts uploads admin; do
+    case ",$(printf '%s' "$KIT_WITHOUT" | tr -d ' ')," in
+        *",$modulo,"*) LEFT_OUT="$LEFT_OUT $modulo" ;;
+        *) CHOSEN="$CHOSEN $modulo" ;;
+    esac
+done
+# Os starters que vão empacotados: o do projeto, ou os dois (comando único).
+if [ "$STARTER" = kit ]; then STARTERS="livewire react"; else STARTERS=$STARTER; fi
 
 # Arquivos de uma pasta do monorepo como o git os vê (versionados e novos
 # não ignorados): nada gerado localmente — vendor, lock de pacote, build.
@@ -68,8 +94,14 @@ copy() {
         copy_tree "packages/$pkg" "$WORK/src/$pkg"
     done
 
-    # O starter como o repositório só-leitura dele vai ficar.
-    copy_tree "starters/$STARTER" "$WORK/src/starter"
+    # O(s) starter(s) como o repositório só-leitura de cada um vai ficar — e,
+    # com o comando único, o twstec/kit.
+    for starter in $STARTERS; do
+        copy_tree "starters/$starter" "$WORK/src/starter-$starter"
+    done
+    if [ "$STARTER" = kit ]; then
+        copy_tree starters/kit "$WORK/src/kit"
+    fi
     rm -rf "$WORK/tree"
 }
 
@@ -79,24 +111,56 @@ package() {
         (cd "$WORK/src/$pkg" && composer archive --format=zip --dir="$WORK/packages" --file="twstec-kit-$pkg-$VERSION" --no-interaction)
     done
 
-    php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/starter" "$VERSION" --set-version
-    (cd "$WORK/src/starter" && composer archive --format=zip --dir="$WORK/packages" --file="twstec-starter-$STARTER-$VERSION" --no-interaction)
+    for starter in $STARTERS; do
+        php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/starter-$starter" "$VERSION" --set-version
+        (cd "$WORK/src/starter-$starter" && composer archive --format=zip --dir="$WORK/packages" --file="twstec-starter-$starter-$VERSION" --no-interaction)
+    done
+    if [ "$STARTER" = kit ]; then
+        php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/kit" "$VERSION" --set-version
+        (cd "$WORK/src/kit" && composer archive --format=zip --dir="$WORK/packages" --file="twstec-kit-$VERSION" --no-interaction)
+    fi
 
     ls -la "$WORK/packages"
 
     # O projeto, como `composer create-project` / `laravel new --using=`. O
     # repositório `artifact` relativo (ver o cabeçalho): daqui ($WORK/src) e do
-    # projeto ($WORK/app), `../packages` é a pasta dos ZIPs.
-    (cd "$WORK/src" && composer create-project "twstec/starter-$STARTER:$VERSION" "$WORK/app" \
-        --repository='{"type":"artifact","url":"../packages"}' --add-repository \
-        --no-interaction --no-progress)
+    # projeto ($WORK/app), `../packages` é a pasta dos ZIPs. Com o comando
+    # único, `create-project twstec/kit` — sem terminal, a escolha vai pelo
+    # ambiente, e o twstec/kit acha o starter pelo mesmo repositório (o
+    # --add-repository o grava no composer.json dele).
+    if [ "$STARTER" = kit ]; then
+        (cd "$WORK/src" && TWS_KIT_STACK="$KIT_STACK" TWS_KIT_WITHOUT="$KIT_WITHOUT" \
+            composer create-project "twstec/kit:$VERSION" "$WORK/app" \
+            --repository='{"type":"artifact","url":"../packages"}' --add-repository \
+            --no-interaction --no-progress)
+    else
+        (cd "$WORK/src" && composer create-project "twstec/starter-$STARTER:$VERSION" "$WORK/app" \
+            --repository='{"type":"artifact","url":"../packages"}' --add-repository \
+            --no-interaction --no-progress)
+    fi
 
     cd "$WORK/app"
+
+    # O projeto é o do starter escolhido (com o comando único, nada do
+    # twstec/kit sobra: nem o composer.json, nem o código, nem a pasta
+    # temporária).
+    grep -q "\"name\": \"twstec/starter-$STACK\"" composer.json
+    grep -q "'name' => 'twstec/starter-$STACK'" vendor/composer/installed.php
+    if [ -e kit-setup ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi
+
+    # Os módulos DESMARCADOS não chegam ao projeto: nem no composer.json, nem
+    # no vendor, nem no registro do Composer.
+    for modulo in $LEFT_OUT; do
+        if grep -q "\"twstec/kit-$modulo\"" composer.json; then echo "módulo desmarcado no composer.json: $modulo"; exit 1; fi
+        if [ -e "vendor/twstec/kit-$modulo" ]; then echo "módulo desmarcado instalado: vendor/twstec/kit-$modulo"; exit 1; fi
+        if grep -Eq "\"name\": *\"twstec/kit-$modulo\"" vendor/composer/installed.json; then echo "módulo desmarcado no registro do Composer: $modulo"; exit 1; fi
+    done
+    echo "módulos opcionais do projeto:${CHOSEN:- nenhum}; de fora:${LEFT_OUT:- nenhum}"
 
     # Nada aponta para o monorepo: pacotes COPIADOS (não link), sem o que é
     # de desenvolvimento deles, nenhum path repository, nenhum caminho
     # `packages/` no registro do Composer.
-    for pkg in $PACKAGES; do
+    for pkg in foundation auth installer $CHOSEN; do
         test -d "vendor/twstec/kit-$pkg/src"
         test ! -L "vendor/twstec/kit-$pkg"
         for proibido in tests phpunit.xml; do
@@ -120,13 +184,17 @@ package() {
     if php artisan route:list --json | grep -q '"name":"landing'; then echo 'projeto publicado com as rotas da demo'; exit 1; fi
 
     # O instalador rodou no post-create-project-cmd: chave da aplicação e,
-    # com o pacote de contas, o pepper dedicado das chaves de API.
+    # com o pacote de contas, o pepper dedicado das chaves de API (sem ele,
+    # não há chave de API nem pepper).
     grep -Eq '^APP_KEY=base64:.+' .env
-    grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env
+    case " $CHOSEN " in
+        *" accounts "*) grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env ;;
+        *) if grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env; then echo 'pepper sem o módulo de contas'; exit 1; fi ;;
+    esac
 
     # Starter React: o projeto é o do React (Inertia, sem Livewire no painel
     # do usuário) e o composer.json publicado é do tipo projeto.
-    if [ "$STARTER" = react ]; then
+    if [ "$STACK" = react ]; then
         grep -q '"name": "twstec/starter-react"' composer.json
         grep -q '"type": "project"' composer.json
         test -d vendor/inertiajs/inertia-laravel
@@ -152,7 +220,7 @@ run_tests() {
 # job de imagens do CI (.github/images/check-<starter>-app.sh).
 image() {
     cd "$WORK/app"
-    tag="kit-publicado-$STARTER"
+    tag="kit-publicado-$STARTER-$STACK"
 
     # Nada do monorepo no compose publicado, e ele resolve (sem o contexto
     # `packages`); o Dockerfile é o do starter, sem mudança.
@@ -169,7 +237,7 @@ image() {
         --build-context packages="$WORK/packages" -t "$tag-app:sim" .
     docker build --target prod -f docker/nginx/Dockerfile -t "$tag-nginx:sim" .
 
-    sh "$ROOT/.github/images/check-$STARTER-app.sh" "$tag-app:sim"
+    KIT_MODULES="foundation auth$CHOSEN" sh "$ROOT/.github/images/check-$STACK-app.sh" "$tag-app:sim"
 
     # nginx: a configuração de produção carrega e o certificado existe.
     docker run --rm --entrypoint sh "$tag-nginx:sim" -c '
@@ -182,7 +250,7 @@ image() {
     if [ "${KEEP_IMAGES:-0}" != 1 ]; then
         docker rmi "$tag-app:sim" "$tag-nginx:sim" >/dev/null
     fi
-    echo "imagens de produção do projeto publicado ($STARTER): conferência ok"
+    echo "imagens de produção do projeto publicado ($STARTER → $STACK;$CHOSEN): conferência ok"
 }
 
 case "$STEP" in

@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+// =============================================================================
+// O COMANDO ÚNICO — `composer create-project twstec/kit meu-projeto`.
+//
+// O post-create-project-cmd do twstec/kit chama este arquivo (`@php`, o mesmo
+// PHP do Composer; nada de bash — vale no Linux, no macOS e no Windows). Ele
+// pergunta a interface e os módulos (ou lê TWS_KIT_STACK / TWS_KIT_WITH /
+// TWS_KIT_WITHOUT) e troca este pacote pelo starter escolhido, com só os
+// pacotes marcados. Ver src/CreateProject.php.
+// =============================================================================
+
+use Twstec\Kit\Setup\Choice;
+use Twstec\Kit\Setup\CreateProject;
+use Twstec\Kit\Setup\Menu;
+use Twstec\Kit\Setup\Output;
+use Twstec\Kit\Setup\ProcessRunner;
+use Twstec\Kit\Setup\Translator;
+
+$project = dirname(__DIR__);
+
+require $project.'/vendor/autoload.php';
+
+// Tudo o que roda DEPOIS do `composer update` fica na memória antes dele: o
+// update troca o vendor/ e o autoload em disco pelos do starter, e este
+// código (kit-setup/) sai no fim.
+foreach ([
+    'Twstec\\Kit\\Setup\\Contracts\\Runner',
+    'Twstec\\Kit\\Setup\\Modules',
+    'Twstec\\Kit\\Setup\\Choice',
+    'Twstec\\Kit\\Setup\\Translator',
+    'Twstec\\Kit\\Setup\\Output',
+    'Twstec\\Kit\\Setup\\ProcessRunner',
+    'Twstec\\Kit\\Setup\\CreateProject',
+    'Twstec\\Kit\\Setup\\MenuCancelled',
+] as $class) {
+    class_exists($class) || interface_exists($class);
+}
+
+$env = getenv();
+$translator = new Translator(Translator::detect($env), __DIR__.'/lang');
+
+// Pergunta num terminal e sem escolha no ambiente. (Com `composer -n`, o
+// Composer não repassa o terminal ao script: sem perguntas.)
+$menu = stream_isatty(STDIN) && ! Choice::inEnvironment($env)
+    ? static fn (array $starters, string $default): ?Choice => (new Menu($translator, $starters, $default))->ask()
+    : null;
+
+exit((new CreateProject($project, $translator, new ProcessRunner($env), Output::stdout(), $env, $menu))->run());
