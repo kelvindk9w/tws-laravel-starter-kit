@@ -4,10 +4,10 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [Não publicado]
+## [2.0.0-beta.2] — 2026-09-29
 
-Esta seção vira a **2.0.0-beta.2** quando a tag for criada (a data entra
-junto).
+Segunda versão de testes da 2.0: comando único com menu para criar o
+projeto, `tws:add` para apps existentes e aviso automático ao Packagist.
 
 ### Adicionado
 
@@ -801,6 +801,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   promover código.
 
 [Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.1...desenvolvimento
+[2.0.0-beta.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0
