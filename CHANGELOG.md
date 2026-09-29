@@ -4,10 +4,10 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [Não publicado]
+## [2.0.0-beta.1] — 2026-09-29
 
-Esta seção vira a **2.0.0-beta.1** quando a tag `v2.0.0-beta.1` for criada
-(a data entra junto com a tag). Até lá, nada aqui está publicado.
+Primeira versão de testes da 2.0: o kit vira monorepo com pacotes
+instaláveis pelo Composer e dois starters (Livewire e React).
 
 ### A 2.0 em resumo
 
@@ -606,7 +606,7 @@ HTTP v1 não muda: mesmas rotas, respostas, códigos e envelopes):
 
 ## [1.1.1] — 2026-09-24
 
-Correção de segurança da linha 1.x (a mesma correção está em "Não publicado"
+Correção de segurança da linha 1.x (a mesma correção está na 2.0.0-beta.1
 acima, para a 2.0).
 
 ### Segurança
@@ -708,6 +708,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
+[2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.0.0
