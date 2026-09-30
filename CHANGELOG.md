@@ -4,6 +4,24 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.0.0-beta.4] — 2026-09-30
+
+Correção do caminho do iniciante publicado na beta.3.
+
+### Corrigido
+
+- **O nome sugerido (o da pasta) era recusado no caminho só com o Docker.**
+  O `docker compose run --rm instalar` roda num container do projeto com o
+  nome da pasta — e a conferência de "projeto Docker que já existe" contava o
+  próprio instalador. Seguindo o guia (pasta com o nome do projeto, Enter na
+  sugestão), todo iniciante caía em "já existe um projeto Docker chamado…". O
+  container do instalador (serviço `instalar`, de uma vez) não conta mais, nem
+  nos nomes nem nas portas; um projeto de verdade com o mesmo nome (containers
+  ou só o volume do banco) continua recusado.
+- **`docker compose run --rm instalar` numa pasta que já é o projeto**: em vez
+  de "no such service", o recado — a pasta já é o projeto, como subir, e como
+  criar outro.
+
 ## [2.0.0-beta.3] — 2026-09-30
 
 Terceira versão de testes da 2.0: começar só com o Docker Desktop, nome e
@@ -867,7 +885,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.2...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.3...desenvolvimento
+[2.0.0-beta.4]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.4
 [2.0.0-beta.3]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.3
 [2.0.0-beta.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1

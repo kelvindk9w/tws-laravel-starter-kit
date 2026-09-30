@@ -338,3 +338,114 @@ it('o que o Docker diz: portas de containers rodando e PARADOS (com o projeto do
         removeDirectory($bin);
     }
 })->skip(PHP_OS_FAMILY === 'Windows', 'o docker de mentira é um script sh');
+
+// --- o próprio instalador não conta (nome do projeto = nome da pasta) --------
+
+/**
+ * Um `docker` de mentira com estes containers (o `inspect`) e estes projetos
+ * em volumes; devolve o DockerHost que o usa e a pasta (para apagar).
+ *
+ * @return array{0: DockerHost, 1: string}
+ */
+function fakeDocker(array $containers, array $volumeProjects = []): array
+{
+    $bin = temporaryDirectory();
+    file_put_contents($bin.'/inspect.json', json_encode($containers));
+    file_put_contents($bin.'/volumes.txt', implode("\n", $volumeProjects)."\n");
+    $ids = implode('\\n', array_map(fn (int $i): string => "c{$i}", array_keys($containers)));
+    file_put_contents($bin.'/docker', <<<SH
+        #!/bin/sh
+        case "\$1 \$2" in
+          "ps -aq") printf '{$ids}\\n' ;;
+          inspect*) cat {$bin}/inspect.json ;;
+          "volume ls") case "\$*" in *twstec.kit.slot*) ;; *) cat {$bin}/volumes.txt ;; esac ;;
+          "network ls") ;;
+          *) exit 1 ;;
+        esac
+        SH);
+    chmod($bin.'/docker', 0755);
+
+    return [new DockerHost(docker: $bin.'/docker'), $bin];
+}
+
+/**
+ * O container do `docker compose run --rm instalar` numa pasta `loja-teste`:
+ * o Compose o põe no projeto `loja-teste`, serviço `instalar`, de uma vez.
+ */
+function installerContainer(string $project = 'loja-teste'): array
+{
+    return [
+        'Name' => "/{$project}-instalar-run-3f2a9c1b7d4e",
+        'Config' => ['Labels' => [
+            'com.docker.compose.project' => $project,
+            'com.docker.compose.service' => 'instalar',
+            'com.docker.compose.oneoff' => 'True',
+        ]],
+        'HostConfig' => ['PortBindings' => []],
+        'NetworkSettings' => ['Ports' => []],
+    ];
+}
+
+it('O CENÁRIO DO GUIA: pasta loja-teste, instalador rodando no projeto loja-teste — o nome da pasta é sugerido e ACEITO', function (): void {
+    [$host, $bin] = fakeDocker([installerContainer()]);
+
+    try {
+        expect($host->projects())->toBe([])
+            ->and($host->published())->toBe([]);
+
+        // Pelo ambiente, com o nome = o da pasta (o passo do teste real).
+        [$choice, $error] = Choice::fromEnvironment(['TWS_KIT_NAME' => 'loja-teste'], ['livewire', 'react'], 'livewire', translator(), $host, 'loja-teste');
+
+        expect($error)->toBeNull()
+            ->and($choice->name)->toBe('loja-teste');
+
+        // E sem nome: a sugestão é o da pasta, sem "-2".
+        [$choice] = Choice::fromEnvironment([], ['livewire', 'react'], 'livewire', translator(), $host, 'loja-teste');
+
+        expect($choice->name)->toBe('loja-teste');
+    } finally {
+        removeDirectory($bin);
+    }
+})->skip(PHP_OS_FAMILY === 'Windows', 'o docker de mentira é um script sh');
+
+it('com um projeto DE VERDADE com o mesmo nome (container do app, ou só o volume do banco), continua recusando', function (array $containers, array $volumes): void {
+    [$host, $bin] = fakeDocker([installerContainer(), ...$containers], $volumes);
+
+    try {
+        [$choice, $error] = Choice::fromEnvironment(['TWS_KIT_NAME' => 'loja-teste'], ['livewire', 'react'], 'livewire', translator(), $host, 'loja-teste');
+
+        expect($choice)->toBeNull()
+            ->and($error)->toContain('there is already a Docker project called loja-teste')
+            ->toContain('suggestion: loja-teste-2');
+    } finally {
+        removeDirectory($bin);
+    }
+})->with([
+    'o app parado' => [[[
+        'Name' => '/loja-teste-app-1',
+        'Config' => ['Labels' => ['com.docker.compose.project' => 'loja-teste', 'com.docker.compose.service' => 'app']],
+        'HostConfig' => ['PortBindings' => []],
+        'NetworkSettings' => ['Ports' => []],
+    ]], []],
+    'só o volume do banco' => [[], ['loja-teste']],
+    // Um `run` de outro serviço (não é o instalador) conta.
+    'run de outro serviço' => [[[
+        'Name' => '/loja-teste-app-run-1',
+        'Config' => ['Labels' => ['com.docker.compose.project' => 'loja-teste', 'com.docker.compose.service' => 'app', 'com.docker.compose.oneoff' => 'True']],
+        'HostConfig' => ['PortBindings' => []],
+        'NetworkSettings' => ['Ports' => []],
+    ]], []],
+])->skip(PHP_OS_FAMILY === 'Windows', 'o docker de mentira é um script sh');
+
+it('o instalador não conta nas portas (mesmo se publicasse): os números continuam livres', function (): void {
+    $installer = installerContainer();
+    $installer['HostConfig']['PortBindings'] = ['80/tcp' => [['HostPort' => '8080']]];
+    [$host, $bin] = fakeDocker([$installer]);
+
+    try {
+        expect($host->published())->toBe([])
+            ->and(DevEnvironment::usedInHundred($host, 0))->toBe([]);
+    } finally {
+        removeDirectory($bin);
+    }
+})->skip(PHP_OS_FAMILY === 'Windows', 'o docker de mentira é um script sh');
