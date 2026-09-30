@@ -4,7 +4,11 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
-## [Não publicado]
+## [2.0.0-beta.3] — 2026-09-30
+
+Terceira versão de testes da 2.0: começar só com o Docker Desktop, nome e
+portas por projeto para rodar vários ao mesmo tempo, e instalação com PHP
+nativo no Windows.
 
 ### Adicionado
 
@@ -864,6 +868,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   promover código.
 
 [Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.2...desenvolvimento
+[2.0.0-beta.3]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.3
 [2.0.0-beta.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.2
 [2.0.0-beta.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.1
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
