@@ -61,6 +61,47 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
   `/ui`, dados demo do `/admin`) não vão para o projeto criado; os de um
   módulo opcional ausente ficam de fora sozinhos (`playwright.config.js`).
 
+### Travas de arquitetura do projeto
+
+Vão junto para o projeto criado e reprovam a suíte quando:
+
+- um PHP de `app/`, `database/` ou `routes/` não começa com
+  `declare(strict_types=1);` (os `make:*` do Laravel geram sem — acrescente
+  a linha);
+- aparece `env()` fora de `config/` (em `app/`, `bootstrap/`, `database/`,
+  `routes/` ou nas views): com `config:cache` o `.env` não é lido e o valor
+  cai no padrão em silêncio — leve para um arquivo de `config/` e leia com
+  `config()`;
+- um model (`app/Models`) ou o domínio (`app/Domain`) usa classe de
+  interface (Filament, Livewire, Inertia);
+- um model cuja tabela tem `account_id` não usa `BelongsToAccount` (com o
+  módulo de contas; as colunas vêm do banco de teste migrado, e as exceções
+  ficam numa lista explícita, com o motivo, em
+  `tests/Feature/Architecture/AccountModelsTest.php`).
+
+Arquivos: `tests/Unit/Architecture/ProjectGuardsTest.php` e
+`tests/Feature/Architecture/AccountModelsTest.php`. Cada trava tem um teste
+"não é cega", que prova que ela pega o que deve.
+
+### Pacotes divididos: a pegadinha do `arch()` do Pest
+
+`arch()->expect('App\Models')->not->toUse('Filament')` **não** pega
+`Filament\Notifications\Notification`: o Pest resolve `Filament` pelas
+pastas do autoload desse prefixo (o pacote `filament/filament`), e
+`filament/notifications`, `filament/forms`, `filament/tables`… declaram cada
+um o seu prefixo PSR-4. O mesmo com `Psr\Http` × `Psr\Http\Message` ou
+`GuzzleHttp` × `GuzzleHttp\Psr7`. A trava parece existir e deixa passar
+metade.
+
+Duas saídas, e as travas do kit usam as duas: comparar o **nome completo**
+de cada classe citada (lido dos tokens do PHP) com `str_starts_with` do
+prefixo terminado em `\` — assim `Filament\` pega qualquer
+`Filament\…` —, e, quando a proibição é de um **pacote** (não de um
+namespace), gerar a lista de prefixos do autoload do Composer
+(`vendor/composer/installed.json`), pacote a pacote, como faz a trava de
+interface do `ProjectGuardsTest`. Se usar o `arch()` do Pest, passe a lista
+completa de prefixos, nunca só a raiz do vendor.
+
 ## Testes no monorepo
 
 Três camadas, todas em container:

@@ -26,7 +26,12 @@ produção é responsabilidade de quem opera o servidor, não do app.
   abaixo.
 - `BACKUP_RUN_CRON` / `BACKUP_CLEAN_CRON` / `BACKUP_MONITOR_CRON` —
   frequências (UTC). Começar em 1h e reduzir quando o banco crescer (o PITR
-  cobre o RPO).
+  cobre o RPO). Ficam em `config/backup.php` → `schedule.run/clean/monitor`
+  e o `routes/console.php` as lê com `config()`: com `config:cache`
+  (produção) o `.env` não é lido, e o `env()` direto na rota (até a
+  2.0.0-beta.5) fazia o backup rodar sempre no padrão, sem aviso. Um teste
+  do projeto gera o cache com frequências fora do padrão e confere o
+  `schedule:list`.
 - `BACKUP_ALERT_EMAIL` — destino dos alertas de falha (padrão:
   `PLATFORM_SUPPORT_EMAIL`).
 - `BACKUP_WEBHOOK_URL` — URL do webhook da validação cruzada (abaixo).

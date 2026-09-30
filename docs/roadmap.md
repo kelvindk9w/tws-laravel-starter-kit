@@ -1,8 +1,9 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-09-30, com a versão **2.0.0-beta.4** publicada e a
-> **2.0.0-beta.5** em preparação (as correções do primeiro uso real — ver o
-> [CHANGELOG](../CHANGELOG.md), "Não publicado").
+> Atualizado em 2026-09-30, com a versão **2.0.0-beta.5** publicada e a
+> **2.0.0-beta.6** em preparação (aritmética monetária segura e as travas de
+> arquitetura no projeto criado — ver o [CHANGELOG](../CHANGELOG.md), "Não
+> publicado").
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -21,6 +22,8 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Trilha de auditoria no banco para toda ação de admin e de conta, inclusive recusas | pronto |
 | Starter React com paridade funcional e de segurança com o Livewire | pronto |
 | Vários projetos na mesma máquina sem colisão (nome e portas por projeto) | pronto |
+| Dinheiro que calcula sem float: percentual com arredondamento explícito, rateio sem perder centavo, checagem de moeda e de estouro | pronto (2.0.0-beta.6) |
+| Travas de arquitetura no projeto criado (`strict_types`, `env()` só em `config/`, models sem interface, `BelongsToAccount`) | pronto (2.0.0-beta.6) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
@@ -41,7 +44,10 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    projeto no `composer.json` (e a licença do kit) e a falta de um CI base. A
    prova do mesmo caminho com o Livewire achou mais duas, também resolvidas:
    a CSP recusava o Vite de desenvolvimento e o `/admin` recebia o bundle
-   CSP-safe do Livewire (modais do Filament sem abrir). Falta usar por
+   CSP-safe do Livewire (modais do Filament sem abrir). O uso seguinte pediu
+   aritmética monetária de verdade no `Money` (#26) e achou as frequências
+   do backup ignoradas com `config:cache` e travas que não chegavam ao
+   projeto criado (#32) — resolvidos na 2.0.0-beta.6. Falta usar por
    algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta

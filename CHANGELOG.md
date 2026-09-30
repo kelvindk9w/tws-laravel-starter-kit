@@ -4,6 +4,74 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.0.0-beta.6] — 2026-09-30
+
+Money que calcula com segurança e correção das frequências do backup.
+
+Para a **2.0.0-beta.6**: aritmética monetária segura no `Money` (#26) e as
+frequências do backup com a config em cache, mais as travas de arquitetura
+que passam a valer no projeto criado (#32).
+
+### Corrigido
+
+- **Frequências do backup ignoradas em produção** (#32). O
+  `routes/console.php` dos dois starters lia `BACKUP_RUN_CRON`,
+  `BACKUP_CLEAN_CRON` e `BACKUP_MONITOR_CRON` com `env()`; com
+  `config:cache` o `.env` não é lido, e o backup rodava sempre no padrão, sem
+  aviso. As frequências foram para `config/backup.php` (`schedule.run`,
+  `schedule.clean`, `schedule.monitor`) e a rota as lê com `config()`. Um
+  teste roda o `artisan` de verdade: gera o cache com frequências fora do
+  padrão e confere o `schedule:list` sem as variáveis no ambiente.
+  **Projeto já criado:** copie a chave `schedule` do `config/backup.php` e
+  troque os três `env('BACKUP_*_CRON', …)` do `routes/console.php` por
+  `config('backup.schedule.run|clean|monitor', …)`.
+
+### Adicionado
+
+- **`Money` que calcula** (#26), no `twstec/kit-foundation`, ao lado das
+  funções estáticas de sempre: objeto de valor imutável `Money::of($centavos,
+  $moeda)` com soma, subtração, negação, valor absoluto, `sum`/`min`/`max`,
+  comparação e sinal (moedas diferentes → `CurrencyMismatchException`);
+  multiplicação por inteiro; percentual em pontos-base (`basisPoints(399,
+  …)`) ou decimal exato em string (`percentage('3.99', …)`), fator decimal,
+  fração e divisão com a **regra de arredondamento obrigatória no
+  parâmetro** (o enum nativo `RoundingMode`: metade para longe do zero,
+  metade para o par, truncar, piso, teto…), e `Money::defaultRounding()`
+  para o projeto que quer uma regra só (`PLATFORM_MONEY_ROUNDING`); rateio
+  por pesos (`allocate`) e em partes iguais (`split`) com a soma das partes
+  sempre igual ao total e o resto distribuído de forma determinística (maior
+  resto primeiro; empate, a parte que vem antes); `Money::ofDecimal()` para
+  entrada decimal exata; estouro de 64 bits recusado
+  (`MoneyOverflowException`) em vez de virar float; casas decimais por moeda
+  configuráveis (`platform.money.fraction_digits`). Cast `AsMoney`, que grava
+  valor e moeda. Intermediários em bcmath (a extensão já era exigida).
+  Documentação com exemplos e a tabela das regras em `docs/convencoes.md`.
+- **Travas de arquitetura no projeto criado** (#32), nos dois starters:
+  todo PHP de `app/`, `database/` e `routes/` com `declare(strict_types=1)`;
+  nenhum `env()` fora de `config/`; models e domínio sem classe de interface
+  (Filament, Livewire, Inertia), com os prefixos lidos do autoload do
+  Composer, pacote a pacote; e a trava "todo model com `account_id` usa
+  `BelongsToAccount`" também no React, com a lista de exceções explícita e
+  o motivo de cada uma. Cada trava tem o teste que prova que ela não é cega.
+- `docs/testes.md`: as travas do projeto e a pegadinha do `arch()` do Pest com
+  pacotes divididos (`not->toUse('Filament')` não pega
+  `Filament\Notifications`).
+
+### Mudado
+
+- `Money::format()` e `Money::parse()` sem float por dentro, com a mesma
+  assinatura e o mesmo resultado (a formatação é idêntica à anterior em 13
+  combinações de locale e moeda testadas, e exata além de 2^53); o `parse`
+  também lê dígitos de outros sistemas (árabe-índicos) e os parênteses de
+  contabilidade como negativo. Uma trava do pacote reprova float, `/`,
+  `round()` e afins no módulo `Money`.
+- O construtor do `Money` passou a ser privado (a classe só tinha métodos
+  estáticos; `new Money()` não fazia sentido e agora lança erro — use
+  `Money::of()`).
+- `strict_types` nos arquivos do esqueleto que ainda não tinham: o
+  controller base, as três migrations iniciais, `UserFactory`,
+  `DatabaseSeeder` e `routes/console.php`.
+
 ## [2.0.0-beta.5] — 2026-09-30
 
 Correções do projeto criado, encontradas no primeiro uso real do kit.
@@ -973,7 +1041,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.4...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.5...desenvolvimento
+[2.0.0-beta.6]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.6
 [2.0.0-beta.5]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.5
 [2.0.0-beta.4]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.4
 [2.0.0-beta.3]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.3
