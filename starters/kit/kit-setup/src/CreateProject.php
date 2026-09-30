@@ -145,6 +145,17 @@ final class CreateProject
 
         $this->out->line($this->text('intro', ['dir' => $this->directory]));
 
+        // A identidade do projeto (TWS_KIT_VENDOR/TWS_KIT_LICENSE) vale nos
+        // dois jeitos (menu e ambiente): conferida antes de qualquer coisa.
+        $identity = Choice::identityError($this->env, $this->t);
+
+        if ($identity !== null) {
+            $this->out->error($identity);
+            $this->out->line($this->text('errors.nothing_installed', ['dir' => $this->directory]));
+
+            return 1;
+        }
+
         $choice = $this->choose($starters, $defaultStack);
 
         if ($choice === null) {

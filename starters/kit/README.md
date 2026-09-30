@@ -90,6 +90,13 @@ resposta sugerida — Enter aceita:**
 O projeto é montado **nesta mesma pasta**: os arquivos do kit dão lugar aos do
 projeto. Ao final, o instalador mostra o endereço do site.
 
+O projeto já nasce **seu**: o `composer.json` com o nome `app/<nome>` e a
+licença `proprietary` (troque à vontade), a licença MIT do kit guardada como
+aviso em `NOTICE-KIT-MIT.txt`, o banco de teste `<nome>_test`, um CI base em
+`.github/workflows/ci.yml` (roda à mão e uma vez por semana) e o
+`scripts/verificar`, que roda o mesmo conjunto do CI na sua máquina, pelo
+Docker. Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
+
 ### 5. Suba o projeto
 
 ```bash
@@ -133,6 +140,7 @@ Rode na pasta do projeto (ou no terminal do VS Code, fora do container):
 | ver o que está rodando | `docker compose ps` |
 | ver os logs | `docker compose logs -f` (ou `… logs -f app`) |
 | rodar os testes | `docker compose exec app php artisan test` |
+| conferir tudo o que o CI confere | `scripts/verificar` |
 | um comando do Laravel | `docker compose exec app php artisan migrate` |
 | um pacote PHP | `docker compose exec app composer require vendor/pacote` |
 | um pacote do front | `docker compose exec vite npm install pacote` |
@@ -279,6 +287,8 @@ macOS e no Windows:
 | `TWS_KIT_WITHOUT` | módulos opcionais que ficam de fora, separados por vírgula (`accounts`, `uploads`, `admin`) | nenhum |
 | `TWS_KIT_WITH` | módulos opcionais que entram (o padrão já é todos) | todos |
 | `TWS_KIT_LOCALE` | idioma do menu: `pt_BR`, `en` ou `es` | o do sistema, se for um dos três; senão `pt_BR` |
+| `TWS_KIT_VENDOR` | o vendor do nome do pacote no `composer.json` do projeto (`<vendor>/<nome>`): letras minúsculas, números e hífen | `app` |
+| `TWS_KIT_LICENSE` | a licença do projeto no `composer.json`: um identificador SPDX (`MIT`, `Apache-2.0`…) ou `proprietary` | `proprietary` |
 
 ```bash
 # Linux / macOS
@@ -291,7 +301,9 @@ $env:TWS_KIT_STACK = "react"; $env:TWS_KIT_WITHOUT = "uploads"
 composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
 
-Qualquer uma dessas variáveis (mesmo vazia) desliga o menu. Sem terminal
+Qualquer uma dessas variáveis (mesmo vazia) desliga o menu — menos
+`TWS_KIT_VENDOR` e `TWS_KIT_LICENSE`, que o menu não pergunta (as duas se
+trocam depois no `composer.json`). Sem terminal
 (`composer create-project -n`, CI) e sem variável nenhuma, vale o padrão
 seguro: o nome da pasta, o primeiro número livre, Livewire com todos os
 módulos. Uma escolha inválida (interface ou módulo desconhecido,
@@ -355,7 +367,9 @@ mesmo PHP e o mesmo Composer do `create-project`:
    `TWS_KIT_NAME`/`TWS_KIT_SLOT`): ele não pergunta de novo, gera as chaves e
    grava no `.env` o Docker de desenvolvimento do projeto — o nome, as portas,
    o endereço `http://<nome>.localhost:<porta>`, o cookie de sessão, o banco e
-   as senhas geradas do banco e do Redis;
+   as senhas geradas do banco e do Redis — e deixa o projeto com a identidade
+   dele (o `.env.example`, o banco de teste, o `composer.json`, a licença do kit
+   em `NOTICE-KIT-MIT.txt` e o CI base);
 5. o resumo, com o endereço e o `docker compose up -d` (que cria o banco e
    roda as migrations).
 

@@ -70,6 +70,8 @@ return [
         'slot_suggestion' => 'El primer número con los cuatro puertos libres es :suggestion.',
         'no_free_slot' => 'Ningún número de 0 a 99 tiene los cuatro puertos libres. Detenga proyectos que no esté usando (docker compose stop, en la carpeta de cada uno) y ejecute de nuevo.',
         'expose_invalid' => 'Valor inválido en TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar la base de datos) o 0.',
+        'vendor_invalid' => 'Vendor inválido en TWS_KIT_VENDOR: :vendor. Use letras minúsculas, números y guion (el nombre del paquete en el composer.json del proyecto queda <vendor>/<nombre del proyecto>).',
+        'license_invalid' => 'Licencia inválida en TWS_KIT_LICENSE: :license. Use un identificador SPDX (MIT, Apache-2.0…) o proprietary.',
     ],
 
     'steps' => [

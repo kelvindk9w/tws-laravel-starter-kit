@@ -34,6 +34,9 @@ declare(strict_types=1);
 // VS Code os procuram: compose.yaml na raiz e .devcontainer/devcontainer.json.
 // O script falha se faltar algum.
 //
+// Os phpunit*.xml publicados excluem o grupo `demo` (a demonstração não é
+// publicada: os testes dela só apareceriam como pulados no projeto).
+//
 // Ainda no starter, o docker-compose.prod.yml publicado sai SEM o contexto de
 // build `packages` (`additional_contexts: packages: ../../packages`, que só
 // existe no monorepo): no projeto criado não há pasta packages/, e o
@@ -188,6 +191,38 @@ if ($isProject && ! $isKit) {
     if (str_contains((string) file_get_contents("{$root}/compose.yaml"), '../../packages')) {
         fwrite(STDERR, "o compose.yaml de desenvolvimento publicado cita o monorepo\n");
         exit(1);
+    }
+
+    // Os testes da demonstração (grupo `demo`) não rodam no projeto: a demo
+    // não é publicada, e eles só apareceriam como "pulados" para sempre. As
+    // configurações do PHPUnit publicadas excluem o grupo (no monorepo, eles
+    // rodam, e pulam sozinhos só quando a demo é tirada).
+    $exclusion = <<<'XML'
+            <!-- A demonstração do kit (twstec/kit-demo) não é publicada: os testes
+                 dela (grupo `demo`) não rodam neste projeto — nem como "pulados". -->
+            <groups>
+                <exclude>
+                    <group>demo</group>
+                </exclude>
+            </groups>
+
+        XML;
+
+    foreach (['phpunit.xml', 'phpunit.pgsql.xml'] as $file) {
+        $xml = (string) @file_get_contents("{$root}/{$file}");
+
+        if ($xml === '' || str_contains($xml, '<groups>')) {
+            continue;
+        }
+
+        $published = (string) preg_replace('#(</testsuites>\n)#', '$1'.$exclusion, $xml, 1, $count);
+
+        if ($count !== 1) {
+            fwrite(STDERR, "{$file} publicado: não achei o fim de <testsuites> para excluir o grupo demo\n");
+            exit(1);
+        }
+
+        file_put_contents("{$root}/{$file}", $published);
     }
 }
 

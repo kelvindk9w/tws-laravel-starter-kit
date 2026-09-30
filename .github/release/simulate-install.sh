@@ -48,10 +48,12 @@
 # entram no lugar do Packagist (a pasta deles montada em /packages, o
 # repositório `artifact` relativo `../packages` visto de /app). Depois:
 # conferências (o projeto do starter com o compose.yaml de desenvolvimento, o
-# .env com o nome e as portas, os arquivos com o dono da máquina), `docker
-# compose up -d`, o site respondendo em http://<nome>.localhost:<porta> (e
-# localhost levando para lá), a suíte dentro do container (DOCKER_PEST=1) e,
-# por fim, `docker compose down -v --rmi local` (KEEP_DOCKER=1 mantém no ar).
+# .env com o nome e as portas, os arquivos com o dono da máquina, o projeto
+# com a identidade dele — created_project), `docker compose up -d`, o site
+# respondendo em http://<nome>.localhost:<porta> (e localhost levando para
+# lá), o Vite liberando no CORS só a origem do site, a suíte dentro do
+# container (DOCKER_PEST=1) e, por fim, `docker compose down -v --rmi local`
+# (KEEP_DOCKER=1 mantém no ar).
 # =============================================================================
 set -eu
 # POSIX sh (roda também na imagem PHP Alpine do kit); pipefail onde houver.
@@ -121,6 +123,58 @@ copy() {
     rm -rf "$WORK/tree"
 }
 
+# O PROJETO CRIADO é do projeto, não do starter nem do monorepo (rode na pasta
+# do projeto, depois do instalador): a identidade no composer.json, a licença
+# do kit como aviso, o banco de teste com o nome do projeto nos dois lugares,
+# o .env.example e o compose de produção com os valores dele, o limite de dev
+# das rotas sensíveis, o CI base e o script de verificação — e nenhum arquivo
+# ou comentário do monorepo nos arquivos de desenvolvimento publicados.
+created_project() {
+    name=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
+    database=$(sed -n 's/^DB_DATABASE=//p' .env)
+    test -n "$name"
+    test -n "$database"
+
+    grep -q "\"name\": \"app/$name\"" composer.json
+    grep -q '"license": "proprietary"' composer.json
+    for chave in description homepage support keywords; do
+        if grep -q "\"$chave\":" composer.json; then echo "composer.json do projeto herdou \"$chave\" do starter"; exit 1; fi
+    done
+    composer validate --no-check-publish --no-interaction >/dev/null
+    test -f NOTICE-KIT-MIT.txt
+    grep -q 'MIT License' NOTICE-KIT-MIT.txt
+    if [ -e LICENSE ]; then echo 'a licença MIT do kit ficou como a licença do projeto (LICENSE)'; exit 1; fi
+
+    test "$(grep -c "name=\"DB_DATABASE\" value=\"${database}_test\"" phpunit.pgsql.xml)" = 2
+    # A demonstração não é publicada: os testes dela não rodam (nem "pulam").
+    grep -q '<group>demo</group>' phpunit.xml
+    grep -q '<group>demo</group>' phpunit.pgsql.xml
+    grep -q 'datname = '"'"'${DB_DATABASE}_test'"'"'' compose.yaml
+    grep -qx "APP_URL=$(sed -n 's/^APP_URL=//p' .env)" .env.example
+    grep -qx "DB_DATABASE=$database" .env.example
+    grep -q "PROD_POSTGRES_DB:-$database}" docker-compose.prod.yml
+    if grep -q 'PROD_POSTGRES_DB:-tws_starter' docker-compose.prod.yml; then echo 'docker-compose.prod.yml com o banco do starter'; exit 1; fi
+    grep -qx 'RATE_LIMIT_SENSITIVE=30' .env
+
+    test -f .github/workflows/ci.yml
+    test -x scripts/verificar
+    test ! -e docker/dev/ci.yml
+
+    # Nada que só existe no monorepo.
+    for monorepo_file in docker/nginx/dev.conf tests/Feature/Localization/SharedTextsWithLivewireTest.php tests/e2e/smoke.spec.js tests/e2e/landing.spec.js; do
+        if [ -e "$monorepo_file" ]; then echo "arquivo do monorepo no projeto: $monorepo_file"; exit 1; fi
+    done
+    if grep -Eq '^FROM .* AS dev$' docker/nginx/Dockerfile; then echo 'alvo dev do nginx (só do monorepo) no projeto'; exit 1; fi
+    citacoes=$(grep -n -i -E 'monorepo|starters/|react-(app|queue|nginx|scheduler|db-init)' \
+        compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
+        docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* scripts/verificar .github/workflows/ci.yml \
+        $(find tests/e2e -type f ! -path '*/.auth/*') 2>/dev/null || true)
+    citacoes="$citacoes$(grep -v '^[[:space:]]*#.*só no monorepo' docker-compose.prod.yml | grep -n -i -E 'monorepo|starters/' || true)"
+    if [ -n "$citacoes" ]; then echo "arquivos de desenvolvimento do projeto citam o monorepo:"; echo "$citacoes"; exit 1; fi
+
+    echo "projeto criado com a identidade dele: app/$name, banco de teste ${database}_test"
+}
+
 package() {
     for pkg in $PACKAGES; do
         php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/$pkg" "$VERSION" --set-version
@@ -160,8 +214,11 @@ package() {
     # O projeto é o do starter escolhido (com o comando único, nada do
     # twstec/kit sobra: nem o composer.json, nem o código, nem a pasta
     # temporária).
-    grep -q "\"name\": \"twstec/starter-$STACK\"" composer.json
-    grep -q "'name' => 'twstec/starter-$STACK'" vendor/composer/installed.php
+    # O projeto nasce do starter escolhido (a interface dele) e com a
+    # identidade DELE no composer.json (ver created_project).
+    if [ "$STACK" = react ]; then test -f resources/js/app.tsx; else test ! -e resources/js/app.tsx; test -f resources/js/app.js; fi
+    test -f vendor/twstec/kit-installer/composer.json
+    created_project
     if [ -e kit-setup ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi
 
     # Os módulos DESMARCADOS não chegam ao projeto: nem no composer.json, nem
@@ -211,7 +268,6 @@ package() {
     # Starter React: o projeto é o do React (Inertia, sem Livewire no painel
     # do usuário) e o composer.json publicado é do tipo projeto.
     if [ "$STACK" = react ]; then
-        grep -q '"name": "twstec/starter-react"' composer.json
         grep -q '"type": "project"' composer.json
         test -d vendor/inertiajs/inertia-laravel
         test -f resources/js/app.tsx
@@ -260,11 +316,11 @@ docker_path() {
 
     # O projeto é o do starter, com o Docker de desenvolvimento, e nada do
     # twstec/kit sobrou.
-    grep -q "\"name\": \"twstec/starter-$STACK\"" composer.json
     test -f compose.yaml
     test -f .devcontainer/devcontainer.json
     if [ -e kit-setup ] || [ -e docker/instalar ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi
     grep -qx "COMPOSE_PROJECT_NAME=$name" .env
+    created_project
     grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^APP_KEY=base64:.+' .env
@@ -288,6 +344,24 @@ docker_path() {
     if [ "$ok" != 1 ]; then docker compose ps -a; docker compose logs --tail 80; echo "o site não respondeu em http://$name.localhost:$port"; exit 1; fi
     echo "site no ar: http://$name.localhost:$port/up → 200"
     test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
+
+    # O Vite de desenvolvimento libera no CORS a origem do SITE — e só ela
+    # (sem isso, o navegador bloqueia os scripts e a tela fica em branco).
+    vite_port=$(sed -n 's/^DEV_VITE_PORT=//p' .env)
+    ok=0
+    for _ in $(seq 1 60); do
+        if [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$vite_port/@vite/client")" = 200 ]; then ok=1; break; fi
+        sleep 5
+    done
+    if [ "$ok" != 1 ]; then docker compose logs --tail 60 vite; echo 'o Vite de desenvolvimento não respondeu'; exit 1; fi
+    liberada=$(curl -s -D - -o /dev/null -H "Origin: http://$name.localhost:$port" "http://127.0.0.1:$vite_port/@vite/client" | tr -d '\r' | sed -n 's/^[Aa]ccess-[Cc]ontrol-[Aa]llow-[Oo]rigin: //p')
+    test "$liberada" = "http://$name.localhost:$port"
+    for outra in "http://outro.localhost:$port" "http://$name.localhost:$vite_port" https://example.com; do
+        if curl -s -D - -o /dev/null -H "Origin: $outra" "http://127.0.0.1:$vite_port/@vite/client" | grep -qi '^access-control-allow-origin'; then
+            echo "o Vite liberou no CORS outra origem: $outra"; exit 1
+        fi
+    done
+    echo "Vite: CORS só para http://$name.localhost:$port"
     docker compose ps --format '{{.Service}} {{.State}}'
 
     if [ "${DOCKER_PEST:-0}" = 1 ]; then

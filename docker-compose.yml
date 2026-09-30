@@ -68,15 +68,16 @@ services:
     networks:
       - backend
 
+  # A configuração de dev é do monorepo (docker/nginx/livewire-dev.conf), numa
+  # imagem nginx pronta — a imagem do starter (docker/nginx/Dockerfile) é só a
+  # de produção.
   nginx:
-    build:
-      context: ./starters/livewire
-      dockerfile: docker/nginx/Dockerfile
-      target: dev
+    image: nginx:stable-alpine3.24
     ports:
       - "${DEV_WEB_PORT:-8180}:80"
     volumes:
       - ./starters/livewire:/var/www/html:ro
+      - ./docker/nginx/livewire-dev.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app
     networks:
@@ -178,7 +179,8 @@ services:
   #
   # ENDEREÇO: http://127.0.0.1:8181 (APP_URL do .env do React), não
   # localhost — cookie é por host, não por porta, e o XSRF-TOKEN dos dois
-  # starters seria o mesmo cookie. O dev.conf leva localhost:8181 para lá.
+  # starters seria o mesmo cookie. O docker/nginx/react-dev.conf leva
+  # localhost:8181 para lá.
   # ===========================================================================
 
   # Cria os bancos do React no PostgreSQL compartilhado, se faltarem, e sai.
@@ -236,7 +238,7 @@ services:
       - "${DEV_REACT_WEB_PORT:-8181}:80"
     volumes:
       - ./starters/react:/var/www/html:ro
-      - ./starters/react/docker/nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/react-dev.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - react-app
     networks:

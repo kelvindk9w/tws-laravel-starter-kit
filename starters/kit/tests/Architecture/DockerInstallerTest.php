@@ -16,7 +16,9 @@ $root = dirname(__DIR__, 2);
 it('o compose.yaml repassa TODAS as variáveis de escolha (e o idioma) ao container', function () use ($root): void {
     $compose = (string) file_get_contents($root.'/compose.yaml');
 
-    foreach ([...Choice::VARIABLES, 'TWS_KIT_LOCALE', 'TWS_KIT_UID', 'TWS_KIT_GID'] as $variable) {
+    // TWS_KIT_VENDOR e TWS_KIT_LICENSE: a identidade do projeto no composer.json
+    // (o instalador do starter as lê).
+    foreach ([...Choice::VARIABLES, 'TWS_KIT_LOCALE', 'TWS_KIT_UID', 'TWS_KIT_GID', 'TWS_KIT_VENDOR', 'TWS_KIT_LICENSE'] as $variable) {
         // Sem valor: repassa só se estiver no ambiente de quem chamou (com
         // valor vazio, qualquer uma desligaria o menu).
         expect($compose)->toMatch('/^\s+- '.$variable.'$/m');

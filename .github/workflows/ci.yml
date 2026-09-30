@@ -488,9 +488,10 @@ jobs:
       # -T instalar` (o instalador em container, com a escolha pelo ambiente e
       # os ZIPs no lugar do Packagist), as conferências (o projeto com o
       # compose.yaml de desenvolvimento, o .env com o nome, as portas e as
-      # senhas geradas, os arquivos com o dono da máquina), `docker compose up
-      # -d`, o site respondendo em http://<nome>.localhost:<porta>/up e o
-      # `down -v --rmi local`.
+      # senhas geradas, os arquivos com o dono da máquina, a identidade do
+      # projeto e nada do monorepo nos arquivos de desenvolvimento), `docker
+      # compose up -d`, o site respondendo em http://<nome>.localhost:<porta>/up,
+      # o Vite liberando no CORS só a origem do site e o `down -v --rmi local`.
       - name: Comando único · caminho só com o Docker (instalar, subir e o site no ar) · Livewire só a base
         working-directory: .
         env:

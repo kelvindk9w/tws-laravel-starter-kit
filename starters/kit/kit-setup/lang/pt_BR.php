@@ -70,6 +70,8 @@ return [
         'slot_suggestion' => 'O primeiro número com as quatro portas livres é :suggestion.',
         'no_free_slot' => 'Nenhum número de 0 a 99 tem as quatro portas livres. Pare projetos que não está usando (docker compose stop, na pasta de cada um) e rode de novo.',
         'expose_invalid' => 'Valor inválido em TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar o banco) ou 0.',
+        'vendor_invalid' => 'Vendor inválido em TWS_KIT_VENDOR: :vendor. Use letras minúsculas, números e hífen (o nome do pacote no composer.json do projeto fica <vendor>/<nome do projeto>).',
+        'license_invalid' => 'Licença inválida em TWS_KIT_LICENSE: :license. Use um identificador SPDX (MIT, Apache-2.0…) ou proprietary.',
     ],
 
     'steps' => [

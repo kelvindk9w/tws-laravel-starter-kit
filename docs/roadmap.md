@@ -1,6 +1,8 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-09-30, com a versão **2.0.0-beta.4** publicada.
+> Atualizado em 2026-09-30, com a versão **2.0.0-beta.4** publicada e a
+> **2.0.0-beta.5** em preparação (as correções do primeiro uso real — ver o
+> [CHANGELOG](../CHANGELOG.md), "Não publicado").
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -28,9 +30,19 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
 
 ## O que falta para a 2.0.0 estável
 
-1. **Uso real em um projeto novo.** Criar um projeto de verdade a partir do
-   beta (de preferência pelo starter React), usar por algumas semanas e
-   corrigir o que aparecer. É o critério principal para sair do beta.
+1. **Uso real em um projeto novo** — **em andamento.** O primeiro projeto de
+   verdade (starter React pelo caminho só com o Docker, com contas, uploads e
+   `/admin`) já achou dez lacunas, todas resolvidas na 2.0.0-beta.5: a tela em
+   branco no dev (CORS do Vite), o limite das rotas sensíveis no `.env` de dev,
+   o E2E que apontava para o monorepo, o banco de teste com dois nomes, o
+   teste só do monorepo que pulava para sempre, arquivos e comentários do
+   monorepo no projeto, valores do starter no `.env.example` e no compose de
+   produção, o `*.localhost` em IPv6 dentro de containers, a identidade do
+   projeto no `composer.json` (e a licença do kit) e a falta de um CI base. A
+   prova do mesmo caminho com o Livewire achou mais duas, também resolvidas:
+   a CSP recusava o Vite de desenvolvimento e o `/admin` recebia o bundle
+   CSP-safe do Livewire (modais do Filament sem abrir). Falta usar por
+   algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
    rodar o guia do iniciante e o comando único num Windows e num Mac de
@@ -53,6 +65,11 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
 
 - **Horizon no Windows com PHP nativo:** não roda (faltam `pcntl`/`posix`);
   a fila funciona com `php artisan queue:work` e o caminho Docker roda tudo.
+- **`*.localhost` em IPv6 dentro de containers:** as portas do projeto saem
+  só em `127.0.0.1`; um script que chame `<nome>.localhost` de dentro de um
+  container (Node, `curl`) pode cair em `::1` e ser recusado — use
+  `127.0.0.1:<porta>` (o E2E do projeto já faz isso). O navegador não tem o
+  problema.
 - **Redes do Docker esgotadas:** em máquinas com muitas redes criadas por
   outros projetos, subir um projeto novo pode falhar por falta de faixa de
   rede; `docker network prune` libera as que não estão em uso.

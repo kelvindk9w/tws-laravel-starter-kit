@@ -4,6 +4,94 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.0.0-beta.5] — 2026-09-30
+
+Correções do projeto criado, encontradas no primeiro uso real do kit.
+
+Para a **2.0.0-beta.5**: as correções do primeiro uso real do kit (um projeto
+criado pelo caminho só com o Docker, starter React com contas, uploads e
+`/admin`) e da mesma prova com o starter Livewire. Tudo no projeto criado;
+o monorepo e a produção seguem como estavam.
+
+### Corrigido
+
+- **Tela em branco no desenvolvimento de todo projeto criado pelo Docker.** A
+  página vem do site (nginx) e os scripts do Vite, de outra porta; com o
+  `server.origin` do Vite, o `laravel-vite-plugin` liberava no CORS só a
+  origem do próprio Vite, e o navegador bloqueava os scripts. O serviço `vite`
+  recebe a URL do site (`VITE_DEV_APP_URL`) e o `vite.config` libera no CORS
+  **só** ela (outro projeto `*.localhost`, a origem do Vite ou um site
+  qualquer continuam sem o cabeçalho). Nos dois starters. Provado no
+  navegador pelo E2E novo `tests/e2e/front-assets.spec`.
+- **Starter Livewire: a CSP recusava o Vite de desenvolvimento** (os scripts e
+  o CSS dele não carregavam no projeto criado). Em `APP_ENV=local`, com o
+  `public/hot` presente, a origem do Vite entra na CSP — como no React
+  (`App\Support\ViteDevServerCsp`); nunca `unsafe-eval`, nada muda fora do
+  desenvolvimento.
+- **Starter Livewire: modais e ações do `/admin` não abriam no projeto
+  criado.** Os assets do Livewire só eram publicados no `composer install`;
+  o projeto nasce de um `composer update`, e o `/admin` recebia o bundle
+  CSP-safe. O `post-update-cmd` também os publica.
+- **`RATE_LIMIT_SENSITIVE=5` no `.env` de desenvolvimento** fazia o E2E do
+  projeto criado levar 429. O desenvolvimento usa 30 (`.env.example` e o
+  instalador); a produção continua com 5 (`config/security.php` e
+  `.env.prod.example`).
+- **O E2E do projeto criado apontava para o monorepo** (`127.0.0.1:8181` e o
+  Mailpit `18025`): sem variáveis, criaria e apagaria pessoas e mensagens no
+  ambiente do kit. O E2E lê `E2E_BASE_URL`/`E2E_MAILPIT_URL` e, na falta, a
+  `APP_URL` e a `DEV_MAIL_PORT` do `.env` do projeto; sem nenhum dos dois, para
+  com a instrução. Antes de qualquer teste, confere que o site que responde é
+  o projeto (o cookie de sessão tem o nome dele) e que o Mailpit é o dele; o
+  teardown do React não varre nada fora do projeto. No monorepo, nada muda.
+- **Banco de teste com dois nomes:** o `db-init` criava `tws_starter_test` e o
+  `phpunit.pgsql.xml` do React usava `tws_starter_react_test`. Agora os dois
+  são `<banco do projeto>_test` (o compose deriva do `DB_DATABASE`; o
+  instalador grava o `phpunit.pgsql.xml`).
+- **Testes "pulados" para sempre no projeto criado:** no React, os 24 da
+  comparação dos textos com o starter Livewire (só existe no monorepo), que
+  viraram arquivo próprio, fora do pacote publicado (`export-ignore`) — a
+  conferência das chaves dos três idiomas continua no projeto; no Livewire, os
+  349 da demonstração (grupo `demo`), que não é publicada: os `phpunit*.xml`
+  publicados excluem o grupo. A suíte do projeto criado roda sem nenhum
+  "pulado" no PostgreSQL (no SQLite, só os que exigem o PostgreSQL).
+- **Arquivos e comentários do monorepo no projeto:** o nginx de dev do
+  monorepo saiu dos starters (para `docker/nginx/` da raiz), e o alvo `dev`
+  do Dockerfile do nginx deixou de existir; o E2E e as capturas da
+  demonstração do Livewire ficam fora do pacote publicado; os comentários do
+  compose, dos Dockerfiles, do `.env.example`, do `phpunit.pgsql.xml`, do
+  Playwright e de `tests/e2e` descrevem o projeto (a simulação da instalação
+  publicada reprova citação do monorepo neles), e a mensagem da guarda de path
+  repository do Dockerfile do PHP não fala mais em monorepo.
+- **Valores do starter no projeto:** o `.env.example` recebe o `APP_URL`, o
+  `PLATFORM_OFFICIAL_URL`, o `DB_DATABASE` e o `SESSION_COOKIE` do projeto
+  (as senhas ficam só no `.env`), e o `docker-compose.prod.yml`, o nome do
+  banco dele.
+- E2E do Livewire: o teste da foto de perfil esperava por um texto que já
+  estava na página e recarregava antes de o envio terminar (falhava por
+  pressa); agora espera a foto aparecer.
+
+### Adicionado
+
+- **O projeto criado com a identidade dele.** O `composer.json` ganha o nome
+  `<vendor>/<nome>` (`TWS_KIT_VENDOR`, padrão `app`) e a licença
+  `proprietary` (`TWS_KIT_LICENSE`), sem a descrição, a página, o suporte, as
+  palavras-chave e a versão do starter (o `content-hash` do lock acompanha); a
+  licença MIT do kit vira `NOTICE-KIT-MIT.txt`, com o aviso de que não é a
+  licença do projeto. Vendor ou licença inválidos param antes de qualquer
+  mudança.
+- **CI base e `scripts/verificar` no projeto criado.**
+  `.github/workflows/ci.yml` (Pint, auditorias, build e Pest contra o
+  PostgreSQL 18), à mão e semanal por padrão — ligar em push está documentado —,
+  só leitura, ações fixadas por commit; e `scripts/verificar`, o mesmo conjunto
+  na máquina, pelo Docker.
+- **E2E do Livewire sem a demonstração:** `tests/e2e/fixtures.php` (as pessoas
+  fixas, como no React), login do `/admin` com o admin do E2E quando não há o
+  super admin demo, e os specs da demonstração ou de um módulo ausente fora da
+  rodada (sem aparecer como pulados) — os testes do `/admin` sobre os dados
+  demo só são registrados com a demonstração instalada.
+- Documentação: `docs/testes.md` e `docs/instalacao.md` com a versão "projeto
+  criado" (testes, E2E, CI, CORS do Vite, IPv6 e `*.localhost`).
+
 ## [2.0.0-beta.4] — 2026-09-30
 
 Correção do caminho do iniciante publicado na beta.3.
@@ -885,7 +973,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.3...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.4...desenvolvimento
+[2.0.0-beta.5]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.5
 [2.0.0-beta.4]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.4
 [2.0.0-beta.3]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.3
 [2.0.0-beta.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.2

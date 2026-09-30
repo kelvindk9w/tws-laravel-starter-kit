@@ -239,7 +239,7 @@ Também: HTTPS forçado em produção (`URL::forceHttps()` nas guardas de produ�
 
 ## Na borda (nginx): só o `index.php` executa, e nenhuma versão é anunciada
 
-Antes da cadeia acima existe o nginx (`docker/nginx/dev.conf` e `prod.conf`), e duas regras dele
+Antes da cadeia acima existe o nginx (`docker/dev/nginx.conf.template` no desenvolvimento e `docker/nginx/prod.conf`), e duas regras dele
 fazem parte da segurança:
 
 - **Só o front controller executa PHP.** O bloco antigo `location ~ \.php$` mandava QUALQUER
@@ -319,7 +319,7 @@ coluna aparece na listagem de logs de requisição do `/admin`.
 **A borda precisa colaborar.** `X-Forwarded-For` é uma lista, e o Laravel toma como cliente a
 última entrada que **não** é de proxy confiável. É isso que impede o forjamento — desde que o proxy
 **acrescente** o endereço real da conexão em vez de repassar o valor do cliente. Os dois arquivos de
-nginx do kit (`docker/nginx/dev.conf` e `prod.conf`) fazem isso com
+nginx do kit (`docker/dev/nginx.conf.template` e `docker/nginx/prod.conf`) fazem isso com
 `fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for`. **Declarar como confiável um proxy
 que só repassa o header do cliente é pior que não declarar nada.**
 
@@ -381,7 +381,8 @@ O painel do usuário roda o **bundle CSP-safe do Livewire** (`csp_safe` em
 O Filament 5 usa expressões Alpine incompatíveis com esse bundle (modais e
 ações não abrem), então SOMENTE as rotas `/admin*`: (1) recebem o bundle
 normal do Livewire (middleware `UseEvalBundleForAdmin`, com assets
-publicados em `public/vendor/livewire` via `post-install-cmd`) e (2) ganham
+publicados em `public/vendor/livewire` pelos scripts do Composer — no
+`composer install` e também no `composer update`, que é o que cria o projeto) e (2) ganham
 `'unsafe-eval'` no `script-src` (SecurityHeaders, configurável por
 `SECURITY_CSP_ADMIN`). Mitigação: /admin é painel interno, atrás de
 `is_admin` + IP allowlist em produção. Os caminhos de cada superfície com CSP

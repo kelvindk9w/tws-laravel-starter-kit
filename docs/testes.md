@@ -1,5 +1,68 @@
 # Testes
 
+> **Num projeto criado** (pelo `twstec/kit` ou por um starter), veja
+> [Testes no projeto criado](#testes-no-projeto-criado) logo abaixo. O resto
+> deste documento descreve a suíte **dentro do monorepo** do kit.
+
+## Testes no projeto criado
+
+Na raiz do projeto, com ele no ar (`docker compose up -d`). Nada disso exige
+PHP ou Node na máquina.
+
+```bash
+# Tudo o que o CI confere, de uma vez (Pint, auditorias, build, Pest PostgreSQL):
+scripts/verificar
+
+# Ou cada camada:
+docker compose exec app ./vendor/bin/pest                       # Pest em SQLite em memória
+docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml  # Pest contra o PostgreSQL (o banco <banco>_test)
+```
+
+O banco da suíte PostgreSQL é `<banco do projeto>_test`: o instalador grava o
+nome no `phpunit.pgsql.xml`, e o serviço `db-init` do `compose.yaml` cria o
+mesmo (`${DB_DATABASE}_test`) na subida. A `tests/TestCase.php` recusa
+qualquer banco que não termine em `_test`.
+
+**E2E (Playwright), sem Node na máquina:**
+
+```bash
+# As pessoas fixas do E2E (e2e@example.com e admin-e2e@example.com), idempotente:
+docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+
+# A suíte, num container (o --user evita arquivos com dono root):
+docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
+```
+
+- **Onde o E2E roda:** sempre no **próprio projeto**. O site é o de
+  `E2E_BASE_URL` ou, sem ela, a `APP_URL` do `.env`; o Mailpit, o de
+  `E2E_MAILPIT_URL` ou `http://127.0.0.1:<DEV_MAIL_PORT do .env>`
+  (`tests/e2e/support/project-env`). Sem a variável e sem o valor no `.env`, o
+  E2E para com a instrução. Antes de qualquer teste, o global-setup confere que
+  o site que responde é **este** projeto (o cookie de sessão tem o nome do
+  `SESSION_COOKIE` do `.env`) e que o Mailpit é o dele — senão a suíte para sem
+  criar nem apagar nada (o teardown do React também não varre). O E2E cria e
+  apaga pessoas e mensagens: apontado para outro ambiente da máquina, ele
+  mexeria no banco e no Mailpit de outro projeto.
+- **IPv6:** dentro do container do Playwright, `<nome>.localhost` pode
+  resolver para `::1`, e as portas só saem em IPv4; o navegador tenta o IPv4
+  sozinho, e as chamadas do Node (Mailpit, Vite) usam `127.0.0.1`.
+- **O front no navegador:** `tests/e2e/front-assets.spec` abre o login e
+  prova que os scripts do front carregam sem bloqueio — com o Vite de
+  desenvolvimento no ar, que eles vêm dele e que ele libera no CORS **só** a
+  origem do site.
+- **Limite das rotas sensíveis:** o `.env` de desenvolvimento usa
+  `RATE_LIMIT_SENSITIVE=30` (o instalador grava); com o 5 da produção, o login
+  e o cadastro paralelos do E2E recebem 429.
+- **Entre duas rodadas, espere 60 s** (o limite de borda por IP). Cada teste
+  apaga o que criou; para conferir sobras:
+  `docker compose exec app php artisan tinker --execute='echo \App\Models\User::where("email","like","e2e-%")->count();'`.
+- **Starter Livewire:** os specs da demonstração do kit (landings, vitrine
+  `/ui`, dados demo do `/admin`) não vão para o projeto criado; os de um
+  módulo opcional ausente ficam de fora sozinhos (`playwright.config.js`).
+
+## Testes no monorepo
+
 Três camadas, todas em container:
 
 ```bash
@@ -135,8 +198,9 @@ padrão continuar verde. Alguns testes (o gatilho das contas demo) só existem
 no PostgreSQL e ficam como *skip* no SQLite.
 
 Para rodar localmente contra o Postgres do docker de dev, use o
-`phpunit.pgsql.xml`. Ele aponta para um banco **separado**,
-`tws_starter_test`, nunca para o banco do `.env` — a suíte apaga o schema a
+`phpunit.pgsql.xml`. No monorepo, ele aponta para um banco **separado**,
+`tws_starter_test` (o do React, `tws_starter_react_test`; num projeto criado,
+`<banco>_test`), nunca para o banco do `.env` — a suíte apaga o schema a
 cada execução, e a `tests/TestCase.php` recusa qualquer banco cujo nome não
 termine em `_test`.
 
@@ -175,6 +239,13 @@ docker compose exec app php artisan tinker --execute='
 # (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD)
 ```
 
+No monorepo, o E2E do Livewire usa a demonstração (o super admin demo faz
+login no `/admin` e a limpeza); sem ela, o admin do E2E de
+`tests/e2e/fixtures.php`. Os endereços vêm do `.env` do starter (a `APP_URL`);
+sem `DEV_MAIL_PORT` no `.env`, o Mailpit é o do `docker-compose.yml` da raiz
+(`http://localhost:18025`) — só quando o `composer.json` instala os pacotes
+por path repository (o monorepo).
+
 Depois rode a suíte, **de dentro de `starters/livewire`** (é onde estão o
 `playwright.config.js`, o `package.json` e `tests/e2e`; o comando monta a pasta
 atual no container):
@@ -193,7 +264,7 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 O `email-verification.spec.js` faz o fluxo real do cadastro: registra uma
 conta nova (`e2e-verificacao-<carimbo>@example.com`), lê o e-mail de
 verificação na API do **Mailpit** (entregue pelo worker `queue`, então os dois
-precisam estar no ar; `E2E_MAILPIT_URL`, padrão `http://localhost:18025`),
+precisam estar no ar; `E2E_MAILPIT_URL`, no monorepo `http://localhost:18025`),
 clica no link e confere o painel liberado. No fim — passando ou falhando — ele
 **apaga o que criou**, como o `two-factor.spec.js` abaixo: a conta, pelo
 `/admin` com o super admin demo, e as mensagens dela no Mailpit.
@@ -228,11 +299,11 @@ uma rodada e a próxima, ou os últimos testes recebem 429.
 ### E2E do starter React
 
 Em `starters/react/tests/e2e` (TypeScript, o mesmo Playwright 1.63), contra
-`http://127.0.0.1:8181` — o host é outro que o do Livewire para os cookies não
-colidirem (ver [instalação](instalacao.md#starter-react)). O React não tem a
-demonstração, então as pessoas fixas do E2E vêm de um script idempotente
-(`e2e@example.com`, a pessoa do painel, e `admin-e2e@example.com`, o admin que
-faz a limpeza):
+a `APP_URL` do `.env` do React — no monorepo, `http://127.0.0.1:8181`; o host
+é outro que o do Livewire para os cookies não colidirem (ver
+[instalação](instalacao.md#starter-react)). O React não tem a demonstração,
+então as pessoas fixas do E2E vêm de um script idempotente (`e2e@example.com`,
+a pessoa do painel, e `admin-e2e@example.com`, o admin que faz a limpeza):
 
 ```bash
 docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"

@@ -204,17 +204,50 @@ pelos comandos por starter — nasce com:
   starter: o `dev` com o Composer e o git), `nginx` (o site), `init` (de uma
   vez: o `vendor/` se faltar e as migrations — o app sobe depois dele),
   `queue`, `scheduler`, `vite` (Node 24, a recarga ao vivo), `postgres`,
-  `redis`, `mailpit` e `db-init` (o banco `tws_starter_test` da suíte contra
-  o PostgreSQL). `docker compose up -d` sobe tudo.
+  `redis`, `mailpit` e `db-init` (o banco `<DB_DATABASE>_test` da suíte contra
+  o PostgreSQL — o mesmo nome que o `phpunit.pgsql.xml` do projeto força).
+  `docker compose up -d` sobe tudo.
 - **`.devcontainer/devcontainer.json`**: o VS Code ("Reopen in Container")
   entra no container `app` do mesmo `compose.yaml`, com o projeto em
   `/var/www/html`.
+- **`.github/workflows/ci.yml`** e **`scripts/verificar`**: o CI base e a
+  mesma verificação na máquina (ver [O CI e o `scripts/verificar` do projeto
+  criado](#o-ci-e-o-scriptsverificar-do-projeto-criado)).
+
+**O Vite de desenvolvimento e o CORS.** A página vem do site (nginx, porta
+`808N`) e os scripts do front, do Vite (porta `803N`) — outra origem. O
+navegador só executa os scripts se o Vite liberar a origem do site no CORS;
+sem isso, a tela fica em branco (o React não monta) ou o front do Livewire não
+roda. O serviço `vite` recebe a URL do site (`VITE_DEV_APP_URL`) e o
+`vite.config` libera no CORS **só** ela: outro projeto `*.localhost`, a
+própria origem do Vite ou um site qualquer continuam sem o cabeçalho de
+liberação. A CSP do projeto, em `APP_ENV=local` e com o `public/hot` presente,
+aceita a origem do Vite (e o WebSocket do HMR) — só em desenvolvimento, nunca
+`unsafe-eval` (`App\Support\ViteDevServerCsp`, nos dois starters).
+
+**IPv6 e `*.localhost`.** As portas saem só em `127.0.0.1`. Em alguns sistemas
+— e dentro de containers, como o do Playwright — `<nome>.localhost` resolve
+primeiro para `::1`: o navegador tenta o `127.0.0.1` sozinho, mas um script
+(Node, `curl`) que chame pelo nome recebe "connection refused". Nele, use
+`http://127.0.0.1:<porta>` (o E2E do projeto já faz isso com o Mailpit e com o
+Vite). O compose não publica em `[::1]` porque isso quebraria o `up` onde o
+IPv6 está desligado.
 
 No monorepo, os dois ficam em `starters/<starter>/docker/dev/` (um
 `compose.yaml` na raiz do starter mudaria o `docker compose` de quem roda o
-monorepo dali); a publicação (`prepare-composer.php`) os põe no lugar. O
+monorepo dali); a publicação (`prepare-composer.php`) os põe no lugar, e o
+instalador põe o CI base (`docker/dev/ci.yml`) em `.github/workflows/`. O
 ambiente de desenvolvimento do monorepo (o `docker-compose.yml` da raiz,
-Livewire na 8180 e React em 127.0.0.1:8181) não muda.
+Livewire na 8180 e React em 127.0.0.1:8181, com as configurações do nginx de
+dev em `docker/nginx/` da raiz) não muda. **Nada disso do monorepo chega ao
+projeto:** o nginx de dev do monorepo e o alvo `dev` do Dockerfile do nginx
+não existem mais nos starters; o teste que compara os textos do React com os do
+Livewire e o E2E da demonstração ficam fora do pacote publicado
+(`export-ignore`), e os `phpunit*.xml` publicados excluem o grupo `demo` (a
+demonstração não é publicada — os testes dela não aparecem como pulados); e os comentários dos arquivos de desenvolvimento publicados
+(compose, Dockerfiles, `.env.example`, `phpunit.pgsql.xml`, Playwright e
+`tests/e2e`) descrevem o projeto — a simulação da instalação publicada
+reprova qualquer citação do monorepo neles.
 
 **O nome** do projeto vira o `COMPOSE_PROJECT_NAME` (containers, volumes e
 rede com o prefixo do projeto), o endereço `http://<nome>.localhost:<porta>`,
@@ -269,7 +302,10 @@ houver `COMPOSE_PROJECT_NAME`): `COMPOSE_PROJECT_NAME`, `COMPOSE_PROFILES`
 containers gravam como ele), `DEV_VITE_POLLING`, `APP_URL` e
 `PLATFORM_OFFICIAL_URL`, `SESSION_COOKIE`, `DB_*` (host `postgres`, banco do
 projeto, **senha gerada**), `REDIS_PASSWORD` (**gerada**) e o Mailpit
-(`MAIL_HOST=mailpit`). Nada de senha fixa do kit: o `.env.example` traz a do
+(`MAIL_HOST=mailpit`) e `RATE_LIMIT_SENSITIVE=30` (as rotas sensíveis no
+desenvolvimento: a suíte E2E entra e cadastra em paralelo, do mesmo IP; a
+produção continua com 5, o padrão da `config/security.php` e do
+`.env.prod.example`). Nada de senha fixa do kit: o `.env.example` traz a do
 desenvolvimento do monorepo, e o projeto criado recebe outra. Com o Docker de
 desenvolvimento configurado, as migrations ficam para o primeiro
 `docker compose up -d` (o banco do projeto ainda não existe durante a
@@ -285,9 +321,44 @@ em uso ou número com porta ocupada param a instalação antes de qualquer
 mudança. No monorepo (sem `compose.yaml` na raiz do starter), nada disso
 acontece.
 
+**O projeto criado é do projeto** — na mesma hora, o instalador troca o que
+o starter trazia:
+
+| Arquivo | O que fica |
+| --- | --- |
+| `.env.example` | `APP_URL`, `PLATFORM_OFFICIAL_URL`, `DB_DATABASE` e `SESSION_COOKIE` do projeto (as senhas geradas ficam só no `.env`) |
+| `phpunit.pgsql.xml` | o banco da suíte `<banco>_test` — o mesmo que o `db-init` do `compose.yaml` cria |
+| `docker-compose.prod.yml` | o nome padrão do banco de produção (`PROD_POSTGRES_DB`) |
+| `composer.json` | `name` = `<vendor>/<nome>` (`TWS_KIT_VENDOR`, padrão `app`), `license` = `proprietary` (`TWS_KIT_LICENSE`: um identificador SPDX como `MIT` ou `Apache-2.0`), sem a descrição, a página, o suporte, as palavras-chave e a versão do starter; o `content-hash` do `composer.lock` acompanha |
+| `LICENSE` → `NOTICE-KIT-MIT.txt` | a licença MIT do kit vira o aviso que a MIT exige manter, com um cabeçalho dizendo que ela não é a licença do projeto — o projeto escolhe a dele (o `license` do `composer.json` e, se quiser, um `LICENSE` próprio) |
+| `.github/workflows/ci.yml` | o CI base (sem sobrescrever um que exista) |
+
+Vendor ou licença inválidos param a instalação antes de qualquer mudança,
+como o nome e o número. `TWS_KIT_VENDOR` e `TWS_KIT_LICENSE` valem nos dois
+caminhos (o `compose.yaml` do instalador em container as repassa); o menu não
+pergunta — as duas se trocam depois no `composer.json`, sem efeito colateral.
+
+### O CI e o `scripts/verificar` do projeto criado
+
+O projeto nasce com o mesmo conjunto de verificação em dois lugares:
+
+- **`scripts/verificar`**, na máquina, pelo Docker de desenvolvimento (sem
+  PHP nem Node instalados): Pint, `composer audit`, `npm audit` (dependências
+  de produção, alta ou crítica), o build do front e o Pest contra o
+  PostgreSQL (`<banco>_test`). Para no primeiro passo que falhar. No Windows,
+  no terminal do WSL ou no Git Bash.
+- **`.github/workflows/ci.yml`**, no GitHub Actions: os mesmos passos, com o
+  PostgreSQL 18 como serviço do job. Roda **à mão** (Actions → CI → Run
+  workflow) e **uma vez por semana** (pega dependência com falha de segurança
+  nova mesmo sem commit) — não a cada push, porque repositório privado tem
+  cota de minutos. Para rodar a cada push e pull request, acrescente em `on:`
+  `push: { branches: [main] }` e `pull_request:`. Permissão só de leitura
+  (`contents: read`), ações de terceiros **fixadas pelo commit** (com a versão
+  no comentário) e o checkout sem guardar a credencial.
+
 **A imagem de produção não muda:** o estágio `workspace` é à parte (o `prod`
 parte do `base`), e o `.dockerignore` deixa o `compose.yaml`, o
-`.devcontainer/` e o `docker/dev/` fora do contexto da imagem.
+`.devcontainer/`, o `docker/dev/` e o `scripts/` fora do contexto da imagem.
 
 ## Criar um projeto a partir de um starter
 

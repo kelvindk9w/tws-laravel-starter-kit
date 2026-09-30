@@ -51,6 +51,32 @@ final class Choice
     ) {}
 
     /**
+     * A identidade do projeto no composer.json (TWS_KIT_VENDOR,
+     * TWS_KIT_LICENSE — o menu não pergunta; o instalador do starter grava):
+     * o motivo da recusa, já traduzido, ou null. Conferida ANTES de qualquer
+     * download, com as mesmas regras do instalador
+     * (Twstec\Kit\Installer\Support\CreatedProject).
+     *
+     * @param  array<string, string|false>  $env
+     */
+    public static function identityError(array $env, Translator $t): ?string
+    {
+        $vendor = strtolower(trim((string) ($env['TWS_KIT_VENDOR'] ?? '')));
+
+        if ($vendor !== '' && preg_match('/^[a-z0-9]([_.-]?[a-z0-9]+)*$/', $vendor) !== 1) {
+            return $t->get('errors.vendor_invalid', ['vendor' => $vendor]);
+        }
+
+        $license = trim((string) ($env['TWS_KIT_LICENSE'] ?? ''));
+
+        if ($license !== '' && preg_match('/^[A-Za-z0-9.+-]+(?: (?:OR|AND) [A-Za-z0-9.+-]+)*$/', $license) !== 1) {
+            return $t->get('errors.license_invalid', ['license' => $license]);
+        }
+
+        return null;
+    }
+
+    /**
      * Os opcionais que ficam de fora.
      *
      * @return list<string>

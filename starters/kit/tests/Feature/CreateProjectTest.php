@@ -147,6 +147,32 @@ it('escolha inválida no ambiente para ANTES de baixar qualquer coisa — o proj
     'nas duas listas' => [['TWS_KIT_WITH' => 'admin', 'TWS_KIT_WITHOUT' => 'admin'], 'is in both TWS_KIT_WITH and TWS_KIT_WITHOUT'],
 ]);
 
+it('vendor ou licença do projeto inválidos (TWS_KIT_VENDOR, TWS_KIT_LICENSE): recusados ANTES de baixar — também com o menu, que não os pergunta', function (array $env, string $message): void {
+    $before = file_get_contents($this->project.'/composer.json');
+    $asked = false;
+    $menu = function () use (&$asked): Choice {
+        $asked = true;
+
+        return new Choice('react', ['admin']);
+    };
+
+    foreach ([null, $menu] as $how) {
+        expect(($this->create)($env, $how))->toBe(1)
+            ->and($this->runner->calls)->toBe([])
+            ->and(file_get_contents($this->project.'/composer.json'))->toBe($before)
+            ->and(($this->output)())->toContain($message)->toContain('Nothing was installed');
+    }
+
+    expect($asked)->toBeFalse();
+})->with([
+    'vendor com espaço' => [['TWS_KIT_VENDOR' => 'minha empresa'], 'Invalid vendor in TWS_KIT_VENDOR: minha empresa'],
+    'licença com comando' => [['TWS_KIT_LICENSE' => 'MIT; rm -rf'], 'Invalid license in TWS_KIT_LICENSE: MIT; rm -rf'],
+]);
+
+it('vendor e licença válidos passam adiante (o instalador do starter os grava no composer.json)', function (): void {
+    expect(($this->create)(['TWS_KIT_VENDOR' => 'maria-tech', 'TWS_KIT_LICENSE' => 'Apache-2.0']))->toBe(0);
+});
+
 it('o menu: a escolha dele vale; desistir não baixa nada', function (): void {
     $asked = [];
     $menu = function (array $starters, string $default) use (&$asked): Choice {
