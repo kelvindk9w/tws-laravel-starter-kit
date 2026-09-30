@@ -45,8 +45,19 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - CI: o caminho só com o Docker, simulado no job do SQLite (instalar, subir e
   o site respondendo), depois da simulação do comando único.
 
+- **Windows e extensões do PHP.** As opções de plataforma do `composer
+  create-project` (`--ignore-platform-req…`, lidas no Linux e no WSL) e as
+  variáveis `COMPOSER_IGNORE_PLATFORM_REQ(S)` chegam ao Composer que o
+  instalador roda por dentro. No Windows, só `ext-pcntl` e `ext-posix` (o
+  Horizon) são ignoradas, sozinhas, com o aviso no resumo (a fila roda com
+  `queue:work`). Qualquer outra extensão que falte para a instalação com a
+  lista e as duas saídas: instalar, ou o caminho só com o Docker. O mesmo no
+  `tws:install` e no `tws:add`.
+
 ### Alterado
 
+- O `phpunit.xml` dos starters sobe o `memory_limit` para 512M: a suíte
+  passava dos 128M do padrão do PHP fora do Docker.
 - O menu do comando único tem cinco perguntas (nome, número, interface,
   módulos, confirmação). Com o Docker de desenvolvimento configurado, o
   `tws:install` deixa as migrations para o `docker compose up -d`.

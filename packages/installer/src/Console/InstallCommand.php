@@ -375,9 +375,7 @@ final class InstallCommand extends Command
      */
     private function applyPackages(InstallPlan $plan, Composer $composer): bool
     {
-        $output = function (string $type, string $line): void {
-            $this->output->write($line);
-        };
+        $output = $this->composerOutput();
 
         if ($plan->removesDemo()) {
             $uninstalled = $this->artisan(['demo:uninstall', '--drop-tables', '--force']);
@@ -395,7 +393,7 @@ final class InstallCommand extends Command
             $this->components->info(__('installer.steps.demo_remove'));
 
             if (! $composer->remove([InstallPlan::DEMO_PACKAGE], true, $output)) {
-                $this->components->error(__('installer.failures.composer'));
+                $this->composerFailed();
 
                 return false;
             }
@@ -406,7 +404,7 @@ final class InstallCommand extends Command
             $this->components->info(__('installer.steps.composer_remove', ['packages' => implode(', ', $packages)]));
 
             if (! $composer->remove($packages, false, $output)) {
-                $this->components->error(__('installer.failures.composer'));
+                $this->composerFailed();
 
                 return false;
             }
@@ -418,7 +416,7 @@ final class InstallCommand extends Command
             $this->components->info(__('installer.steps.composer_require', ['packages' => implode(', ', $packages)]));
 
             if (! $composer->require($packages, false, $output)) {
-                $this->components->error(__('installer.failures.composer'));
+                $this->composerFailed();
 
                 return false;
             }
@@ -683,6 +681,12 @@ final class InstallCommand extends Command
 
         if (in_array('admin', $plan->toRemove(), true)) {
             $next[] = __('installer.summary.next_horizon');
+        }
+
+        // Windows: o Horizon não roda nativo (pcntl e posix ignoradas). O
+        // comando único (twstec/kit) avisa no resumo dele.
+        if ($this->windowsWithoutHorizon() && getenv('TWS_KIT_FROM_KIT') !== '1') {
+            $next[] = __('installer.extensions.windows_horizon');
         }
 
         $next[] = $dev === null ? __('installer.summary.next_serve') : __('installer.dev.next', [

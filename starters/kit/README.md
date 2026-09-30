@@ -27,6 +27,10 @@ Container do VS Code.
 Você só precisa do **Docker Desktop**. Todo o resto (PHP, Composer, Node,
 banco de dados) roda dentro de containers.
 
+> **Windows sem Docker?** Dá para criar o projeto com o PHP do Windows
+> (`composer create-project`, abaixo): o Horizon fica de fora (ver [Windows e
+> extensões](#windows-e-extensões-do-php)). Com o Docker, nada fica de fora.
+
 ### 1. Instale o Docker Desktop
 
 Baixe em [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/),
@@ -255,8 +259,9 @@ Container do VS Code em `.devcontainer/`. Sem Docker, ajuste as variáveis
 fica no projeto: ele dá lugar ao starter.
 
 - **Requisitos:** PHP 8.4+ com `mbstring`, Composer 2, e as extensões que o
-  starter pede (as do Laravel, mais `pcntl` do Horizon — ver abaixo, no
-  Windows).
+  starter pede (as do Laravel, `bcmath`, `intl`, `zip`, `gd` com uploads, e
+  `pcntl`/`posix` do Horizon — dispensadas no Windows; ver [Windows e
+  extensões](#windows-e-extensões-do-php)).
 - **Licença:** MIT.
 
 ## Sem perguntas (CI, scripts)
@@ -294,19 +299,41 @@ módulos. Uma escolha inválida (interface ou módulo desconhecido,
 já existe, número com alguma porta ocupada) é recusada **antes** de baixar
 qualquer coisa, com o motivo e a sugestão.
 
-## Windows
+## Windows e extensões do PHP
 
 Sem WSL, o menu sai em listas numeradas (o Question Helper do Symfony
 Console), com as mesmas perguntas e a mesma validação. Nada depende de bash:
-o comando é PHP puro. O starter usa o Horizon, que exige `ext-pcntl` — que o
-PHP do Windows não tem. Fora do Docker ou do WSL, peça ao Composer para
-ignorar essa extensão (a produção roda na imagem Docker do starter, que a
-tem):
+o comando é PHP puro.
+
+**O Horizon no Windows.** O starter usa o Horizon (o painel das filas), que
+exige as extensões `pcntl` e `posix` — e o PHP do Windows não as tem. No
+Windows, o instalador **ignora só essas duas**, sozinho, em todas as chamadas
+ao Composer (a criação e os `tws:install`/`tws:add` depois), e o resumo final
+avisa. O resto do aplicativo não depende delas: o site, o login, a fila (com
+`php artisan queue:work` no lugar do `php artisan horizon`) e o agendador
+funcionam normalmente, e a suíte passa. Só o comando `php artisan horizon` não
+roda. Nos seus próximos comandos do Composer no projeto, defina antes:
 
 ```powershell
 $env:COMPOSER_IGNORE_PLATFORM_REQ = "ext-pcntl,ext-posix"
-composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
+
+O caminho só com o Docker (`docker compose run --rm instalar`) roda tudo,
+inclusive o Horizon; a produção roda na imagem Docker do starter, que tem as
+duas extensões.
+
+**Outra extensão faltando** (bcmath, gd, intl, zip…) **não é ignorada**: a
+instalação para no `composer update` com a lista do que falta e duas saídas —
+instalar a extensão (no Windows, tirar o `;` da linha `extension=…` no
+`php.ini`; no Ubuntu/Debian, `sudo apt install php8.4-<extensão>`; no macOS, o
+PHP do Homebrew já as traz) e terminar com os comandos que a mensagem mostra,
+ou usar o caminho só com o Docker.
+
+**Opções de plataforma que você der** — `--ignore-platform-req=…` e
+`--ignore-platform-reqs` no `composer create-project`, ou as variáveis
+`COMPOSER_IGNORE_PLATFORM_REQ` / `COMPOSER_IGNORE_PLATFORM_REQS` — valem
+também para o Composer que o instalador roda por dentro. (As opções da linha de
+comando são lidas no Linux e no WSL; no Windows, use as variáveis.)
 
 ## Como funciona
 

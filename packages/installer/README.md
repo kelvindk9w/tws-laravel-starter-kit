@@ -77,6 +77,13 @@ Idempotente. Não apaga arquivo do aplicativo — o starter esconde sozinho o qu
 As regras: `uploads` exige `accounts`; a demonstração exige todos os módulos
 opcionais (tirar um deles exige `--no-demo`); `foundation` e `auth` não saem.
 
+**Extensões do PHP.** O `composer require`/`remove` do instalador herda o que
+a pessoa pediu para ignorar (`COMPOSER_IGNORE_PLATFORM_REQ(S)`), e no Windows
+ignora sozinho só `ext-pcntl` e `ext-posix` (o Horizon; o resto do aplicativo
+roda sem elas — o resumo do `tws:install` avisa). Outra extensão que falte faz
+o comando parar com a lista e as duas saídas: instalar a extensão, ou o
+caminho só com o Docker (`docker compose run --rm instalar`).
+
 **Docker de desenvolvimento (projeto criado).** Com o `compose.yaml` de
 desenvolvimento na raiz do projeto (o do starter publicado), o `tws:install`
 grava no `.env`, **uma vez** (enquanto não houver `COMPOSE_PROJECT_NAME`), o

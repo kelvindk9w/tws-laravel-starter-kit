@@ -11,6 +11,7 @@ use Throwable;
 use Twstec\Kit\Setup\Contracts\Runner;
 use Twstec\Kit\Setup\Dev\DevEnvironment;
 use Twstec\Kit\Setup\Dev\Host;
+use Twstec\Kit\Setup\Platform\PlatformRequirements;
 
 /**
  * `composer create-project twstec/kit meu-projeto` — o que acontece depois
@@ -43,6 +44,14 @@ use Twstec\Kit\Setup\Dev\Host;
  *    `docker compose up -d` sobe o banco e roda as migrations; sem ele, se o
  *    do .env não respondeu, a instrução exata.
  *
+ * EXTENSÕES DO PHP: as chamadas ao Composer recebem o que a pessoa pediu para
+ * ignorar (COMPOSER_IGNORE_PLATFORM_REQ(S) e as opções do create-project,
+ * quando dá para lê-las) e, no Windows, `ext-pcntl` e `ext-posix` (só o
+ * Horizon as usa; o PHP do Windows não as tem) — o resumo avisa. Qualquer
+ * outra extensão que falte para o `composer update` com a lista e as duas
+ * saídas: instalar a extensão, ou o caminho só com o Docker. Ver
+ * Platform/PlatformRequirements.
+ *
  * DENTRO DO CONTAINER DO INSTALADOR (`docker compose run --rm instalar`,
  * TWS_KIT_IN_DOCKER=1): o projeto é montado na própria pasta baixada do
  * twstec/kit, e as mensagens falam dela ("esta pasta") e dos comandos do
@@ -71,6 +80,15 @@ final class CreateProject
     private readonly bool $inDocker;
 
     /**
+     * As variáveis de plataforma para TODAS as chamadas ao Composer.
+     *
+     * @var array<string, string>
+     */
+    private readonly array $platform;
+
+    private readonly bool $windows;
+
+    /**
      * @param  array<string, string|false>  $env
      * @param  (Closure(array<string, string>, string): ?Choice)|null  $menu  null = sem perguntas
      */
@@ -82,8 +100,12 @@ final class CreateProject
         private readonly array $env,
         private readonly Host $host,
         private readonly ?Closure $menu = null,
+        string $osFamily = PHP_OS_FAMILY,
+        array $callerArguments = [],
     ) {
         $this->inDocker = ($env['TWS_KIT_IN_DOCKER'] ?? '') === '1';
+        $this->windows = PlatformRequirements::isWindows($osFamily);
+        $this->platform = PlatformRequirements::composerEnvironment($env, $osFamily, $callerArguments);
     }
 
     /**
@@ -215,7 +237,7 @@ final class CreateProject
             $arguments[] = '--repository='.json_encode($repository, JSON_UNESCAPED_SLASHES);
         }
 
-        if ($this->runner->composer($arguments, $this->directory) !== 0 || ! is_file($temporary.'/composer.json')) {
+        if ($this->runner->composer($arguments, $this->directory, $this->platform) !== 0 || ! is_file($temporary.'/composer.json')) {
             $this->out->error($this->text('failures.download', ['package' => $package, 'dir' => $this->directory]));
 
             return null;
@@ -310,6 +332,8 @@ final class CreateProject
                 'TWS_KIT_WITHOUT' => implode(',', $choice->without()),
                 // O instalador do projeto fala a língua do menu.
                 'APP_LOCALE' => $this->t->locale,
+                // O resumo final é o deste comando (o aviso do Windows, uma vez).
+                'TWS_KIT_FROM_KIT' => '1',
                 // O Docker de desenvolvimento do projeto: o instalador grava
                 // no .env (e não pergunta de novo).
                 ...$this->devEnvironment($choice),
@@ -319,12 +343,22 @@ final class CreateProject
         foreach ($steps as $index => [$label, $arguments, $env]) {
             $this->out->step($this->t->get($label));
 
-            if ($this->runner->composer($arguments, $this->directory, $env) === 0) {
+            // O `composer update` guarda a saída: a mensagem de extensão que
+            // falta é lida dela.
+            $update = $arguments[0] === 'update';
+
+            if ($this->runner->composer($arguments, $this->directory, [...$this->platform, ...$env], $update) === 0) {
                 continue;
             }
 
             $this->out->line();
             $this->out->error($this->text('failures.incomplete', ['dir' => $this->directory, 'step' => $this->t->get($label)]));
+
+            $missing = $update ? PlatformRequirements::missingExtensions($this->runner->output()) : [];
+
+            if ($missing !== []) {
+                $this->missingExtensions($missing);
+            }
 
             // No container, a pasta já é um projeto pela metade, sem o
             // instalador: recomeçar do ZIP é o caminho simples.
@@ -334,8 +368,13 @@ final class CreateProject
                 return false;
             }
 
-            $this->out->line($this->t->get('failures.finish'));
+            $this->out->line($this->t->get($missing === [] ? 'failures.finish' : 'failures.finish_after_extensions'));
             $this->out->command('cd '.$this->directory);
+
+            // O que foi ignorado aqui vale para os comandos de terminar.
+            foreach ($this->platform as $name => $value) {
+                $this->out->command($this->windows ? "\$env:{$name} = \"{$value}\"" : "export {$name}={$value}");
+            }
 
             foreach (array_slice($steps, $index) as [, $remaining]) {
                 $this->out->command('composer '.implode(' ', array_slice($remaining, 0, -1)));
@@ -347,6 +386,28 @@ final class CreateProject
         }
 
         return true;
+    }
+
+    /**
+     * Extensões do PHP que faltam (e não são dispensáveis): a lista e as duas
+     * saídas — instalar, ou o caminho só com o Docker.
+     *
+     * @param  list<string>  $missing
+     */
+    private function missingExtensions(array $missing): void
+    {
+        $this->out->line();
+        $this->out->error($this->t->get('extensions.missing', ['extensions' => implode(', ', $missing)]));
+        $this->out->line($this->t->get('extensions.install'));
+        $this->out->line($this->t->get('extensions.windows', [
+            'lines' => implode(', ', array_map(static fn (string $e): string => "extension={$e}", $missing)),
+        ]));
+        $this->out->line($this->t->get('extensions.linux', [
+            'packages' => implode(' ', array_map(static fn (string $e): string => "php8.4-{$e}", $missing)),
+        ]));
+        $this->out->line($this->t->get('extensions.mac'));
+        $this->out->line($this->t->get('extensions.docker'));
+        $this->out->line();
     }
 
     private function finish(Choice $choice, string $package): int
@@ -382,6 +443,13 @@ final class CreateProject
             $this->out->command('cd '.$this->directory);
             $this->out->command('npm install && npm run build');
             $this->out->command('composer dev');
+        }
+
+        // Windows: o Horizon não roda nativo (sem pcntl/posix, ignoradas na
+        // instalação) — o resto do aplicativo sim.
+        if ($this->windows && ! $this->inDocker) {
+            $this->out->line();
+            $this->out->warn($this->t->get('extensions.windows_horizon'));
         }
 
         $this->out->line();

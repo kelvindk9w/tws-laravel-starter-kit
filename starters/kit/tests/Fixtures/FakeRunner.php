@@ -42,12 +42,36 @@ final class FakeRunner implements Runner
      */
     public bool $withCompose = false;
 
-    public function composer(array $arguments, string $cwd, array $env = []): int
+    /**
+     * Passo => a saída do Composer quando ele falha (ex.: a mensagem de
+     * extensão que falta).
+     *
+     * @var array<string, string>
+     */
+    public array $failingOutput = [];
+
+    /**
+     * As chamadas que pediram a saída guardada (o passo).
+     *
+     * @var list<string>
+     */
+    public array $captured = [];
+
+    private string $output = '';
+
+    public function composer(array $arguments, string $cwd, array $env = [], bool $capture = false): int
     {
         $this->calls[] = ['composer', $arguments, $env, $cwd];
         $step = $arguments[0] === 'run-script' ? 'run-script '.$arguments[1] : $arguments[0];
+        $this->output = '';
+
+        if ($capture) {
+            $this->captured[] = $step;
+        }
 
         if (isset($this->failing[$step])) {
+            $this->output = $capture ? ($this->failingOutput[$step] ?? '') : '';
+
             return $this->failing[$step];
         }
 
@@ -65,6 +89,11 @@ final class FakeRunner implements Runner
         }
 
         return 0;
+    }
+
+    public function output(): string
+    {
+        return $this->output;
     }
 
     public function quietPhp(array $arguments, string $cwd): int

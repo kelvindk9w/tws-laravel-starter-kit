@@ -17,6 +17,7 @@ use Twstec\Kit\Setup\CreateProject;
 use Twstec\Kit\Setup\Dev\DockerHost;
 use Twstec\Kit\Setup\Menu;
 use Twstec\Kit\Setup\Output;
+use Twstec\Kit\Setup\Platform\PlatformRequirements;
 use Twstec\Kit\Setup\ProcessRunner;
 use Twstec\Kit\Setup\Translator;
 
@@ -39,6 +40,7 @@ foreach ([
     'Twstec\\Kit\\Setup\\Dev\\Host',
     'Twstec\\Kit\\Setup\\Dev\\DevEnvironment',
     'Twstec\\Kit\\Setup\\Dev\\DockerHost',
+    'Twstec\\Kit\\Setup\\Platform\\PlatformRequirements',
 ] as $class) {
     class_exists($class) || interface_exists($class);
 }
@@ -56,4 +58,9 @@ $menu = stream_isatty(STDIN) && ! Choice::inEnvironment($env)
     ? static fn (array $starters, string $default): ?Choice => (new Menu($translator, $starters, $default, $host, CreateProject::folderOf($project, $env)))->ask()
     : null;
 
-exit((new CreateProject($project, $translator, new ProcessRunner($env), Output::stdout(), $env, $host, $menu))->run());
+// O sistema (TWS_KIT_OS_FAMILY=Windows simula o Windows — para testar o que
+// acontece lá sem uma máquina Windows) e as opções do create-project de quem
+// chamou (--ignore-platform-req…), quando dá para lê-las.
+$osFamily = (string) ($env['TWS_KIT_OS_FAMILY'] ?? '') !== '' ? (string) $env['TWS_KIT_OS_FAMILY'] : PHP_OS_FAMILY;
+
+exit((new CreateProject($project, $translator, new ProcessRunner($env), Output::stdout(), $env, $host, $menu, $osFamily, PlatformRequirements::callerArguments()))->run());

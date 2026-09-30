@@ -39,8 +39,10 @@ beforeEach(function (): void {
 
     // A pasta, como a pessoa a vê (a pasta temporária tem nome aleatório):
     // a base do nome sugerido do projeto.
-    $this->create = function (array $env = [], ?Closure $menu = null, string $locale = 'en'): int {
-        return (new CreateProject($this->project, translator($locale), $this->runner, new Output($this->stream, false), ['TWS_KIT_FOLDER' => 'meu-app', ...$env], $this->host, $menu))->run();
+    // O sistema (Linux; 'Windows' simula o PHP do Windows) e o comando de quem
+    // chamou (as opções do create-project).
+    $this->create = function (array $env = [], ?Closure $menu = null, string $locale = 'en', string $os = 'Linux', array $caller = []): int {
+        return (new CreateProject($this->project, translator($locale), $this->runner, new Output($this->stream, false), ['TWS_KIT_FOLDER' => 'meu-app', ...$env], $this->host, $menu, $os, $caller))->run();
     };
 
     $this->output = function (): string {
@@ -107,6 +109,7 @@ it('React sem uploads pelo ambiente: o starter React, sem o pacote desmarcado, e
         'TWS_KIT_WITH' => 'accounts,admin',
         'TWS_KIT_WITHOUT' => 'uploads',
         'APP_LOCALE' => 'en',
+        'TWS_KIT_FROM_KIT' => '1',
         // O Docker de desenvolvimento: o nome da pasta e o primeiro número
         // livre, sem o banco publicado.
         'TWS_KIT_NAME' => 'meu-app',
@@ -349,4 +352,70 @@ it('no container, falha depois de montar o projeto: recomeçar do ZIP (sem coman
 it('no container, desistir no menu: nada instalado, e o comando para rodar de novo', function (): void {
     expect(($this->create)(['TWS_KIT_IN_DOCKER' => '1'], fn (): ?Choice => null))->toBe(1)
         ->and(($this->output)())->toContain('Run `docker compose run --rm instalar` again whenever you want.');
+});
+
+// --- extensões do PHP (ver também PlatformTest) ------------------------------
+
+it('Windows: TODAS as chamadas ao Composer ignoram só ext-pcntl e ext-posix — e o resumo avisa do Horizon', function (): void {
+    expect(($this->create)([], null, 'en', 'Windows'))->toBe(0);
+
+    foreach (array_filter($this->runner->calls, fn (array $call): bool => $call[0] === 'composer') as $call) {
+        expect($call[2]['COMPOSER_IGNORE_PLATFORM_REQ'] ?? null)->toBe('ext-pcntl,ext-posix', implode(' ', $call[1]));
+    }
+
+    expect(($this->output)())->toContain('Windows: Horizon (the queue dashboard) needs the pcntl and posix extensions')
+        ->toContain('php artisan queue:work')
+        ->toContain('docker compose run --rm instalar');
+});
+
+it('fora do Windows, nada é ignorado sem pedido; o que foi pedido (variável ou opção do create-project) chega a todas', function (): void {
+    ($this->create)();
+
+    foreach (array_filter($this->runner->calls, fn (array $call): bool => $call[0] === 'composer') as $call) {
+        expect($call[2])->not->toHaveKey('COMPOSER_IGNORE_PLATFORM_REQ')->not->toHaveKey('COMPOSER_IGNORE_PLATFORM_REQS');
+    }
+
+    expect(($this->output)())->not->toContain('Horizon');
+
+    $this->runner->calls = [];
+    ($this->writeKit)();
+    ($this->create)(['COMPOSER_IGNORE_PLATFORM_REQ' => 'ext-intl'], null, 'en', 'Linux', ['composer', 'create-project', 'twstec/kit', 'x', '--ignore-platform-req=ext-zip']);
+
+    foreach (array_filter($this->runner->calls, fn (array $call): bool => $call[0] === 'composer') as $call) {
+        expect($call[2]['COMPOSER_IGNORE_PLATFORM_REQ'] ?? null)->toBe('ext-intl,ext-zip');
+    }
+});
+
+it('extensão que falta no composer update: a lista, as duas saídas (instalar ou Docker) e como terminar', function (): void {
+    $this->runner->failing['update'] = 2;
+    $this->runner->failingOutput['update'] = MISSING_EXTENSIONS_OUTPUT;
+
+    expect(($this->create)())->toBe(1)
+        ->and($this->runner->captured)->toBe(['update']);
+
+    expect(($this->output)())->toContain('PHP extensions missing on this machine: bcmath, gd. There are two ways out:')
+        ->toContain('extension=bcmath, extension=gd')
+        ->toContain('sudo apt install php8.4-bcmath php8.4-gd')
+        ->toContain('Or use the Docker-only way')
+        ->toContain('docker compose run --rm instalar')
+        ->toContain("With the extensions installed, to finish without starting over:\n    cd {$this->project}\n    composer update\n    composer run-script post-create-project-cmd\n");
+});
+
+it('no Windows, a mesma falha: os comandos de terminar começam pelo que foi ignorado', function (): void {
+    $this->runner->failing['update'] = 2;
+    $this->runner->failingOutput['update'] = MISSING_EXTENSIONS_OUTPUT;
+
+    ($this->create)([], null, 'en', 'Windows');
+
+    expect(($this->output)())->toContain("    cd {$this->project}\n    \$env:COMPOSER_IGNORE_PLATFORM_REQ = \"ext-pcntl,ext-posix\"\n    composer update\n");
+});
+
+it('falha do composer update sem ser extensão: a mensagem de sempre, sem a lista', function (): void {
+    $this->runner->failing['update'] = 1;
+    $this->runner->failingOutput['update'] = 'Could not find package twstec/kit-foundation';
+
+    ($this->create)();
+
+    expect(($this->output)())->not->toContain('PHP extensions missing')
+        ->toContain('To finish without starting over, after fixing the cause:');
 });

@@ -30,6 +30,23 @@ function envChoice(array $env, ?FakeHost $host = null): array
 }
 
 /**
+ * A mensagem de verdade do Composer 2 para extensões que faltam.
+ */
+const MISSING_EXTENSIONS_OUTPUT = <<<'TXT'
+    Your requirements could not be resolved to an installable set of packages.
+
+      Problem 1
+        - Root composer.json requires twstec/kit-foundation ^2.0@beta -> satisfiable by twstec/kit-foundation[v2.0.0-beta.2].
+        - twstec/kit-foundation v2.0.0-beta.2 requires ext-bcmath * -> it is missing from your system. Install or enable PHP's bcmath extension.
+      Problem 2
+        - twstec/kit-uploads v2.0.0-beta.2 requires ext-gd * -> it is missing from your system. Install or enable PHP's gd extension.
+      Problem 3
+        - twstec/kit-foundation v2.0.0-beta.2 requires ext-bcmath * -> it is missing from your system. Install or enable PHP's bcmath extension.
+
+    To enable extensions, verify that they are enabled in your .ini files:
+    TXT;
+
+/**
  * Uma pasta temporária nova.
  */
 function temporaryDirectory(): string

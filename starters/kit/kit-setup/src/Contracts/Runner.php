@@ -16,8 +16,14 @@ interface Runner
      *
      * @param  list<string>  $arguments
      * @param  array<string, string>  $env  variáveis acrescentadas ao ambiente
+     * @param  bool  $capture  guardar também a saída (para output())
      */
-    public function composer(array $arguments, string $cwd, array $env = []): int;
+    public function composer(array $arguments, string $cwd, array $env = [], bool $capture = false): int;
+
+    /**
+     * A saída guardada da última chamada com $capture (saída e erros juntos).
+     */
+    public function output(): string;
 
     /**
      * O PHP em silêncio (só o código de saída importa).

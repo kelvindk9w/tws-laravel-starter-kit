@@ -22,7 +22,9 @@ final class ProcessRunner implements Runner
      */
     public function __construct(private readonly array $env) {}
 
-    public function composer(array $arguments, string $cwd, array $env = []): int
+    private string $output = '';
+
+    public function composer(array $arguments, string $cwd, array $env = [], bool $capture = false): int
     {
         $binary = (string) ($this->env['COMPOSER_BINARY'] ?? '');
 
@@ -32,7 +34,32 @@ final class ProcessRunner implements Runner
             default => ['composer', ...$arguments],
         };
 
-        return $this->run($command, $cwd, $env, [0 => STDIN, 1 => STDOUT, 2 => STDERR]);
+        if (! $capture) {
+            return $this->run($command, $cwd, $env, [0 => STDIN, 1 => STDOUT, 2 => STDERR]);
+        }
+
+        // Na tela E guardado (a mensagem do Composer sobre extensão que falta
+        // é lida depois): saída e erros num tubo só, repassado linha a linha.
+        $this->output = '';
+        $process = proc_open($command, [0 => STDIN, 1 => ['pipe', 'w'], 2 => ['redirect', 1]], $pipes, $cwd, $this->environment($env));
+
+        if (! is_resource($process)) {
+            return 1;
+        }
+
+        while (($chunk = fgets($pipes[1])) !== false) {
+            fwrite(STDOUT, $chunk);
+            $this->output .= $chunk;
+        }
+
+        fclose($pipes[1]);
+
+        return proc_close($process);
+    }
+
+    public function output(): string
+    {
+        return $this->output;
     }
 
     public function quietPhp(array $arguments, string $cwd): int
@@ -53,18 +80,29 @@ final class ProcessRunner implements Runner
      */
     private function run(array $command, string $cwd, array $env, array $descriptors): int
     {
-        $environment = [];
-
-        foreach ([...getenv(), ...$env] as $name => $value) {
-            $environment[(string) $name] = (string) $value;
-        }
-
-        $process = proc_open($command, $descriptors, $pipes, $cwd, $environment);
+        $process = proc_open($command, $descriptors, $pipes, $cwd, $this->environment($env));
 
         if (! is_resource($process)) {
             return 1;
         }
 
         return proc_close($process);
+    }
+
+    /**
+     * O ambiente deste processo com as variáveis acrescentadas.
+     *
+     * @param  array<string, string>  $env
+     * @return array<string, string>
+     */
+    private function environment(array $env): array
+    {
+        $environment = [];
+
+        foreach ([...getenv(), ...$env] as $name => $value) {
+            $environment[(string) $name] = (string) $value;
+        }
+
+        return $environment;
     }
 }

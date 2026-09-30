@@ -95,6 +95,16 @@ return [
         'next' => 'Start the project: docker compose up -d — then open :url (e-mails at :mail).',
     ],
 
+    'extensions' => [
+        'missing' => 'PHP extensions missing on this machine: :extensions. There are two ways out:',
+        'install' => '1) Install the extensions in this machine PHP (check with `php -m`):',
+        'windows' => '   • Windows: in php.ini (`php --ini` shows where it is), remove the ";" at the start of the lines :lines (the PHP from windows.php.net already has the files).',
+        'linux' => '   • Ubuntu/Debian: sudo apt install :packages',
+        'mac' => '   • macOS (Homebrew): the PHP from `brew install php` already has these extensions; check which PHP the terminal uses (`which php`).',
+        'docker' => '2) Or use the Docker-only way, which has everything: delete this folder, download twstec-kit (Code → Download ZIP) and, inside its folder, run `docker compose run --rm instalar`.',
+        'windows_horizon' => 'Windows: Horizon (the queue dashboard) needs the pcntl and posix extensions, which the Windows PHP does not have — they were ignored during installation, and only Horizon is left out. Everything else runs normally; to process the queue, use `php artisan queue:work`. For the next Composer commands in this project, set `$env:COMPOSER_IGNORE_PLATFORM_REQ = "ext-pcntl,ext-posix"` first. The Docker-only way (docker compose run --rm instalar) runs everything, Horizon included.',
+    ],
+
     'summary' => [
         'heading' => 'Done',
         'removed' => 'removed',

@@ -152,10 +152,39 @@ baixar qualquer coisa, com o motivo e a sugestão.
 
 **Windows:** nada depende de bash (é PHP puro). Sem WSL, o menu sai em listas
 numeradas (o Question Helper do Symfony Console), com as mesmas perguntas e a
-mesma validação. O Horizon do starter exige `ext-pcntl`, que o PHP do Windows
-não tem: fora do Docker ou do WSL, use
-`$env:COMPOSER_IGNORE_PLATFORM_REQ = "ext-pcntl,ext-posix"` antes do comando
-(a produção roda na imagem Docker do starter, que tem a extensão).
+mesma validação. As extensões: ver [Windows e extensões do PHP](#windows-e-extensões-do-php).
+
+### Windows e extensões do PHP
+
+- **O que a pessoa pede vale por dentro.** `--ignore-platform-req=…` e
+  `--ignore-platform-reqs` do `composer create-project` não chegam sozinhos
+  aos comandos do Composer que o instalador roda (o `composer update` do
+  starter, e depois os do `tws:install`/`tws:add`). O instalador os lê no
+  comando que o chamou (pelo `/proc`: Linux e WSL) e os repassa como
+  `COMPOSER_IGNORE_PLATFORM_REQ(S)`; essas variáveis, quando a pessoa as
+  define, valem em qualquer sistema.
+- **Windows: só `ext-pcntl` e `ext-posix` são ignoradas, sozinhas.** Só o
+  Horizon as exige, e o PHP do Windows não as tem. Sem elas, o resto roda — foi
+  provado num PHP 8.4 sem as duas: a suíte inteira passa, o site sobe com
+  login, `queue:work` processa a fila (banco e Redis) e o `schedule:run`
+  roda; o que não roda é `php artisan horizon` (`pcntl_async_signals`). O
+  código dos pacotes só chama `posix_*` depois de conferir que a função existe.
+  O resumo do comando único (e o do `tws:install`, quando chamado sozinho) diz
+  isso em linguagem simples, com o `queue:work`, o
+  `$env:COMPOSER_IGNORE_PLATFORM_REQ = "ext-pcntl,ext-posix"` para os
+  próximos comandos do Composer, e o caminho só com o Docker, que roda tudo.
+  (`TWS_KIT_OS_FAMILY=Windows` simula o Windows em outro sistema — é o que a
+  prova usa.)
+- **Qualquer outra extensão que falte** (bcmath, gd, intl, zip…) **não é
+  ignorada**: o `composer update` para, e a mensagem lista as extensões que
+  faltam (lidas da saída do Composer) com as duas saídas — instalar (no
+  Windows, `extension=…` no `php.ini`; no Ubuntu/Debian, `sudo apt install
+  php8.4-…`; no macOS, o PHP do Homebrew) e terminar com os comandos exatos
+  (no Windows, começando pelo `$env:COMPOSER_IGNORE_PLATFORM_REQ`), ou usar o
+  caminho só com o Docker. O `tws:install` e o `tws:add` dão a mesma
+  mensagem quando o Composer deles recusa.
+- **A suíte fora do Docker:** o `phpunit.xml` dos starters sobe o
+  `memory_limit` para 512M (o padrão do PHP, 128M, não bastava).
 
 **Falha limpa.** O que falha antes de o starter ser montado (escolha
 inválida, starter que não baixa, pacote baixado que não é o esperado) não
