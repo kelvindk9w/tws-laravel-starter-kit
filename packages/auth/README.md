@@ -112,6 +112,17 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   depois do `SetLocale`, para a recusa sair no idioma da conta). Conta
   bloqueada ou pendente com sessão aberta perde a sessão na requisição
   seguinte.
+- **Segundo fator obrigatório** (`AUTH_TWO_FACTOR_REQUIRED` = `none`,
+  `admins` ou `all`): `EnsureTwoFactorIsConfigured`, logo depois do status da
+  conta, leva quem ainda não ligou à tela `two-factor.setup` antes de
+  qualquer outra (página, formulário, ação Livewire, JSON), com carência
+  opcional para quem já existia. Desligar é recusado no próprio
+  `TwoFactorLogin` e registrado na trilha de auditoria. "Administrador" vem
+  do contrato `IdentifiesAdministrators` (o `twstec/kit-admin` registra o
+  dele; sem ele, a coluna `is_admin`).
+- **Cadastro público desligável** (`AUTH_REGISTRATION_ENABLED=false`): o
+  envio do cadastro e a Action `RegisterUser` respondem 404
+  (`Support\Registration`).
 - **Aliases** `verified` (a regra do kit: exigência desligável por
   `AUTH_EMAIL_VERIFICATION_REQUIRED`, conta protegida conta como verificada —
   substitui o do framework) e `sensitive.token` (token de ação sensível de uso
@@ -124,7 +135,8 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   conta e IP (`auth.two_factor`, `auth.verification`), intervalos de reenvio.
 - **Configuração padrão** das chaves do kit em `config('auth')`
   (`password_rules`, `login`, `transaction_password`, `verification`,
-  `email_verification`, `sensitive_action`, `two_factor`, `web_protections`).
+  `email_verification`, `sensitive_action`, `two_factor`, `registration`,
+  `web_protections`).
   As chaves de primeiro nível do `config/auth.php` do aplicativo prevalecem.
 - **Migrations** com os **mesmos nomes de arquivo** que tinham no aplicativo
   na 1.x: um banco que já as rodou não vê nada pendente.
@@ -146,7 +158,7 @@ aplicação instalar as mesmas proteções por conta própria.
 
 | O quê | Como | Por que não no pacote |
 | --- | --- | --- |
-| Telas (login, cadastro, código, esqueci/redefinir senha, aviso de e-mail, senha de transação) | Rotas GET e views do front; os POSTs apontam para os controllers do pacote | São a interface; o endereço de cada rota é do front |
+| Telas (login, cadastro, código, esqueci/redefinir senha, aviso de e-mail, senha de transação, configuração do segundo fator obrigatório `two-factor.setup`) | Rotas GET e views do front; os POSTs apontam para os controllers do pacote | São a interface; o endereço de cada rota é do front |
 | Respostas próprias (JSON, Inertia…) | `bind` do contrato de `Contracts\Responses` num provider do app | As padrão redirecionam para as rotas nomeadas `login`, `dashboard`, `two-factor.challenge` e `verification.notice` |
 | Corpo dos e-mails | Views `mail.messages.verification-code`, `mail.messages.password-reset`, `mail.messages.email-verification` | São interface (o layout `<x-email::…>` é do foundation) |
 | Ações Livewire exigirem e-mail confirmado | `Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class])` | O pacote não conhece o Livewire |

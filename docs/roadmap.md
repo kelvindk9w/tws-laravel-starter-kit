@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-01, com a versão **2.0.0-beta.8** publicada.
+> Atualizado em 2026-10-01, com a versão **2.0.0-beta.9** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -23,6 +23,7 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Travas de arquitetura no projeto criado (`strict_types`, `env()` só em `config/`, models sem interface, `BelongsToAccount`) | pronto (2.0.0-beta.6) |
 | Correlation id de ponta a ponta: requisição → job da fila (cadeia, lote, agendador) → chamada HTTP de saída, com trilha só-acréscimo e redigida das chamadas de saída | pronto (2.0.0-beta.7) |
 | `/admin` com papéis e permissões por tela e por ação (conferidas no servidor, com recusa na trilha) e aprovação em dois passos — quatro olhos ou um operador — para ações de alto impacto | pronto (2.0.0-beta.8) |
+| Segundo fator obrigatório por configuração (todos ou só administradores, no painel e no `/admin`, com carência opcional e recusa de desligar na trilha) e cadastro público desligável | pronto (2.0.0-beta.9) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
@@ -51,7 +52,10 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    nem a chamada ao serviço externo — resolvido na 2.0.0-beta.7. E separar
    funções na equipe de operação (#21): o `/admin` era tudo-ou-nada e não
    havia como exigir que uma ação de alto impacto fosse aprovada por outra
-   pessoa — resolvido na 2.0.0-beta.8. Falta usar por
+   pessoa — resolvido na 2.0.0-beta.8. Por fim, exigir o segundo fator de
+   quem opera (#22): ele era opcional por conta, o `/admin` não o cobrava e
+   não havia como fechar o cadastro público para um produto só por convite
+   — resolvido na 2.0.0-beta.9. Falta usar por
    algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta

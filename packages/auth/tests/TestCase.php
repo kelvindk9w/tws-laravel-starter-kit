@@ -15,7 +15,9 @@ use Twstec\Kit\Auth\Http\Controllers\NewPasswordController;
 use Twstec\Kit\Auth\Http\Controllers\PasswordResetLinkController;
 use Twstec\Kit\Auth\Http\Controllers\RegisteredUserController;
 use Twstec\Kit\Auth\Http\Controllers\SensitiveActionController;
+use Twstec\Kit\Auth\Http\Controllers\TransactionPasswordController;
 use Twstec\Kit\Auth\Http\Controllers\TwoFactorChallengeController;
+use Twstec\Kit\Auth\Http\Controllers\TwoFactorSetupController;
 use Twstec\Kit\Auth\Providers\AuthServiceProvider;
 use Twstec\Kit\Auth\Tests\Fixtures\User;
 use Twstec\Kit\Foundation\Audit\Providers\AuditServiceProvider;
@@ -104,6 +106,8 @@ abstract class TestCase extends Testbench
     {
         $page = fn (string $name): string => $name;
 
+        $router->get('/', fn () => $page('página pública'))->name('home');
+
         $router->middleware('guest')->group(function (Router $router) use ($page): void {
             $router->get('login', fn () => $page('tela de login'))->name('login');
             $router->post('login', [AuthenticatedSessionController::class, 'store']);
@@ -121,6 +125,12 @@ abstract class TestCase extends Testbench
             $router->get('email/verify', fn () => $page('aviso de e-mail'))->name('verification.notice');
             $router->get('email/verify/{uuid}/{hash}', [EmailVerificationController::class, 'verify'])->name('verification.verify');
             $router->post('sensitive-actions/code', [SensitiveActionController::class, 'store']);
+            $router->put('settings/transaction-password', [TransactionPasswordController::class, 'update'])->name('transaction-password.update');
+
+            // Segundo fator obrigatório: a tela é do front; os envios, do pacote.
+            $router->get('two-factor/setup', fn () => $page('tela de configuração do segundo fator'))->name('two-factor.setup');
+            $router->post('two-factor/setup/code', [TwoFactorSetupController::class, 'code'])->name('two-factor.setup.code');
+            $router->post('two-factor/setup', [TwoFactorSetupController::class, 'store'])->name('two-factor.setup.store');
         });
 
         $router->middleware(['auth', 'verified'])->group(function (Router $router) use ($page): void {

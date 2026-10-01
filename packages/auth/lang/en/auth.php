@@ -58,6 +58,9 @@ return [
         // Old name (up to 2.x), same text: removed in 3.0.
         'demo_blocked' => 'Not available on this account: it is protected, and two-step verification cannot be turned on for it.',
         'requires_transaction_password' => 'Set your transaction password first: turning two-step verification on and off are sensitive actions.',
+        'setup_required' => 'Two-step verification is required on this installation. Set it up to continue.',
+        'required_cannot_disable' => 'Two-step verification is required on this installation and cannot be turned off.',
+        'setup_done' => 'Two-step verification is on. From your next sign-in, we will ask for the code sent to your email.',
     ],
     'sensitive_action' => [
         'token_issued' => 'Sensitive action authorized. Use the token immediately — it is single-use.',

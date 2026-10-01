@@ -49,10 +49,11 @@ era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
 
 | Fluxo | Rotas | Observações |
 |---|---|---|
-| Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada; com a verificação ligada, envia o e-mail e vai à tela de aviso |
+| Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada; com a verificação ligada, envia o e-mail e vai à tela de aviso; desligável — ver [Cadastro público](#cadastro-público-aberto-ou-fechado) |
 | Verificação de e-mail | `GET /email/verify`, `POST /email/verification-notification`, `GET /email/verify/{uuid}/{hash}` | ver [Verificação de e-mail](#verificação-de-e-mail-no-cadastro) |
 | Login | `GET/POST /login` | **bloqueio por tentativas** (RateLimiter, e-mail+IP — `AUTH_LOGIN_MAX_ATTEMPTS`/`AUTH_LOGIN_LOCKOUT_MINUTES`); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
 | Segundo fator do login | `GET/POST /two-factor-challenge`, `POST /two-factor-challenge/resend`, `POST /two-factor-challenge/cancel` | só para quem ligou; ver [Verificação em duas etapas](#verificação-em-duas-etapas-no-login-opcional) |
+| Configuração do segundo fator obrigatório | `GET /two-factor/setup`, `POST /two-factor/setup/code`, `POST /two-factor/setup` | só com `AUTH_TWO_FACTOR_REQUIRED`; ver [Segundo fator obrigatório](#segundo-fator-obrigatório) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
 | Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
@@ -330,7 +331,122 @@ AUTH_TWO_FACTOR_LOCKOUT_MINUTES=15           # janela/bloqueio
 Desligar `AUTH_TWO_FACTOR_ENABLED` esconde a opção dos perfis e faz o login
 ignorar a preferência de quem já tinha ligado (ela fica gravada e volta a
 valer se a flag for religada). Sem `.env` (instalação nova, CI) os padrões
-acima valem — nada disso roda no boot.
+acima valem — nada disso roda no boot. Com o segundo fator **obrigatório**
+(abaixo), a opção fica disponível mesmo com a flag desligada.
+
+## Segundo fator obrigatório
+
+**Desligado por padrão** (`none`: cada conta decide, como acima). Para
+produtos que lidam com dados ou operações sensíveis, a instalação pode exigir
+a verificação em duas etapas sem alterar código:
+
+```dotenv
+AUTH_TWO_FACTOR_REQUIRED=none        # none | admins | all
+AUTH_TWO_FACTOR_GRACE_DAYS=0         # carência (dias) para quem já existia; 0 = sem carência
+#AUTH_TWO_FACTOR_REQUIRED_SINCE=2026-10-01  # o dia em que a regra entrou (referência da carência)
+```
+
+- `all`: todas as contas. `admins`: só administradores (abaixo). Qualquer
+  outro valor vale como `all` — um erro de digitação não desliga uma
+  exigência de segurança.
+- A regra mora em `Twstec\Kit\Auth\Support\TwoFactorRequirement`; o
+  segundo fator continua sendo o mesmo (código por e-mail, a mesma
+  preferência `two_factor_enabled_at` para o `/login` e o `/admin/login`).
+
+**O que acontece com quem ainda não ligou.** Logo depois do login, a pessoa
+vai para a tela **Configure a verificação em duas etapas**
+(`two-factor.setup`) e não alcança nenhuma outra até terminar: páginas,
+formulários, ações Livewire e endpoints de sessão em JSON (403 com a
+mensagem traduzida). A barreira é o middleware
+`EnsureTwoFactorIsConfigured`, que o pacote anexa ao **fim do grupo `web`**
+(depois do `EnsureAccountIsActive`): toda rota do grupo passa por ele,
+inclusive as que ainda vão existir, e o que fica aberto é uma lista
+(`auth.two_factor.setup_allowed_routes`): a própria configuração e os envios
+dela, sair, idioma, tema e definir a senha de transação. O endpoint do
+Livewire não está na lista — por isso a tela de configuração dos starters é
+formulário comum, não componente. O destino que a pessoa tentou abrir fica
+guardado e, no fim, ela volta para lá pelo `SafeRedirect` (o `/admin`
+inclusive). Sem a rota `two-factor.setup` no front, a resposta é 403: a
+barreira nunca deixa passar. Conta com e-mail ainda por confirmar confirma
+primeiro (o código do segundo fator vai para esse e-mail).
+
+**A configuração** é a mesma regra de ligar pelo perfil, sem atalho
+(`TwoFactorSetupController`, envios do pacote): senha de transação —
+definida ali mesmo se a conta ainda não tem — → código por e-mail → liga. O
+token de ação sensível nasce e morre no servidor. A resposta final é o
+contrato `TwoFactorSetupResponse` (no React, carga completa).
+
+**Desligar é recusado no servidor** enquanto a regra vale para a conta: o
+`TwoFactorLogin::disable()` confere a regra antes de qualquer outra coisa
+(antes de gastar o token) e as três telas (perfil Livewire, perfil React,
+perfil do `/admin`) recusam já no primeiro passo, antes de mandar código.
+Toda recusa vai para a trilha de auditoria como `user.two_factor_disabled`,
+`outcome = denied`, com o motivo — no contexto do painel ou do `/admin`. O
+perfil mostra o selo "Obrigatória nesta instalação" e o botão desabilitado
+com a explicação.
+
+**`/admin`.** Com `admins` ou `all`, o painel registra o MFA do Filament como
+**obrigatório** (`multiFactorAuthentication(..., isRequired: …)`), com o
+middleware de "MFA exigido" trocado pelo do kit
+(`EnsureAdminTwoFactorIsConfigured`, que respeita a carência); a rota de
+configuração exigida do Filament leva à tela de configuração do front. A
+mesma barreira está na pilha **persistente** do painel
+(`AdminPlugin::authMiddleware()`): vale em toda tela e ação Livewire e é
+conferida a cada requisição, mesmo que as rotas tenham sido registradas (ou
+cacheadas) antes de a regra ser ligada. Ainda assim, depois de mudar a regra
+em produção, rode `php artisan optimize` de novo.
+
+**Quem é administrador** (modo `admins`): quem entra no `/admin`
+(`is_admin`) **ou** tem qualquer papel do painel gravado (`admin_role`:
+`owner`, `operations`, `support`, `auditor` ou os que o projeto declarar).
+Qualquer papel, de propósito: até o `auditor`, só leitura, enxerga dados
+pessoais de todas as contas e a trilha. A conta não precisa estar ativa nem
+o papel existir ainda na configuração — o critério erra para o lado de
+exigir. O critério é um contrato do pacote de autenticação
+(`Twstec\Kit\Auth\Contracts\IdentifiesAdministrators`): o
+`twstec/kit-admin` registra o dele (`Access\PanelAdministrators`); sem o
+painel instalado, vale a coluna `is_admin`; um projeto pode registrar o
+próprio num provider.
+
+**Carência.** Com `AUTH_TWO_FACTOR_GRACE_DAYS` > 0 e
+`AUTH_TWO_FACTOR_REQUIRED_SINCE` (a data em que a regra entrou), a conta
+criada **antes** dessa data pode adiar até a data + N dias: opera
+normalmente, com um aviso do prazo em todas as telas do painel e o caminho
+para a configuração (que oferece "Configurar depois"). Conta criada depois
+da data configura já no primeiro acesso. Na carência, desligar já é
+recusado. Carência sem data válida **não vale** — toda conta pendente
+configura no próximo acesso — e o pacote avisa no log a cada boot.
+
+**Quem fica de fora:** conta **protegida** (a conta demo, com o modo demo
+ligado), que não pode ligar o segundo fator — exigir seria trancá-la. O modo
+demo é recusado em produção. A API pública (chaves `pk_`/`sk_`) não usa
+sessão e não muda.
+
+**Desligar a proteção web** (`AUTH_WEB_PROTECTIONS=false`) também tira a
+cobrança no painel (o aviso do log diz isso); o `/admin` continua cobrando.
+
+## Cadastro público: aberto ou fechado
+
+```dotenv
+AUTH_REGISTRATION_ENABLED=true   # false = sem cadastro público
+```
+
+Com `false` (`Twstec\Kit\Auth\Support\Registration`):
+
+- `GET /register` e `POST /register` respondem **404**. O envio recusa no
+  controller do pacote **antes da validação** (nem "e-mail já cadastrado"
+  sai) e a Action `RegisterUser` também recusa — um front que a chame direto
+  não reabre o cadastro.
+- **Nenhum link "Criar conta"** é renderizado: login, página inicial e
+  cabeçalho do site no Livewire; no React, a rota sai do mapa do front
+  (`FrontRoutes`) e as telas só desenham o link com `has('register')`; o CTA
+  da landing da demonstração leva ao login.
+- Contas continuam nascendo pelo **convite** de uma conta
+  (`twstec/kit-accounts`) e pela **criação no `/admin`**.
+
+Nos testes e no E2E dos starters, os casos que criam a conta pelo
+`/register` perguntam ao servidor e **pulam com o motivo** quando o cadastro
+está fechado.
 
 ## Ação sensível: senha de transação + código por e-mail (2FA)
 
@@ -386,7 +502,9 @@ pacote, com as próprias telas e respostas.
 **O que o pacote liga sozinho** (nenhuma proteção depende de o front lembrar):
 
 - o status da conta a cada requisição do grupo `web` (`EnsureAccountIsActive`,
-  anexado ao fim do grupo — no starter, logo depois do `SetLocale`);
+  anexado ao fim do grupo — no starter, logo depois do `SetLocale`) e, logo
+  depois dele, o segundo fator obrigatório (`EnsureTwoFactorIsConfigured`,
+  que não faz nada com `AUTH_TWO_FACTOR_REQUIRED=none`);
 - os aliases `verified` (a regra do kit, que substitui o do framework) e
   `sensitive.token` (um alias de mesmo nome declarado pelo aplicativo
   prevalece);
@@ -415,8 +533,13 @@ status e os dois aliases, e o pacote grava um aviso no log a cada boot.
    `TwoFactorChallengeController@store/resend/destroy`,
    `PasswordResetLinkController@store`, `NewPasswordController@store`,
    `EmailVerificationController@resend/verify`,
-   `TransactionPasswordController@update`, `SensitiveActionController@store/confirm`).
-   Os endereços são seus; o limite vem junto.
+   `TransactionPasswordController@update`, `SensitiveActionController@store/confirm`,
+   `TwoFactorSetupController@code/store`).
+   Os endereços são seus; o limite vem junto. Declare também a tela
+   `two-factor.setup` (e os envios `two-factor.setup.code`/`.store`): é para
+   ela que o segundo fator obrigatório leva — sem ela, a barreira responde
+   403. Com o cadastro fechado, a tela de registro chama
+   `Registration::ensureOpen()` e os links perguntam `Registration::enabled()`.
 3. **Telas:** são suas (no starter Livewire, `AuthPageController` + views Blade;
    num starter React, as páginas dele). A tela do código do segundo fator pergunta
    `CompleteTwoFactorLogin::pendingUser()` e, sem estado, responde com
@@ -426,7 +549,7 @@ status e os dois aliases, e o pacote grava um aviso no log a cada boot.
    usam `password.reset` e `verification.verify`). Para JSON ou Inertia,
    registre a sua implementação de cada contrato de
    `Twstec\Kit\Auth\Contracts\Responses` num provider do app — o padrão é
-   `bindIf` e cede. O starter React é o exemplo pronto: as 11 respostas
+   `bindIf` e cede. O starter React é o exemplo pronto: as 12 respostas
    Inertia em `starters/react/app/Http/Responses/Inertia`, registradas no
    `AppServiceProvider` dele (carga completa, com o `SafeRedirect`, para quem
    entra ou sai; redirect comum, com o erro no campo, para o resto).
@@ -472,7 +595,13 @@ anti-enumeração, "manter conectado" só depois do código, troca/redefinição
 de senha não desligam; `ProfileTwoFactorTest`: ligar/desligar com a
 confirmação sensível, token exigido pelo service, demo; `AdminTwoFactorTest`:
 login do Filament com o provedor do kit, voltar, validade, limites e o perfil
-do `/admin`; `VerificationCodesTest`: o motor).
+do `/admin`; `VerificationCodesTest`: o motor), segundo fator obrigatório
+(`TwoFactorRequiredTest`, nos dois starters e nos pacotes auth e admin:
+`all`, `admins` por papel, valor desconhecido, página/JSON/ação Livewire
+fechadas, configuração completa voltando ao destino, recusa de desligar no
+servidor com a linha na trilha, `/admin` exigindo, carência) e cadastro
+fechado (`RegistrationClosedTest`: 404 no GET e no POST, nenhum link nas
+telas, convite e `/admin` ainda criando contas).
 
 ## Política de senha (configurável, sem tocar em código)
 

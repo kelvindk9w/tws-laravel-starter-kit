@@ -6,6 +6,89 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.9] — 2026-10-01
+
+Segundo fator obrigatório por configuração e interruptor do cadastro público.
+
+Para a **2.0.0-beta.9**: a instalação passa a poder exigir a verificação em
+duas etapas de todos ou só dos administradores — no painel e no `/admin` —
+e a fechar o cadastro público sem mexer em código (#22).
+
+### Adicionado
+
+- **Segundo fator obrigatório** (#22), no `twstec/kit-auth`, ligado pelo
+  pacote: `AUTH_TWO_FACTOR_REQUIRED` = `none` (padrão, o comportamento de
+  sempre), `admins` ou `all`; valor desconhecido vale como `all`. Com a regra
+  valendo, quem ainda não ligou o segundo fator é levado, logo depois do
+  login, a uma tela de configuração e não alcança nenhuma outra: páginas,
+  formulários, ações Livewire e endpoints JSON de sessão respondem com o
+  redirecionamento (ou 403 em JSON). Ficam abertos só a própria configuração,
+  sair, idioma, tema e definir a senha de transação. A barreira é um
+  middleware anexado pelo pacote ao fim do grupo `web`
+  (`EnsureTwoFactorIsConfigured`) com uma lista do que fica aberto — rota
+  nova nasce fechada para quem está pendente. A conta com e-mail ainda por
+  confirmar confirma primeiro.
+- **Tela de configuração** (`two-factor.setup`) nos dois starters, com os
+  envios do pacote (`TwoFactorSetupController`): a mesma regra de ligar pelo
+  perfil — senha de transação (definida ali mesmo, se faltar) → código por
+  e-mail → liga —, sem atalho. No fim, a pessoa volta para onde queria ir,
+  inclusive o `/admin` (contrato `TwoFactorSetupResponse`; no React, carga
+  completa).
+- **Desligar é recusado no servidor** enquanto a regra vale para a conta,
+  qualquer que seja a tela (perfil Livewire, perfil React, perfil do
+  `/admin`), antes de mandar código e antes de gastar o token — e a tentativa
+  vai para a trilha de auditoria como `user.two_factor_disabled`, `denied`,
+  com o motivo. O perfil mostra o selo "Obrigatória nesta instalação" e o
+  botão desabilitado com a explicação.
+- **`/admin` com o MFA do Filament obrigatório** quando a regra alcança os
+  administradores (`admins` ou `all`): o painel registra o MFA como
+  obrigatório, cobrado por um middleware do kit (que respeita a carência), e
+  a mesma barreira entra na pilha persistente do painel — vale em toda tela
+  e ação Livewire, conferida a cada requisição. A configuração é a do front
+  (uma preferência só para os dois logins).
+- **"Administrador"**, para o modo `admins`: quem entra no `/admin`
+  (`is_admin`) ou tem qualquer papel do painel (`owner`, `operations`,
+  `support`, `auditor` ou os declarados pelo projeto), conta ativa ou não —
+  o critério erra para o lado de exigir. Contrato
+  `IdentifiesAdministrators` no `twstec/kit-auth`; sem o `twstec/kit-admin`,
+  vale a coluna `is_admin`.
+- **Carência opcional** para quem já existia: `AUTH_TWO_FACTOR_GRACE_DAYS`
+  (padrão 0) contados de `AUTH_TWO_FACTOR_REQUIRED_SINCE` (a data em que a
+  regra entrou). Conta criada antes dessa data opera até o prazo, com um
+  aviso em todas as telas do painel e a tela de configuração aberta; conta
+  criada depois configura já no primeiro acesso. Carência sem data válida
+  não vale (aviso no log a cada boot).
+- **Cadastro público desligável** (#22): `AUTH_REGISTRATION_ENABLED=false`
+  faz GET e POST `/register` responderem 404 — o envio antes da validação
+  (nem "e-mail já cadastrado" sai) e a própria Action `RegisterUser` também
+  recusa —, e nenhuma tela renderiza "Criar conta" (login, página inicial e
+  cabeçalho do Livewire, login e página inicial do React — onde a rota sai do
+  mapa do front —, o CTA da landing da demonstração). Convite e criação pelo
+  `/admin` continuam criando contas.
+- E2E dos dois starters se adaptam ao cadastro: os specs que criam a conta
+  pelo `/register` perguntam ao servidor e **pulam com o motivo** quando ele
+  está fechado; um spec novo em cada starter confere os links e a rota nos
+  dois estados.
+
+### Mudado
+
+- Com a regra de obrigatoriedade valendo, a opção de segundo fator fica
+  disponível mesmo com `AUTH_TWO_FACTOR_ENABLED=false` (exigir algo que não
+  se pode ligar trancaria todo mundo).
+- O grupo `web` termina com `EnsureAccountIsActive` seguido de
+  `EnsureTwoFactorIsConfigured` (conta inativa sai antes). Com
+  `AUTH_WEB_PROTECTIONS=false`, o segundo fator obrigatório também não é
+  cobrado no painel (o aviso do log diz isso).
+- A pilha de autenticação do `/admin` (`AdminPlugin::authMiddleware()`)
+  ganhou `EnsureAdminTwoFactorIsConfigured`, entre o acesso de admin e o
+  modo sistema.
+- Variáveis novas no `.env.example` e no `.env.prod.example` dos dois
+  starters e na `config/auth.php` (`two_factor.required`,
+  `two_factor.grace_days`, `two_factor.required_since`,
+  `two_factor.setup_allowed_routes`, `registration.enabled`). Depois de mudar
+  a regra em produção, rode `php artisan optimize` de novo (o `/admin`
+  registra a rota de "MFA exigido" com as rotas).
+
 ## [2.0.0-beta.8] — 2026-10-01
 
 Papéis e permissões no `/admin` e aprovação em dois passos (quatro olhos).
@@ -1166,7 +1249,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.8...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.9...desenvolvimento
+[2.0.0-beta.9]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.9
 [2.0.0-beta.8]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.8
 [2.0.0-beta.7]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.7
 [2.0.0-beta.6]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.6

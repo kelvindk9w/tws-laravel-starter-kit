@@ -10,11 +10,15 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use LogicException;
+use Twstec\Kit\Auth\Contracts\IdentifiesAdministrators;
 use Twstec\Kit\Auth\Contracts\Responses;
 use Twstec\Kit\Auth\Http\Middleware\EnsureAccountIsActive;
 use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
+use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use Twstec\Kit\Auth\Http\Responses as Defaults;
+use Twstec\Kit\Auth\Support\AdministratorFlag;
+use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 
 /**
@@ -29,9 +33,14 @@ use Twstec\Kit\Foundation\Localization\PackageTranslations;
  *   aplicativo vencendo na mesma chave;
  * - as respostas HTTP padrão dos fluxos (contratos de Contracts\Responses);
  * - as PROTEÇÕES da sessão web: o status da conta conferido a cada requisição
- *   do grupo `web` (EnsureAccountIsActive) e os aliases `verified` (e-mail
+ *   do grupo `web` (EnsureAccountIsActive), o segundo fator obrigatório
+ *   configurado antes de qualquer outra tela quando a regra vale
+ *   (EnsureTwoFactorIsConfigured) e os aliases `verified` (e-mail
  *   confirmado, com a regra do kit) e `sensitive.token` (token de ação
- *   sensível de uso único).
+ *   sensível de uso único);
+ * - o critério padrão de "administrador" da regra do segundo fator
+ *   obrigatório (Contracts\IdentifiesAdministrators — o twstec/kit-admin
+ *   registra o dele).
  *
  * As proteções que ficam nas próprias regras continuam lá e não dependem de
  * rota nem de provider: bloqueio de login por tentativas (AttemptLogin),
@@ -68,17 +77,20 @@ final class AuthServiceProvider extends ServiceProvider
         Responses\FailedPasswordResetResponse::class => Defaults\FailedPasswordResetResponse::class,
         Responses\VerifyEmailResponse::class => Defaults\VerifyEmailResponse::class,
         Responses\EmailVerificationResponse::class => Defaults\EmailVerificationResponse::class,
+        Responses\TwoFactorSetupResponse::class => Defaults\TwoFactorSetupResponse::class,
     ];
 
     /**
      * Middleware anexado ao FIM do grupo `web` (depois do que a aplicação
      * declarou nele — no starter, depois do SetLocale, para a mensagem de
-     * recusa sair no idioma da conta).
+     * recusa sair no idioma da conta). Nesta ordem: conta inativa sai antes
+     * de qualquer conversa sobre segundo fator.
      *
      * @var list<class-string>
      */
     public const WEB_MIDDLEWARE = [
         EnsureAccountIsActive::class,
+        EnsureTwoFactorIsConfigured::class,
     ];
 
     /**
@@ -102,12 +114,18 @@ final class AuthServiceProvider extends ServiceProvider
             $this->app->bindIf($contract, $default);
         }
 
+        $this->app->bindIf(IdentifiesAdministrators::class, AdministratorFlag::class);
+
         PackageTranslations::register($this->app, $this->path('lang'));
     }
 
     public function boot(): void
     {
         $this->registerWebProtections();
+
+        if (TwoFactorRequirement::graceMisconfigured()) {
+            Log::warning('AUTH_TWO_FACTOR_GRACE_DAYS sem AUTH_TWO_FACTOR_REQUIRED_SINCE válido: a carência do segundo fator obrigatório NÃO vale — toda conta sem o segundo fator configura no próximo acesso. Informe a data em que a regra entrou (AAAA-MM-DD). Ver docs/autenticacao.md.');
+        }
 
         // As migrations rodam direto daqui, com os MESMOS nomes de arquivo
         // que tinham quando moravam no aplicativo: um banco que já as rodou
@@ -123,7 +141,7 @@ final class AuthServiceProvider extends ServiceProvider
     private function registerWebProtections(): void
     {
         if (config('auth.web_protections.enabled', true) === false) {
-            Log::warning('AUTH_WEB_PROTECTIONS=false: as proteções web do twstec/kit-auth estão DESLIGADAS — o status da conta NÃO é conferido a cada requisição do grupo `web` (conta bloqueada com sessão aberta continua operando) e os aliases `verified` e `sensitive.token` não são instalados pelo pacote. Só é seguro se a aplicação instalar as mesmas proteções por conta própria. Ver Twstec\Kit\Auth\Providers\AuthServiceProvider.');
+            Log::warning('AUTH_WEB_PROTECTIONS=false: as proteções web do twstec/kit-auth estão DESLIGADAS — o status da conta NÃO é conferido a cada requisição do grupo `web` (conta bloqueada com sessão aberta continua operando), o segundo fator obrigatório (AUTH_TWO_FACTOR_REQUIRED) NÃO é cobrado no painel e os aliases `verified` e `sensitive.token` não são instalados pelo pacote. Só é seguro se a aplicação instalar as mesmas proteções por conta própria. Ver Twstec\Kit\Auth\Providers\AuthServiceProvider.');
 
             return;
         }

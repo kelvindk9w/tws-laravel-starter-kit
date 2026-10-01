@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Twstec\Kit\Auth\Contracts\Responses\LoginResponse;
 use Twstec\Kit\Auth\Http\Middleware\EnsureAccountIsActive;
 use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
+use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use Twstec\Kit\Auth\Providers\AuthServiceProvider;
 use Twstec\Kit\Auth\Tests\TestCase;
@@ -65,8 +66,11 @@ it('põe o status da conta no FIM do grupo web e instala os aliases do kit', fun
     $kernel = app(Kernel::class);
     $web = $kernel->getMiddlewareGroups()['web'];
 
-    expect(end($web))->toBe(EnsureAccountIsActive::class)
+    // O status da conta, e depois dele só a outra barreira do pacote (o
+    // segundo fator obrigatório): conta inativa sai antes.
+    expect(array_slice($web, -2))->toBe([EnsureAccountIsActive::class, EnsureTwoFactorIsConfigured::class])
         ->and(array_count_values($web)[EnsureAccountIsActive::class])->toBe(1)
+        ->and(array_count_values($web)[EnsureTwoFactorIsConfigured::class])->toBe(1)
         ->and($kernel->getMiddlewareAliases()['verified'])->toBe(EnsureEmailIsVerified::class)
         ->and($kernel->getMiddlewareAliases()['sensitive.token'])->toBe(RequiresSensitiveActionToken::class);
 });

@@ -14,7 +14,9 @@
 @php
     $clones = (int) config('landing.clones');
     $tests = (int) config('landing.tests');
-    $cloneUrl = platform()->repoUrl ?? route('register');
+    // Sem repositório configurado, o CTA leva ao cadastro — ou ao login, com o
+    // cadastro público fechado (AUTH_REGISTRATION_ENABLED=false).
+    $cloneUrl = platform()->repoUrl ?? (\Twstec\Kit\Auth\Support\Registration::enabled() ? route('register') : route('login'));
 
     // O número da prova social: quantos clonaram, quando o .env traz esse dado;
     // senão, a suíte verde — o fato que o kit tem para mostrar hoje.

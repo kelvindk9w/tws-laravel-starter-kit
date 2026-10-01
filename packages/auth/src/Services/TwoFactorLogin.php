@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Auth\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Enums\VerificationResult;
 use Twstec\Kit\Auth\Exceptions\TwoFactorLockedException;
+use Twstec\Kit\Auth\Exceptions\TwoFactorRequiredException;
 use Twstec\Kit\Auth\Support\ProtectedAccounts;
+use Twstec\Kit\Auth\Support\TwoFactorRequirement;
+use Twstec\Kit\Foundation\Audit\AuditScope;
+use Twstec\Kit\Foundation\Audit\AuditTrail;
+use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
 
 /**
  * A REGRA da verificação em duas etapas no login, em um lugar só.
@@ -47,20 +53,39 @@ use Twstec\Kit\Auth\Support\ProtectedAccounts;
  * CONTAS PROTEGIDAS (Twstec\Kit\Auth\Contracts\AccountProtection): enquanto
  * a proteção vale, a preferência delas é imutável. Aqui a recusa sai antes,
  * com mensagem clara, em vez da exceção do model.
+ *
+ * OBRIGATÓRIO (AUTH_TWO_FACTOR_REQUIRED — Support\TwoFactorRequirement):
+ * enquanto a regra vale para a conta, DESLIGAR é recusado aqui, no servidor,
+ * qualquer que seja a tela — e a tentativa vai para a trilha de auditoria
+ * (`user.two_factor_disabled`, `denied`, com o motivo), antes de qualquer
+ * token ser consumido. A regra também torna a opção disponível mesmo com
+ * AUTH_TWO_FACTOR_ENABLED=false: exigir algo que não se pode ligar trancaria
+ * todo mundo.
  */
 final class TwoFactorLogin
 {
     public function __construct(
         private readonly VerificationCodes $codes,
         private readonly SensitiveActionService $sensitiveActions,
+        private readonly TwoFactorRequirement $requirement,
+        private readonly AuditTrail $trail,
     ) {}
 
     /**
-     * A opção existe nesta instalação? (AUTH_TWO_FACTOR_ENABLED)
+     * A opção existe nesta instalação? (AUTH_TWO_FACTOR_ENABLED, ou a regra
+     * de obrigatoriedade valendo)
      */
     public static function available(): bool
     {
-        return (bool) config('auth.two_factor.enabled', true);
+        return (bool) config('auth.two_factor.enabled', true) || TwoFactorRequirement::active();
+    }
+
+    /**
+     * A regra de obrigatoriedade vale para esta conta?
+     */
+    public function requiredFor(AuthUser $user): bool
+    {
+        return $this->requirement->appliesTo($user);
     }
 
     /**
@@ -94,6 +119,44 @@ final class TwoFactorLogin
     }
 
     /**
+     * Motivo (traduzido) pelo qual a conta NÃO pode DESLIGAR agora, ou null —
+     * o de blockedReason() mais a regra de obrigatoriedade. Para a tela
+     * explicar; a recusa de verdade é ensureCanDisable().
+     */
+    public function disableBlockedReason(AuthUser $user): ?string
+    {
+        return $this->blockedReason($user)
+            ?? ($this->requiredFor($user) ? __('auth.two_factor.required_cannot_disable') : null);
+    }
+
+    /**
+     * Recusa o pedido de desligar enquanto a regra vale para a conta — e
+     * registra a tentativa na trilha de auditoria. Chamado por disable() e
+     * pelas telas, no primeiro passo do pedido (antes de mandar código).
+     *
+     * @throws TwoFactorRequiredException já registrada na trilha
+     */
+    public function ensureCanDisable(AuthUser $user): void
+    {
+        if (! $this->requiredFor($user)) {
+            return;
+        }
+
+        $reason = __('auth.two_factor.required_cannot_disable');
+        $subject = $user instanceof Model ? $user : null;
+        $type = $subject !== null ? AuditTrail::subjectType($subject) : 'user';
+        $record = fn () => $this->trail->denied($type.'.two_factor_disabled', $subject, $reason, $type);
+
+        // Dentro de um ponto de entrada auditado (o /admin), a linha leva o
+        // escopo dele; fora (painel do cliente), o da requisição do painel.
+        $event = $this->trail->current() !== null
+            ? $record()
+            : $this->trail->within(AuditScope::fromRequest(AuditContext::Panel), $record);
+
+        throw TwoFactorRequiredException::recorded($event, $reason);
+    }
+
+    /**
      * Liga o segundo fator. Exige o token de ação sensível (uso único).
      *
      * @throws ValidationException
@@ -106,12 +169,18 @@ final class TwoFactorLogin
     }
 
     /**
-     * Desliga o segundo fator. Exige o token de ação sensível (uso único).
+     * Desliga o segundo fator. Exige o token de ação sensível (uso único) e
+     * que a regra de obrigatoriedade não valha para a conta.
      *
+     * @throws TwoFactorRequiredException regra valendo (já na trilha)
      * @throws ValidationException
      */
     public function disable(AuthUser $user, #[\SensitiveParameter] string $sensitiveToken): void
     {
+        // A regra de obrigatoriedade vem ANTES do token: a recusa não gasta
+        // a confirmação de ninguém e fica registrada.
+        $this->ensureCanDisable($user);
+
         $this->authorizeChange($user, $sensitiveToken);
 
         $user->forceFill(['two_factor_enabled_at' => null])->save();

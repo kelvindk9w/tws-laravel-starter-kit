@@ -58,6 +58,9 @@ return [
         // Nombre antiguo (hasta la 2.x), mismo texto: sale en la 3.0.
         'demo_blocked' => 'No disponible en esta cuenta: está protegida y la verificación en dos pasos no puede activarse en ella.',
         'requires_transaction_password' => 'Define primero tu contraseña de transacción: activar y desactivar la verificación en dos pasos son acciones sensibles.',
+        'setup_required' => 'La verificación en dos pasos es obligatoria en esta instalación. Configúrala para continuar.',
+        'required_cannot_disable' => 'La verificación en dos pasos es obligatoria en esta instalación y no se puede desactivar.',
+        'setup_done' => 'Verificación en dos pasos activada. A partir del próximo inicio de sesión, te pediremos el código enviado a tu correo.',
     ],
     'sensitive_action' => [
         'token_issued' => 'Acción sensible autorizada. Usa el token de inmediato — es de uso único.',

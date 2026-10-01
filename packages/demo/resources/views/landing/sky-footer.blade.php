@@ -8,7 +8,9 @@
      fallback em CSS é o MESMO arco — mesmos ícones, mesmos rótulos, parado —
      e é dele que o 3D levanta as marcas. --}}
 @php
-    $cloneUrl = platform()->repoUrl ?? route('register');
+    // Sem repositório configurado, o CTA leva ao cadastro — ou ao login, com o
+    // cadastro público fechado (AUTH_REGISTRATION_ENABLED=false).
+    $cloneUrl = platform()->repoUrl ?? (\Twstec\Kit\Auth\Support\Registration::enabled() ? route('register') : route('login'));
 
     // Arco: as pontas sobem, o centro desce. Os ângulos do CSS e os do
     // Three.js descrevem a MESMA curva (sky3d.js, layout 'arc').

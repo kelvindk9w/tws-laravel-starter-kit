@@ -58,6 +58,9 @@ return [
         // Nome antigo (até a 2.x), com o mesmo texto: sai na 3.0.
         'demo_blocked' => 'Indisponível nesta conta: ela é protegida, e a verificação em duas etapas não pode ser ligada nela.',
         'requires_transaction_password' => 'Defina sua senha de transação antes: ligar e desligar a verificação em duas etapas são ações sensíveis.',
+        'setup_required' => 'A verificação em duas etapas é obrigatória nesta instalação. Configure-a para continuar.',
+        'required_cannot_disable' => 'A verificação em duas etapas é obrigatória nesta instalação e não pode ser desligada.',
+        'setup_done' => 'Verificação em duas etapas ligada. A partir do próximo login, pediremos o código enviado ao seu e-mail.',
     ],
     'sensitive_action' => [
         'token_issued' => 'Ação sensível autorizada. Use o token imediatamente — ele é de uso único.',

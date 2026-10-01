@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Support\EmailVerification;
+use Twstec\Kit\Auth\Support\Registration;
 use Twstec\Kit\Auth\Support\UserModel;
 
 /**
@@ -22,6 +23,10 @@ use Twstec\Kit\Auth\Support\UserModel;
  *
  * Os dados chegam JÁ VALIDADOS (RegisterRequest). A resposta é do contrato
  * RegisterResponse.
+ *
+ * CADASTRO FECHADO (AUTH_REGISTRATION_ENABLED=false): recusa com 404 aqui
+ * também, e não só no controller — um front que chame a regra direto não
+ * reabre o cadastro. Convite e /admin criam contas por outros caminhos.
  */
 final class RegisterUser
 {
@@ -30,6 +35,8 @@ final class RegisterUser
      */
     public function handle(Request $request, array $input): AuthUser
     {
+        Registration::ensureOpen();
+
         $user = UserModel::name()::createWithPublicCodeRetry([
             'name' => $input['name'],
             'email' => $input['email'],
