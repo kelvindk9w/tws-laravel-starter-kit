@@ -4,6 +4,54 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [2.0.0-beta.7] — 2026-10-01
+
+Rastreio de ponta a ponta: identificador de correlação nas filas e nas chamadas HTTP de saída.
+
+Para a **2.0.0-beta.7**: o `correlation_id` passa a acompanhar a operação
+inteira — requisição, jobs da fila e chamadas HTTP de saída — com trilha
+redigida das chamadas de saída (#25).
+
+### Adicionado
+
+- **Correlation id nos jobs da fila** (#25), no `twstec/kit-foundation`,
+  ligado pelo pacote: todo job despachado leva no payload a chave
+  `twsCorrelation` (só id e origem) e o worker o restaura antes do job —
+  contexto do log (`correlation_id`, `correlation_origin`), trilhas e chamadas
+  de saída — e o desfaz depois. Drivers `database`, `redis` e `sync`;
+  `Bus::chain`, `Bus::batch` e job despachado de dentro de outro job herdam o
+  mesmo id. Job sem id (ou com id que não é UUID) ganha um novo, de origem
+  `queue`; cada tarefa do agendador ganha o seu, de origem `scheduler`, que
+  chega também ao processo filho de um `command()`; comando avulso ganha um
+  de origem `console`. No código: `CorrelationId::current()` e
+  `CorrelationId::origin()`.
+- **Chamadas HTTP de saída rastreadas** (#25): middleware global do cliente
+  `Http` do Laravel que envia o id no cabeçalho `X-Correlation-Id` (nome
+  configurável; desligável por destino em `TRACING_HTTP_HEADER_EXCEPT_HOSTS` e
+  por chamada com `Http::withoutCorrelationHeader()`) e grava cada tentativa
+  na tabela só-acréscimo `outbound_http_logs`: método, host, rota
+  normalizada (identificadores, documentos, e-mails e tokens do caminho viram
+  marcadores), só os nomes dos parâmetros da query, status, duração,
+  tentativa, tamanhos, correlation_id e conta. Cabeçalhos nunca; corpo só com
+  `Http::withBodyInTrail()`, redigido pelo `Redactor`. Falha ao gravar a
+  trilha não afeta a chamada (vira `http.outbound.persist_failed` no canal
+  `request_log`). UPDATE/DELETE recusados pelo model, pelo builder e, no
+  PostgreSQL, por gatilho; retenção em `TRACING_HTTP_RETENTION_DAYS` (90 dias)
+  com a poda `outbound-http:prune` agendada pelo próprio pacote.
+- `config/tracing.php` no foundation (e as variáveis `TRACING_*` no
+  `.env.example` dos starters); opt-out explícito de cada parte, com aviso no
+  log em produção.
+- Com o `twstec/kit-accounts` instalado, a linha da trilha de saída leva a
+  conta (`tenant_uuid`) em nome da qual a chamada foi feita.
+
+### Mudado
+
+- Rotas leves fora da trilha em banco (health check, assets) também ganham
+  correlation_id, para o job e a chamada de saída que elas fizerem.
+- A trilha de auditoria de ações gravada de dentro de um job ou de uma tarefa
+  agendada (contexto `console`) passa a levar o `correlation_id` da operação
+  que a originou (antes, sempre nulo no console).
+
 ## [2.0.0-beta.6] — 2026-09-30
 
 Money que calcula com segurança e correção das frequências do backup.
@@ -1041,7 +1089,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.5...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.6...desenvolvimento
+[2.0.0-beta.7]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.7
 [2.0.0-beta.6]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.6
 [2.0.0-beta.5]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.5
 [2.0.0-beta.4]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.4

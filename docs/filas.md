@@ -35,6 +35,19 @@
   (`HORIZON_TRIM_FAILED_MINUTES`), e a `failed_jobs` — que antes guardava para
   sempre, com o texto da exceção — é podada diariamente na mesma janela
   (`queue:prune-failed`, `QUEUE_FAILED_RETENTION_HOURS`, padrão 168).
+- **Correlation id nos jobs.** Todo job despachado leva no payload a chave
+  `twsCorrelation` (só `{id, origin}` — nada da requisição, nenhum segredo)
+  com o `correlation_id` de quem o despachou, e o worker o restaura antes do
+  job (contexto do log: `correlation_id` e `correlation_origin`; trilhas;
+  cabeçalho das chamadas HTTP de saída) e o desfaz depois. Vale para os
+  drivers `database`, `redis` e `sync`, para `Bus::chain` e `Bus::batch` e
+  para job despachado de dentro de outro job — tudo ligado pelo
+  `twstec/kit-foundation`, sem nada no código do job. Job sem id (enfileirado
+  antes da 2.0.0-beta.7) ganha um novo, de origem `queue`; cada tarefa do
+  agendador ganha o seu, de origem `scheduler`. No job,
+  `CorrelationId::current()` devolve o id. Opt-out: `TRACING_QUEUE=false`
+  (aviso no log em produção). Detalhes em
+  [Logs e LGPD](logs-lgpd.md#rastreio-de-ponta-a-ponta-fila-e-http-de-saída).
 - **API do Horizon** (`/horizon/api/*`, de onde o dashboard lê os payloads):
   está no mesmo grupo de middleware do dashboard — allowlist de IP + gate de
   admin ativo — e os testes cobrem guest, usuário comum, admin
@@ -49,5 +62,8 @@ Horizon: gating (guest/usuário comum =
 403, admin = 200), IP allowlist aplicada às rotas (dashboard e API), CSP
 dedicada, supervisores por ambiente, payload criptografado dos jobs de e-mail,
 retenção e poda da `failed_jobs`
-(`tests/Feature/Horizon/QueuePayloadConfidentialityTest.php`). E-mail em
+(`tests/Feature/Horizon/QueuePayloadConfidentialityTest.php`). Correlation id na
+fila: suíte do pacote foundation (`tests/Feature/Tracing/QueueCorrelationTest.php`
+— worker de verdade com `queue:work`, `database`, `redis` e `sync`, cadeia, lote,
+agendador e processo filho). E-mail em
 produção: `tests/Feature/Mail/NonDeliveringMailerProductionTest.php`.

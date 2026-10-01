@@ -1,9 +1,9 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-09-30, com a versão **2.0.0-beta.5** publicada e a
-> **2.0.0-beta.6** em preparação (aritmética monetária segura e as travas de
-> arquitetura no projeto criado — ver o [CHANGELOG](../CHANGELOG.md), "Não
-> publicado").
+> Atualizado em 2026-10-01, com a versão **2.0.0-beta.6** publicada e a
+> **2.0.0-beta.7** em preparação (correlation id seguindo a operação pela fila
+> e pelas chamadas HTTP de saída, com trilha redigida das chamadas — ver o
+> [CHANGELOG](../CHANGELOG.md), "Não publicado").
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -24,6 +24,7 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Vários projetos na mesma máquina sem colisão (nome e portas por projeto) | pronto |
 | Dinheiro que calcula sem float: percentual com arredondamento explícito, rateio sem perder centavo, checagem de moeda e de estouro | pronto (2.0.0-beta.6) |
 | Travas de arquitetura no projeto criado (`strict_types`, `env()` só em `config/`, models sem interface, `BelongsToAccount`) | pronto (2.0.0-beta.6) |
+| Correlation id de ponta a ponta: requisição → job da fila (cadeia, lote, agendador) → chamada HTTP de saída, com trilha só-acréscimo e redigida das chamadas de saída | pronto (2.0.0-beta.7) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
@@ -47,7 +48,9 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    CSP-safe do Livewire (modais do Filament sem abrir). O uso seguinte pediu
    aritmética monetária de verdade no `Money` (#26) e achou as frequências
    do backup ignoradas com `config:cache` e travas que não chegavam ao
-   projeto criado (#32) — resolvidos na 2.0.0-beta.6. Falta usar por
+   projeto criado (#32) — resolvidos na 2.0.0-beta.6. Depois, rastrear uma
+   operação de ponta a ponta (#25): o correlation id não acompanhava o job
+   nem a chamada ao serviço externo — resolvido na 2.0.0-beta.7. Falta usar por
    algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta

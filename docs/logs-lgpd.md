@@ -46,12 +46,16 @@ são o dado do próprio contato, necessário para respondê-lo.
 |---|---|---|
 | Banco (principal) | tabela `request_logs` | ciclo INICIADA→CONCLUIDA/ERRO/BLOQUEADA, payload redigido (neutralizado quando há `attack_type`), duração, IP, tenant |
 | Banco (ações) | tabela `audit_events` | quem fez o quê, em qual registro, o antes/depois redigido e se foi executada ou recusada — ver [Trilha de auditoria de ações](#trilha-de-auditoria-de-ações-audit_events) |
-| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`, `audit.event`, `audit.persist_failed`); número de cartão sai mascarado (ver [Redaction](#redaction-lgpd)) |
+| Banco (saída) | tabela `outbound_http_logs` | cada chamada HTTP de saída (uma linha por tentativa): destino normalizado, método, status, duração, tamanhos, `correlation_id` e conta — ver [Rastreio de ponta a ponta](#rastreio-de-ponta-a-ponta-fila-e-http-de-saída) |
+| Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`, `audit.event`, `audit.persist_failed`, `http.outbound`, `http.outbound.persist_failed`); número de cartão sai mascarado (ver [Redaction](#redaction-lgpd)) |
 | Borda | access log do nginx | tudo, inclusive health checks |
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
 arquivo da mesma requisição. Também entra no contexto compartilhado do Monolog
-(`Log::shareContext`) — todo `Log::*` emitido durante a requisição o carrega.
+(`Log::shareContext`, chaves `correlation_id` e `correlation_origin`) — todo `Log::*` emitido
+durante a requisição o carrega. E ele **segue a operação**: o job que a requisição despachou, o
+job que esse job despachou e a chamada HTTP que qualquer um deles fez a um serviço externo levam o
+mesmo id — ver [Rastreio de ponta a ponta](#rastreio-de-ponta-a-ponta-fila-e-http-de-saída).
 
 **Ações de admin.** A linha de `request_logs` de uma ação no `/admin` é o update do Livewire, com
 payload resumido (só o nome do componente) — ela prova que houve a requisição, não QUAL ação foi
@@ -74,7 +78,7 @@ Decisão do dono: **toda ação de admin que altera dado fica registrada no banc
 | `tenant_uuid` | a CONTA em que a ação aconteceu (o mesmo valor de `request_logs.tenant_uuid`); nulo quando a ação não é de uma conta |
 | `changes` | resumo do que mudou, `{campo: {before, after}}`, **já redigido** (abaixo) |
 | `reason` | o motivo da recusa, quando `denied` (passa pelo Redactor) |
-| `correlation_id` | o MESMO da linha de `request_logs` da requisição (nulo no console) |
+| `correlation_id` | o MESMO da linha de `request_logs` da requisição; num job ou numa tarefa agendada, o da operação que o originou; nulo num comando avulso |
 | `ip`, `user_agent` | como a trilha de requisições trata: IP resolvido pelo TrustProxies, User-Agent em 500 caracteres. No console, o `user_agent` leva o comando e o usuário do sistema operacional |
 
 Índices para as quatro perguntas de auditoria, todas por período: o que FULANO fez
@@ -164,6 +168,148 @@ diariamente (`routes/console.php`, `onOneServer`), como a poda da `failed_jobs`,
 quando apaga alguma coisa, grava `audit_event.pruned` (contexto `console`) com quantas linhas saíram
 e a data de corte. Rodar à mão: `php artisan audit:prune` (ou `--days=N`).
 
+## Rastreio de ponta a ponta (fila e HTTP de saída)
+
+O primeiro passo de qualquer investigação é seguir UMA operação de ponta a ponta: a requisição →
+o job que ela despachou → a chamada ao serviço externo → o retorno. O pacote `twstec/kit-foundation`
+faz o `correlation_id` acompanhar tudo isso sozinho, sem o aplicativo lembrar de nada
+(`config/tracing.php`; módulo `Tracing`).
+
+### De onde vem o id que vale agora
+
+O id nasce uma vez e segue a operação. `CorrelationId::current()` devolve o que vale no momento;
+`CorrelationId::origin()` diz onde ele nasceu:
+
+| Origem | Quando |
+|---|---|
+| `http` | a requisição (gerado pelo servidor no `RequestLogging` — nunca vem do cliente). Rotas leves, fora da trilha em banco (health check, assets), também ganham id |
+| `scheduler` | cada tarefa do agendador (`schedule:run`) ganha um id próprio; um `command()`/`exec()` roda em outro processo, e o id chega a ele pelo Context do Laravel (escondido, `hidden`) e é adotado no boot |
+| `queue` | job que chegou ao worker SEM id no payload (enfileirado antes desta versão, ou por um produtor de fora do Laravel) |
+| `console` | comando artisan avulso: o id nasce na primeira vez que for preciso (primeiro job despachado, primeira chamada de saída) e vale para o resto do processo |
+
+O id corrente fica no contexto compartilhado do log (`correlation_id`, `correlation_origin`): todo
+`Log::*` de dentro de um job sai com o id da requisição que o despachou.
+
+### Fila
+
+Todo job despachado — em qualquer driver (`database`, `redis`, `sync`) — leva no payload a chave
+`twsCorrelation` = `{id, origin}`. **Só isso**: nenhum dado da requisição, nenhum segredo. No worker,
+antes do job, o id é restaurado (contexto do log, trilhas, chamadas de saída); depois do job — com
+sucesso, exceção, falha ou devolução à fila —, desfeito: o job seguinte não herda nada. Um id que
+não é UUID (payload adulterado no Redis ou no banco) é descartado e o job ganha um novo, de origem
+`queue` — o valor do payload nunca vai ao log como veio.
+
+`Bus::chain` e `Bus::batch` herdam sozinhos: o próximo elo da cadeia é despachado de dentro do job
+anterior (com o id restaurado), os jobs do lote são enfileirados juntos no contexto de quem
+despachou, e os callbacks do lote (`then`/`catch`/`finally`) rodam no worker do último job.
+
+Ler o id num job:
+
+```php
+use Twstec\Kit\Foundation\Logging\CorrelationId;
+
+public function handle(): void
+{
+    $id = CorrelationId::current();           // o mesmo da requisição que despachou
+    $origem = CorrelationId::origin()?->value; // 'http', 'scheduler', 'queue' ou 'console'
+
+    Log::info('cobrança processada');          // já sai com correlation_id no contexto
+}
+```
+
+A trilha de auditoria de ações também usa o id: uma linha gravada por um job (contexto `console`)
+leva o `correlation_id` da operação que o originou.
+
+### Chamadas HTTP de saída
+
+Um middleware **global** do cliente `Http` do Laravel (instalado pelo pacote com
+`Http::globalMiddleware`) cuida de toda chamada — `Http::post(...)`, `retry()`, `pool()`, `async()`,
+e também com `Http::fake()` nos testes:
+
+- **Cabeçalho** `X-Correlation-Id` (nome em `TRACING_HTTP_HEADER_NAME`) com o id corrente. Não
+  sobrescreve o mesmo cabeçalho posto pela própria chamada. Desligável **por destino**
+  (`TRACING_HTTP_HEADER_EXCEPT_HOSTS`, aceita curinga `*.exemplo.com`) e **por chamada**:
+  `Http::withoutCorrelationHeader()->post(...)`. O id é um UUID v7 interno; um destino que não deve
+  recebê-lo vai na lista.
+- **Trilha** `outbound_http_logs`: uma linha **por tentativa**, gravada quando a resposta (ou a
+  falha de conexão) chega.
+
+| Coluna | Conteúdo |
+|---|---|
+| `uuid`, `created_at` | identificador e momento (UTC) |
+| `correlation_id`, `correlation_origin` | a operação de origem — junta com `request_logs` e `audit_events` |
+| `tenant_uuid` | a conta em nome da qual a chamada foi feita (com o pacote de contas instalado; nulo fora de conta) |
+| `method`, `host` | método e host (minúsculo; porta só quando não é a padrão; **sem** usuário/senha da URL) |
+| `path` | a rota **normalizada**: segmento que parece valor vira marcador — número, CPF/CNPJ/cartão e qualquer segmento com 6+ dígitos → `{n}`, UUID → `{uuid}`, e-mail → `{email}`, token/hash/chave → `{token}`. `/v1/customers/123.456.789-09/charges` → `/v1/customers/{n}/charges` |
+| `query_keys` | só os **nomes** dos parâmetros da query (`["access_token", "page"]`) — nunca os valores |
+| `attempt` | a tentativa (1, 2, 3… no `retry()`) |
+| `http_status`, `duration_ms` | status (nulo na falha de conexão) e duração |
+| `request_bytes`, `response_bytes` | tamanho do corpo enviado e recebido |
+| `error` | na falha de conexão: o tipo do erro e a mensagem redigida, **sem a URL** (a mensagem do cURL repete a URL inteira, com a query) |
+| `request_body`, `response_body` | nulos — salvo com `Http::withBodyInTrail()`, e então **redigidos** pelo `Redactor` (segredos por nome de campo, CPF/CNPJ, e-mail e cartão em qualquer texto); corpo que não é JSON nem formulário, ou acima de 64 KB, entra só como tipo e tamanho |
+
+**O que nunca entra:** cabeçalho nenhum (`Authorization`, `Cookie`, chaves de API), valor de
+parâmetro da query, usuário/senha da URL e — sem o pedido explícito — o corpo. A segunda camada no
+arquivo (`http.outbound` no canal `request_log`) tem as mesmas colunas, nunca o corpo.
+
+**Fail-open só da trilha.** Qualquer erro ao montar ou gravar a linha é engolido e vira
+`http.outbound.persist_failed` (`critical`) no canal de arquivo; a chamada nunca é afetada — a
+resposta, ou a exceção de conexão, chega ao aplicativo exatamente como chegaria sem o pacote. O
+contrário (a chamada falhar porque a trilha falhou) derrubaria pagamentos por causa de um log.
+
+**Transação.** A linha é gravada na conexão padrão, dentro da transação em que a chamada
+aconteceu: se ela for desfeita, a linha do banco some junto (a do arquivo fica). Para a linha
+sobreviver ao rollback, aponte `TRACING_HTTP_TRAIL_CONNECTION` para uma conexão própria (o mesmo
+banco, outra conexão em `config/database.php`).
+
+**Tentativa.** O Laravel refaz a chamada passando de novo pelo middleware, sem dizer qual é a
+tentativa; a regra reproduz a do próprio `retry()`: mesmo método e mesma URL logo depois de uma
+falha = tentativa seguinte. Se o aplicativo trocar as opções globais do cliente depois do boot
+(`Http::globalOptions(...)`), o contador não chega e `attempt` fica nulo — o resto da linha não muda.
+
+**Decisão: tabela própria só-acréscimo, não o canal `request_log`.** O volume é de uma linha por
+chamada de saída — da ordem do de `request_logs` ou menor, e com o mesmo perfil de crescimento — e
+as perguntas de investigação são consultas, não buscas em texto: tudo desta operação
+(`correlation_id`), tudo deste destino num período (`host` + `created_at`, para medir
+indisponibilidade de um parceiro) e tudo desta conta (`tenant_uuid` + `created_at`). Isso pede
+índice e junção com `request_logs`/`audit_events`, o que o arquivo diário não dá; e a trilha
+precisa da mesma garantia de imutabilidade das outras. O arquivo continua como segunda camada.
+
+**Só-acréscimo, nas mesmas três camadas de `audit_events`:** o model e o builder recusam
+UPDATE/DELETE (`AppendOnlyViolationException`) e, no PostgreSQL, o gatilho `OutboundHttpLogTrigger`
+recusa UPDATE, TRUNCATE e todo DELETE fora da poda. A linha também fica fora da captura automática
+da auditoria de ações (é efeito de uma ação, não ação).
+
+**Retenção.** `TRACING_HTTP_RETENTION_DAYS` (padrão **90**; `0` = nunca podar). A poda
+`outbound-http:prune` é agendada **pelo próprio pacote** (`TRACING_HTTP_PRUNE_SCHEDULE`, padrão
+`20 3 * * *`, `onOneServer`; vazio desliga, com aviso no log) e deixa rastro na auditoria
+(`outbound_http_log.pruned`, com quantas linhas saíram e a data de corte). À mão:
+`php artisan outbound-http:prune` (ou `--days=N`).
+
+```sql
+-- Tudo de uma operação: a requisição, as ações e as chamadas de saída.
+SELECT * FROM request_logs       WHERE correlation_id = :id;
+SELECT * FROM audit_events       WHERE correlation_id = :id;
+SELECT * FROM outbound_http_logs WHERE correlation_id = :id ORDER BY id;
+
+-- Saúde de um parceiro na última hora.
+SELECT http_status, count(*), avg(duration_ms)
+  FROM outbound_http_logs
+ WHERE host = 'api.parceiro.com' AND created_at > now() - interval '1 hour'
+ GROUP BY http_status;
+```
+
+### Desligar (opt-out explícito)
+
+| Variável | Efeito |
+|---|---|
+| `TRACING_QUEUE=false` | jobs sem o id de quem despachou |
+| `TRACING_HTTP_HEADER=false` | chamadas de saída sem o cabeçalho |
+| `TRACING_HTTP_TRAIL=false` | chamadas de saída sem a trilha |
+| `TRACING_HTTP_PRUNE_SCHEDULE=` | poda não agendada (o comando continua) |
+
+Os três primeiros deixam aviso no log a cada boot em produção; o último, em todo ambiente.
+
 ## O que significa um log INICIADA "órfão"
 
 Log que **permanece em INICIADA** = a requisição não chegou ao terminate: processo morto no meio,
@@ -197,7 +343,9 @@ Em produção, complementar com
    da poda — vale também para `DB::table()`, psql e qualquer cliente externo.
 
 A única remoção é a poda por idade (`AuditEvent::pruneOlderThan()`, usada pelo `audit:prune`): ela
-liga a flag local `tws.audit_prune` só dentro da transação de cada lote. Em produção, complementar
+liga a flag local `tws.audit_prune` só dentro da transação de cada lote. `outbound_http_logs` segue
+as mesmas três camadas (gatilho `OutboundHttpLogTrigger`, flag `tws.outbound_http_prune`, poda
+`outbound-http:prune`). Em produção, complementar
 com separação de papéis no PostgreSQL — a aplicação conectando com uma role que **não é dona** do
 esquema (dono pode desligar gatilho e apagar tabela) e `REVOKE UPDATE ON audit_events` dessa role. O
 `DELETE` continua concedido, porque é a própria aplicação que poda; quem quiser tirá-lo também
