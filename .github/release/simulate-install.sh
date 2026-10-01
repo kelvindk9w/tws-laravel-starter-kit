@@ -256,13 +256,21 @@ package() {
     php artisan route:list --json | grep -q '"name":"home"'
     if php artisan route:list --json | grep -q '"name":"landing'; then echo 'projeto publicado com as rotas da demo'; exit 1; fi
 
-    # O instalador rodou no post-create-project-cmd: chave da aplicação e,
-    # com o pacote de contas, o pepper dedicado das chaves de API (sem ele,
-    # não há chave de API nem pepper).
+    # O instalador rodou no post-create-project-cmd: chave da aplicação, com o
+    # pacote de contas o pepper dedicado das chaves de API (sem ele, não há
+    # chave de API nem pepper) e, com o de uploads, a chave dos confidenciais.
     grep -Eq '^APP_KEY=base64:.+' .env
     case " $CHOSEN " in
         *" accounts "*) grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env ;;
         *) if grep -Eq '^API_KEYS_HASH_PEPPER=.+' .env; then echo 'pepper sem o módulo de contas'; exit 1; fi ;;
+    esac
+    # Com o pacote de uploads, a chave PRÓPRIA dos uploads confidenciais
+    # (base64: + 32 bytes, diferente da APP_KEY); sem ele, nenhuma.
+    case " $CHOSEN " in
+        *" uploads "*)
+            grep -Eq '^UPLOADS_ENCRYPTION_KEY=base64:[A-Za-z0-9+/]{43}=$' .env
+            if [ "$(sed -n 's/^UPLOADS_ENCRYPTION_KEY=//p' .env)" = "$(sed -n 's/^APP_KEY=//p' .env)" ]; then echo 'chave dos uploads confidenciais igual à APP_KEY'; exit 1; fi ;;
+        *) if grep -Eq '^UPLOADS_ENCRYPTION_KEY=.+' .env; then echo 'chave dos uploads confidenciais sem o módulo de uploads'; exit 1; fi ;;
     esac
 
     # Starter React: o projeto é o do React (Inertia, sem Livewire no painel

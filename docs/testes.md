@@ -210,6 +210,14 @@ Regras para escrever teste novo:
   `AdminLivewireEndpointBarrierTest` têm os dois.
 - Dataset com telas de módulo opcional: acrescente-as só com o módulo
   (`...(Kit::has('accounts') ? ['chaves de API' => '/api-keys'] : [])`).
+- **Classe de apoio que depende de um módulo opcional nasce DENTRO do teste**
+  (classe anônima: `new class implements DeletionCheck { … }`), nunca no topo
+  do arquivo. O Pest carrega todos os arquivos antes de decidir o que pula:
+  uma classe de topo que estende ou implementa um tipo de `accounts`,
+  `uploads`, `admin` (ou do Filament) derruba a suíte inteira numa instalação
+  sem o módulo ("Interface … not found") — foi o que reprovou a 2.0.0-beta.10
+  na simulação "Livewire só a base". `tests/Feature/Architecture/OptionalModuleTestFilesTest.php`
+  (nos dois starters) reprova isso. `use` no topo pode: ele não carrega nada.
 - Teste que varre `app/` com `class_exists`: pule as classes que só carregam
   com um módulo (`TestCase::appClassLoadable()` — hoje, o PanelProvider do
   `/admin`, que estende o Filament).

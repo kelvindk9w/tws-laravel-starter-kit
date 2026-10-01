@@ -6,6 +6,41 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.11] — 2026-10-01
+
+Correção da 2.0.0-beta.10: o projeto criado sem os módulos opcionais voltava
+a não carregar a própria suíte de testes.
+
+### Corrigido
+
+- **Projeto criado só com a base** (sem contas, uploads e `/admin`): o `pest`
+  do projeto parava antes de rodar, com `Interface
+  "Twstec\Kit\Accounts\Deletion\Contracts\DeletionCheck" not found`. Um
+  teste novo da 2.0.0-beta.10 no starter Livewire declarava, no topo do
+  arquivo, uma classe de apoio que implementa um contrato do
+  `twstec/kit-accounts`; o Pest carrega todos os arquivos antes de pular os
+  testes de módulo ausente, e a classe derrubava o carregamento. A classe
+  passou a nascer dentro do teste (classe anônima), e os testes continuam
+  rodando quando o módulo está instalado. O instalador e o código do aplicativo
+  não tinham o problema.
+
+### Adicionado
+
+- Trava nos dois starters (`tests/Feature/Architecture/OptionalModuleTestFilesTest.php`):
+  reprova arquivo de teste que declara no topo uma classe que estende ou
+  implementa tipo de módulo opcional (`accounts`, `uploads`, `admin`) ou do
+  Filament. A regra está em `docs/testes.md`.
+- A simulação da instalação publicada (`.github/release/simulate-install.sh`)
+  passa a conferir a chave dos uploads confidenciais gerada pelo instalador:
+  presente (e diferente da `APP_KEY`) com o módulo de uploads, ausente sem ele.
+
+### Atualizando da 2.0.0-beta.10
+
+Nada a fazer no aplicativo. Num projeto criado com a 2.0.0-beta.10 sem os
+módulos opcionais, se o `pest` não carregar, apague
+`tests/Feature/Uploads/ConfidentialAndRetentionTest.php` (os testes dele são
+dos módulos de contas e uploads) ou troque pelo da 2.0.0-beta.11.
+
 ## [2.0.0-beta.10] — 2026-10-01
 
 Uploads confidenciais, retenção legal e impedimentos de exclusão.
@@ -1399,7 +1434,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.10...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.11...desenvolvimento
+[2.0.0-beta.11]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.11
 [2.0.0-beta.10]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.10
 [2.0.0-beta.9]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.9
 [2.0.0-beta.8]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.8
