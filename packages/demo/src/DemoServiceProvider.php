@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\Factory as ViewFactory;
 use Livewire\Livewire;
+use Twstec\Kit\Admin\Approvals\Approvals;
 use Twstec\Kit\Admin\Widgets\Overview\LatestUploads;
 use Twstec\Kit\Auth\Contracts\AccountProtection;
 use Twstec\Kit\Auth\Contracts\LoginPrefillProvider;
 use Twstec\Kit\Demo\Accounts\DemoAccountProtection;
 use Twstec\Kit\Demo\Accounts\DemoAccountSession;
 use Twstec\Kit\Demo\Accounts\DemoLoginPrefill;
+use Twstec\Kit\Demo\Catalog\Approvals\RepriceProduct;
 use Twstec\Kit\Demo\Console\UninstallDemo;
 use Twstec\Kit\Demo\Database\Seeders\DemoSeeder;
 use Twstec\Kit\Demo\Filament\Dashboards\ContentDashboard;
@@ -148,6 +150,10 @@ final class DemoServiceProvider extends ServiceProvider
         if (! $this->app->routesAreCached()) {
             Route::middleware('web')->group($this->path('routes/web.php'));
         }
+
+        // A aprovação em dois passos do /admin mostrada no catálogo: reajustar
+        // preço sempre vira pedido (outra pessoa aprova).
+        Approvals::register(RepriceProduct::class);
 
         // Componente fora de App\Livewire: registrado pelo nome que as views
         // usam (<livewire:contact-form />).

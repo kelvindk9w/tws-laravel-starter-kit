@@ -60,6 +60,9 @@ return [
         'price_up_to_100' => 'Up to R$ 100',
         'price_100_to_500' => 'R$ 100 to R$ 500',
         'price_above_500' => 'Above R$ 500',
+        'reprice' => 'Change price',
+        'reprice_heading' => 'Change the price (with approval)',
+        'new_price' => 'New price',
         'deleted' => 'Product deleted.',
     ],
 

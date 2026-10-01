@@ -60,6 +60,9 @@ return [
         'price_up_to_100' => 'Até R$ 100',
         'price_100_to_500' => 'R$ 100 a R$ 500',
         'price_above_500' => 'Acima de R$ 500',
+        'reprice' => 'Reajustar preço',
+        'reprice_heading' => 'Reajustar o preço (com aprovação)',
+        'new_price' => 'Novo valor',
         'deleted' => 'Produto excluído.',
     ],
 

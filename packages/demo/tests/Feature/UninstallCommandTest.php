@@ -31,7 +31,7 @@ it('com --drop-tables, apaga as tabelas e o registro das migrations da demo — 
         ->and(Schema::hasTable('form_submissions'))->toBeFalse()
         ->and(DB::table('migrations')->where('migration', 'like', '%products%')->exists())->toBeFalse()
         ->and(DB::table('migrations')->where('migration', 'like', '%protect_demo_users%')->exists())->toBeFalse()
-        ->and(DB::table('migrations')->count())->toBe($antes - 7)
+        ->and(DB::table('migrations')->count())->toBe($antes - 8)
         ->and(Schema::hasTable('users'))->toBeTrue();
 });
 

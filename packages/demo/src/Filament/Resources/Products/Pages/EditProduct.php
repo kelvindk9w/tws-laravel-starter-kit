@@ -26,6 +26,7 @@ final class EditProduct extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            ProductResource::repriceAction(),
             DeleteAction::make()
                 ->successNotificationTitle(__('admin.products.deleted')),
         ];

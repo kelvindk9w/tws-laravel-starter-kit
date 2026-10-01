@@ -152,8 +152,10 @@ tabela/cards gravados na sessão pelo nome antigo migram sozinhos para o novo
 na primeira abertura da tela.
 
 
-- **Acesso**: somente `is_admin` + conta ativa — qualquer outro usuário
-  recebe **403**; guest vai ao login do painel. O critério é do pacote
+- **Acesso**: ENTRAR é somente `is_admin` + conta ativa — qualquer outro
+  usuário recebe **403**; guest vai ao login do painel. O que cada pessoa
+  pode FAZER lá dentro vem do papel dela — ver
+  [Papéis e permissões](#papéis-e-permissões-no-admin). O critério é do pacote
   (`Twstec\Kit\Admin\Access\AdminAccess`): o model do aplicativo o usa em
   `canAccessPanel` (trait `AccessesAdminPanel`) e o pacote o confere de novo
   em todo pedido do painel e em toda ação Livewire (`EnsureAdminPanelAccess`,
@@ -165,8 +167,11 @@ na primeira abertura da tela.
 
 ```bash
 docker compose exec app php artisan user:make-admin email@exemplo.com
-# revogar:  ... user:make-admin email@exemplo.com --remove
+# com outro papel: ... user:make-admin email@exemplo.com --role=support
+# revogar:         ... user:make-admin email@exemplo.com --remove
 ```
+
+  O comando dá o papel de dono (`owner`) por padrão — é o caminho de resgate.
 
   Promover também marca o e-mail da conta como confirmado, e a conta criada
   pelo formulário de usuário do `/admin` já nasce confirmada: quem cadastrou
@@ -293,6 +298,226 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
     configurada. A aplicação reconhece esse erro e avisa no log a cada boot.
   - Regra, decisões e justificativas: `Twstec\Kit\Foundation\Security\AdminIpAllowlist`.
     Middleware: `EnsureAdminIpAllowed`.
+
+## Papéis e permissões no `/admin`
+
+Desde a 2.0.0-beta.8 o painel não é mais tudo-ou-nada. **Entrar** continua
+sendo `is_admin` + conta ativa (`Access\AdminAccess`); **o que se faz lá
+dentro** vem do papel da pessoa — a coluna `admin_role` da tabela `users`,
+criada pela migration do pacote.
+
+### Os papéis são código
+
+Ficam em `config/admin.php` (`authorization.roles`) — mudar o que um papel
+pode é um diff revisado, não um clique. De fábrica:
+
+| Papel | O que pode |
+| --- | --- |
+| `owner` (o `super_role`) | tudo, sempre — e só ele concede o papel de dono |
+| `operations` | ver tudo; criar, editar, bloquear, desbloquear e excluir usuário; marcar e-mail verificado; revogar chave; aprovar, recusar e executar pedidos |
+| `support` | ver usuários, contas, projetos, chaves e pedidos; marcar e-mail verificado |
+| `auditor` | só leitura (`*.view`), inclusive a trilha e as configurações |
+
+Permissão = `<recurso>.<ação>`. O recurso é a chave do resource (o que vem
+depois de `admin.` no `$translationKey`: `users`, `api_keys`, `accounts`,
+`projects`, `uploads`, `request_logs`, `audit`, `approvals`; ou
+`$permissionKey`) ou de uma página (`settings`). A ação é `view`, `create`,
+`update`, `delete` ou o nome da Action em snake_case (`block`,
+`mark_email_verified`, `assign_role`, `revoke`, `approve`). O padrão aceita
+`*`: `users.*`, `*.view`, `*`. Um papel novo do projeto:
+
+```php
+// config/admin.php (publicado com --tag=admin-config)
+'authorization' => [
+    'enabled' => true,
+    'super_role' => 'owner',
+    'roles' => [
+        'owner' => ['*'],
+        'financeiro' => ['*.view', 'faturas.*', 'approvals.approve', 'approvals.reject'],
+        // ...
+    ],
+],
+```
+
+O rótulo na tela vem de `admin.roles.<papel>` nas traduções (o aplicativo
+acrescenta os dele no `lang/<idioma>/admin.php`); sem tradução, o nome do
+papel. Admin **sem papel** — ou com um papel que saiu da config — só vê os
+dashboards e o próprio perfil (deny-by-default).
+
+### Onde a permissão é conferida (no servidor)
+
+- **Toda chamada Livewire de tela do painel** (`Authorization\AdminAuthorization`,
+  pendurada no mesmo gancho da trilha de auditoria): antes de o componente
+  hidratar — antes até da recusa do próprio Filament — e de novo em cada
+  chamada. A tela exige a permissão dela (listagem e detalhe: `view`;
+  edição: `update`; criação: `create`), e cada Action (`mountAction`/
+  `callMountedAction`, inclusive aninhada) exige `<recurso>.<ação>`. Faltou:
+  **403** e a linha **`denied`** na trilha. Uma chamada forjada — o
+  `mountAction('block')` de quem não vê o botão, ou o snapshot de uma tela
+  aberta antes de perder o papel — tem o mesmo destino. Action de nome novo
+  nasce exigindo permissão própria (deny-by-default); só as de tela do
+  Filament e do kit (filtros, colunas, alternador) não pedem nada.
+- **A policy dos resources do kit** (`BaseResource::getAuthorizationResponse`):
+  ver/criar/editar/excluir somem para quem não pode — e, se o aplicativo tiver
+  uma policy para o model, ela também precisa deixar.
+- **As ações próprias da tabela** de um `BaseResource` somem sozinhas para
+  quem não tem `<recurso>.<ação>`. Ação de cabeçalho ou de página própria:
+  `AdminPermissions::guard($action, 'faturas.estornar')`.
+- **Página própria** do painel entra na mesma checagem implementando
+  `Authorization\Contracts\GuardedByPermission` (como `Pages\Settings`).
+
+Esconder o botão é conforto; a barreira é a checagem central.
+
+### Atribuir e retirar papel
+
+Na tela do usuário (detalhe e edição), **"Alterar papel"** — ação sensível em
+dois modais: o papel novo (ou "Sem acesso ao painel") + a senha de transação
+→ código por e-mail → `Authorization\AdminRoles::assign()`, que confere tudo
+de novo e consome o token. Fica na trilha como `user.role_changed` (de/para do
+papel e da flag). Regras (no serviço, não na tela):
+
+- quem atribui precisa de `users.assign_role`;
+- ninguém muda o próprio papel;
+- **sem escalada**: só se concede papel cujas permissões o próprio ator tem —
+  comparando os PADRÕES (quem tem só `users.view` e `users.update` não
+  concede `users.*`, que daria também as ações que ainda vão existir); o papel
+  de dono, só o dono concede;
+- ninguém mexe em quem tem um papel acima do seu;
+- o último dono ativo não é rebaixado, bloqueado nem excluído;
+- conta protegida é intocável.
+
+A flag "Admin" do formulário (entrada no painel) pede `users.assign_role`;
+tirá-la tira também o papel, e devolvê-la não devolve o papel antigo.
+
+**Migração sem perda de acesso:** quem já era `is_admin` vira `owner` na
+migration. Depois dela, `is_admin` sozinho dá só a entrada: o papel vem do
+`user:make-admin` (dono, ou `--role=`) ou da ação "Alterar papel". A factory
+de usuário dos starters dá o papel de dono a quem ela cria com `is_admin`
+(estado `->admin('support')` para outro papel).
+
+**Opt-out:** `ADMIN_AUTHORIZATION=false` volta ao tudo-ou-nada (todo admin
+pode tudo), com aviso no log a cada boot.
+
+## Aprovação em dois passos (quatro olhos)
+
+Para ação de alto impacto: em vez de executar, ela vira um **pedido**, e só
+executa quando aprovada (`Approvals\ApprovalService`).
+
+- **O pedido** guarda quem pediu, o quê (a chave da ação e o registro alvo,
+  pelo uuid), o antes/depois **redigido** (a mesma redação da trilha), os dados
+  para executar (**cifrados** em repouso), o motivo e a validade
+  (`ADMIN_APPROVALS_TTL_MINUTES`, 24 h). As guardas da ação valem já no
+  pedido.
+- **Modo quatro olhos** (padrão): outra pessoa, com `approvals.approve` e a
+  permissão da própria ação, aprova na tela **Aprovações** (grupo Segurança,
+  com os pendentes no menu) — com a ação sensível (senha de transação +
+  código; `ADMIN_APPROVALS_SENSITIVE=false` desliga, com aviso). **Quem pediu
+  nunca aprova o próprio pedido.** A aprovação executa na hora.
+- **Modo um operador** (`ADMIN_APPROVALS_MODE=single_operator`, para equipes
+  de uma pessoa, com aviso no log): o mesmo operador aprova, sempre com a ação
+  sensível, e **executa num segundo passo**, depois da espera mínima
+  (`ADMIN_APPROVALS_MIN_WAIT_MINUTES`, 15) e dentro da janela
+  (`ADMIN_APPROVALS_EXECUTION_WINDOW_MINUTES`, 24 h). Trocar a config não
+  afrouxa um pedido feito em quatro olhos.
+- **Uma execução só**: aprovar e executar travam o pedido
+  (`SELECT … FOR UPDATE`) e mudam a situação na mesma transação; duas
+  aprovações ao mesmo tempo → a segunda encontra o pedido decidido. O estado
+  do registro é **conferido de novo** na aprovação/execução: mudou depois do
+  pedido → o pedido fica **obsoleto** e nada executa. Falha na execução →
+  nada dela fica (ponto de salvamento) e o pedido vira `failed`, com a
+  mensagem redigida. Pedido vencido não é aprovado.
+- **Trilha**: `approval_request.created`, `.approved`, `.executed`,
+  `.failed`, `.rejected`, `.expired`, `.stale` (com o de/para da situação), as
+  linhas do próprio alvo na execução (`user.deleted`...) e toda recusa como
+  `denied` com o motivo.
+
+O kit traz um exemplo atrás de config: **excluir usuário**
+(`ADMIN_APPROVALS_ACTIONS=users.delete`) — as mesmas guardas do caminho
+direto, conferidas no pedido (com quem pede) e de novo na aprovação (com quem
+aprova: ninguém aprova a exclusão da própria conta). A demonstração
+(`twstec/kit-demo`) traz outro, **sempre ligado**: "Reajustar preço" de
+produto vira pedido com o valor novo (é o fluxo que o E2E percorre).
+
+Ação que exige aprovação **por natureza** declara
+`alwaysRequiresApproval(): true` na `ApprovableAction` — vale sem a config, e a
+config não a desliga (ela só acrescenta ações). A notificação do pedido feito
+pela tela traz o link dele. Pedido **encerrado** (executado, recusado,
+vencido, obsoleto ou com falha) pode ser excluído da tela por quem tem
+`approvals.delete` (de fábrica, só o dono) — o histórico continua na trilha
+(`approval_request.deleted`); pedido em aberto não sai, recusa-se antes.
+
+### Declarar uma ação que exige aprovação num resource novo
+
+1. **A ação** — uma classe que estende `Approvals\ApprovableAction`:
+
+```php
+use Twstec\Kit\Admin\Approvals\ApprovableAction;
+
+final class EstornarFatura extends ApprovableAction
+{
+    public function key(): string
+    {
+        return 'faturas.estornar'; // também a permissão de quem pede e de quem aprova
+    }
+
+    public function subjectModel(): string
+    {
+        return Fatura::class; // resolvido pelo uuid
+    }
+
+    public function label(): string
+    {
+        return __('admin.faturas.estornar');
+    }
+
+    /** A mesma guarda do caminho direto; conferida no pedido e na aprovação. */
+    public function denial(Model $fatura, array $data, Authenticatable $ator): ?string
+    {
+        return $fatura->estornada ? __('admin.faturas.ja_estornada') : null;
+    }
+
+    /** O que o aprovador lê (passa pela redação da trilha). */
+    public function changes(Model $fatura, array $data): array
+    {
+        return ['status' => ['before' => $fatura->status, 'after' => 'estornada']];
+    }
+
+    /** O estado que, se mudar até a aprovação, invalida o pedido. */
+    public function fingerprint(Model $fatura, array $data): array
+    {
+        return ['status' => $fatura->status, 'valor' => $fatura->valor];
+    }
+
+    public function execute(Model $fatura, array $data, Authenticatable $ator): void
+    {
+        app(Estornos::class)->estornar($fatura); // dentro da transação, sob a trava
+    }
+}
+```
+
+2. **O registro**, no provider do aplicativo:
+   `Approvals::register(EstornarFatura::class);`
+3. **A Action do Filament passa por `Approvals::gate()`** — o resto dela
+   continua igual (rótulo, confirmação, `before()` com as guardas):
+
+```php
+Approvals::gate(
+    Action::make('estornar')
+        ->requiresConfirmation()
+        ->action(fn (Fatura $record) => app(Estornos::class)->estornar($record)),
+    EstornarFatura::class,
+),
+```
+
+4. **Ligar** na config: `ADMIN_APPROVALS_ACTIONS=users.delete,faturas.estornar`.
+   Desligada, a Action executa como sempre; ligada, pede o motivo e cria o
+   pedido.
+
+Fora da tela (um comando, um job), o serviço é o mesmo:
+`app(ApprovalService::class)->request($chave, $registro, $dados, $motivo, $ator)`,
+`->approve($pedido, $aprovador, $tokenSensivel)`, `->reject(...)` e, no modo
+de um operador, `->execute(...)`. Toda recusa chega como `RecordedDenial`, já
+registrada na trilha.
 
 ## Dashboards: escolhendo e adaptando a sua variante
 
@@ -655,6 +880,14 @@ regras, cobradas pelo teste de arquitetura:
 - **recuse com `AdminAudit::denied($motivo, $record)`**: registra a
   tentativa como Recusada e mostra a notificação. `Notification::make()
   ->danger()` à mão reprova o build.
+
+**Os papéis também vêm de graça.** O resource novo entra nas permissões com
+a chave do prefixo de tradução (`admin.faturas` → `faturas.view`,
+`faturas.create`, `faturas.update`, `faturas.delete`, `faturas.<ação>`): a
+checagem central recusa no servidor o que o papel não dá e a tabela esconde
+o que não pode. Basta dar as permissões aos papéis em `config/admin.php` (o
+dono já tem tudo). Ação de alto impacto pode exigir aprovação em dois passos —
+ver [Declarar uma ação que exige aprovação](#declarar-uma-ação-que-exige-aprovação-num-resource-novo).
 
 Ajustes finos disponíveis por propriedade estática: `$defaultSortColumn` /
 `$defaultSortDirection` (`null` na coluna = o resource ordena sozinho, como

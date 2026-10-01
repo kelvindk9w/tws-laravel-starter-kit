@@ -4,6 +4,83 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+## [2.0.0-beta.8] — 2026-10-01
+
+Papéis e permissões no `/admin` e aprovação em dois passos (quatro olhos).
+
+Para a **2.0.0-beta.8**: o `/admin` deixa de ser tudo-ou-nada — cada pessoa
+tem um papel com permissões por tela e por ação, conferidas no servidor — e
+ganha uma primitiva genérica de aprovação em dois passos para ações de alto
+impacto (#21).
+
+### Adicionado
+
+- **Papéis do `/admin`** (#21), no `twstec/kit-admin`, ligados pelo pacote:
+  coluna `admin_role` em `users` (migration do pacote) e papéis declarados em
+  `admin.authorization.roles` — `owner` (tudo), `operations`, `support` e
+  `auditor` (só leitura) de fábrica, editáveis pelo projeto. Permissão =
+  `<recurso>.<ação>` (`users.block`, `settings.update`, `approvals.approve`),
+  com curinga (`users.*`, `*.view`). Entrar no painel continua sendo
+  `is_admin` + conta ativa; admin sem papel só vê os dashboards e o perfil.
+- **Checagem no servidor, em toda chamada Livewire do painel**
+  (`Authorization\AdminAuthorization`, pelo gancho da trilha de auditoria):
+  a tela e cada Action, inclusive a chamada forjada a um botão que não
+  aparece, exigem a permissão; faltou, a resposta é 403 e a tentativa fica na
+  trilha como `denied`. A conferência acontece antes de o componente hidratar
+  (antes até da recusa do próprio Filament) e de novo em cada chamada. Os
+  resources do kit (`BaseResource`) passam a respeitar os papéis também na
+  policy do Filament (ver/criar/editar/excluir somem para quem não pode) e
+  escondem as ações próprias da tabela sem permissão; a página de
+  Configurações pede `settings.view`/`settings.update`.
+- **Atribuir/retirar papel** é ação sensível (senha de transação + código
+  por e-mail, o mecanismo do `twstec/kit-auth`), na tela do usuário, auditada
+  como `user.role_changed`, e sem escalada: ninguém concede papel com
+  permissão que não tem (comparação de padrões, não da lista de hoje), ninguém
+  muda o próprio papel, ninguém mexe em quem tem um papel acima do seu, e o
+  último dono ativo não é rebaixado, bloqueado nem excluído.
+- **Aprovação em dois passos** (`Approvals\ApprovalService`): uma
+  `ApprovableAction` registrada (`Approvals::register()`) e listada em
+  `ADMIN_APPROVALS_ACTIONS` não executa — vira um pedido pendente com quem
+  pediu, o quê, o antes/depois redigido, o motivo, os dados cifrados e a
+  validade. Modo **quatro olhos** (padrão): outra pessoa com
+  `approvals.approve` e a permissão da ação aprova, com a ação sensível
+  (desligável com aviso), e a ação executa na hora. Modo **um operador**
+  (`ADMIN_APPROVALS_MODE=single_operator`, com aviso): o mesmo operador
+  aprova só com a ação sensível e executa num segundo passo, depois de uma
+  espera mínima. A execução acontece uma vez, sob trava do pedido
+  (`SELECT … FOR UPDATE`), com o estado do registro conferido de novo
+  (mudou → pedido obsoleto); falha desfaz a execução e deixa o pedido
+  `failed`; pedido vence. Pedido, aprovação, recusa, execução, falha e
+  vencimento ficam na trilha. Tela "Aprovações" no grupo Segurança, com os
+  pendentes no menu.
+- O exemplo do kit: **excluir usuário** com aprovação, atrás de config
+  (`ADMIN_APPROVALS_ACTIONS=users.delete`), com as mesmas guardas do caminho
+  direto conferidas no pedido e de novo na aprovação.
+- `ApprovableAction::alwaysRequiresApproval()` para ação que exige aprovação
+  por natureza (a config só acrescenta); a notificação do pedido traz o link
+  dele; pedido encerrado pode ser excluído por quem tem `approvals.delete`
+  (o histórico fica na trilha).
+- Na demonstração (`twstec/kit-demo`): "Reajustar preço" de produto, sempre
+  com aprovação em dois passos — o fluxo que o E2E percorre de ponta a ponta,
+  criando e apagando os próprios dados.
+- `user:make-admin` aceita `--role=` (padrão: o papel de dono); a factory de
+  usuário dos starters ganhou o estado `admin($role)`.
+
+### Mudado
+
+- **Quem já é `is_admin` vira dono (`owner`) na migration** — nenhum
+  administrador existente perde acesso no deploy. Depois dela, `is_admin`
+  sozinho dá só a entrada no painel: o papel vem do `user:make-admin` ou da
+  ação "Alterar papel". Seeder ou código do aplicativo que promove admin
+  gravando só `is_admin` precisa gravar também `admin_role` (a factory dos
+  starters faz isso sozinha).
+- A flag "Admin" do formulário de usuário pede `users.assign_role`; tirá-la
+  tira também o papel, e devolvê-la não devolve o papel antigo.
+- O papel no painel entrou nos campos blindados das contas demo
+  (`twstec/kit-demo`, com o gatilho do PostgreSQL reinstalado).
+
 ## [2.0.0-beta.7] — 2026-10-01
 
 Rastreio de ponta a ponta: identificador de correlação nas filas e nas chamadas HTTP de saída.
@@ -1089,7 +1166,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.6...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.8...desenvolvimento
+[2.0.0-beta.8]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.8
 [2.0.0-beta.7]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.7
 [2.0.0-beta.6]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.6
 [2.0.0-beta.5]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.5

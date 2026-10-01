@@ -44,6 +44,9 @@ class DemoAdminSeeder extends Seeder
                 'password' => Hash::make((string) config('ui.demo_admin.password')),
                 'email_verified_at' => $user->email_verified_at ?? now(),
                 'is_admin' => true,
+                // Dono do painel (papel de `admin.authorization.super_role`):
+                // a demonstração mostra o painel inteiro.
+                'admin_role' => (string) config('admin.authorization.super_role', 'owner'),
             ])->save();
         });
 

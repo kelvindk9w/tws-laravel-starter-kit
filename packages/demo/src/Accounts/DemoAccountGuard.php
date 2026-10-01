@@ -38,7 +38,7 @@ use Twstec\Kit\Demo\Support\DemoSurface;
  * precisa conseguir trocar o próprio nome, subir uma foto, mudar o idioma e
  * o tema — é isso que se está demonstrando. O corte é por CONSEQUÊNCIA:
  *
- *   BLOQUEADO  email, password, is_admin, status, two_factor_enabled_at
+ *   BLOQUEADO  email, password, is_admin, admin_role, status, two_factor_enabled_at
  *              → mudam QUEM entra e COM QUAL poder. Trocar qualquer um
  *                deles derruba o acesso do próximo visitante. O último é a
  *                verificação em duas etapas do login: ligada numa conta de
@@ -68,7 +68,7 @@ final class DemoAccountGuard
      *
      * @var list<string>
      */
-    public const SENSITIVE_ATTRIBUTES = ['email', 'password', 'is_admin', 'status', 'two_factor_enabled_at'];
+    public const SENSITIVE_ATTRIBUTES = ['email', 'password', 'is_admin', 'admin_role', 'status', 'two_factor_enabled_at'];
 
     /**
      * Chave de sessão do PostgreSQL que desliga o trigger. Quem escreve nela:

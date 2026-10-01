@@ -81,6 +81,7 @@ it('traz as migrations dela, com os mesmos nomes de arquivo de antes do pacote',
         '2026_09_05_000002_protect_demo_users_with_trigger.php',
         '2026_09_23_000001_protect_demo_users_from_truncate.php',
         '2026_09_24_000003_protect_demo_users_two_factor_column.php',
+        '2026_10_01_100002_protect_demo_users_admin_role_column.php',
     ])
         ->and(app('migrator')->paths())->toContain(dirname(__DIR__, 2).'/database/migrations');
 

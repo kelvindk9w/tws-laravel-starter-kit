@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Twstec\Kit\Demo\Filament\Resources\Products;
 
 use BackedEnum;
+use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
@@ -22,8 +24,10 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
+use Twstec\Kit\Admin\Approvals\Approvals;
 use Twstec\Kit\Admin\Support\AdminColumns;
 use Twstec\Kit\Admin\Support\BaseResource;
+use Twstec\Kit\Demo\Catalog\Approvals\RepriceProduct;
 use Twstec\Kit\Demo\Catalog\Models\Product;
 use Twstec\Kit\Demo\Filament\Resources\Products\Pages\CreateProduct;
 use Twstec\Kit\Demo\Filament\Resources\Products\Pages\EditProduct;
@@ -86,21 +90,7 @@ final class ProductResource extends BaseResource
                     // (seria crédito, não produto) e zero também é recusado —
                     // item gratuito é uma decisão comercial explícita, não o
                     // resultado de um campo deixado em branco. Mínimo: 1 centavo.
-                    ->rule(function (): \Closure {
-                        return function (string $attribute, mixed $value, \Closure $fail): void {
-                            try {
-                                $cents = Money::parse((string) $value);
-                            } catch (Throwable) {
-                                $fail(__('admin.products.price_invalid'));
-
-                                return;
-                            }
-
-                            if ($cents <= 0) {
-                                $fail(__('admin.products.price_positive'));
-                            }
-                        };
-                    }),
+                    ->rule(self::priceRule()),
                 Textarea::make('description')
                     ->label(__('admin.products.description'))
                     ->rows(4)
@@ -169,6 +159,60 @@ final class ProductResource extends BaseResource
         ];
     }
 
+    /**
+     * Regra do catálogo (decisão documentada): o valor precisa ser MAIOR QUE
+     * ZERO. Negativo não existe em catálogo (seria crédito, não produto) e
+     * zero também é recusado — item gratuito é uma decisão comercial
+     * explícita, não o resultado de um campo deixado em branco. Mínimo: 1
+     * centavo. A mesma regra no cadastro e no reajuste.
+     */
+    private static function priceRule(): Closure
+    {
+        return function (): Closure {
+            return function (string $attribute, mixed $value, Closure $fail): void {
+                try {
+                    $cents = Money::parse((string) $value);
+                } catch (Throwable) {
+                    $fail(__('admin.products.price_invalid'));
+
+                    return;
+                }
+
+                if ($cents <= 0) {
+                    $fail(__('admin.products.price_positive'));
+                }
+            };
+        };
+    }
+
+    /**
+     * REAJUSTAR PREÇO — a aprovação em dois passos na demonstração: sempre
+     * vira pedido (RepriceProduct::alwaysRequiresApproval), com o valor novo
+     * e o motivo; outra pessoa aprova na tela "Aprovações". A mesma definição
+     * na listagem e na edição.
+     */
+    public static function repriceAction(): Action
+    {
+        return Approvals::gate(
+            Action::make('reprice')
+                ->label(__('admin.products.reprice'))
+                ->icon(Heroicon::OutlinedCurrencyDollar)
+                ->color('warning')
+                ->modalHeading(__('admin.products.reprice_heading'))
+                ->schema([
+                    TextInput::make('price')
+                        ->label(__('admin.products.new_price'))
+                        ->helperText(__('admin.products.price_hint'))
+                        ->required()
+                        ->rule(self::priceRule())
+                        ->dehydrateStateUsing(fn (string $state): int => Money::parse($state)),
+                ])
+                // Sem aprovação (nunca, para esta ação): o reajuste direto.
+                ->action(fn (Product $record, array $data): bool => $record->forceFill(['price' => (int) $data['price']])->save()),
+            RepriceProduct::class,
+        );
+    }
+
     private static function priceColumn(): TextColumn
     {
         return TextColumn::make('price')
@@ -199,6 +243,7 @@ final class ProductResource extends BaseResource
             ])
             ->recordActions([
                 EditAction::make(),
+                self::repriceAction(),
                 DeleteAction::make()
                     ->successNotificationTitle(__('admin.products.deleted')),
             ]);

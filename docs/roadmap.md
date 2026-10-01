@@ -1,9 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-01, com a versão **2.0.0-beta.6** publicada e a
-> **2.0.0-beta.7** em preparação (correlation id seguindo a operação pela fila
-> e pelas chamadas HTTP de saída, com trilha redigida das chamadas — ver o
-> [CHANGELOG](../CHANGELOG.md), "Não publicado").
+> Atualizado em 2026-10-01, com a versão **2.0.0-beta.8** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -25,6 +22,7 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Dinheiro que calcula sem float: percentual com arredondamento explícito, rateio sem perder centavo, checagem de moeda e de estouro | pronto (2.0.0-beta.6) |
 | Travas de arquitetura no projeto criado (`strict_types`, `env()` só em `config/`, models sem interface, `BelongsToAccount`) | pronto (2.0.0-beta.6) |
 | Correlation id de ponta a ponta: requisição → job da fila (cadeia, lote, agendador) → chamada HTTP de saída, com trilha só-acréscimo e redigida das chamadas de saída | pronto (2.0.0-beta.7) |
+| `/admin` com papéis e permissões por tela e por ação (conferidas no servidor, com recusa na trilha) e aprovação em dois passos — quatro olhos ou um operador — para ações de alto impacto | pronto (2.0.0-beta.8) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
@@ -50,7 +48,10 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    do backup ignoradas com `config:cache` e travas que não chegavam ao
    projeto criado (#32) — resolvidos na 2.0.0-beta.6. Depois, rastrear uma
    operação de ponta a ponta (#25): o correlation id não acompanhava o job
-   nem a chamada ao serviço externo — resolvido na 2.0.0-beta.7. Falta usar por
+   nem a chamada ao serviço externo — resolvido na 2.0.0-beta.7. E separar
+   funções na equipe de operação (#21): o `/admin` era tudo-ou-nada e não
+   havia como exigir que uma ação de alto impacto fosse aprovada por outra
+   pessoa — resolvido na 2.0.0-beta.8. Falta usar por
    algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
@@ -98,8 +99,12 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
 - **Autenticação avançada:** app autenticador (TOTP), chaves de acesso
   (passkeys) e gestão de sessões.
 - **Webhooks de saída** assinados, com reenvio e painel de entregas.
-- **Contas avançadas:** papéis customizáveis, SSO corporativo, auditoria por
+- **Contas avançadas:** papéis customizáveis nas contas dos clientes (os do
+  `/admin` já são, desde a 2.0.0-beta.8), SSO corporativo, auditoria por
   membro exportável.
+- **Aprovações:** aviso a quem pode aprovar (e-mail/notificação) quando um
+  pedido chega, e a varredura agendada que marca como vencidos os pedidos
+  esquecidos (hoje o vencimento é conferido na tentativa e mostrado na tela).
 - **Demo pública hospedada** com banco efêmero ou reset periódico (a senha do
   admin demo é pública por desenho).
 - **Backup contínuo do PostgreSQL** (arquivamento de WAL / PITR), além do
