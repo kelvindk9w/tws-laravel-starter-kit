@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-01, com a versão **2.0.0-beta.9** publicada.
+> Atualizado em 2026-10-01, com a versão **2.0.0-beta.10** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -24,6 +24,7 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Correlation id de ponta a ponta: requisição → job da fila (cadeia, lote, agendador) → chamada HTTP de saída, com trilha só-acréscimo e redigida das chamadas de saída | pronto (2.0.0-beta.7) |
 | `/admin` com papéis e permissões por tela e por ação (conferidas no servidor, com recusa na trilha) e aprovação em dois passos — quatro olhos ou um operador — para ações de alto impacto | pronto (2.0.0-beta.8) |
 | Segundo fator obrigatório por configuração (todos ou só administradores, no painel e no `/admin`, com carência opcional e recusa de desligar na trilha) e cadastro público desligável | pronto (2.0.0-beta.9) |
+| Uploads confidenciais cifrados em repouso (chave própria, rotação sem indisponibilidade, trilha de cada acesso), retenção legal que segura o apagamento na exclusão do titular e impedimentos de exclusão declarados pelo aplicativo (recusa limpa, nunca o erro bruto do banco) | pronto (2.0.0-beta.10) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
@@ -55,7 +56,11 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    pessoa — resolvido na 2.0.0-beta.8. Por fim, exigir o segundo fator de
    quem opera (#22): ele era opcional por conta, o `/admin` não o cobrava e
    não havia como fechar o cadastro público para um produto só por convite
-   — resolvido na 2.0.0-beta.9. Falta usar por
+   — resolvido na 2.0.0-beta.9. Depois, guardar documentos de clientes
+   (#23): o arquivo ficava em claro no armazenamento, abrir não deixava
+   rastro, excluir a conta apagava o que a lei manda guardar, e excluir uma
+   conta referenciada por registro do aplicativo que a lei manda manter
+   estourava o erro bruto do banco — resolvido na 2.0.0-beta.10. Falta usar por
    algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
@@ -92,7 +97,18 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
 - **Até 10 projetos simultâneos por centena de portas** (números 0–9); acima
   disso o instalador passa para a centena seguinte (818N, 812N…).
 - **Tirar um módulo não apaga as tabelas dele** do banco.
-- **Uploads em disco que não sabe assinar URL** caem em URL comum.
+- **Uploads em disco que não sabe assinar URL** caem em URL comum (os
+  confidenciais não: saem sempre pela rota da aplicação).
+- **Link de documento confidencial é credencial durante a validade** (5
+  minutos por padrão): quem o receber abre enquanto quem o gerou mantiver o
+  acesso — cada abertura fica na trilha, com o IP de quem abriu.
+- **Perder a chave dos uploads confidenciais é perder os arquivos**: o
+  backup do armazenamento guarda só o cifrado.
+- **`ext-sodium` não declarada no `composer.json` do `twstec/kit-uploads`**
+  (declarar exigiria refazer os locks dos starters): a extensão é conferida em
+  tempo de execução — sem ela, o upload confidencial é recusado com a mensagem
+  que diz para instalá-la, e o boot de produção avisa. Vem no PHP oficial e na
+  imagem do kit; os uploads comuns não dependem dela.
 - **Durante o beta**, quem instala um pacote avulso precisa de `@beta` em
   cada pacote do kit.
 
@@ -106,6 +122,10 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
 - **Contas avançadas:** papéis customizáveis nas contas dos clientes (os do
   `/admin` já são, desde a 2.0.0-beta.8), SSO corporativo, auditoria por
   membro exportável.
+- **Telas de documentos confidenciais e guarda legal no painel do cliente**
+  (Livewire e React): hoje só o `/admin` lista, abre confidenciais e põe ou
+  tira a guarda; o projeto monta as telas do cliente sobre a API do
+  `twstec/kit-uploads`.
 - **Aprovações:** aviso a quem pode aprovar (e-mail/notificação) quando um
   pedido chega, e a varredura agendada que marca como vencidos os pedidos
   esquecidos (hoje o vencimento é conferido na tentativa e mostrado na tela).

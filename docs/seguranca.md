@@ -70,6 +70,34 @@ não os declara. A ordem é conferida por teste na suíte do pacote.
    sensíveis (login, códigos 2FA/verificação) usam `throttle:sensitive` (5/min padrão). Valores
    em `config/security.php`.
 
+## Documentos confidenciais: cifra em repouso, trilha de acesso e guarda legal
+
+Para documento de identificação, contrato ou comprovante, o `twstec/kit-uploads`
+tem a classificação **`confidential`** ([detalhes em uploads.md](uploads.md#uploads-confidenciais)):
+
+- **cifra antes de gravar** (libsodium secretstream, XChaCha20-Poly1305, AEAD, em blocos de
+  64 KB): o armazenamento só vê o cifrado; cada arquivo é amarrado ao seu registro (o
+  objeto de outro upload posto no lugar não decifra); corte, sobra ou bit trocado não decifram;
+- **chave própria** (`UPLOADS_ENCRYPTION_KEY`, gerada por `php artisan uploads:encryption-key`),
+  nunca a `APP_KEY` (igual a ela conta como ausente), com o **id da versão** no cabeçalho de cada
+  arquivo e **rotação sem indisponibilidade** (`--rotate` + `uploads:reencrypt`, idempotente e
+  retomável);
+- **falha fechada**: sem chave utilizável, o upload confidencial é recusado (nada grava) e a
+  entrega responde 503; em produção, aviso no log a cada boot. A chave nunca vai para log;
+- **trilha de acesso no banco**: gerar a URL, visualizar e baixar (painel, API e `/admin`),
+  inclusive as recusas, com ator, conta, arquivo e contexto — antes de a URL existir e antes do
+  primeiro byte. A URL é curta, assinada e amarrada a quem a gerou; quem perde o acesso não abre
+  mais (404). No `/admin`, abrir pede `uploads.view_confidential` (fora de `*.view`);
+- **guarda legal** ("guardar até"): a exclusão do titular segue, o arquivo guardado fica
+  desvinculado e a recusa de apagá-lo vai para a trilha; vencido o prazo, um comando agendado
+  apaga ([uploads.md](uploads.md#retenção-legal-guardar-até));
+- **impedimentos de exclusão** declarados pelo aplicativo e recusa limpa quando um registro do
+  aplicativo aponta para a conta/pessoa com chave estrangeira `RESTRICT`
+  ([tenancy.md](tenancy.md#impedimentos-de-exclusão)) — nunca o erro bruto do banco, nada
+  apagado pela metade.
+
+A assinatura de URLs assinadas (`signature`) passa a ser mascarada na trilha de requisições.
+
 ## Filtro de ataques: modo `observe` (padrão) e modo `block`
 
 **A defesa primária contra injeção e XSS é o framework, não o filtro.** Eloquent e o Query

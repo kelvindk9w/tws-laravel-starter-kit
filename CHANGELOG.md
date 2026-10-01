@@ -6,6 +6,156 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.10] — 2026-10-01
+
+Uploads confidenciais, retenção legal e impedimentos de exclusão.
+
+Para a **2.0.0-beta.10**: documentos de identificação, contratos e
+comprovantes passam a ser cifrados antes de ir ao armazenamento, com chave
+própria e trilha de cada acesso; um upload pode ser guardado por obrigação
+legal mesmo quando o titular pede a exclusão; e o aplicativo ganha um jeito de
+declarar por que uma pessoa ou uma conta não pode ser excluída agora — em vez
+do erro bruto do banco (#23).
+
+### Adicionado
+
+- **Classificação por finalidade** (#23), no `twstec/kit-uploads`: `public`,
+  `private` (padrão — o comportamento de sempre) e `confidential`, declarada
+  pelo projeto em cada chamada do `SecureUploadService` (`classification:`)
+  ou pelo padrão `UPLOADS_DEFAULT_CLASSIFICATION`. Valor desconhecido é erro,
+  nunca rebaixamento silencioso. O `/admin` mostra a classificação, com
+  filtro.
+- **Uploads confidenciais cifrados em repouso**: o conteúdo é cifrado ANTES de
+  ir ao armazenamento (libsodium secretstream, XChaCha20-Poly1305, AEAD), em
+  blocos de 64 KB — o arquivo inteiro nunca precisa estar em memória e o texto
+  claro nunca vai para arquivo temporário. Cada bloco é autenticado com o
+  cabeçalho e o uuid do registro: bit trocado, corte, bytes a mais ou o objeto
+  de outro upload posto no lugar não decifram, e nada que não autentica sai.
+  O caminho no armazenamento termina em `.enc`.
+- **Chave própria, separada da `APP_KEY`**: `UPLOADS_ENCRYPTION_KEY`, gerada
+  por `php artisan uploads:encryption-key` (grava no `.env`; `--show` só
+  mostra; recusa sobrescrever uma chave existente). O identificador da versão
+  da chave (derivado dela, sem revelá-la) vai no cabeçalho de cada arquivo e
+  em `uploads.encryption_key_id`. **Falha fechada**: sem a extensão sodium,
+  sem chave, com chave inválida ou igual à `APP_KEY`, o upload confidencial é
+  recusado antes de ler o arquivo (503, nada grava) e a entrega responde 503;
+  em produção o boot avisa no log a cada subida — o motivo, nunca a chave.
+- **Rotação sem indisponibilidade**: `uploads:encryption-key --rotate` (a
+  atual vira anterior, em `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`, e continua
+  decifrando) e `uploads:reencrypt`, que recifra bloco a bloco num objeto
+  novo, confere o sha256, troca o registro numa atualização condicional e
+  apaga o antigo — idempotente, retomável, uma rodada por vez, com o que falha
+  ficando como estava (e o comando saindo com erro). No fim, diz quando as
+  chaves anteriores podem sair. A rodada vai para a trilha
+  (`upload.reencrypted`).
+- **Entrega e trilha de acesso dos confidenciais**: `Upload::url()` de um
+  confidencial devolve a rota `uploads.confidential` (registrada pelo pacote,
+  sem sessão, limitada por IP), com URL assinada de `UPLOADS_CONFIDENTIAL_URL_MINUTES`
+  (5) amarrada ao upload, à conta, a quem a gerou e ao contexto; na entrega a
+  regra é conferida de novo (quem gerou ainda existe, está ativo e é membro da
+  conta — no `/admin`, ainda é admin). Gerar a URL, visualizar e baixar gravam
+  `upload.confidential_url_issued`, `upload.confidential_viewed` e
+  `upload.confidential_downloaded` no banco — ator, conta, arquivo, contexto
+  (`panel`, `api`, `admin`), IP — antes de a URL existir e antes do primeiro
+  byte; as recusas também (outra conta, quem perdeu o acesso: 404; URL
+  adulterada ou vencida: 403; sem chave: 503).
+- **`/admin`**: "Abrir documento confidencial" com permissão própria
+  `uploads.view_confidential` (fora de `*.view` — o auditor vê a lista, não o
+  documento), a URL gerada no clique; colunas de classificação e "guardar
+  até"; tipo de dono "Retido (guarda legal)"; ações "Guarda legal" e "Tirar a
+  guarda legal" (permissão `uploads.legal_hold`).
+- **Retenção legal ("guardar até")**: `Retention\LegalHold::place()` /
+  `release()`, com o prazo e o motivo, na trilha (`upload.legal_hold_placed`,
+  `upload.legal_hold_released`). Enquanto vale: a **exclusão** do dono (pessoa
+  ou conta) segue, e o upload guardado é **desvinculado** — sem conta, sem
+  autor, nome original trocado pelo código público — com a recusa de apagá-lo
+  na trilha (`upload.erasure_refused`, `denied`, com o código, o prazo, o
+  motivo e a conta de onde saiu); `delete()` direto é recusado
+  (`UploadUnderLegalHoldException`, com a trilha); a limpeza não o toca.
+  Vencido o prazo, `uploads:erase-expired-holds` — agendado pelo pacote
+  (`UPLOADS_LEGAL_HOLD_SCHEDULE`, `50 3 * * *`; vazio desliga, com aviso) —
+  apaga registro e arquivo. Com `UPLOADS_LEGAL_HOLD_BLOCKS_DELETION=true`, a
+  guarda vira impedimento: a exclusão é recusada inteira.
+- **Impedimentos de exclusão** (`twstec/kit-accounts`): o aplicativo declara
+  verificadores (`Deletion\Contracts\DeletionCheck`, em
+  `accounts.deletion.checks` ou registrados em código) que dizem se e por que
+  uma pessoa ou uma conta não pode ser excluída agora — consultados ANTES de
+  qualquer linha sair. Havendo impedimento, a exclusão é recusada inteira
+  (`DeletionImpededException`, mensagem traduzida, nada apagado pela metade),
+  com a recusa na trilha — que fica mesmo quando quem chamou desfaz a
+  transação em volta. Na página da conta (Livewire e React), a recusa vem na
+  pré-checagem, antes de pedir o código, junto do botão; no `/admin`, a ação
+  de excluir usuário some com o motivo.
+- **Recusa limpa para registro do aplicativo não declarado**: a exclusão da
+  conta (página da conta) e da pessoa (`/admin`) rodam num savepoint, e a
+  recusa do banco por chave estrangeira (`RESTRICT`/`NO ACTION`, PostgreSQL,
+  SQLite e MySQL) vira a mesma recusa limpa ("há registros que ainda dependem
+  desta conta"), com a transação desfeita, `denied` na trilha e
+  `accounts.deletion.undeclared_reference` no log — nunca o erro bruto.
+- **Excluir usuário com aprovação em dois passos** respeita os impedimentos
+  em cada passo: com impedimento declarado, o pedido nem nasce; impedimento
+  surgido depois recusa a aprovação; na execução (quatro olhos ou o segundo
+  passo do um operador), a recusa que só aparece na hora — impedimento novo
+  ou `RESTRICT` do aplicativo não declarado — deixa o pedido `failed` com a
+  mensagem traduzida (sem nome de classe nem texto do banco), nada apagado e
+  `user.deleted` `denied` na trilha. A primitiva ganhou
+  `Approvals\ExecutionRefused` para qualquer ação recusar assim.
+- **O instalador gera a chave dos uploads confidenciais**: `tws:install` e
+  `tws:add uploads` (e, por eles, o `composer create-project twstec/kit` e o
+  caminho só com o Docker) gravam `UPLOADS_ENCRYPTION_KEY` no `.env` quando
+  o módulo de uploads entra — nunca impressa, e a que já existe nunca é
+  trocada. Sem `.env` nem `.env.example`, o aviso traz a instrução
+  (`php artisan uploads:encryption-key`).
+- **Sem a extensão sodium**, a recusa do upload confidencial, o aviso de boot
+  em produção e o `uploads:encryption-key` dizem isso com todas as letras
+  (instalar a `ext-sodium`), em vez de "cifra não configurada".
+
+### Mudado
+
+- "Exclusão" (do titular: pessoa, conta) e "apagamento" (do registro e do
+  arquivo) viram conceitos separados na documentação e no código: a exclusão
+  pede o apagamento do que é do titular, menos o que está sob guarda legal.
+- A chave estrangeira `uploads.account_id` passa de `CASCADE` para `SET NULL`
+  (migration `2026_10_01_000001_add_classification_and_legal_hold_to_uploads`):
+  o banco não leva junto o que está guardado; quem apaga é sempre o pacote,
+  explicitamente. Upload que ficou sem conta sem passar pelo pacote conta como
+  órfão na limpeza.
+- `DeleteAccount::authorize()` também confere os impedimentos de exclusão, e
+  `AccountService::deleteAccount()` recusa quando há um.
+- A assinatura de URLs assinadas (`signature`) passa a ser mascarada na
+  trilha de requisições.
+- Variáveis novas no `.env.example` (e a chave no `.env.prod.example`) dos
+  dois starters e no `config/uploads.php`: `UPLOADS_DEFAULT_CLASSIFICATION`,
+  `UPLOADS_ENCRYPTION_KEY`, `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`,
+  `UPLOADS_CONFIDENTIAL_URL_MINUTES`, `UPLOADS_CONFIDENTIAL_RATE_LIMIT`,
+  `UPLOADS_LEGAL_HOLD_BLOCKS_DELETION`, `UPLOADS_LEGAL_HOLD_SCHEDULE`.
+
+### Atualizando da 2.0.0-beta.9
+
+1. Atualize os pacotes e rode `php artisan migrate`: todo upload existente
+   vira `private` e continua exatamente como era (mesmo caminho, mesma URL
+   assinada). A migration é reversível; a volta recusa enquanto houver
+   upload confidencial (cifrado) ou desvinculado sob guarda.
+2. Se o projeto vai receber documentos confidenciais: `php artisan
+   uploads:encryption-key` no desenvolvimento (projeto novo criado pelo kit já
+   vem com ela; num projeto existente, o `tws:install` também a gera) e, em
+   produção, a chave do
+   `--show` no cofre de segredos e em `UPLOADS_ENCRYPTION_KEY` de todos os
+   serviços PHP. Sem ela, nada muda para os uploads comuns; só o confidencial
+   é recusado (e o boot de produção avisa).
+3. Marque os envios confidenciais com `classification:
+   UploadClassification::Confidential` (ou mude o padrão do projeto).
+4. Se o aplicativo tem tabelas que apontam para `accounts` ou `users` com
+   chave estrangeira `RESTRICT`, declare um verificador em
+   `accounts.deletion.checks` — a mensagem fica melhor e a recusa vem antes de
+   pedir o código (sem declarar, a recusa limpa já acontece na hora).
+5. Papéis do `/admin` do projeto: abrir confidencial e mexer na guarda legal
+   pedem `uploads.view_confidential` e `uploads.legal_hold`, que `*.view` não
+   cobre — acrescente aos papéis que devem tê-las (o `owner` já tem).
+6. A cópia do aplicativo de `config/uploads.php` (se publicada) não precisa
+   mudar: as chaves novas de primeiro nível vêm do pacote. Os dois starters já
+   trazem as seções novas.
+
 ## [2.0.0-beta.9] — 2026-10-01
 
 Segundo fator obrigatório por configuração e interruptor do cadastro público.
@@ -1249,7 +1399,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.9...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.10...desenvolvimento
+[2.0.0-beta.10]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.10
 [2.0.0-beta.9]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.9
 [2.0.0-beta.8]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.8
 [2.0.0-beta.7]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.7

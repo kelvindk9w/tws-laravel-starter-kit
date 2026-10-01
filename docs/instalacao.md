@@ -104,8 +104,9 @@ Depois, sem perguntar mais nada:
    `post-root-package-install` (o `.env`), `composer update` e
    `post-create-project-cmd`, que chama o instalador do starter
    (`php artisan tws:install --graceful`) com a escolha no ambiente — ele não
-   pergunta de novo, gera a `APP_KEY` e, com contas, o pepper dedicado das
-   chaves de API, e grava no `.env` o Docker de desenvolvimento do projeto (o
+   pergunta de novo, gera a `APP_KEY`, com contas o pepper dedicado das
+   chaves de API e, com uploads, a chave dos uploads confidenciais
+   (`UPLOADS_ENCRYPTION_KEY`, nunca impressa), e grava no `.env` o Docker de desenvolvimento do projeto (o
    nome e o número vão em `TWS_KIT_NAME`/`TWS_KIT_SLOT`);
 5. o resumo: o endereço do site e dos e-mails e o `docker compose up -d`, que
    cria o banco e roda as migrations. (Num starter sem o `compose.yaml` de
@@ -381,8 +382,9 @@ aplica `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`, se estiverem no ambiente
 (`TWS_KIT_WITHOUT=admin composer create-project …`). O
 projeto nasce **sem a demonstração** (ela não é publicada: o `composer.json`
 publicado do starter não a cita): `/` é a página inicial do produto e os
-testes da demo pulam sozinhos. Depois dele, o projeto tem a `APP_KEY` e, com o módulo de
-contas, um pepper dedicado para as chaves de API. As migrations rodam se o
+testes da demo pulam sozinhos. Depois dele, o projeto tem a `APP_KEY`, com o módulo de
+contas um pepper dedicado para as chaves de API e, com o de uploads, a chave própria dos
+uploads confidenciais (`UPLOADS_ENCRYPTION_KEY` — guarde uma cópia no cofre de segredos). As migrations rodam se o
 banco do `.env` estiver acessível; senão, ficam para depois
 (`php artisan migrate`) — o `.env.example` aponta para o PostgreSQL do
 `docker-compose.yml`.
@@ -420,7 +422,8 @@ cd meu-app && npm install && npm run build
 Como no Livewire, o `post-create-project-cmd` cria o SQLite local e chama o
 instalador (`php artisan tws:install --graceful`): num terminal ele pergunta
 os módulos opcionais (contas, uploads, `/admin`); sem terminal, mantém todos.
-Gera a `APP_KEY` e, com contas, o pepper dedicado das chaves de API. O React
+Gera a `APP_KEY`, com contas o pepper dedicado das chaves de API e, com
+uploads, a chave dos uploads confidenciais (`UPLOADS_ENCRYPTION_KEY`). O React
 não tem a demonstração, então ela nunca é perguntada. Enquanto a publicação
 não é ligada, o CI simula exatamente isso a partir dos pacotes empacotados
 (`STARTER=react sh .github/release/simulate-install.sh`).
@@ -532,7 +535,7 @@ recusados **antes** de mexer em qualquer coisa.
    primeiro uso ([API](api.md)).
 6. `php artisan migrate --force`.
 7. Resumo: módulos (instalado, instalado agora, removido, não instalado),
-   `APP_KEY`, pepper, migrations e os próximos passos — recompilar o front
+   `APP_KEY`, pepper, chave dos uploads confidenciais, migrations e os próximos passos — recompilar o front
    (`npm install && npm run build`), `migrate:fresh` num banco de
    desenvolvimento que tinha a massa fictícia da demo, e o aviso do `/horizon`
    sem o `/admin`.
@@ -611,7 +614,8 @@ aplicativo tem e os que faltam, e instala os escolhidos:
   num aplicativo que só tem ele);
 - `optimize:clear`, a configuração publicada de cada módulo
   (`vendor:publish --tag=<módulo>-config`, sem sobrescrever o que existe), a
-  `APP_KEY` se faltar, o pepper dedicado das chaves de API com contas, e
+  `APP_KEY` se faltar, o pepper dedicado das chaves de API com contas, a
+  chave dos uploads confidenciais (`UPLOADS_ENCRYPTION_KEY`) com uploads, e
   `migrate` (`--graceful` deixa as migrations para depois se o banco não
   responder);
 - as **proteções** vêm ligadas pelos próprios pacotes (descoberta automática

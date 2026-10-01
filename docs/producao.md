@@ -227,6 +227,20 @@ Duas coisas que o `APP_PREVIOUS_KEYS` **não** resgata:
   [docs/api.md](api.md#roteiro-de-transição).
 - **Sessões e cookies** — não é perda de dado, é logout: todos refazem o login.
 
+### A chave dos uploads confidenciais é outra
+
+Uploads `confidential` (documentos de identificação, contratos) são cifrados
+com uma chave **própria**, `UPLOADS_ENCRYPTION_KEY` — a `APP_KEY` não serve
+(igual a ela conta como ausente), e trocar a `APP_KEY` não mexe neles. Gere com
+`php artisan uploads:encryption-key --show`, guarde no **mesmo cofre** da
+`APP_KEY` e entregue a todos os serviços PHP pelo `.env.prod` ou pelo secret do
+orquestrador. Sem ela, o upload confidencial é recusado e o boot avisa no log
+a cada subida. Perder a chave é perder os arquivos (o backup do armazenamento
+guarda só o cifrado). Trocar: a nova em `UPLOADS_ENCRYPTION_KEY`, a antiga em
+`UPLOADS_ENCRYPTION_PREVIOUS_KEYS`, `php artisan uploads:reencrypt` (sem tirar
+nada do ar) e só então tire a antiga — ver
+[docs/uploads.md](uploads.md#rotação-sem-indisponibilidade).
+
 ### Segredos com valor de fachada
 
 O mesmo princípio vale para as senhas: **senha padrão que funciona é o mesmo bug

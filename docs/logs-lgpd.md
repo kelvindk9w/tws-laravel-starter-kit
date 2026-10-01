@@ -5,7 +5,8 @@
 `Twstec\Kit\Foundation\Logging\Redactor` mascara antes de persistir:
 
 - chaves sensíveis por nome exato (`password`, `token`, `api_key`, `secret`, `authorization`,
-  `card_number`, `cvv`...) ou sufixo (`_token`, `_secret`, `_password`, `_api_key`) → `[REDACTED]`;
+  `card_number`, `cvv`, `signature` — a assinatura de URL assinada abre o recurso dentro da
+  validade...) ou sufixo (`_token`, `_secret`, `_password`, `_api_key`) → `[REDACTED]`;
 - CPF/CNPJ em qualquer string → `123.***.***-09` (3 primeiros + 2 últimos dígitos);
 - e-mails → `k***@dominio.com`;
 - **número de cartão (PAN) em qualquer string** → `**** **** **** 1111` (só os 4 últimos
@@ -99,6 +100,17 @@ sempre só com **contagens e motivo** — nunca o caminho do arquivo nem o conte
 | `upload.erased` | os registros saíram, na transação da exclusão (no `/admin`, com o operador como ator) | quantos, o motivo (`person_deleted` / `account_deleted`) e a conta (`tenant_uuid`) na exclusão de conta |
 | `upload.files_deleted` | o job da fila apagou os arquivos, depois do commit (contexto `console`) | quantos eram, quantos saíram, quantos já não existiam, o motivo |
 | `upload.orphans_pruned` | a limpeza `uploads:prune-orphans` apagou algo (contexto `console`) | quantos órfãos, fotos pessoais sem uso e arquivos sem registro |
+| `upload.erasure_refused` (`denied`) | a exclusão do dono pediu o apagamento de um upload sob **guarda legal**: ele ficou, desvinculado ([uploads.md](uploads.md#retenção-legal-guardar-até)) | uma linha por upload: o arquivo (`subject_uuid`), a conta de onde saiu e, no motivo, o código, o prazo e o motivo da guarda |
+| `upload.legal_hold_placed` / `upload.legal_hold_released` | pôr/mudar ou tirar a guarda legal | o prazo e o motivo, antes e depois (e o motivo de tirar) |
+| `upload.erased` com motivo `legal_hold_expired` | o `uploads:erase-expired-holds` apagou o desvinculado cuja guarda venceu | quantos |
+| `upload.confidential_url_issued`, `upload.confidential_viewed`, `upload.confidential_downloaded` | gerar a URL, visualizar e baixar um upload **confidencial** — e as recusas (`denied`) | quem, a conta, o arquivo, o contexto (`panel`, `api`, `admin`), IP e User-Agent ([uploads.md](uploads.md#entrega-e-trilha-de-acesso)) |
+| `upload.reencrypted` | a rotação `uploads:reencrypt` recifrou arquivos (contexto `console`) | quantos, quantos falharam, quantos faltam e o id (não a chave) da chave atual |
+
+**Exclusão × apagamento.** "Exclusão" é o pedido sobre o titular (a pessoa, a conta); "apagamento"
+é sumir com registro e arquivo. A exclusão pede o apagamento do que é do titular, menos o que a
+lei manda guardar ([guarda legal](uploads.md#retenção-legal-guardar-até)) — e um registro do
+aplicativo pode impedir a exclusão inteira ([impedimentos de exclusão](tenancy.md#impedimentos-de-exclusão)),
+com a recusa na trilha.
 
 Falha definitiva ao apagar arquivo (tentativas esgotadas) vai para o log de aplicação
 (`upload.files_delete_failed`, só contagens); o arquivo que sobrou sai na limpeza seguinte. No

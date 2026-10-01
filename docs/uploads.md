@@ -83,6 +83,7 @@ relação carregada antes, um objeto guardado) é recusado com
 ## Como usar o serviço
 
 ```php
+use Twstec\Kit\Uploads\Classification\UploadClassification;
 use Twstec\Kit\Uploads\Services\SecureUploadService;
 
 // Na conta atual (a da sessão na web, a da chave na API), com created_by =
@@ -93,13 +94,169 @@ $upload = app(SecureUploadService::class)->handle(
     disk: 's3',                        // opcional — default: config uploads.disk
     directory: 'documentos',           // opcional — default: uploads.directory
     allowedTypes: ['image', 'pdf'],    // opcional — default: uploads.allowed_types
+    classification: UploadClassification::Confidential, // opcional — default: uploads.classification.default (private)
 );
 
-$upload->url();  // URL temporária assinada (bucket NUNCA público)
+$upload->url();               // URL temporária assinada (bucket NUNCA público)
+$upload->url(download: true); // confidencial: a mesma, para baixar (anexo)
 ```
 
 Rejeições lançam `UploadRejectedException` (com `reason` estável para logs);
-os controllers convertem em 422.
+os controllers convertem em 422. Confidencial sem chave de cifra lança
+`ConfidentialStorageUnavailableException` (503).
+
+## Classificação por finalidade
+
+Todo upload tem uma **classificação** (`classification`, enum
+`Twstec\Kit\Uploads\Classification\UploadClassification`), que o
+**projeto declara** em cada chamada do `SecureUploadService` (parâmetro
+`classification`) — ou o padrão `UPLOADS_DEFAULT_CLASSIFICATION`:
+
+| Classificação | Para quê | Armazenamento | Entrega |
+| --- | --- | --- | --- |
+| `public` | conteúdo que o projeto pode mostrar a quem tiver o link (a imagem de um produto) | como sempre | URL assinada de curta duração — o kit nunca usa bucket público; a classificação registra a intenção |
+| `private` (padrão) | o resto — e todo upload anterior à classificação | como sempre | URL assinada de curta duração |
+| `confidential` | documento de identificação, contrato, comprovante | **cifrado** antes de gravar | só pela rota da aplicação, que decifra em fluxo, **com trilha de acesso** |
+
+A API (`POST /api/v1/uploads`) usa o padrão; o cliente da API não escolhe a
+classificação. Valor desconhecido no padrão é erro — nunca um rebaixamento
+silencioso para "em claro". O `/admin` mostra a classificação de cada linha,
+com filtro.
+
+## Uploads confidenciais
+
+### Cifra em repouso
+
+O conteúdo é **cifrado antes de ir ao armazenamento** (disco local, S3/R2):
+o armazenamento só vê o objeto cifrado, com o caminho terminado em `.enc`.
+
+- **Algoritmo:** libsodium *secretstream* (XChaCha20-Poly1305, AEAD), a API
+  oficial do PHP (`sodium_crypto_secretstream_xchacha20poly1305_*`). Nonce
+  aleatório de 192 bits por arquivo (o mesmo conteúdo enviado duas vezes vira
+  dois objetos diferentes).
+- **Em fluxo, em blocos de 64 KB:** o arquivo inteiro nunca precisa estar em
+  memória para cifrar ou decifrar, e o **texto claro nunca vai para arquivo
+  temporário** — o que passa pelo temporário (`php://temp`) antes de subir é o
+  objeto já cifrado. A entrega lê o objeto em stream e devolve bloco a bloco.
+- **Cada bloco é autenticado** com o cabeçalho e com o **uuid do registro**
+  como dados adicionais. Trocar um bit, cortar o fim (falta a marca FINAL),
+  acrescentar bytes depois dela, reordenar blocos ou pôr no lugar o objeto
+  cifrado de **outro upload** (mesmo da mesma chave): não decifra
+  (`UndecryptableUploadException`, com o motivo estável). Nada que não
+  autentica é devolvido.
+- **Formato do arquivo (versão 1):** `TWSUPENC` (8 bytes) · versão (1) · **id
+  da chave** (8) · tamanho do bloco (4, big-endian) · cabeçalho do fluxo (24)
+  · blocos (cada um com 17 bytes de autenticação; o último com a marca FINAL).
+- `size` e `sha256` do registro são do conteúdo original (o que o cliente
+  confere).
+
+### A chave: própria, versionada, nunca a `APP_KEY`
+
+O **instalador gera a chave** quando o módulo de uploads entra (`tws:install`,
+`tws:add uploads`, o `composer create-project twstec/kit` e o caminho só com o
+Docker, que passam pelo `tws:install`): `UPLOADS_ENCRYPTION_KEY` no `.env`,
+nunca impressa, e a que já existe nunca é trocada. Sem `.env` nem
+`.env.example`, ele avisa com a instrução (`php artisan uploads:encryption-key`).
+
+```bash
+php artisan uploads:encryption-key            # gera e grava UPLOADS_ENCRYPTION_KEY no .env
+php artisan uploads:encryption-key --show     # só mostra (cofre de segredos, orquestrador)
+php artisan uploads:encryption-key --rotate   # troca: a nova vira a atual, a antiga vai para as anteriores
+php artisan uploads:reencrypt                 # recifra os arquivos com a atual, sem indisponibilidade
+```
+
+- `UPLOADS_ENCRYPTION_KEY`: a atual (`base64:` + 32 bytes). Dela saem, por
+  derivação com contexto próprio (`sodium_crypto_kdf_derive_from_key`), a
+  chave que cifra e o **identificador da versão** (16 caracteres hex),
+  gravado no cabeçalho de cada arquivo e em `uploads.encryption_key_id`.
+- `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`: as anteriores, separadas por vírgula —
+  só decifram.
+- **Falha fechada:** sem a extensão sodium, sem chave, com chave em formato
+  inválido ou **igual à `APP_KEY`** (ou a uma `APP_PREVIOUS_KEYS`), o upload
+  confidencial é **recusado** antes de ler o arquivo (nada vai para o disco nem
+  para o banco; `ConfidentialStorageUnavailableException`, 503 na API) e a
+  entrega responde 503. Em **produção**, o motivo vai para o log **a cada
+  boot** — o motivo, nunca a chave. A chave não aparece em log, dump nem fila
+  (o objeto da chave esconde o material e recusa serialização).
+- **Perder a chave é perder os arquivos.** Guarde-a no cofre de segredos.
+- **Extensão `sodium` do PHP (`ext-sodium`).** Vem no PHP oficial e na imagem
+  do kit, mas **não** está declarada no `composer.json` do pacote (declarar
+  exigiria refazer os locks dos starters): é conferida em tempo de execução.
+  Sem ela, o upload confidencial é recusado com a mensagem "falta a extensão
+  sodium do PHP (ext-sodium)", o boot de produção avisa para instalá-la e o
+  `uploads:encryption-key` falha dizendo isso. Os uploads comuns não precisam
+  dela.
+- O comando recusa sobrescrever uma chave existente sem `--rotate` (trocar sem
+  guardar a antiga deixaria os arquivos sem leitura); em produção, pede
+  confirmação (ou `--force`).
+
+### Rotação sem indisponibilidade
+
+1. `php artisan uploads:encryption-key --rotate` (ou: a chave nova em
+   `UPLOADS_ENCRYPTION_KEY` e a antiga no começo de
+   `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`) e recarregue a configuração. Daqui em
+   diante, arquivo novo nasce na chave nova, e os antigos **continuam
+   abrindo** com a anterior.
+2. `php artisan uploads:reencrypt` (`--dry-run` só conta; `--chunk=100`). Para
+   cada confidencial fora da chave atual: decifra e cifra de novo, bloco a
+   bloco, num objeto **novo**; confere o sha256 do conteúdo; troca o registro
+   (caminho + versão) numa atualização condicional; apaga o objeto antigo. O
+   antigo continua sendo entregue até a troca; uma entrega que pegou o
+   registro um instante antes relê o registro antes de desistir.
+   **Idempotente** (só pega o que falta) e **retomável** (parar no meio deixa
+   cada arquivo no estado antigo ou no novo; objeto que sobrou de uma queda
+   sai na limpeza como "arquivo sem registro"). O que falha (objeto
+   corrompido, armazenamento fora do ar) fica como estava, vai para o log
+   (`upload.reencrypt_failed`, sem conteúdo) e o comando sai com erro; a
+   rodada seguinte retoma. Uma rodada por vez (trava no cache). A rodada vai
+   para a trilha (`upload.reencrypted`, contagens e o id da chave).
+3. Quando o comando disser que nenhum arquivo usa mais as chaves anteriores,
+   tire-as de `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`.
+
+### Entrega e trilha de acesso
+
+`Upload::url()` de um confidencial devolve a URL da rota
+**`uploads.confidential`** (`GET /uploads/confidential/{uuid}`, registrada
+pelo pacote), nunca a do armazenamento. A URL é **assinada** e amarra o
+upload, a **conta** em nome da qual foi gerada (ou "sistema", no `/admin`),
+**quem a gerou**, o contexto e se é para baixar; vale
+`UPLOADS_CONFIDENTIAL_URL_MINUTES` (5). Na entrega, além da assinatura e da
+validade, a regra é conferida **de novo**: o upload ainda é daquela conta e
+quem gerou ainda existe, está ativo e ainda é membro dela (no `/admin`: ainda é
+admin). A rota não usa sessão (serve ao painel, à API e ao `/admin`) e é
+limitada por IP (`UPLOADS_CONFIDENTIAL_RATE_LIMIT`, 60/min). Resposta: o tipo
+real, o tamanho exato (`Content-Length`), `inline` para visualizar ou
+`attachment` para baixar (nome original saneado), `nosniff`, `no-store`,
+`no-referrer`.
+
+Tudo vai para a **trilha de auditoria no banco** (`audit_events`), com ator,
+conta (`tenant_uuid`), arquivo (`subject_uuid`) e contexto (`panel`, `api`,
+`admin`), IP e User-Agent:
+
+| Evento | Quando | Recusas (`outcome = denied`, com o motivo) |
+| --- | --- | --- |
+| `upload.confidential_url_issued` | gerar a URL — gravado **antes** de a URL existir | upload de outra conta (`UploadOutsideAccountException`); ninguém agindo (job, comando: 403) |
+| `upload.confidential_viewed` / `upload.confidential_downloaded` | visualizar / baixar — gravado **antes** do primeiro byte | assinatura inválida ou vencida (403 — a linha não confia em nada da URL); quem gerou perdeu o acesso, conta da URL não é a do upload (**404**, o mesmo de "não existe"); sem chave (503); arquivo ausente (404) |
+
+**De outra conta, continua 404:** a consulta não acha (escopo da conta), a URL
+não sai (recusa na trilha) e a URL de quem saiu da conta ou foi bloqueado
+deixa de abrir.
+
+**Telas:** só o `/admin` tem telas para confidenciais e guarda legal (abrir,
+pôr e tirar a guarda). Os painéis do cliente (Livewire e React) não listam
+uploads nem abrem confidenciais — o projeto monta essas telas sobre a API do
+pacote (`Upload::url()`, `LegalHold`); está no backlog do
+[roadmap](roadmap.md#depois-da-200-backlog).
+
+No `/admin`, abrir um confidencial é uma ação à parte ("Abrir documento
+confidencial"), com permissão própria **`uploads.view_confidential`** — fora
+de `*.view`: o papel `auditor` vê a lista, não o documento. A URL nasce no
+clique (nunca ao desenhar a tabela), e a geração e a visualização ficam na
+trilha com o contexto `admin` e o operador.
+
+Os parâmetros da URL assinada (inclusive `signature`) passam a ser
+**mascarados** na trilha de requisições (`request_logs`): a assinatura, dentro
+da validade, abre o recurso.
 
 ## De quem é o upload: da conta
 
@@ -198,9 +355,60 @@ do `twstec/kit-accounts` (`PersonDeleting`, `PersonDeleted`,
    no log (só contagens) — e o arquivo que sobrou sai na limpeza seguinte,
    como "arquivo sem registro".
 
-A exclusão **recusada** (dona de conta com outros membros, ou qualquer guarda
-do aplicativo que recuse depois) não apaga nada: o pacote só **lê** o que vai
-sair no `deleting` da pessoa e apaga no `deleted`.
+A exclusão **recusada** (dona de conta com outros membros, impedimento
+declarado — ver [Impedimentos de exclusão](tenancy.md#impedimentos-de-exclusão)
+—, ou qualquer guarda do aplicativo que recuse depois) não apaga nada: o
+pacote só **lê** o que vai sair no `deleting` da pessoa e apaga no `deleted`.
+
+### Exclusão × apagamento
+
+São conceitos separados, na documentação e no código:
+
+- **Exclusão** é o pedido sobre o **titular**: excluir a pessoa, excluir a
+  conta (`twstec/kit-accounts`). É o que a LGPD pede quando o titular sai.
+- **Apagamento** é sumir com o **registro e o arquivo** de um upload
+  (`Erasure\UploadEraser`, `Jobs\DeleteUploadFiles`).
+
+A exclusão do titular pede o apagamento do que é dele — **menos o que está sob
+guarda legal**, que é desvinculado e mantido até o prazo (abaixo). A chave
+estrangeira `uploads.account_id` passou de `CASCADE` para `SET NULL`: o banco
+não leva junto o que está guardado (no PostgreSQL a conta da pessoa excluída
+sai na mesma sentença, por gatilho); quem apaga é sempre o pacote,
+explicitamente. Upload que ficou sem conta sem passar pelo pacote (a conta
+apagada direto no banco) conta como órfão na limpeza.
+
+## Retenção legal ("guardar até")
+
+Um upload pode receber uma **guarda legal**: uma data "guardar até" e o
+motivo (a lei, o contrato) — `Twstec\Kit\Uploads\Retention\LegalHold`:
+
+```php
+app(LegalHold::class)->place($upload, now()->addYears(5), 'Contrato: guarda de 5 anos');
+app(LegalHold::class)->release($upload, 'Processo encerrado'); // tirar antes do prazo, com o motivo
+```
+
+No `/admin`, as ações "Guarda legal" e "Tirar a guarda legal" (permissão
+**`uploads.legal_hold`**). Pôr, mudar e tirar vão para a trilha
+(`upload.legal_hold_placed`, `upload.legal_hold_released`) com o antes e o
+depois.
+
+Enquanto a guarda vale:
+
+| Caminho | O que acontece |
+| --- | --- |
+| **Excluir o dono** (a pessoa ou a conta) | a exclusão **segue**: o que pode sair sai; o upload guardado fica **desvinculado** — sem conta, sem autor, o nome original trocado pelo código público (`UPL-XXXXXX.pdf`), `detached_at` preenchido — e a **recusa de apagá-lo** vai para a trilha: `upload.erasure_refused`, `denied`, com o código, o prazo, o motivo e a conta de onde saiu. No `/admin` ele aparece como "Retido (guarda legal)" |
+| `$upload->delete()` direto | **recusado** (`UploadUnderLegalHoldException`), com a recusa na trilha (`upload.deleted`, `denied`) |
+| Limpeza (`uploads:prune-orphans`) | não toca o que está sob guarda nem o desvinculado |
+| **Prazo vencido** | o comando agendado **`uploads:erase-expired-holds`** apaga o desvinculado (registro e arquivo, `upload.erased` com o motivo `legal_hold_expired`). O pacote agenda sozinho (`UPLOADS_LEGAL_HOLD_SCHEDULE`, `50 3 * * *` em UTC; vazio desliga, com aviso no log a cada boot) |
+
+Guarda vencida não segura nada: a exclusão apaga como sempre.
+
+**Recusar a exclusão inteira** em vez de desvincular:
+`UPLOADS_LEGAL_HOLD_BLOCKS_DELETION=true` faz da guarda um
+[impedimento de exclusão](tenancy.md#impedimentos-de-exclusão) — a exclusão da
+pessoa ou da conta é recusada enquanto houver upload dela (das contas que
+sairiam, ou foto pessoal que ela enviou) sob guarda, com a mensagem ao usuário
+e a recusa na trilha.
 
 ## Limpeza: `uploads:prune-orphans`
 
@@ -216,6 +424,10 @@ Apaga registro **e** arquivo de:
    `UPLOADS_PRUNE_DISKS`, padrão só o `UPLOADS_DISK`), mais velhos que
    `UPLOADS_PRUNE_STRAY_FILES_AFTER_HOURS` (24) — o prazo protege o envio em
    andamento (o arquivo vai para o disco um instante antes do registro).
+
+Nunca toca o que está sob guarda legal nem o desvinculado pela guarda; upload
+sem conta que não é foto pessoal nem desvinculado (a conta apagada direto no
+banco) entra como órfão.
 
 `--dry-run` só conta e mostra. Sem ele, cada rodada que apaga algo grava
 `upload.orphans_pruned` na trilha (contexto `console`, só contagens). O
@@ -260,6 +472,10 @@ onde pôr chave estrangeira recria a tabela, a migration guarda e devolve
   url, MIME real, tamanho, sha256). Para registrar a rota você mesmo:
   `UPLOADS_API_ROUTES=false` e `Twstec\Kit\Uploads\Http\UploadRoutes::register()`
   (a autenticação por chave entra sempre).
+- `GET /uploads/confidential/{uuid}` (rota `uploads.confidential`) —
+  **registrada pelo pacote**, sempre: a entrega dos confidenciais (URL
+  assinada, sem sessão, limitada por IP). Prefixo em
+  `uploads.confidential.route.prefix`.
 - `POST /settings/avatar` (web autenticada) — rota do **starter**
   (`routes/web.php`, `throttle:sensitive`) apontando para o
   `AvatarController` do pacote. Campo `avatar`, restrito a imagens
@@ -282,6 +498,12 @@ AWS_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
 ```
 
 Em dev, `UPLOADS_DISK=local` (ou MinIO apontando o mesmo disco `s3`).
+
+Confidenciais e guarda legal: `UPLOADS_DEFAULT_CLASSIFICATION`,
+`UPLOADS_ENCRYPTION_KEY`, `UPLOADS_ENCRYPTION_PREVIOUS_KEYS`,
+`UPLOADS_CONFIDENTIAL_URL_MINUTES`, `UPLOADS_CONFIDENTIAL_RATE_LIMIT`,
+`UPLOADS_LEGAL_HOLD_BLOCKS_DELETION`, `UPLOADS_LEGAL_HOLD_SCHEDULE` (seção
+*Uploads* do `.env.example`; a chave de produção no `.env.prod.example`).
 Limites por tipo, tipos permitidos, teto de pixels e validade das URLs
 assinadas: seção *Uploads* do `.env.example` → `config/uploads.php`. A imagem
 de produção já traz as extensões `fileinfo` e `gd`, que o pacote exige.
@@ -300,13 +522,28 @@ de produção já traz as extensões `fileinfo` e `gd`, que o pacote exige.
   entrega o arquivo, e sem assinatura, adulterada, vencida ou com o caminho
   de outro dono é recusada; o pacote liga a entrega num disco que não a tem;
   opt-out e disco público com aviso; rota, escopo e credencial; traduções com
-  o aplicativo vencendo; apelidos; arquitetura.
+  o aplicativo vencendo; apelidos; arquitetura. Confidenciais
+  (`ConfidentialUploadsTest`, `ConfidentialAccessTest`, `KeyRotationTest`): o
+  objeto cru não é o original nem contém trecho dele; vários blocos; bit
+  trocado, corte, sobra e troca de objeto entre uploads não decifram; sem
+  chave (ausente, inválida, igual à APP_KEY) o upload é recusado e nada grava,
+  503 na API, aviso no boot em produção; a chave fora de log e dump; trilha de
+  gerar, ver e baixar (painel, API, modo sistema); outra conta, quem perdeu o
+  acesso, URL adulterada ou vencida, sem chave na entrega; limite por IP;
+  rotação com os antigos legíveis, idempotente e retomável; o comando da
+  chave. Guarda legal (`LegalHoldTest`): exclusão da conta e da pessoa com
+  upload guardado, o comando depois do prazo e o agendamento, `delete()`
+  direto, a limpeza, a trilha de pôr e tirar, o modo que impede a exclusão. A
+  migration da classificação (`ClassificationMigrationTest`).
 - **Starter** (`tests/Feature/Uploads/`, com fixtures programáticas em
   `tests/Fixtures/uploads.php` — nada de binário commitado): a mesma lei
   pela API e pelo avatar, com o banco e as telas do aplicativo; uploads da
   conta, foto em todas as contas e exclusão pelo `/admin` e pela página da
   conta (`UploadAccountsTest`), a migração no esquema completo, SQLite e
-  PostgreSQL (`UploadsMigrationTest`);
+  PostgreSQL (`UploadsMigrationTest`); confidencial pela API e pelo `/admin`,
+  exclusão com upload sob guarda e as recusas limpas por chave estrangeira
+  `RESTRICT` do aplicativo (`ConfidentialAndRetentionTest`, SQLite e
+  PostgreSQL);
   `tests/Feature/Panel/ProfileTest.php` (painel do cliente),
   `tests/Feature/Uploads/AdminAvatarTest.php` (super admin) e os E2E
   `tests/e2e/panel.spec.js` / `tests/e2e/admin.spec.js`.

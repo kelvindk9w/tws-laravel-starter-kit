@@ -214,7 +214,14 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   Request Logs (auditoria de API
   + web + admin, com filtros de status/tenant/endpoint/período — logs órfãos,
   sem tenant, destacados em vermelho), **Auditoria** (a trilha de AÇÕES —
-  somente leitura, ver abaixo) e Uploads.
+  somente leitura, ver abaixo) e Uploads — com a conta, o tipo de dono
+  (da conta, foto pessoal, órfão ou **retido** pela guarda legal), a
+  **classificação** (pública, privada, confidencial; com filtro) e o
+  **"guardar até"**. Abrir um **confidencial** é uma ação à parte, com
+  permissão própria (`uploads.view_confidential`): a URL nasce no clique e a
+  geração e a visualização vão para a trilha com o contexto `admin`. **Guarda
+  legal** e **Tirar a guarda legal** (permissão `uploads.legal_hold`) pedem a
+  data e o motivo, e ficam na trilha (ver [docs/uploads.md](uploads.md)).
 - **Trilha de auditoria de ações** (`/admin/audit-events`): **toda** escrita
   do painel — criar/editar/excluir usuário, bloquear/desbloquear, marcar
   e-mail verificado, ligar/desligar o 2FA do próprio admin, revogar chave,
@@ -323,8 +330,11 @@ depois de `admin.` no `$translationKey`: `users`, `api_keys`, `accounts`,
 `projects`, `uploads`, `request_logs`, `audit`, `approvals`; ou
 `$permissionKey`) ou de uma página (`settings`). A ação é `view`, `create`,
 `update`, `delete` ou o nome da Action em snake_case (`block`,
-`mark_email_verified`, `assign_role`, `revoke`, `approve`). O padrão aceita
-`*`: `users.*`, `*.view`, `*`. Um papel novo do projeto:
+`mark_email_verified`, `assign_role`, `revoke`, `approve`,
+`view_confidential`, `legal_hold`). O padrão aceita `*`: `users.*`, `*.view`,
+`*`. Abrir upload confidencial (`uploads.view_confidential`) e mexer na guarda
+legal (`uploads.legal_hold`) ficam de fora de `*.view` de propósito: de
+fábrica, só o `owner` os tem. Um papel novo do projeto:
 
 ```php
 // config/admin.php (publicado com --tag=admin-config)
@@ -425,7 +435,11 @@ executa quando aprovada (`Approvals\ApprovalService`).
   do registro é **conferido de novo** na aprovação/execução: mudou depois do
   pedido → o pedido fica **obsoleto** e nada executa. Falha na execução →
   nada dela fica (ponto de salvamento) e o pedido vira `failed`, com a
-  mensagem redigida. Pedido vencido não é aprovado.
+  mensagem redigida. A ação que **recusa por regra** na hora de executar
+  lança `Approvals\ExecutionRefused` com a mensagem já traduzida: o pedido
+  vira `failed` com **essa** mensagem (sem nome de classe nem texto do banco),
+  a recusa vai para a trilha do alvo (`<tipo>.<verbo>`, `denied`) e nada é
+  reportado como erro. Pedido vencido não é aprovado.
 - **Trilha**: `approval_request.created`, `.approved`, `.executed`,
   `.failed`, `.rejected`, `.expired`, `.stale` (com o de/para da situação), as
   linhas do próprio alvo na execução (`user.deleted`...) e toda recusa como
@@ -434,7 +448,15 @@ executa quando aprovada (`Approvals\ApprovalService`).
 O kit traz um exemplo atrás de config: **excluir usuário**
 (`ADMIN_APPROVALS_ACTIONS=users.delete`) — as mesmas guardas do caminho
 direto, conferidas no pedido (com quem pede) e de novo na aprovação (com quem
-aprova: ninguém aprova a exclusão da própria conta). A demonstração
+aprova: ninguém aprova a exclusão da própria conta). Os
+[impedimentos de exclusão](tenancy.md#impedimentos-de-exclusão) declarados pelo
+aplicativo entram nessas guardas: com um impedimento, **o pedido nem nasce**
+(recusa com o motivo na trilha); um impedimento que surgiu depois do pedido
+recusa a aprovação (o pedido continua pendente). Na **execução** (quatro olhos
+ou o segundo passo do um operador), a recusa que só aparece na hora — um
+impedimento novo, ou um registro do aplicativo que aponta para a pessoa com
+chave estrangeira `RESTRICT` sem ter sido declarado — deixa o pedido `failed`
+com a mensagem traduzida, nada apagado e `user.deleted` `denied` na trilha. A demonstração
 (`twstec/kit-demo`) traz outro, **sempre ligado**: "Reajustar preço" de
 produto vira pedido com o valor novo (é o fluxo que o E2E percorre).
 

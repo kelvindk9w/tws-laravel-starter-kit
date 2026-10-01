@@ -44,6 +44,24 @@ it('os starters do menu são os do monorepo: projetos com todos os pacotes do ki
     }
 })->skip(! is_dir($monorepo.'/starters/livewire'), 'fora do monorepo');
 
+it('o create-project chega à chave dos uploads confidenciais: o .env.example dos starters traz a linha vazia e o instalador a gera com o módulo de uploads', function () use ($monorepo): void {
+    foreach (['livewire', 'react'] as $stack) {
+        $exemplo = (string) file_get_contents("{$monorepo}/starters/{$stack}/.env.example");
+
+        // A linha existe e vem VAZIA (nunca uma chave no repositório): quem
+        // preenche é o tws:install do post-create-project-cmd.
+        expect($exemplo)->toMatch('/^UPLOADS_ENCRYPTION_KEY=$/m');
+    }
+
+    $instalar = (string) file_get_contents($monorepo.'/packages/installer/src/Console/InstallCommand.php');
+    $acrescentar = (string) file_get_contents($monorepo.'/packages/installer/src/Console/AddCommand.php');
+
+    expect($instalar)->toContain("in_array('uploads', \$plan->target, true)")
+        ->toContain('UploadsEncryptionKey::ensure($env)')
+        ->and($acrescentar)->toContain('UploadsEncryptionKey::ensure($env)')
+        ->and(is_file($monorepo.'/packages/installer/src/Support/UploadsEncryptionKey.php'))->toBeTrue();
+})->skip(! is_dir($monorepo.'/packages/installer'), 'fora do monorepo');
+
 it('depende só do PHP e do Laravel Prompts, e o create-project chama o kit-setup', function () use ($root): void {
     $composer = json_decode((string) file_get_contents($root.'/composer.json'), true);
 

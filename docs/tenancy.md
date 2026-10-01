@@ -143,6 +143,9 @@ cada chamada no starter e nos pacotes e reprova a que não foi revisada. Hoje:
 | `HasAvatar` (`twstec/kit-uploads`) | lê a foto de perfil — restrita ao upload que a própria pessoa aponta, foto pessoal ou da conta pessoal dela |
 | `UploadEraser` (`twstec/kit-uploads`) | exclusão da pessoa ou da conta (LGPD): lê e apaga os uploads de contas que somem |
 | `uploads:prune-orphans` (`twstec/kit-uploads`) | limpeza agendada dos uploads sem dono, de todas as contas |
+| `ConfidentialAccess` (`twstec/kit-uploads`) | a entrega do upload confidencial: a rota não tem sessão; acha o upload em qualquer conta e quem decide é a regra da URL assinada (a conta tem de ser a do upload e quem gerou, ainda membro dela) |
+| `uploads:reencrypt` (`twstec/kit-uploads`) | rotação da chave dos confidenciais, de todas as contas |
+| `LegalHoldDeletionCheck` (`twstec/kit-uploads`) | guarda legal como impedimento de exclusão: conta os uploads sob guarda das contas que sairiam |
 
 A mesma trava reprova `withoutGlobalScope(s)`, `newQueryWithoutScopes()`,
 `newModelQuery()`, `->getQuery()` e query builder cru nas tabelas das contas
@@ -169,6 +172,8 @@ pessoal, o uuid da pessoa, o mesmo gravado na 1.x).
 | Situação | O que acontece |
 | --- | --- |
 | Dona de conta **com outros membros** | **Recusada**: nada muda. No `/admin`, a ação some e, forjada, é recusada com o motivo na trilha de auditoria (`denied`); por qualquer outro caminho, o model lança `OwnerOfSharedAccountException`; por SQL, o gatilho do PostgreSQL recusa. Transfira a propriedade antes |
+| Com **impedimento declarado** pelo aplicativo ([abaixo](#impedimentos-de-exclusão)) — ela ou uma conta que sairia junto | **Recusada**: nada muda. No `/admin`, a ação some e mostra o motivo; por qualquer outro caminho, o model lança `DeletionImpededException` e a recusa vai para a trilha (`user.deleted`, `denied`), mesmo que quem chamou desfaça a transação em volta |
+| Com upload sob **guarda legal** (`twstec/kit-uploads`) | A exclusão **segue**; o upload sob guarda fica, desvinculado (sem conta, sem autor), e a recusa de apagá-lo vai para a trilha — ver [Retenção legal em `docs/uploads.md`](uploads.md#retenção-legal-guardar-até). Com `UPLOADS_LEGAL_HOLD_BLOCKS_DELETION=true`, a guarda vira impedimento e a exclusão é recusada |
 | Dona só de contas sem outros membros (a pessoal, no caso de hoje) | As contas saem **com os dados** (projetos, chaves, vínculos, **uploads** — registro e arquivo no disco) — o mesmo efeito da 1.x, quando projetos e chaves eram da pessoa. A foto de perfil e as fotos pessoais que ela enviou saem também |
 | Admin ou member de outra conta | Deixa de ser membro; a conta e os dados ficam (inclusive os uploads que ela enviou lá), e o `created_by` do que criou fica vazio |
 | Conta protegida (extensão de proteção, como a demonstração) | Continua protegida: a proteção recusa antes de qualquer efeito |
@@ -191,6 +196,84 @@ ou é removida pela página da conta, o dono e os admins recebem o
 **Conta bloqueada.** Dono da conta bloqueado, pendente ou sem e-mail confirmado
 derruba as chaves da conta (401) — na conta pessoal, exatamente como a regra da
 1.x para a pessoa.
+
+## Impedimentos de exclusão
+
+Um registro do **aplicativo** pode impedir que uma pessoa ou uma conta seja
+excluída agora — o exemplo clássico é o lançamento contábil só-acréscimo que a
+lei manda guardar por anos e que aponta para a conta com chave estrangeira
+`RESTRICT`. Sem aviso, a exclusão estouraria o erro bruto do banco no meio do
+caminho. O `twstec/kit-accounts` tem um **ponto de extensão** para o
+aplicativo declarar esses impedimentos; eles são perguntados **antes** de
+qualquer linha sair.
+
+```php
+use Twstec\Kit\Accounts\Deletion\Contracts\DeletionCheck;
+use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
+use Twstec\Kit\Accounts\Deletion\DeletionRequest;
+
+final class LancamentosImpedemExclusao implements DeletionCheck
+{
+    public function impediments(DeletionRequest $request): iterable
+    {
+        // $request->accountIds(): as contas que sairiam (a conta, ou as que
+        // saem junto com a pessoa); $request->person: a pessoa, quando é
+        // exclusão de pessoa.
+        $total = Lancamento::query()
+            ->whereIn('account_id', $request->accountIds())
+            ->count();
+
+        if ($total > 0) {
+            yield new DeletionImpediment(
+                'ledger_entries',                                   // código estável
+                __('app.exclusao.lancamentos', ['total' => $total]), // o que o usuário lê
+            );
+        }
+    }
+}
+```
+
+Registre na configuração do aplicativo (`config/accounts.php`, chave de
+primeiro nível `deletion` — publique com `vendor:publish --tag=accounts-config`):
+
+```php
+'deletion' => [
+    'checks' => [App\Exclusao\LancamentosImpedemExclusao::class],
+],
+```
+
+ou em código, no `boot()` de um service provider (é como um pacote entra):
+
+```php
+app(\Twstec\Kit\Accounts\Deletion\DeletionImpediments::class)
+    ->register(LancamentosImpedemExclusao::class); // ou um Closure(DeletionRequest): iterable
+```
+
+| Onde | O que acontece com um impedimento |
+| --- | --- |
+| Excluir a **conta** pela página da conta (`DeleteAccount`) | recusada já na pré-checagem, **antes de pedir o código** (o token não é gasto), com a mensagem junto do botão (erro de validação no campo `account`) e `account.deleted` `denied` na trilha |
+| Excluir a **pessoa** pelo `/admin` | o botão some; a pré-checagem (`AccountService::deletionDenial`) dá o motivo; a chamada forjada é recusada com a trilha |
+| Excluir a pessoa com **aprovação em dois passos** (`users.delete`) | o pedido não nasce (recusa com o motivo); impedimento que surgiu depois recusa a aprovação; na execução, a recusa que só aparece na hora (inclusive `RESTRICT` não declarado) deixa o pedido `failed` com a mensagem traduzida, nada apagado |
+| Excluir a pessoa por código (`$user->delete()`) | `DeletionImpededException` (com `codes()` e a mensagem), nada muda, `user.deleted` `denied` na trilha — que fica mesmo se quem chamou desfizer a transação em volta |
+| `AccountService::deleteAccount()` por código | `DeletionImpededException`, nada muda |
+
+Regras do contrato: o verificador **só lê** (outro ainda pode recusar); a
+exceção que ele lançar **para** a exclusão (falha fechada); a mensagem é a que
+o usuário lê e a que vai para a trilha (traduzida, sem dado de terceiros).
+
+**Rede de segurança.** Registro do aplicativo que aponta para a conta ou para
+a pessoa com chave estrangeira `RESTRICT` e que **ninguém declarou**: a
+exclusão pela página da conta e pelo `/admin` roda num savepoint e, se o banco
+recusar por chave estrangeira (PostgreSQL `23503`/`23001`, SQLite e MySQL
+`23000`), devolve a mesma recusa limpa — "não é possível excluir agora: há
+registros que ainda dependem desta conta" —, com a transação desfeita, a
+recusa na trilha e `accounts.deletion.undeclared_reference` no log (só o
+código SQL, nunca a mensagem do banco). Declare o impedimento: a mensagem fica
+melhor e a recusa vem antes de pedir o código.
+
+A **guarda legal** dos uploads usa o mesmo mecanismo quando o projeto quer que
+ela impeça a exclusão (`UPLOADS_LEGAL_HOLD_BLOCKS_DELETION=true`); por padrão
+ela não impede: a exclusão segue e o upload guardado fica desvinculado.
 
 ## Membros
 
@@ -275,8 +358,12 @@ PostgreSQL continuam valendo). A conta pessoal não se transfere.
 
 `Account\Actions\DeleteAccount`: só o **dono**, com o token de ação sensível;
 a conta sai com projetos, chaves, vínculos, convites e **uploads** (registro
-na transação, arquivo no disco por job depois do commit); os membros ficam com
-as contas deles. A conta pessoal não se exclui por aqui.
+na transação, arquivo no disco por job depois do commit — menos o que está sob
+[guarda legal](uploads.md#retenção-legal-guardar-até), que fica desvinculado);
+os membros ficam com as contas deles. A conta pessoal não se exclui por aqui.
+Com [impedimento declarado](#impedimentos-de-exclusão), recusa antes de pedir
+o código; com registro do aplicativo que aponta para a conta sem ter sido
+declarado, recusa limpa com a transação desfeita.
 
 ## Aviso de chave órfã
 
