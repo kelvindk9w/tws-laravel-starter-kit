@@ -104,7 +104,10 @@ a trava dos testes de módulo opcional acusava o que não é declaração de cla
   Livewire dependia da ordem da suíte (a lista de hosts é estado estático do
   Symfony e vinha com a sobra do teste anterior) e passa a começar limpo; e o
   teste dos dados semeados da demonstração deixou de variar o número de
-  asserções de uma rodada para outra.
+  asserções de uma rodada para outra. Os dois testes que comparam a URL
+  assinada da foto de perfil gerada duas vezes (perfil do React e menu do
+  `/admin`) congelam o relógio: a virada do segundo entre as duas gerações
+  mudava a expiração e reprovava ao acaso.
 
 ### Atualizando da 2.0.0-beta.11
 
