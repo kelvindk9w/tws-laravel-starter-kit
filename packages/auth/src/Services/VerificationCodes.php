@@ -15,8 +15,9 @@ use Twstec\Kit\Auth\Verification\VerificationChannelManager;
 /**
  * O MOTOR dos códigos de verificação de 6 dígitos, em um lugar só.
  *
- * Quem usa: a confirmação de ação sensível (SensitiveActionService) e o
- * segundo fator do login (TwoFactorLogin). Cada fluxo tem a sua FINALIDADE
+ * Quem usa: a confirmação de ação sensível e a configuração do segundo fator
+ * obrigatório (SensitiveActionService) e o segundo fator do login
+ * (TwoFactorLogin). Cada fluxo tem a sua FINALIDADE
  * (VerificationPurpose) e os códigos de finalidades diferentes não se
  * misturam: um código pedido para autorizar uma chave de API não abre uma
  * sessão, e vice-versa.
@@ -26,6 +27,7 @@ use Twstec\Kit\Auth\Verification\VerificationChannelManager;
  *   job criptografado da fila e no e-mail;
  * - validade curta (AUTH_VERIFICATION_CODE_TTL_MINUTES);
  * - código novo invalida os anteriores da mesma finalidade;
+ * - o intervalo de reenvio (cooldownRemaining) também é por finalidade;
  * - tentativas limitadas por código (AUTH_VERIFICATION_CODE_MAX_ATTEMPTS) —
  *   e a tentativa é RESERVADA no banco antes de o hash ser conferido, com um
  *   UPDATE condicional. Assim, nem uma rajada de requisições simultâneas

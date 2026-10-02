@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-01, com a versão **2.0.0-beta.12** publicada.
+> Atualizado em 2026-10-02, com a versão **2.0.0-beta.13** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -67,8 +67,14 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    testes de módulo opcional confundia `X::class` com declaração de classe
    (#37) e a exclusão chamada por código (job, comando) não tinha a recusa
    limpa nem a trilha (#38) — resolvidas na 2.0.0-beta.12, que traz também a
-   análise estática dos starters no CI e o caminho único de exclusão. Falta
-   usar por algumas semanas; é o critério principal para sair do beta.
+   análise estática dos starters no CI e o caminho único de exclusão. Com o
+   segundo fator obrigatório ligado no projeto (#36), o E2E dos starters não
+   passava do login, e a primeira ação sensível depois de configurar o
+   segundo fator esperava o intervalo de reenvio. As duas foram resolvidas
+   para a 2.0.0-beta.13: o E2E roda verde com `none`, `admins` e `all`, com o
+   cadastro aberto ou fechado, e o código da configuração ganhou família
+   própria. Falta usar por algumas semanas; é o critério principal para sair
+   do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
    rodar o guia do iniciante e o comando único num Windows e num Mac de

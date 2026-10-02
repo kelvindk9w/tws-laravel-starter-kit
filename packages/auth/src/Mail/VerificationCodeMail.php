@@ -59,7 +59,9 @@ final class VerificationCodeMail extends KitMailable
     {
         return match ($this->purpose) {
             VerificationPurpose::LoginChallenge => 'mail.login_code',
-            VerificationPurpose::SensitiveAction => 'mail.verification_code',
+            // A configuração do segundo fator também é "confirmar a ação"
+            // (senha de transação + código), só de família própria.
+            VerificationPurpose::SensitiveAction, VerificationPurpose::TwoFactorSetup => 'mail.verification_code',
         };
     }
 }

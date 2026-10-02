@@ -125,6 +125,7 @@ abstract class TestCase extends Testbench
             $router->get('email/verify', fn () => $page('aviso de e-mail'))->name('verification.notice');
             $router->get('email/verify/{uuid}/{hash}', [EmailVerificationController::class, 'verify'])->name('verification.verify');
             $router->post('sensitive-actions/code', [SensitiveActionController::class, 'store']);
+            $router->post('sensitive-actions/confirm', [SensitiveActionController::class, 'confirm']);
             $router->put('settings/transaction-password', [TransactionPasswordController::class, 'update'])->name('transaction-password.update');
 
             // Segundo fator obrigatório: a tela é do front; os envios, do pacote.

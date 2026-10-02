@@ -29,7 +29,9 @@ use Twstec\Kit\Auth\Models\VerificationCode;
  * Invariantes: código e token NUNCA em plaintext no banco (somente hash),
  * sempre com expiração; reenvio com cooldown; tentativas limitadas. O código
  * em si é do motor comum (VerificationCodes), o mesmo do segundo fator do
- * login — cada fluxo com a sua finalidade.
+ * login — cada fluxo com a sua finalidade. A configuração do segundo fator
+ * obrigatório passa pela mesma exigência, em família própria
+ * (sendTwoFactorSetupCode/confirmTwoFactorSetupCode).
  */
 final class SensitiveActionService
 {
@@ -44,22 +46,7 @@ final class SensitiveActionService
      */
     public function sendCode(AuthUser $user, #[\SensitiveParameter] string $transactionPassword, ?VerificationChannel $channel = null): VerificationCode
     {
-        if (! $user->hasTransactionPassword() || ! Hash::check($transactionPassword, (string) $user->transaction_password)) {
-            throw ValidationException::withMessages([
-                'transaction_password' => __('auth.transaction_password.invalid'),
-            ]);
-        }
-
-        $remaining = $this->codes->cooldownRemaining($user, VerificationPurpose::SensitiveAction, $channel);
-
-        if ($remaining > 0) {
-            throw ValidationException::withMessages([
-                'transaction_password' => __('auth.verification_code.resend_cooldown', ['seconds' => $remaining]),
-            ]);
-        }
-
-        // Um código novo invalida os ativos anteriores da mesma finalidade.
-        return $this->codes->issue($user, VerificationPurpose::SensitiveAction, $channel);
+        return $this->send($user, $transactionPassword, VerificationPurpose::SensitiveAction, $channel);
     }
 
     /**
@@ -72,15 +59,37 @@ final class SensitiveActionService
      */
     public function confirmCode(AuthUser $user, #[\SensitiveParameter] string $code): array
     {
-        return match ($this->codes->verify($user, VerificationPurpose::SensitiveAction, $code)) {
-            VerificationResult::Valid => $this->issueToken($user),
-            VerificationResult::Invalid => throw ValidationException::withMessages([
-                'code' => __('auth.verification_code.invalid'),
-            ]),
-            VerificationResult::Expired => throw ValidationException::withMessages([
-                'code' => __('auth.verification_code.expired'),
-            ]),
-        };
+        return $this->confirm($user, $code, VerificationPurpose::SensitiveAction);
+    }
+
+    /**
+     * A MESMA exigência (senha de transação → código por e-mail), na família
+     * da CONFIGURAÇÃO do segundo fator obrigatório
+     * (VerificationPurpose::TwoFactorSetup — só o TwoFactorSetupController
+     * usa). Família própria, para que o código e o intervalo de reenvio da
+     * configuração não se misturem com os da confirmação de segurança: o
+     * código de uma não vale na outra, e quem acabou de configurar não espera
+     * o intervalo para a primeira ação sensível (cada uma continua pedindo
+     * senha de transação + código novo; nada é dispensado).
+     *
+     * @throws ValidationException Senha incorreta/não definida ou cooldown ativo.
+     */
+    public function sendTwoFactorSetupCode(AuthUser $user, #[\SensitiveParameter] string $transactionPassword): VerificationCode
+    {
+        return $this->send($user, $transactionPassword, VerificationPurpose::TwoFactorSetup);
+    }
+
+    /**
+     * Confere o código da configuração do segundo fator e emite o token de
+     * uso único que o TwoFactorLogin::enable() consome na mesma requisição.
+     *
+     * @return array{token: string, expires_at: Carbon}
+     *
+     * @throws ValidationException Código inválido, expirado ou tentativas esgotadas.
+     */
+    public function confirmTwoFactorSetupCode(AuthUser $user, #[\SensitiveParameter] string $code): array
+    {
+        return $this->confirm($user, $code, VerificationPurpose::TwoFactorSetup);
     }
 
     /**
@@ -113,6 +122,49 @@ final class SensitiveActionService
     public function resendCooldownRemaining(AuthUser $user, ?VerificationChannel $channel = null): int
     {
         return $this->codes->cooldownRemaining($user, VerificationPurpose::SensitiveAction, $channel);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function send(AuthUser $user, #[\SensitiveParameter] string $transactionPassword, VerificationPurpose $purpose, ?VerificationChannel $channel = null): VerificationCode
+    {
+        if (! $user->hasTransactionPassword() || ! Hash::check($transactionPassword, (string) $user->transaction_password)) {
+            throw ValidationException::withMessages([
+                'transaction_password' => __('auth.transaction_password.invalid'),
+            ]);
+        }
+
+        // O intervalo de reenvio é por FAMÍLIA (finalidade): o código da
+        // configuração do segundo fator não segura a confirmação de segurança.
+        $remaining = $this->codes->cooldownRemaining($user, $purpose, $channel);
+
+        if ($remaining > 0) {
+            throw ValidationException::withMessages([
+                'transaction_password' => __('auth.verification_code.resend_cooldown', ['seconds' => $remaining]),
+            ]);
+        }
+
+        // Um código novo invalida os ativos anteriores da mesma finalidade.
+        return $this->codes->issue($user, $purpose, $channel);
+    }
+
+    /**
+     * @return array{token: string, expires_at: Carbon}
+     *
+     * @throws ValidationException
+     */
+    private function confirm(AuthUser $user, #[\SensitiveParameter] string $code, VerificationPurpose $purpose): array
+    {
+        return match ($this->codes->verify($user, $purpose, $code)) {
+            VerificationResult::Valid => $this->issueToken($user),
+            VerificationResult::Invalid => throw ValidationException::withMessages([
+                'code' => __('auth.verification_code.invalid'),
+            ]),
+            VerificationResult::Expired => throw ValidationException::withMessages([
+                'code' => __('auth.verification_code.expired'),
+            ]),
+        };
     }
 
     /**

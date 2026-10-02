@@ -37,6 +37,12 @@ use Twstec\Kit\Auth\Services\TwoFactorLogin;
  * Conta que já tem o segundo fator ligado não tem o que configurar: os dois
  * envios só a devolvem ao destino. O `throttle:sensitive` vem com o
  * controller (HasMiddleware).
+ *
+ * O código é da família PRÓPRIA da configuração
+ * (VerificationPurpose::TwoFactorSetup), não da confirmação de segurança:
+ * não vale lá (nem o de lá vale aqui), e o intervalo de reenvio de uma não
+ * segura a outra — a primeira ação sensível depois de configurar manda o
+ * código na hora, ainda pedindo senha de transação + código novo.
  */
 final class TwoFactorSetupController implements HasMiddleware
 {
@@ -78,7 +84,7 @@ final class TwoFactorSetupController implements HasMiddleware
             throw ValidationException::withMessages(['two_factor' => $reason]);
         }
 
-        $sensitive->sendCode($user, $request->string('transaction_password')->toString());
+        $sensitive->sendTwoFactorSetupCode($user, $request->string('transaction_password')->toString());
 
         $request->session()->put(self::CODE_SENT, true);
 
@@ -93,7 +99,7 @@ final class TwoFactorSetupController implements HasMiddleware
         $user = $this->user($request);
 
         if (! $twoFactor->enabledFor($user)) {
-            $issued = $sensitive->confirmCode($user, $request->string('code')->toString());
+            $issued = $sensitive->confirmTwoFactorSetupCode($user, $request->string('code')->toString());
 
             $twoFactor->enable($user, $issued['token']);
         }

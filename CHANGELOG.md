@@ -6,6 +6,80 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.13] — 2026-10-02
+
+O E2E dos starters passa a funcionar com o segundo fator obrigatório e com o
+cadastro fechado, e quem acaba de configurar o segundo fator não espera mais
+o intervalo de reenvio para a primeira ação sensível (#36). As duas lacunas
+foram achadas no uso real de um projeto criado pelo kit.
+
+### Mudado
+
+- **Família própria para o código da configuração do segundo fator** (#36,
+  `twstec/kit-auth`): o código pedido na tela de configuração do segundo
+  fator obrigatório tem agora a finalidade `VerificationPurpose::TwoFactorSetup`,
+  separada da confirmação de segurança (`SensitiveAction`). A primeira ação
+  sensível logo depois da configuração (criar chave de API, transferir uma
+  conta) manda o código na hora, em vez de "Aguarde N segundos". Ela continua
+  pedindo a senha de transação e um código novo. O código de uma família não
+  vale na outra, e dentro de cada uma o intervalo de reenvio continua
+  valendo. O e-mail é o mesmo da confirmação ("Seu código de verificação").
+  O `SensitiveActionService` ganhou `sendTwoFactorSetupCode()` e
+  `confirmTwoFactorSetupCode()`, e só o `TwoFactorSetupController` os usa. A
+  outra saída avaliada, tratar a configuração recém-concluída como
+  confirmação recente e dispensar o código da ação seguinte por uma janela,
+  foi descartada porque abriria uma janela de ações sensíveis sem o e-mail.
+  O porquê está em `docs/autenticacao.md`, "Segundo fator obrigatório".
+
+### Corrigido
+
+- **E2E com o segundo fator obrigatório** (#36, nos dois starters): com
+  `AUTH_TWO_FACTOR_REQUIRED=admins|all` a suíte não passava do login. Agora:
+  - `tests/e2e/fixtures.php` liga o segundo fator (e a senha de transação
+    que ligar exige) em quem a regra alcança (`TwoFactorRequirement::appliesTo`)
+    e apaga os códigos de verificação que as pessoas fixas tinham;
+  - o `global-setup` (painel e `/admin`) e os testes de login pela tela leem
+    o código real no Mailpit;
+  - os testes de login pela tela usam pessoas fixas próprias
+    (`login-e2e@example.com` e, no React, `admin-login-e2e@example.com`),
+    para não esbarrar no intervalo de reenvio de quem o `global-setup`
+    acabou de logar;
+  - a limpeza do Livewire reusa a sessão do `/admin` gravada pelo
+    `global-setup` em vez de logar a cada teste;
+  - a pessoa nova que o servidor leva à configuração do segundo fator passa
+    por ela (senha de transação, depois o código do Mailpit);
+  - as mensagens das pessoas fixas saem do Mailpit no fim da rodada (novo
+    `tests/e2e/global-teardown.js` no Livewire).
+- **E2E com o cadastro fechado** (`AUTH_REGISTRATION_ENABLED=false`): os
+  testes que precisam de uma pessoa nova (segundo fator, contas com membros,
+  perfil e chave de API no React) criam a pessoa pelo `/admin` em vez de
+  pular. Só o teste do próprio cadastro continua pulando, com o motivo.
+- **Rodada do E2E do Livewire sem sobra no banco, no disco e no Mailpit:**
+  - o teste da foto de perfil usa uma pessoa nova, apagada no fim pelo
+    `/admin` com a foto (registro e arquivo). Antes, a foto ia para a pessoa
+    fixa `e2e@example.com` e ficava no banco e em
+    `storage/app/private/avatars` a cada rodada;
+  - o teste do formulário de contato (só com a demonstração) confere que a
+    mensagem chega ao Mailpit, com o texto enviado, e a apaga no fim. Uma
+    rede de segurança no `global-teardown.js` apaga a que a fila entregar
+    depois, só as que trazem o marcador do E2E.
+- O E2E foi conferido verde nos dois starters com `none`, `admins` e `all`,
+  com o cadastro aberto e fechado. Como trocar a combinação está em
+  `docs/testes.md`, "E2E com segundo fator obrigatório e cadastro fechado".
+
+### Atualizando da 2.0.0-beta.12
+
+- **Nada a migrar no banco.** A finalidade nova cabe na coluna `purpose`. Um
+  código de configuração que já estava no ar na hora da atualização deixa de
+  valer, e a pessoa pede outro na mesma tela.
+- **Testes do projeto que leem o código da configuração** filtrando o e-mail
+  por `VerificationPurpose::SensitiveAction` passam a procurar
+  `VerificationPurpose::TwoFactorSetup`.
+- **E2E:** copie de `tests/e2e/` do starter `fixtures.php`, `global-setup`,
+  os arquivos de `support/` e os specs alterados. No Livewire, copie também
+  `global-teardown.js` e o `playwright.config.js`. Depois rode o
+  `fixtures.php` de novo.
+
 ## [2.0.0-beta.12] — 2026-10-02
 
 Três lacunas achadas na atualização de um projeto real: a exclusão chamada por
@@ -1560,7 +1634,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.12...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.13...desenvolvimento
+[2.0.0-beta.13]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.13
 [2.0.0-beta.12]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.12
 [2.0.0-beta.11]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.11
 [2.0.0-beta.10]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.10

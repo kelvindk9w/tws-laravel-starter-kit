@@ -26,7 +26,8 @@ qualquer banco que não termine em `_test`.
 **E2E (Playwright), sem Node na máquina:**
 
 ```bash
-# As pessoas fixas do E2E (e2e@example.com e admin-e2e@example.com), idempotente:
+# As pessoas fixas do E2E (e2e@, login-e2e@, admin-e2e@ e — no React —
+# admin-login-e2e@example.com), idempotente; rode antes de cada rodada:
 docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
 
 # A suíte, num container (o --user evita arquivos com dono root):
@@ -60,6 +61,10 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 - **Starter Livewire:** os specs da demonstração do kit (landings, vitrine
   `/ui`, dados demo do `/admin`) não vão para o projeto criado; os de um
   módulo opcional ausente ficam de fora sozinhos (`playwright.config.js`).
+- **Segundo fator obrigatório e cadastro fechado:** a suíte roda com
+  `AUTH_TWO_FACTOR_REQUIRED` = `none`, `admins` ou `all` e com
+  `AUTH_REGISTRATION_ENABLED` = `true` ou `false`. Ver
+  [E2E com segundo fator obrigatório e cadastro fechado](#e2e-com-segundo-fator-obrigatório-e-cadastro-fechado).
 
 ### Travas de arquitetura do projeto
 
@@ -316,19 +321,17 @@ encontra nada (404 uniforme).
 
 ## Testes E2E (Playwright)
 
-Com a stack de dev no ar, crie o usuário E2E (uma única vez por banco). A
-factory cria a conta **com o e-mail já confirmado** — a verificação de e-mail
-é exigida para entrar no painel; sem isso o login do `global-setup` cairia na
-tela de aviso. Se o usuário já existia com o e-mail pendente, a migration
-`mark_existing_users_email_as_verified` o confirma no `migrate`.
+Com a stack de dev no ar, prepare as pessoas fixas do E2E com o script
+idempotente (rode antes de cada rodada e sempre que a regra do segundo fator
+mudar). Ele cria ou devolve ao estado inicial `e2e@example.com` (a pessoa do
+painel, sessão do `global-setup`), `login-e2e@example.com` (só do teste de
+login pela tela) e `admin-e2e@example.com` (o admin do E2E), todas com o
+e-mail já confirmado — a verificação de e-mail é exigida para entrar no
+painel. Credenciais sobreponíveis via `E2E_USER_EMAIL`, `E2E_USER_PASSWORD`,
+`E2E_LOGIN_USER_EMAIL`, `E2E_ADMIN_EMAIL` e `E2E_ADMIN_PASSWORD`.
 
 ```bash
-docker compose exec app php artisan tinker --execute='
-  \App\Models\User::factory()->create([
-    "email" => "e2e@example.com",
-    "password" => "E2eSenhaForte123",
-  ]);'
-# (credenciais sobreponíveis via E2E_USER_EMAIL / E2E_USER_PASSWORD)
+docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
 ```
 
 No monorepo, o E2E do Livewire usa a demonstração (o super admin demo faz
@@ -373,14 +376,18 @@ docker compose exec app php artisan tinker --execute='
 ```
 
 O `two-factor.spec.js` faz a verificação em duas etapas de ponta a ponta:
-cadastra uma conta nova (`e2e-2fa-<carimbo>@example.com`), confirma o
-e-mail, define a senha de transação, **liga** o segundo fator no perfil
-(código de ação sensível lido no Mailpit), sai, entra com a senha, confere
-que o painel continua fechado no estado intermediário e conclui com o código
-de acesso lido no Mailpit. No fim ele **apaga o que criou**: a conta, pelo
-`/admin` com o super admin demo (por isso precisa do modo demo ligado), e as
-mensagens dela no Mailpit. Ele usa conta própria de propósito — ligar o
-segundo fator no `e2e@example.com` quebraria o login dos outros specs.
+cria uma conta nova (`e2e-2fa-<carimbo>@example.com` — pelo cadastro, ou
+pelo `/admin` com ele fechado) e liga o segundo fator pelo caminho que a
+instalação oferece: opcional, define a senha de transação e **liga** no
+perfil (código de ação sensível lido no Mailpit); obrigatório, passa pela
+configuração ao entrar e confere no perfil o selo "obrigatória" e o desligar
+travado. Depois sai, entra com a senha, confere que o painel continua fechado
+no estado intermediário e conclui com o código de acesso lido no Mailpit. No
+fim ele **apaga o que criou**: a conta, pelo `/admin` com a sessão gravada
+pelo `global-setup`, e as mensagens dela no Mailpit. Ele usa conta própria de
+propósito — ligar o segundo fator no `e2e@example.com` mudaria o login dos
+outros specs. As mensagens das pessoas fixas (códigos de login e de
+confirmação) saem do Mailpit no fim da rodada (`tests/e2e/global-teardown.js`).
 
 Toda a suíte sai do mesmo IP e passa pelo limite de borda (300 requisições
 por minuto por IP — ver
@@ -395,7 +402,9 @@ a `APP_URL` do `.env` do React — no monorepo, `http://127.0.0.1:8181`; o host
 é outro que o do Livewire para os cookies não colidirem (ver
 [instalação](instalacao.md#starter-react)). O React não tem a demonstração,
 então as pessoas fixas do E2E vêm de um script idempotente (`e2e@example.com`,
-a pessoa do painel, e `admin-e2e@example.com`, o admin que faz a limpeza):
+a pessoa do painel; `admin-e2e@example.com`, o admin que faz a limpeza; e
+`login-e2e@` e `admin-login-e2e@example.com`, só dos testes de login pela
+tela):
 
 ```bash
 docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
@@ -413,5 +422,72 @@ pessoas criadas pelos testes (`e2e-…@example.com`) saem no `finally` pelo
 `/admin` (sem depender do idioma, `tests/e2e/support/cleanup.ts`), e uma
 varredura no fim da suíte (`tests/e2e/global-teardown.ts`) apaga qualquer
 resto — a rodada termina sem pessoa, conta, projeto, chave, convite, foto ou
-mensagem de teste no banco e no Mailpit. O mesmo limite de borda vale: 60 s
-entre duas rodadas.
+mensagem de teste no banco e no Mailpit (as mensagens das pessoas fixas
+também saem). O mesmo limite de borda vale: 60 s entre duas rodadas.
+
+### E2E com segundo fator obrigatório e cadastro fechado
+
+As duas suítes (Livewire e React) rodam verdes nas seis combinações de
+`AUTH_TWO_FACTOR_REQUIRED` (`none`, `admins`, `all`) com
+`AUTH_REGISTRATION_ENABLED` (`true`, `false`). O Playwright não lê essas
+variáveis: quem decide é o servidor, e os passos se adaptam ao que ele
+responde.
+
+- **Pessoas fixas** (`tests/e2e/fixtures.php`): quem a regra alcança
+  (`TwoFactorRequirement::appliesTo`; no modo `admins`, só os admins do E2E)
+  nasce com o segundo fator **ligado** e com a senha de transação que ligar
+  exige. O script apaga os códigos de verificação que elas tinham, para a
+  rodada não começar dentro de um intervalo de reenvio. Rode-o de novo a cada
+  troca de combinação.
+- **Login com código:** o `global-setup` (painel e `/admin`) e os testes de
+  login pela tela leem o código **real** no Mailpit, ignorando as mensagens
+  que a pessoa já tinha. No `/admin`, o código entra no formulário que o
+  Filament troca no lugar do login.
+- **Uma pessoa fixa por login:** com o segundo fator, cada login manda um
+  código e o código novo só sai depois do intervalo de reenvio (60 s). Por
+  isso os testes de login pela tela usam pessoas próprias (`login-e2e@` e,
+  no React, `admin-login-e2e@example.com`), e a limpeza do Livewire reusa a
+  sessão do `/admin` gravada pelo `global-setup`, sem logar de novo.
+- **Pessoa nova:** com o cadastro aberto, cadastro + link do Mailpit; fechado,
+  criada pelo `/admin` e login pela tela. Se o servidor a leva à configuração
+  do segundo fator, ela passa por ela (senha de transação → código do
+  Mailpit) e segue para onde ia. Com o cadastro fechado, só o teste do
+  próprio cadastro (verificação de e-mail) pula, com o motivo; o estado
+  fechado é coberto pelo `registration.spec`.
+- **Sem espera depois da configuração:** a ação sensível logo depois de
+  configurar o segundo fator (chave de API, transferência de conta) manda o
+  código na hora. O código da configuração é de outra família e não conta
+  para o intervalo da confirmação de segurança (ver
+  [autenticação](autenticacao.md#segundo-fator-obrigatório)).
+
+**Como trocar a combinação.** As variáveis ficam no `.env` de
+desenvolvimento do projeto:
+
+```dotenv
+AUTH_TWO_FACTOR_REQUIRED=all        # none | admins | all
+AUTH_REGISTRATION_ENABLED=false     # true | false
+```
+
+Num **projeto criado**, os serviços PHP leem o `.env` montado, sem
+`env_file`: basta salvar o arquivo, rodar as pessoas fixas de novo e a suíte.
+
+```bash
+docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
+  -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble npx playwright test
+```
+
+No **monorepo**, o `docker-compose.yml` da raiz passa o `.env` de cada
+starter aos containers (`env_file`), e a variável do container vence a do
+arquivo. Depois de editar `starters/livewire/.env` ou `starters/react/.env`,
+recrie os serviços PHP (o Compose recria só o que mudou) e reinicie o nginx,
+que guarda o endereço do container antigo (sem isso, 502):
+
+```bash
+docker compose up -d app queue scheduler react-app react-queue react-scheduler
+docker compose restart nginx react-nginx
+docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+```
+
+Para voltar ao padrão, tire as duas linhas do `.env` e repita os comandos.

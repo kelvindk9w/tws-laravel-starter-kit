@@ -376,6 +376,19 @@ definida ali mesmo se a conta ainda não tem — → código por e-mail → liga
 token de ação sensível nasce e morre no servidor. A resposta final é o
 contrato `TwoFactorSetupResponse` (no React, carga completa).
 
+**O código da configuração é de família própria**
+(`VerificationPurpose::TwoFactorSetup`), separada da confirmação de
+segurança (`SensitiveAction`). O código de uma não vale na outra, e o
+intervalo de reenvio de uma não conta para a outra: quem acaba de configurar
+faz a primeira ação sensível (criar chave de API, transferir uma conta) sem
+esperar o intervalo. Nada é dispensado, porque essa ação continua pedindo a
+senha de transação e um código novo. Dentro de cada família, o intervalo
+(`AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS`) continua valendo. A
+alternativa de tratar a configuração recém-concluída como "confirmação
+recente" (pular o código da ação seguinte por alguns minutos) foi descartada:
+ela trocaria a regra "uma confirmação por ação" por uma janela em que uma
+sessão roubada faria ações sensíveis sem passar pelo e-mail.
+
 **Desligar é recusado no servidor** enquanto a regra vale para a conta: o
 `TwoFactorLogin::disable()` confere a regra antes de qualquer outra coisa
 (antes de gastar o token) e as três telas (perfil Livewire, perfil React,

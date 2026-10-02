@@ -201,7 +201,8 @@ it('configuração: senha de transação → código → liga, consome o token e
         ->assertSessionHasErrors('code');
     expect($user->fresh()->two_factor_enabled_at)->toBeNull();
 
-    $this->post('/two-factor/setup', ['code' => requiredTfaCode()])
+    // O código da configuração é da família própria dela (TwoFactorSetup).
+    $this->post('/two-factor/setup', ['code' => requiredTfaCode(VerificationPurpose::TwoFactorSetup)])
         ->assertRedirect(url('/dashboard'))
         ->assertSessionHas('status', __('auth.two_factor.setup_done'));
 
