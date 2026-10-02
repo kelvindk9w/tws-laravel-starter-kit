@@ -22,8 +22,12 @@
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 #
+# ANÁLISE ESTÁTICA: Larastan (PHPStan) nível 8 no app/ de cada starter, sem
+# baseline, como PASSO do job do PostgreSQL (não é check novo). Ver
+# docs/testes.md, "Análise estática".
+#
 # STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs. No do
-# PostgreSQL: Pint, auditorias, build, a suíte contra o PostgreSQL (banco
+# PostgreSQL: Pint, Larastan, auditorias, build, a suíte contra o PostgreSQL (banco
 # tws_starter_react_test, criado no service do job) e a simulação da
 # instalação publicada (`create-project twstec/starter-react`). No do SQLite:
 # tipos (tsc), lint/formatação (Vite+, como no kit oficial), build, a suíte no
@@ -292,6 +296,12 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
 
+      # ANÁLISE ESTÁTICA do código do aplicativo (app/) — Larastan nível 8,
+      # sem baseline (phpstan.neon.dist do starter). O projeto criado pelo kit
+      # nasce passando nela; erro novo reprova o push.
+      - name: Análise estática (Larastan nível 8)
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+
       - name: Testes (Pest · PostgreSQL 18)
         run: ./vendor/bin/pest --ci -c phpunit.pgsql.xml
 
@@ -322,6 +332,10 @@ jobs:
           PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d tws_starter_test -c 'CREATE DATABASE tws_starter_react_test'
           cp .env.example .env
           php artisan key:generate --force
+
+      - name: Starter React · análise estática (Larastan nível 8)
+        working-directory: starters/react
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
 
       - name: Starter React · testes (Pest · PostgreSQL 18)
         working-directory: starters/react

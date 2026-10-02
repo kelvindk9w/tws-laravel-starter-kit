@@ -23,7 +23,7 @@ use Twstec\Kit\Auth\Models\VerificationCode;
  *   2. confirmCode()  — valida o código (expiração + máx. tentativas + hash)
  *                       e emite um TOKEN DE AÇÃO SENSÍVEL de curta duração.
  *   3. validateToken()— o middleware `sensitive.token` valida (e consome) o
- *                       token antes da operação sensível (saque, rotação de
+ *                       token antes da operação sensível (rotação de
  *                       chave de API...). USO ÚNICO.
  *
  * Invariantes: código e token NUNCA em plaintext no banco (somente hash),

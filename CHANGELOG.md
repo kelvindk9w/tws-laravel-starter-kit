@@ -6,6 +6,129 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.12] — 2026-10-02
+
+Três lacunas achadas na atualização de um projeto real: a exclusão chamada por
+código (job, comando, serviço) não tinha a recusa limpa nem a trilha (#38), o
+starter React não passava na análise estática nível 8 de quem a adota (#35) e
+a trava dos testes de módulo opcional acusava o que não é declaração de classe
+(#37).
+
+### Adicionado
+
+- **Caminho único de exclusão de pessoa e de conta** (#38), no
+  `twstec/kit-accounts`: `Deletion\AccountDeletion::deleteUser($pessoa)` e
+  `deleteAccount($conta, $quemPediu)`. Pergunta antes aos verificadores de
+  impedimento (e, para a pessoa, à regra do dono de conta com outros
+  membros), roda a exclusão com a rede de segurança da chave estrangeira
+  `RESTRICT` não declarada e grava a recusa na trilha de auditoria **uma vez
+  só**, que fica no banco mesmo quando quem chamou desfaz a transação em
+  volta (em qualquer profundidade). A exclusão de conta grava também o
+  sucesso. As telas passam a usá-lo: a página da conta nos dois starters, a
+  exclusão de pessoa no `/admin` e a execução da aprovação em dois passos. O
+  código do aplicativo deve usá-lo também — exemplo em `docs/tenancy.md`, "O
+  caminho único de exclusão", e no README do pacote.
+- **Análise estática dos starters** (#35): o Larastan (PHPStan com as regras
+  do Laravel) entra no `require-dev` dos dois starters, com o
+  `phpstan.neon.dist` em **nível 8** no `app/`, **sem baseline**. O CI do kit
+  roda a análise nos dois starters a cada push; o projeto criado nasce com ela
+  configurada e passando (`./vendor/bin/phpstan analyse`). Ver
+  `docs/testes.md`, "Análise estática".
+
+### Mudado
+
+- **`delete()` direto no model da conta é recusado** (#38): fora do caminho
+  único, a conta não sai — `DeletionOutsideServiceException` antes de qualquer
+  linha sair, com `account.deleted` `denied` na trilha. Um `delete()` solto
+  pulava os verificadores, deixava para trás o que é da conta e não avisava
+  os uploads para apagar os arquivos.
+- **A conta pessoal não sai pelo caminho de exclusão de conta** (#38): ela sai
+  junto com a pessoa. Antes, `AccountService::deleteAccount()` aceitava a
+  conta pessoal.
+- **`AccountService::deleteAccount()`** passa a ser o caminho único por baixo
+  (mantido por compatibilidade): ganha a rede de segurança da `RESTRICT`, a
+  recusa na trilha e a linha de sucesso.
+- **`$pessoa->delete()` direto** continua valendo e perguntando aos
+  verificadores no `deleting`; a recusa da regra do dono de conta com outros
+  membros (`OwnerOfSharedAccountException`) também passa a ir para a trilha
+  (`user.deleted`, `denied`). Só a rede de segurança da `RESTRICT` não
+  declarada fica restrita ao caminho único.
+- **`/admin`** (#38): `UserAdminGuard::deleteRefusal(Closure)` deu lugar a
+  `UserAdminGuard::delete($pessoa)`, que exclui pelo caminho único e lança a
+  recusa já gravada (`Support\Exceptions\RecordedDenial`); o
+  `Approvals\ExecutionRefused` ganhou `recorded: true` para o serviço de
+  aprovações não gravar a mesma recusa duas vezes.
+- **Exemplos neutros na documentação, nos textos e nos testes:** os exemplos
+  de escopo de chave de API passam a ser `orders:create` e `invoices:*` (a
+  mensagem de formato inválido de escopo mudou nos três idiomas), a rota de
+  exemplo da ação sensível passa a ser cancelar um pedido, o código de
+  impedimento de exemplo passa a ser `retained_records`, e o subtítulo da
+  senha de transação cita "exclusão de conta" no lugar do exemplo antigo.
+- **Preferência de notificação de exemplo renomeada** nos starters:
+  `payment_confirmed` passa a ser `order_confirmed` ("Pedido confirmado").
+  É o esqueleto de notificação do produto; nenhum e-mail do kit depende dela.
+- **Models dos pacotes com as colunas declaradas** (`@property` em `Account`,
+  `AccountMembership`, `ApiKey`, `Project` e `RequestLog`): a análise estática
+  de quem usa os pacotes passa a conhecer as colunas, cujas migrations ficam no
+  `vendor/`.
+
+### Corrigido
+
+- **Starter React, Larastan nível 8** (#35): a tela de configurar o segundo
+  fator (e as do código do login em duas etapas e do aviso de e-mail não
+  verificado) lia `$user->email` de um objeto tipado pelo contrato `AuthUser`,
+  e a análise recusava (`property.notFound`).
+  Passa a usar `getEmailForVerification()` (o mesmo valor). O starter Livewire
+  tinha o mesmo padrão e foi corrigido junto. As demais acusações da análise
+  nos dois starters também foram corrigidas, sem mudar o comportamento: a
+  pessoa que some no meio da sessão (preferência de tema, perfil) recebe a
+  mesma recusa do `auth` em vez de um erro, a lista de membros confere o model
+  de usuário (`ensure`) e as listas do menu de contas e da página da conta
+  saem com tipos exatos.
+- **Trava dos testes de módulo opcional** (#37,
+  `tests/Feature/Architecture/OptionalModuleTestFilesTest.php`, nos dois
+  starters): acusava `Algo::class` no topo de um arquivo de teste como se
+  fosse a declaração de uma classe — num projeto real, 91 falsos positivos.
+  Reescrita sobre os tokens do PHP: só acusa declaração de verdade
+  (`class`/`interface`/`trait`/`enum` com nome, no topo do arquivo ou de um
+  bloco `namespace`, que estende, implementa ou usa como trait um tipo de
+  módulo opcional ou do Filament — por `use`, apelido, `use` em grupo ou nome
+  completo). Não acusa `X::class`, `new X`, `instanceof X`, classe anônima,
+  comentário nem texto. A própria trava ganhou os casos que não pode acusar e
+  os que tem de acusar, inclusive a classe da 2.0.0-beta.10.
+
+- **Suíte de testes dos starters** (sem efeito no aplicativo): duas
+  execuções simultâneas da suíte PostgreSQL no mesmo banco de teste davam
+  falhas ao acaso; agora a segunda é recusada logo, com o motivo (trava
+  consultiva na `tests/TestCase.php`). O teste dos hosts confiáveis do
+  Livewire dependia da ordem da suíte (a lista de hosts é estado estático do
+  Symfony e vinha com a sobra do teste anterior) e passa a começar limpo; e o
+  teste dos dados semeados da demonstração deixou de variar o número de
+  asserções de uma rodada para outra.
+
+### Atualizando da 2.0.0-beta.11
+
+- **Exclusão por código:** troque `$conta->delete()` (agora recusado) e
+  `AccountService::deleteAccount()` por
+  `app(AccountDeletion::class)->deleteAccount($conta, $quemPediu)`, e
+  `$pessoa->delete()` em job ou comando por
+  `app(AccountDeletion::class)->deleteUser($pessoa)` — para ter a recusa limpa
+  da `RESTRICT` e a trilha. Quem recebe a recusa só mostra o motivo: ela já
+  está na trilha.
+- **Código que chamava `UserAdminGuard::deleteRefusal(fn () => ...)`:** use
+  `UserAdminGuard::delete($pessoa)` e trate `RecordedDenial`.
+- **Preferência de notificação:** quem usava a chave de exemplo
+  `payment_confirmed` em `config/notifications.php` mantém a dele (o arquivo
+  é do projeto); quem adotar a nova `order_confirmed` perde a escolha gravada
+  com o nome antigo e volta ao padrão.
+- **Trava dos testes:** troque `tests/Feature/Architecture/OptionalModuleTestFilesTest.php`
+  pelo da 2.0.0-beta.12.
+- **Análise estática:** para ter o Larastan num projeto já criado,
+  `composer require --dev larastan/larastan:^3.12` e copie o
+  `phpstan.neon.dist` do starter. Num projeto criado sem algum módulo
+  opcional, as telas do módulo ausente continuam em `app/` e a análise acusa
+  as classes que não estão instaladas (ver `docs/testes.md`).
+
 ## [2.0.0-beta.11] — 2026-10-01
 
 Correção da 2.0.0-beta.10: o projeto criado sem os módulos opcionais voltava
@@ -1434,7 +1557,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.11...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.12...desenvolvimento
+[2.0.0-beta.12]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.12
 [2.0.0-beta.11]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.11
 [2.0.0-beta.10]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.10
 [2.0.0-beta.9]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.9

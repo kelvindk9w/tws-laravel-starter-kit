@@ -12,10 +12,10 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
 /**
  * Exige um token de ação sensível válido para prosseguir.
  *
- * Uso em rotas de operações sensíveis (saque, criação/rotação de chave de
- * API, alterações críticas), SEMPRE combinado com `auth`:
+ * Uso em rotas de operações sensíveis (cancelar um pedido, criação/rotação de
+ * chave de API, alterações críticas), SEMPRE combinado com `auth`:
  *
- *   Route::post('/saque', ...)->middleware(['auth', 'sensitive.token']);
+ *   Route::post('/orders/{order}/cancel', ...)->middleware(['auth', 'sensitive.token']);
  *
  * O token é lido do header `X-Sensitive-Action-Token` (preferido) ou do
  * campo `sensitive_action_token`. É de USO ÚNICO: a validação o consome.

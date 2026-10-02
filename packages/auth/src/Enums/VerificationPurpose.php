@@ -10,7 +10,7 @@ namespace Twstec\Kit\Auth\Enums;
  */
 enum VerificationPurpose: string
 {
-    /** Confirmação de ação sensível (saque, rotação de chave etc.). */
+    /** Confirmação de ação sensível (rotação de chave, exclusão de conta etc.). */
     case SensitiveAction = 'sensitive_action';
 
     /** Segundo fator do login (verificação em duas etapas por e-mail). */

@@ -181,9 +181,9 @@ pessoal, o uuid da pessoa, o mesmo gravado na 1.x).
 **Eventos para quem guarda dado das contas fora do pacote.** `PersonDeleting`
 (no `deleting` da pessoa, depois de a regra das contas não recusar — **só para
 ler**: outra guarda ainda pode recusar), `PersonDeleted` (a pessoa saiu; antes
-de o pacote arrumar as contas) e `AccountDeleting` (em
-`AccountService::deleteAccount`, dentro da transação, antes de qualquer linha
-sair). O `twstec/kit-uploads` usa os três para apagar os arquivos (ver
+de o pacote arrumar as contas) e `AccountDeleting` (na exclusão da conta pelo
+[caminho único](#o-caminho-único-de-exclusão), dentro da transação, antes de
+qualquer linha sair). O `twstec/kit-uploads` usa os três para apagar os arquivos (ver
 [Exclusão em `docs/uploads.md`](uploads.md#exclusão-o-arquivo-sai-junto-lgpd)).
 
 **Chaves de quem saiu.** A chave é da conta e continua valendo quando quem a
@@ -200,7 +200,7 @@ derruba as chaves da conta (401) — na conta pessoal, exatamente como a regra d
 ## Impedimentos de exclusão
 
 Um registro do **aplicativo** pode impedir que uma pessoa ou uma conta seja
-excluída agora — o exemplo clássico é o lançamento contábil só-acréscimo que a
+excluída agora — o exemplo clássico é o registro só-acréscimo que a
 lei manda guardar por anos e que aponta para a conta com chave estrangeira
 `RESTRICT`. Sem aviso, a exclusão estouraria o erro bruto do banco no meio do
 caminho. O `twstec/kit-accounts` tem um **ponto de extensão** para o
@@ -212,21 +212,21 @@ use Twstec\Kit\Accounts\Deletion\Contracts\DeletionCheck;
 use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
 use Twstec\Kit\Accounts\Deletion\DeletionRequest;
 
-final class LancamentosImpedemExclusao implements DeletionCheck
+final class RegistrosGuardadosImpedemExclusao implements DeletionCheck
 {
     public function impediments(DeletionRequest $request): iterable
     {
         // $request->accountIds(): as contas que sairiam (a conta, ou as que
         // saem junto com a pessoa); $request->person: a pessoa, quando é
         // exclusão de pessoa.
-        $total = Lancamento::query()
+        $total = RegistroGuardado::query()
             ->whereIn('account_id', $request->accountIds())
             ->count();
 
         if ($total > 0) {
             yield new DeletionImpediment(
-                'ledger_entries',                                   // código estável
-                __('app.exclusao.lancamentos', ['total' => $total]), // o que o usuário lê
+                'retained_records',                                   // código estável
+                __('app.exclusao.registros_guardados', ['total' => $total]), // o que o usuário lê
             );
         }
     }
@@ -238,7 +238,7 @@ primeiro nível `deletion` — publique com `vendor:publish --tag=accounts-confi
 
 ```php
 'deletion' => [
-    'checks' => [App\Exclusao\LancamentosImpedemExclusao::class],
+    'checks' => [App\Exclusao\RegistrosGuardadosImpedemExclusao::class],
 ],
 ```
 
@@ -246,7 +246,7 @@ ou em código, no `boot()` de um service provider (é como um pacote entra):
 
 ```php
 app(\Twstec\Kit\Accounts\Deletion\DeletionImpediments::class)
-    ->register(LancamentosImpedemExclusao::class); // ou um Closure(DeletionRequest): iterable
+    ->register(RegistrosGuardadosImpedemExclusao::class); // ou um Closure(DeletionRequest): iterable
 ```
 
 | Onde | O que acontece com um impedimento |
@@ -254,8 +254,9 @@ app(\Twstec\Kit\Accounts\Deletion\DeletionImpediments::class)
 | Excluir a **conta** pela página da conta (`DeleteAccount`) | recusada já na pré-checagem, **antes de pedir o código** (o token não é gasto), com a mensagem junto do botão (erro de validação no campo `account`) e `account.deleted` `denied` na trilha |
 | Excluir a **pessoa** pelo `/admin` | o botão some; a pré-checagem (`AccountService::deletionDenial`) dá o motivo; a chamada forjada é recusada com a trilha |
 | Excluir a pessoa com **aprovação em dois passos** (`users.delete`) | o pedido não nasce (recusa com o motivo); impedimento que surgiu depois recusa a aprovação; na execução, a recusa que só aparece na hora (inclusive `RESTRICT` não declarado) deixa o pedido `failed` com a mensagem traduzida, nada apagado |
-| Excluir a pessoa por código (`$user->delete()`) | `DeletionImpededException` (com `codes()` e a mensagem), nada muda, `user.deleted` `denied` na trilha — que fica mesmo se quem chamou desfizer a transação em volta |
-| `AccountService::deleteAccount()` por código | `DeletionImpededException`, nada muda |
+| Excluir a pessoa ou a conta por código pelo [caminho único](#o-caminho-único-de-exclusão) (`AccountDeletion`) | `DeletionImpededException` (com `codes()` e a mensagem), nada muda, `user.deleted` ou `account.deleted` `denied` na trilha — que fica mesmo se quem chamou desfizer a transação em volta |
+| Excluir a pessoa direto no model (`$user->delete()`) | a mesma recusa e a mesma linha na trilha (o `deleting` do model pergunta); só a rede de segurança abaixo fica de fora |
+| `AccountService::deleteAccount()` por código | é o caminho único por baixo (mantido por compatibilidade): a mesma recusa, com a trilha |
 
 Regras do contrato: o verificador **só lê** (outro ainda pode recusar); a
 exceção que ele lançar **para** a exclusão (falha fechada); a mensagem é a que
@@ -263,7 +264,8 @@ o usuário lê e a que vai para a trilha (traduzida, sem dado de terceiros).
 
 **Rede de segurança.** Registro do aplicativo que aponta para a conta ou para
 a pessoa com chave estrangeira `RESTRICT` e que **ninguém declarou**: a
-exclusão pela página da conta e pelo `/admin` roda num savepoint e, se o banco
+exclusão pelo [caminho único](#o-caminho-único-de-exclusão) — que a página da
+conta, o `/admin` e a aprovação em dois passos usam — roda num savepoint e, se o banco
 recusar por chave estrangeira (PostgreSQL `23503`/`23001`, SQLite e MySQL
 `23000`), devolve a mesma recusa limpa — "não é possível excluir agora: há
 registros que ainda dependem desta conta" —, com a transação desfeita, a
@@ -274,6 +276,70 @@ melhor e a recusa vem antes de pedir o código.
 A **guarda legal** dos uploads usa o mesmo mecanismo quando o projeto quer que
 ela impeça a exclusão (`UPLOADS_LEGAL_HOLD_BLOCKS_DELETION=true`); por padrão
 ela não impede: a exclusão segue e o upload guardado fica desvinculado.
+
+## O caminho único de exclusão
+
+Pessoa e conta se excluem por **um caminho só**, o
+`Twstec\Kit\Accounts\Deletion\AccountDeletion` — o mesmo que as telas usam (a
+página da conta nos dois starters, o `/admin`, a execução da aprovação em dois
+passos). Código do aplicativo que exclui (um job de retenção, um comando de
+suporte, um serviço) chama ele também:
+
+```php
+use Twstec\Kit\Accounts\Deletion\AccountDeletion;
+use Twstec\Kit\Accounts\Deletion\Exceptions\DeletionImpededException;
+use Twstec\Kit\Accounts\Account\Exceptions\OwnerOfSharedAccountException;
+
+final class EncerrarCadastrosInativos
+{
+    public function __construct(private readonly AccountDeletion $exclusao) {}
+
+    public function handle(): void
+    {
+        foreach (User::query()->where('status', 'pending')->where('created_at', '<', now()->subYear())->cursor() as $pessoa) {
+            try {
+                $this->exclusao->deleteUser($pessoa);
+            } catch (DeletionImpededException|OwnerOfSharedAccountException $recusa) {
+                // Nada foi apagado e a recusa JÁ está na trilha de auditoria:
+                // aqui só se decide o que fazer com o motivo.
+                report($recusa);
+            }
+        }
+    }
+}
+
+// A conta de uma empresa (nunca a pessoal, que sai junto com a pessoa):
+app(AccountDeletion::class)->deleteAccount($conta, $quemPediu);
+```
+
+O que ele faz em toda exclusão:
+
+1. **Pergunta antes** aos [verificadores](#impedimentos-de-exclusão) — para a
+   pessoa, também a regra do dono de conta com outros membros. Recusa:
+   `DeletionImpededException` ou `OwnerOfSharedAccountException`, nada apagado.
+2. **Rede de segurança**: a exclusão roda num savepoint; uma chave estrangeira
+   `RESTRICT` que ninguém declarou vira a mesma recusa limpa (código
+   `referenced_by_application`), com tudo desfeito — nunca o erro bruto do banco.
+3. **Trilha no banco**: a recusa vai para `audit_events` (`user.deleted` ou
+   `account.deleted`, `denied`, com o motivo) **uma vez**, e fica lá mesmo que
+   quem chamou desfaça a transação em volta, em qualquer profundidade. A
+   exclusão da conta grava também o sucesso, na mesma transação.
+
+Quem recebe a recusa só mostra o motivo — **não grava de novo** (o `/admin` e a
+aprovação em dois passos já fazem assim).
+
+**Falha fechada fora do caminho.**
+
+| Chamada | O que acontece |
+| --- | --- |
+| `$conta->delete()` (ou `forceDelete()`) direto no model da conta | **Recusado** antes de qualquer linha sair: `DeletionOutsideServiceException`, com `account.deleted` `denied` na trilha. A conta só sai pelo caminho único, que leva junto o que é dela (projetos, chaves, vínculos, convites, uploads) |
+| `$user->delete()` direto no model da pessoa | **Continua valendo** — é o que factories, testes e as rotinas de limpeza usam. O `deleting` do model pergunta aos verificadores e à regra do dono, com a recusa na trilha. Só a rede de segurança da `RESTRICT` não declarada fica de fora: o banco recusa (nada sai), mas com o erro bruto e sem linha na trilha. Declare o impedimento ou exclua pelo caminho único |
+| Exclusão em massa (`User::query()->delete()`, `DB::table('accounts')->delete()`) | Não passa por evento de model nenhum: não use para pessoas nem contas (no PostgreSQL, os gatilhos das contas ainda seguram a regra do dono) |
+
+Por que a pessoa não tem a mesma trava da conta: o `delete()` do model de
+usuário é usado por factories, testes e rotinas do próprio aplicativo; recusá-lo
+fora do serviço quebraria esses caminhos sem ganho de segurança — os
+verificadores já são perguntados no `deleting`.
 
 ## Membros
 
@@ -363,7 +429,8 @@ na transação, arquivo no disco por job depois do commit — menos o que está 
 os membros ficam com as contas deles. A conta pessoal não se exclui por aqui.
 Com [impedimento declarado](#impedimentos-de-exclusão), recusa antes de pedir
 o código; com registro do aplicativo que aponta para a conta sem ter sido
-declarado, recusa limpa com a transação desfeita.
+declarado, recusa limpa com a transação desfeita. A exclusão em si é a do
+[caminho único](#o-caminho-único-de-exclusão) — a mesma de quem exclui por código.
 
 ## Aviso de chave órfã
 

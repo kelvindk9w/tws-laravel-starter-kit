@@ -12,7 +12,7 @@ use Twstec\Kit\Auth\Support\UserModel;
 
 /**
  * Token de ação sensível: emitido após senha de transação + código
- * de verificação válidos. Autoriza UMA ação sensível (saque, rotação de chave
+ * de verificação válidos. Autoriza UMA ação sensível (rotação de chave
  * de API, alteração crítica).
  *
  * Invariantes de segurança:

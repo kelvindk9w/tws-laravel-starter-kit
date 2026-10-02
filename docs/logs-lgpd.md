@@ -225,7 +225,7 @@ public function handle(): void
     $id = CorrelationId::current();           // o mesmo da requisição que despachou
     $origem = CorrelationId::origin()?->value; // 'http', 'scheduler', 'queue' ou 'console'
 
-    Log::info('cobrança processada');          // já sai com correlation_id no contexto
+    Log::info('pedido processado');          // já sai com correlation_id no contexto
 }
 ```
 
@@ -267,7 +267,7 @@ arquivo (`http.outbound` no canal `request_log`) tem as mesmas colunas, nunca o 
 **Fail-open só da trilha.** Qualquer erro ao montar ou gravar a linha é engolido e vira
 `http.outbound.persist_failed` (`critical`) no canal de arquivo; a chamada nunca é afetada — a
 resposta, ou a exceção de conexão, chega ao aplicativo exatamente como chegaria sem o pacote. O
-contrário (a chamada falhar porque a trilha falhou) derrubaria pagamentos por causa de um log.
+contrário (a chamada falhar porque a trilha falhou) derrubaria a operação do aplicativo por causa de um log.
 
 **Transação.** A linha é gravada na conexão padrão, dentro da transação em que a chamada
 aconteceu: se ela for desfeita, a linha do banco some junto (a do arquivo fica). Para a linha

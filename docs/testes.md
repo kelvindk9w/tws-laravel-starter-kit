@@ -83,6 +83,33 @@ Arquivos: `tests/Unit/Architecture/ProjectGuardsTest.php` e
 `tests/Feature/Architecture/AccountModelsTest.php`. Cada trava tem um teste
 "não é cega", que prova que ela pega o que deve.
 
+### Análise estática (Larastan)
+
+O projeto nasce com o [Larastan](https://github.com/larastan/larastan)
+(PHPStan com as regras do Laravel) em `require-dev` e o `phpstan.neon.dist` na
+raiz: **nível 8** no código do aplicativo (`app/`), **sem baseline**.
+
+```bash
+docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
+```
+
+- O código dos starters passa limpo, e o CI do kit roda essa análise nos dois
+  starters a cada push: erro novo reprova.
+- Erro é para corrigir, não para guardar numa lista de ignorados. A única
+  entrada de `ignoreErrors` é o aviso `trait.unused` das peças neutras dos
+  módulos opcionais (`app/Models/Concerns/Fallbacks`), que só entram em uso sem
+  o módulo — com `reportUnmatched: false`, porque sem o módulo o aviso some.
+- Os models dos pacotes (`Account`, `AccountMembership`, `ApiKey`, `Project`,
+  `RequestLog`) declaram as colunas em `@property`: as migrations deles ficam
+  no `vendor/`, fora do alcance da leitura de migrations do Larastan.
+- Do contrato de usuário (`Twstec\Kit\Auth\Contracts\AuthUser`), use os
+  métodos, não as colunas: o e-mail é `getEmailForVerification()`. Coluna
+  lida de um objeto tipado pelo contrato (`$user->email`) reprova no nível 8.
+- **Projeto criado sem algum módulo opcional:** as telas do módulo ausente
+  continuam em `app/` (as rotas e o menu não as registram) e citam classes
+  que não estão instaladas; a análise acusa essas citações. Ela não entra no
+  `scripts/verificar` por isso. Com todos os módulos, passa limpa.
+
 ### Pacotes divididos: a pegadinha do `arch()` do Pest
 
 `arch()->expect('App\Models')->not->toUse('Filament')` **não** pega
@@ -218,6 +245,14 @@ Regras para escrever teste novo:
   sem o módulo ("Interface … not found") — foi o que reprovou a 2.0.0-beta.10
   na simulação "Livewire só a base". `tests/Feature/Architecture/OptionalModuleTestFilesTest.php`
   (nos dois starters) reprova isso. `use` no topo pode: ele não carrega nada.
+  A trava lê os **tokens** do PHP e só acusa declaração de verdade
+  (`class`/`interface`/`trait`/`enum` com nome, no topo do arquivo ou de um
+  bloco `namespace`, que estende, implementa ou usa como trait um tipo do
+  módulo — por `use`, apelido, `use` em grupo ou nome completo). Não acusa
+  `X::class`, `new X` ou `instanceof X` dentro de função ou closure, classe
+  anônima, comentário nem texto. Os casos que ela **não pode** acusar e os que
+  ela **tem de** acusar (inclusive a classe da 2.0.0-beta.10) estão no próprio
+  arquivo, como datasets.
 - Teste que varre `app/` com `class_exists`: pule as classes que só carregam
   com um módulo (`TestCase::appClassLoadable()` — hoje, o PanelProvider do
   `/admin`, que estende o Filament).
@@ -264,6 +299,14 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
 
 Host, porta, usuário e senha vêm do `.env` (os mesmos do banco de dev); só o
 nome do banco é forçado pelo `phpunit.pgsql.xml`.
+
+**Uma suíte por vez no mesmo banco de teste.** Duas execuções simultâneas
+contra o mesmo `<banco>_test` se atropelam (o `migrate:fresh` de uma apaga as
+tabelas da outra; o que um teste grava com commit aparece na contagem de outro)
+e dão falhas ao acaso. A `tests/TestCase.php` pega uma trava consultiva do
+PostgreSQL (`pg_try_advisory_lock`) no começo da suíte e a segura até o fim: a
+segunda execução para logo, com "Suíte recusada: outra execução está usando o
+banco de teste", em vez de falhar ao acaso.
 
 **Consultas com valor vindo de fora em coluna `uuid`** (URL, ação do Livewire,
 filtro do /admin): use `Model::query()->byUuid($valor)` (escopo da

@@ -423,7 +423,7 @@ demo é recusado em produção. A API pública (chaves `pk_`/`sk_`) não usa
 sessão e não muda.
 
 **Desligar a proteção web** (`AUTH_WEB_PROTECTIONS=false`) também tira a
-cobrança no painel (o aviso do log diz isso); o `/admin` continua cobrando.
+exigência no painel (o aviso do log diz isso); o `/admin` continua exigindo.
 
 ## Cadastro público: aberto ou fechado
 
@@ -450,7 +450,7 @@ está fechado.
 
 ## Ação sensível: senha de transação + código por e-mail (2FA)
 
-Fluxo (para saque, criação e rotação de chave de API, transferência de propriedade e exclusão de conta — ver [tenancy.md](tenancy.md) — e alterações críticas):
+Fluxo (para cancelar um pedido, criação e rotação de chave de API, transferência de propriedade e exclusão de conta — ver [tenancy.md](tenancy.md) — e alterações críticas):
 
 1. `POST /sensitive-actions/code` com a senha de transação → gera código de
    **6 dígitos**, persiste **somente o hash** (`verification_codes`) com
@@ -469,7 +469,7 @@ Fluxo (para saque, criação e rotação de chave de API, transferência de prop
    combinado com `auth`:
 
 ```php
-Route::post('/saque', ...)->middleware(['auth', 'sensitive.token']);
+Route::post('/orders/{order}/cancel', ...)->middleware(['auth', 'sensitive.token']);
 ```
 
 O código (geração, hash, validade, tentativas reservadas no banco, uso único

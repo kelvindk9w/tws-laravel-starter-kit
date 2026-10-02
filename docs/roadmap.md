@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-01, com a versão **2.0.0-beta.11** publicada.
+> Atualizado em 2026-10-01, com a versão **2.0.0-beta.12** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -27,10 +27,11 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Uploads confidenciais cifrados em repouso (chave própria, rotação sem indisponibilidade, trilha de cada acesso), retenção legal que segura o apagamento na exclusão do titular e impedimentos de exclusão declarados pelo aplicativo (recusa limpa, nunca o erro bruto do banco) | pronto (2.0.0-beta.10) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
-Cada versão passa pelos mesmos portões: Pint, Pest dos 7 pacotes e dos dois
-starters (SQLite e PostgreSQL), E2E dos dois starters, combinações de
-módulos, simulação da instalação publicada com build da imagem de produção,
-prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
+Cada versão passa pelos mesmos portões: Pint, Larastan nível 8 nos dois
+starters, Pest dos 7 pacotes e dos dois starters (SQLite e PostgreSQL), E2E
+dos dois starters, combinações de módulos, simulação da instalação publicada
+com build da imagem de produção, prova do caminho Docker, CodeQL,
+`composer audit` e `npm audit`.
 
 ## O que falta para a 2.0.0 estável
 
@@ -60,8 +61,14 @@ prova do caminho Docker, CodeQL, `composer audit` e `npm audit`.
    (#23): o arquivo ficava em claro no armazenamento, abrir não deixava
    rastro, excluir a conta apagava o que a lei manda guardar, e excluir uma
    conta referenciada por registro do aplicativo que a lei manda manter
-   estourava o erro bruto do banco — resolvido na 2.0.0-beta.10. Falta usar por
-   algumas semanas; é o critério principal para sair do beta.
+   estourava o erro bruto do banco — resolvido na 2.0.0-beta.10. A
+   atualização do projeto para as betas seguintes achou mais três: o starter
+   React não passava no Larastan nível 8 de quem o adota (#35), a trava dos
+   testes de módulo opcional confundia `X::class` com declaração de classe
+   (#37) e a exclusão chamada por código (job, comando) não tinha a recusa
+   limpa nem a trilha (#38) — resolvidas na 2.0.0-beta.12, que traz também a
+   análise estática dos starters no CI e o caminho único de exclusão. Falta
+   usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
    rodar o guia do iniciante e o comando único num Windows e num Mac de

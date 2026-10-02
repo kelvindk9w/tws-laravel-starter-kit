@@ -21,7 +21,7 @@ default = preferência do SO).
 | `/profile` | Dados, idioma, aparência (tema), senha de login, senha de transação e avatar (mesma tela) |
 | `/api-keys` | Chaves de API: criar (scopes + vínculo N:N com projetos), visualização única da secreta, rotacionar (grace period), revogar |
 | `/projects` | Projetos: CRUD só com nome, tudo inline |
-| `/notifications` | Preferências de e-mail (esqueleto p/ notificações de pagamento) |
+| `/notifications` | Preferências de e-mail (esqueleto p/ notificações do produto) |
 
 **O dashboard mostra tráfego REAL**: as métricas, o gráfico e a lista saem de
 `request_logs` filtrados por `tenant_uuid` (o uuid do dono da chave, vinculado
@@ -456,7 +456,10 @@ recusa a aprovação (o pedido continua pendente). Na **execução** (quatro olh
 ou o segundo passo do um operador), a recusa que só aparece na hora — um
 impedimento novo, ou um registro do aplicativo que aponta para a pessoa com
 chave estrangeira `RESTRICT` sem ter sido declarado — deixa o pedido `failed`
-com a mensagem traduzida, nada apagado e `user.deleted` `denied` na trilha. A demonstração
+com a mensagem traduzida, nada apagado e `user.deleted` `denied` na trilha (uma
+linha só: quem grava é o [caminho único de exclusão](tenancy.md#o-caminho-único-de-exclusão),
+e o `ExecutionRefused` com `recorded: true` avisa o serviço de aprovações para
+não gravar de novo). A demonstração
 (`twstec/kit-demo`) traz outro, **sempre ligado**: "Reajustar preço" de
 produto vira pedido com o valor novo (é o fluxo que o E2E percorre).
 

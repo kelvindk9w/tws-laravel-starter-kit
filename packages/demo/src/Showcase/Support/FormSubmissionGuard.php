@@ -29,9 +29,9 @@ use Twstec\Kit\Foundation\Security\AttackDetector;
  * e-mail; no modo `block`, o middleware recusa antes.
  *
  * O texto é gravado CRU (decisão de auditoria: a evidência forense precisa
- * do payload como veio), com UMA exceção: número de cartão (PAN). O kit é
- * base de sistemas de pagamento, e PCI DSS (req. 3) proíbe armazenar PAN
- * legível sem necessidade de negócio — e uma mensagem de contato ou um form
+ * do payload como veio), com UMA exceção: número de cartão (PAN). Quem digita
+ * um cartão num formulário não deveria tê-lo guardado em claro, e PCI DSS
+ * (req. 3) proíbe armazenar PAN legível sem necessidade de negócio — e uma mensagem de contato ou um form
  * demo nunca tem essa necessidade. A detecção de ataque roda ANTES, sobre o
  * texto original; só o que é persistido perde os dígitos do cartão (ficam os
  * 4 últimos). CPF e e-mail seguem crus aqui: são o próprio dado do contato.

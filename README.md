@@ -209,6 +209,7 @@ docker compose exec app php artisan <comando>        # artisan
 docker compose exec app php artisan test             # testes (Pest 4)
 docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml   # testes contra PostgreSQL
 docker compose exec app ./vendor/bin/pint            # estilo de código
+docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G   # análise estática (Larastan nível 8)
 
 # Os comandos abaixo montam a pasta atual: rode-os DENTRO de starters/livewire.
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app composer:latest composer <cmd>

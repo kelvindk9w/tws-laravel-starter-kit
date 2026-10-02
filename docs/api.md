@@ -126,13 +126,13 @@ anterior (ou a flag) sai, ela passa a receber 401 e precisa ser rotacionada.
 
 ## Scopes (permissões granulares)
 
-Formato `recurso:acao` (ex.: `customers:read`, `pix:create`, `withdrawals:*`),
+Formato `recurso:acao` (ex.: `customers:read`, `orders:create`, `invoices:*`),
 jsonb na coluna `scopes`. **Padrão na criação: tudo habilitado (`['*:*']`)** —
 o usuário restringe pelo menor privilégio. Wildcards: `*:*` e `recurso:*`.
-Checagem no model: `$apiKey->allows('pix:create')`. Proteção de rota:
+Checagem no model: `$apiKey->allows('orders:create')`. Proteção de rota:
 
 ```php
-Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
+Route::post('/orders', ...)->middleware('scope:orders:create'); // 403 + scope exigido
 ```
 
 ## Contrato de resposta da API (sucesso e erro)
