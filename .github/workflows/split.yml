@@ -129,7 +129,7 @@ jobs:
         run: php .github/release/prepare-composer.php "${{ matrix.path }}" "$TAG"
 
       - name: Cópia para ${{ env.SPLIT_OWNER }}/${{ matrix.repository }}
-        uses: symplify/monorepo-split-github-action@ac9845270ef47266435b4f124b133a323619e738 # v2.3.0
+        uses: symplify/monorepo-split-github-action@14e42e2437f674b8987c1f50ca3689116aea1893 # v2.4.5
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
         with:
