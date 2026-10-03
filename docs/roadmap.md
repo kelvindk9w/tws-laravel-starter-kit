@@ -1,7 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-03, com a versão **2.0.0-beta.14** publicada e a
-> **2.0.0-beta.14** (idempotência nas escritas da API) em preparação.
+> Atualizado em 2026-10-03, com a versão **2.0.0-beta.14** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
