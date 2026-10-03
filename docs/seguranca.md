@@ -98,6 +98,28 @@ tem a classificação **`confidential`** ([detalhes em uploads.md](uploads.md#up
 
 A assinatura de URLs assinadas (`signature`) passa a ser mascarada na trilha de requisições.
 
+## Idempotência das escritas da API (`Idempotency-Key`)
+
+Um `POST` reenviado com a mesma `Idempotency-Key` não executa de novo: o
+cliente recebe a resposta original. As decisões de segurança, em resumo:
+
+- **A corrida é decidida pelo banco** (unicidade em `idempotency_keys` com
+  `ON CONFLICT DO NOTHING`), não pelo cache.
+- **Escopo por conta + credencial** (ou conta + pessoa na sessão). Sem
+  ninguém identificado, a requisição com chave é recusada (falha fechada).
+- **A chave e o pedido ficam só em hash.** O corpo da requisição nunca é
+  guardado.
+- **A resposta guardada é cifrada** (`APP_KEY`) e só vive enquanto a chave
+  vale. Rota que exibe um segredo uma vez não guarda o corpo (`withhold`), e
+  a repetição nunca reexibe o segredo.
+- **Um replay não pula a autenticação nem a autorização:** o middleware roda
+  depois delas pela lista de prioridade do kernel.
+- **Resultado indeterminado não executa de novo:** se a rota gravou e a
+  conclusão não foi registrada, a chave fica em `409` até vencer (padrão).
+  O modo `transactional` grava a rota e a conclusão juntas.
+
+Tudo em [docs/api.md](api.md#idempotência-idempotency-key).
+
 ## Filtro de ataques: modo `observe` (padrão) e modo `block`
 
 **A defesa primária contra injeção e XSS é o framework, não o filtro.** Eloquent e o Query

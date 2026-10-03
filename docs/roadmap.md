@@ -1,6 +1,7 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-02, com a versão **2.0.0-beta.13** publicada.
+> Atualizado em 2026-10-03, com a versão **2.0.0-beta.14** publicada e a
+> **2.0.0-beta.14** (idempotência nas escritas da API) em preparação.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -25,6 +26,7 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | `/admin` com papéis e permissões por tela e por ação (conferidas no servidor, com recusa na trilha) e aprovação em dois passos — quatro olhos ou um operador — para ações de alto impacto | pronto (2.0.0-beta.8) |
 | Segundo fator obrigatório por configuração (todos ou só administradores, no painel e no `/admin`, com carência opcional e recusa de desligar na trilha) e cadastro público desligável | pronto (2.0.0-beta.9) |
 | Uploads confidenciais cifrados em repouso (chave própria, rotação sem indisponibilidade, trilha de cada acesso), retenção legal que segura o apagamento na exclusão do titular e impedimentos de exclusão declarados pelo aplicativo (recusa limpa, nunca o erro bruto do banco) | pronto (2.0.0-beta.10) |
+| Escritas da API com `Idempotency-Key`: replay da resposta original, recusa de chave reusada ou em processamento, corrida decidida pela unicidade no banco, escopo por conta + credencial, só hashes do pedido e resposta cifrada (sem guardar segredo exibido uma vez) | pronto (2.0.0-beta.14) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Larastan nível 8 nos dois
@@ -73,8 +75,10 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    segundo fator esperava o intervalo de reenvio. As duas foram resolvidas
    para a 2.0.0-beta.13: o E2E roda verde com `none`, `admins` e `all`, com o
    cadastro aberto ou fechado, e o código da configuração ganhou família
-   própria. Falta usar por algumas semanas; é o critério principal para sair
-   do beta.
+   própria. Depois, as escritas da API (#20): um `POST` reenviado (timeout,
+   queda de rede, retry do SDK) executava de novo, e cada projeto inventava
+   o próprio controle — resolvido na 2.0.0-beta.14 com a `Idempotency-Key`.
+   Falta usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
    rodar o guia do iniciante e o comando único num Windows e num Mac de
@@ -124,6 +128,12 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
   imagem do kit; os uploads comuns não dependem dela.
 - **Durante o beta**, quem instala um pacote avulso precisa de `@beta` em
   cada pacote do kit.
+- **Idempotência com resultado indeterminado:** fora do modo transacional,
+  o processo que morre (ou a conclusão que falha) depois de a rota gravar
+  deixa a chave presa em `409` até vencer. Esse é o padrão, pela segurança:
+  o cliente consulta o recurso e repete com uma chave nova. O modo
+  `transactional` fecha essa janela para efeito todo no banco. As linhas de
+  uma conta excluída saem na poda, não na exclusão (no máximo 24 h + 1 h).
 
 ## Depois da 2.0.0 (backlog)
 

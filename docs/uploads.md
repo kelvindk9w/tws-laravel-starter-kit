@@ -472,6 +472,35 @@ onde pôr chave estrangeira recria a tabela, a migration guarda e devolve
   url, MIME real, tamanho, sha256). Para registrar a rota você mesmo:
   `UPLOADS_API_ROUTES=false` e `Twstec\Kit\Uploads\Http\UploadRoutes::register()`
   (a autenticação por chave entra sempre).
+
+  **Idempotência** (`Idempotency-Key`, opcional — ver
+  [docs/api.md](api.md#idempotência-idempotency-key)):
+  - o reenvio do **mesmo arquivo** com a mesma chave não grava de novo, nem no
+    banco nem no armazenamento;
+  - **outro arquivo** com a mesma chave (o conteúdo conta, não o nome) é
+    recusado com `422 idempotency_key_reused`;
+  - a **URL assinada é credencial** enquanto vale, então segue a regra das
+    secretas (`withhold`): ela não é guardada, nem cifrada, e não volta na
+    repetição;
+  - a repetição devolve o status original, `Idempotent-Replayed: true` e
+    `data.uuid`, `data.codigo_publico`, `data.mime`, `data.size`,
+    `data.sha256` e `data.status`, com `idempotency.body_withheld: true`.
+    Nunca o caminho no armazenamento nem o nome original do arquivo.
+
+  **URL nova depois de um replay:** a API v1 **não tem** rota de consulta de
+  upload; o pacote só registra o `POST`. A URL assinada nasce fresca toda vez
+  que o aplicativo serializa o upload com o `UploadResource` (a validade
+  conta a partir dali). O cliente que perdeu a resposta original guarda o
+  `uuid` do replay e pede a URL pelo caminho que o aplicativo oferecer. Se o
+  projeto precisar disso na API, registre a consulta no mesmo grupo
+  autenticado, filtrada pela conta da chave:
+
+  ```php
+  Route::get('uploads/{uuid}', fn (string $uuid) => UploadResource::make(
+      Upload::query()->where('uuid', $uuid)->firstOrFail(), // o escopo da conta filtra
+  ))->middleware('scope:uploads:read');
+  ```
+
 - `GET /uploads/confidential/{uuid}` (rota `uploads.confidential`) —
   **registrada pelo pacote**, sempre: a entrega dos confidenciais (URL
   assinada, sem sessão, limitada por IP). Prefixo em

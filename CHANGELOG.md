@@ -6,6 +6,110 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.14] — 2026-10-03
+
+A API ganha idempotência nas escritas: o cliente que reenvia um `POST` com o
+mesmo cabeçalho `Idempotency-Key` recebe a resposta original, sem a operação
+rodar de novo, mesmo com duas tentativas ao mesmo tempo (#20).
+
+### Adicionado
+
+- **`Idempotency-Key` nas escritas da API** (#20, `twstec/kit-foundation`):
+  middleware `idempotent`, ligado por rota ou grupo, em `POST` e `PATCH`
+  (`IDEMPOTENCY_METHODS`).
+  - **Repetição** com a mesma chave e a mesma requisição: devolve o status e
+    o corpo da original, byte a byte, sem executar. Vem com
+    `Idempotent-Replayed: true` e `X-Original-Correlation-Id`; o
+    `X-Correlation-Id` é o do próprio replay.
+  - **Recusas** no envelope de erro, com código estável e sem executar:
+    - mesma chave com outra requisição: `422 idempotency_key_reused`;
+    - mesma chave ainda em execução: `409 idempotency_request_in_progress`,
+      com `Retry-After`. Com `IDEMPOTENCY_WAIT_MS`, a segunda espera um pouco
+      e recebe o replay;
+    - chave fora do formato (16 a 255 caracteres de uma lista branca):
+      `400 idempotency_key_invalid`;
+    - rota com `idempotent:required` e sem a chave:
+      `400 idempotency_key_missing`.
+  - **Corrida decidida pelo banco:** a linha "em processamento" entra com
+    `INSERT … ON CONFLICT DO NOTHING` sobre a unicidade (escopo, chave), na
+    tabela nova `idempotency_keys`. De duas requisições simultâneas, só uma
+    executa. Não depende do cache.
+  - **Escopo:** conta + chave de API na API; conta + pessoa na sessão; só
+    com a base, a pessoa. A mesma chave em contas ou credenciais diferentes
+    são chaves diferentes. Sem ninguém identificado, a requisição com chave
+    é recusada (falha fechada).
+  - **Nada em claro do cliente:** a chave e o escopo ficam só em SHA-256. O
+    corpo da requisição nunca é guardado, só o hash de uma forma canônica
+    (método, caminho, query e corpo normalizado; JSON e formulário
+    documentados em `docs/api.md`). O log leva uma impressão curta do hash,
+    nunca a chave.
+  - **Resposta guardada cifrada** com a `APP_KEY`, só enquanto a chave vale
+    (`IDEMPOTENCY_TTL_HOURS`, 24 h). A poda `idempotency:prune` roda de hora
+    em hora, agendada pelo pacote.
+  - **Rotas que exibem um segredo uma vez** (`withhold`): o corpo não é
+    guardado, nem cifrado. A repetição diz "já processada", com só os campos
+    de uma lista branca (`keep`), e nunca reexibe o segredo.
+  - **Falhas não congelam a chave:** erro de servidor, exceção e erro de
+    validação liberam a chave para a próxima tentativa. O 422 congela com
+    `IDEMPOTENCY_FREEZE_VALIDATION_ERRORS=true`, e outros 4xx só se
+    listados em `IDEMPOTENCY_FREEZE_CLIENT_ERRORS`.
+  - **Resultado indeterminado não executa de novo:** quando o processo morre
+    ou a gravação da conclusão falha depois de a rota gravar, a chave fica
+    "em processamento". Por padrão ela nunca é retomada e responde `409` até
+    vencer, e o cliente consulta o recurso antes de repetir com uma chave
+    nova. Com `IDEMPOTENCY_ABANDONED_TAKEOVER_SECONDS` > 0, ela é retomada
+    depois do prazo, com o risco de efeito duplicado documentado.
+  - **Modo transacional** (`idempotent:transactional`): a rota e a conclusão
+    da chave são confirmadas na mesma transação. Um `5xx` ou uma falha ao
+    concluir desfazem a escrita da rota, e a execução abandonada é retomada
+    com segurança depois de `IDEMPOTENCY_LOCK_SECONDS`. Serve para efeito
+    todo no banco.
+  - **Ordem garantida:** o middleware roda depois da autenticação, do
+    limite e da autorização, em qualquer ordem declarada na rota.
+  - **Trilha:** recusas, replays e liberações no canal `request_log`
+    (`api.idempotency.*`), com o correlation id.
+- **API v1 com idempotência** (`twstec/kit-accounts`): os `POST` aceitam a
+  chave, opcional.
+  - `POST /projects` repete a resposta original.
+  - `POST /api-keys` e `POST /api-keys/{uuid}/rotate` não guardam a secreta.
+    A repetição devolve o `uuid`, o código público e a chave pública, sem
+    reexibir a secreta, e não consome um token de ação sensível novo.
+  - O escopo é o `TenantIdempotencyScope`. Um resolvedor do aplicativo vence.
+- **Upload pela API com idempotência** (`twstec/kit-uploads`): o
+  `POST /api/v1/uploads` aceita a chave, opcional.
+  - O reenvio do mesmo arquivo não grava de novo, nem no banco nem no
+    armazenamento.
+  - Outro arquivo com a mesma chave recebe `422`. O conteúdo do arquivo entra
+    no hash, não só o nome.
+  - A URL assinada, credencial enquanto vale, não é guardada nem reexibida.
+    A repetição devolve identificadores, tipo, tamanho, hash e situação.
+  - A API v1 não tem consulta de upload. Como obter uma URL nova está em
+    `docs/uploads.md`.
+- **Código próprio no envelope de erro** (`twstec/kit-foundation`): uma
+  exceção que implementa `ProvidesApiErrorCode` sai com o `code` dela, mais
+  específico que o do status.
+- **Testes de concorrência real** nos dois starters
+  (`tests/Feature/Api/IdempotencyConcurrencyTest.php`): dois processos no
+  PostgreSQL, sem e com a espera curta, sempre com uma escrita só.
+
+### Atualizando da 2.0.0-beta.13
+
+- **Rode `php artisan migrate`:** a tabela `idempotency_keys` vem do
+  foundation. Não publique a migration.
+- **Agendador:** a poda `idempotency:prune` entra sozinha, de hora em hora.
+  Para outro horário, use `IDEMPOTENCY_PRUNE_SCHEDULE`.
+- **`.env`:** as variáveis `IDEMPOTENCY_*` são opcionais, e os padrões valem
+  sem elas. A lista comentada está no `.env.example` dos starters.
+- **Rotas do projeto:** para proteger uma escrita, acrescente `idempotent`
+  (ou `idempotent:required`) depois da autenticação. Em rota que exibe um
+  segredo uma vez, use `HandleIdempotencyKey::using(withhold: true, keep: [...])`.
+  Confirmação de uso único vai depois do `idempotent`. Grave dentro de
+  transação, porque um `5xx` libera a chave. O passo a passo está em
+  `docs/api.md`, "Idempotência".
+- **Clientes da API v1:** nada muda sem o cabeçalho. Um cliente que já
+  mandava `Idempotency-Key` por conta própria passa a ter a regra aplicada,
+  com o formato validado.
+
 ## [2.0.0-beta.13] — 2026-10-02
 
 O E2E dos starters passa a funcionar com o segundo fator obrigatório e com o
@@ -1634,7 +1738,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.13...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.14...desenvolvimento
+[2.0.0-beta.14]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.14
 [2.0.0-beta.13]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.13
 [2.0.0-beta.12]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.12
 [2.0.0-beta.11]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.11
