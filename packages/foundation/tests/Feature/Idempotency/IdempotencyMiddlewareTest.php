@@ -49,6 +49,13 @@ $GLOBALS['idemLogLines'] = [];
 beforeEach(function (): void {
     $GLOBALS['idemLogLines'] = [];
 
+    // A resposta guardada é cifrada com a APP_KEY. A aplicação mínima do
+    // Testbench não tem uma (no CI não há .env; no container de dev, a do .env
+    // do starter vazava pelo ambiente): cada teste ganha a sua, aleatória.
+    config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+    app()->forgetInstance('encrypter');
+    Crypt::clearResolvedInstance('encrypter');
+
     Event::listen(MessageLogged::class, function (MessageLogged $event): void {
         $GLOBALS['idemLogLines'][] = ['level' => $event->level, 'message' => (string) $event->message, 'context' => $event->context];
     });
@@ -746,3 +753,24 @@ it('modo transactional com a tabela de chaves em outra conexão é erro de monta
     config()->set('idempotency.connection', null);
     expect(idemOrders())->toBe(0);
 });
+
+it('sem chave de cifra utilizável (APP_KEY ausente): FALHA FECHADA antes de executar, com log crítico; sem a chave, a rota segue', function (string $appKey): void {
+    config()->set('app.key', $appKey);
+    app()->forgetInstance('encrypter');
+    Crypt::clearResolvedInstance('encrypter');
+
+    idemPost()->assertStatus(500)->assertJsonPath('error.code', 'server_error');
+
+    $unavailable = idemLog('api.idempotency.encryption_unavailable');
+    expect(idemOrders())->toBe(0)
+        ->and(DB::table(IdempotencyStore::TABLE)->count())->toBe(0)
+        ->and($unavailable)->toHaveCount(1)
+        ->and($unavailable[0]['level'])->toBe('critical');
+
+    // A requisição sem Idempotency-Key não depende da cifra.
+    idemPost(key: null)->assertCreated();
+    expect(idemOrders())->toBe(1);
+})->with([
+    'ausente' => [''],
+    'de tamanho errado' => ['base64:'.base64_encode('curta')],
+]);

@@ -91,6 +91,11 @@ rodar de novo, mesmo com duas tentativas ao mesmo tempo (#20).
 - **Testes de concorrência real** nos dois starters
   (`tests/Feature/Api/IdempotencyConcurrencyTest.php`): dois processos no
   PostgreSQL, sem e com a espera curta, sempre com uma escrita só.
+- **Sem chave de cifra, nada executa:** a requisição com `Idempotency-Key`
+  sem `APP_KEY` utilizável é recusada antes de a rota executar (500 genérico
+  e `api.idempotency.encryption_unavailable` no log, nível crítico), em vez
+  de executar e deixar a chave presa com o efeito gravado. Sem a chave, a
+  rota segue normal.
 
 ### Atualizando da 2.0.0-beta.13
 

@@ -128,6 +128,23 @@ final class StoredResponse
     }
 
     /**
+     * Motivo pelo qual a cifra NÃO está utilizável (APP_KEY ausente, de
+     * tamanho errado, cifra não suportada), ou null quando está. Resolver o
+     * encrypter é o que o Laravel faz na primeira cifra — aqui é feito ANTES
+     * de a rota executar.
+     */
+    public static function encryptionProblem(): ?string
+    {
+        try {
+            app('encrypter');
+        } catch (\Throwable $exception) {
+            return $exception::class;
+        }
+
+        return null;
+    }
+
+    /**
      * A resposta guardada ainda pode ser decifrada? (Para o log: replay de
      * resposta ilegível sai sem corpo.)
      */

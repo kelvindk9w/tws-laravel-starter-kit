@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 use Twstec\Kit\Foundation\Idempotency\Acquisition;
 use Twstec\Kit\Foundation\Idempotency\Exceptions\IdempotencyRefusedException;
+use Twstec\Kit\Foundation\Idempotency\Exceptions\IdempotencyUnavailableException;
 use Twstec\Kit\Foundation\Idempotency\Exceptions\MissingIdempotencyScopeException;
 use Twstec\Kit\Foundation\Idempotency\Exceptions\ReleaseWithinTransaction;
 use Twstec\Kit\Foundation\Idempotency\IdempotencyKey;
@@ -147,6 +148,20 @@ final class HandleIdempotencyKey
             ]);
 
             throw MissingIdempotencyScopeException::forRoute($route);
+        }
+
+        // Sem cifra utilizável a resposta não poderia ser guardada: recusa
+        // ANTES de executar (falha fechada), em vez de executar e deixar a
+        // chave presa com o efeito já gravado.
+        $encryptionProblem = StoredResponse::encryptionProblem();
+
+        if ($encryptionProblem !== null) {
+            Log::channel('request_log')->critical('api.idempotency.encryption_unavailable', [
+                ...$this->context($request, $key),
+                'exception' => $encryptionProblem,
+            ]);
+
+            throw IdempotencyUnavailableException::encryptionUnavailable($encryptionProblem);
         }
 
         $scopeHash = IdempotencyScope::hash($scope);

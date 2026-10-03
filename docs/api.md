@@ -367,6 +367,9 @@ Tabela `idempotency_keys` (migration do foundation):
   corpo**. Resposta que não decifra mais (`APP_KEY` trocada sem a anterior em
   `APP_PREVIOUS_KEYS`) vira o replay sem corpo, e a requisição **não executa de
   novo** por isso.
+- **Sem chave de cifra utilizável** (`APP_KEY` ausente ou inválida), a
+  requisição com `Idempotency-Key` é recusada **antes** de executar: `500` e
+  `api.idempotency.encryption_unavailable` (crítico) no log.
 
 ### Rotas que exibem um segredo uma vez (`withhold`)
 
