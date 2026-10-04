@@ -26,7 +26,11 @@ Créditos são dados a quem reportar, se desejar.
 
 ## Versões suportadas
 
-Apenas a branch `producao` e a última tag recebem correções de segurança.
+| Linha | Suporte |
+|---|---|
+| 2.x (branch `producao` e a última tag `v2.*`) | Correções de segurança e de defeitos |
+| 1.x (branch `1.x`, tags `v1.*`) | Só correções de segurança, até 6 meses depois do lançamento da 2.0.0 |
+| Anteriores à 1.0 | Sem suporte |
 
 ## O que já está coberto
 
@@ -45,5 +49,6 @@ Cada release passa por: testes automatizados, `composer audit`,
 Please **do not open public issues** for vulnerabilities. Use GitHub's
 *Security → Report a vulnerability* on this repository. We acknowledge
 within 2 business days, triage within 5, and target 14 days for high or
-critical fixes, followed by coordinated disclosure. Only the `producao`
-branch and the latest tag receive security fixes.
+critical fixes, followed by coordinated disclosure. Supported: the 2.x line
+(`producao` branch and the latest `v2.*` tag) and, for security fixes only,
+the 1.x line (`1.x` branch) until 6 months after the 2.0.0 release.

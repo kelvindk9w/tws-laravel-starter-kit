@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Http\Exceptions;
 
+use App\Core\Http\Exceptions\Contracts\ProvidesApiErrorCode;
 use App\Core\Logging\CorrelationId;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -69,11 +70,17 @@ final class ApiErrorRenderer
         }
 
         $status = $this->status($e);
-        $code = self::CODES[$status] ?? 'server_error';
+        $statusCode = self::CODES[$status] ?? 'server_error';
+
+        // Código mais específico que o do status (ex.: api_key_scope_exceeded),
+        // quando a exceção o declara — só em 4xx: 5xx é sempre server_error.
+        $code = $e instanceof ProvidesApiErrorCode && $status < 500
+            ? $e->apiErrorCode()
+            : $statusCode;
 
         $payload = [
             'code' => $code,
-            'message' => $this->message($e, $status, $code),
+            'message' => $this->message($e, $status, $statusCode),
             'correlation_id' => CorrelationId::resolve($request),
         ];
 

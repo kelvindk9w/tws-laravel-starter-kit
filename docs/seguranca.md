@@ -192,6 +192,13 @@ primeiro uso, sempre com todos os candidatos comparados em tempo constante — a
 recusa continua o mesmo 401 e conta para os baldes acima. Ver
 [api.md](api.md#pepper-vazio-nunca-é-pepper).
 
+**Sem escalada de privilégio pela API (1.1.2).** Uma chave de API nunca cria,
+rotaciona ou edita chave mais ampla que ela mesma: os escopos pedidos (ou os da
+chave alvo) têm de caber nos dela, e `scopes` omitido na criação herda os dela,
+nunca `*:*`. A recusa é 403 com código estável (`api_key_scope_exceeded` ou
+`api_key_projects_exceeded`). Ver
+[api.md](api.md#sem-escalada-de-privilégio-pela-api).
+
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
 a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
 (`App\Core\Security\ClientBucket`).

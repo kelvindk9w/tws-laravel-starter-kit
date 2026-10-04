@@ -4,6 +4,99 @@ Todas as mudanças relevantes deste kit. O formato segue
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e a numeração
 segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [1.1.2] — 2026-10-04
+
+Correção de segurança da linha 1.x (achada na 2.0.0-beta.15; o defeito existe
+desde a 1.0.0).
+
+### Segurança
+- **Chave de API criada pela tela com a restrição de projetos perdida.** As
+  caixas de seleção da tela de chaves de API (`<x-checkbox>` com `wire:model`
+  de lista) não sincronizavam no navegador: o componente punha o `wire:model`
+  e o `value` na `<label>`, e o `<input>` saía sempre com `value="1"`. Os
+  projetos marcados na criação não chegavam ao servidor, e a chave nascia
+  **valendo para a conta toda**, mais ampla do que a pessoa pediu. A edição
+  dos projetos de uma chave (o modal "Projetos") também não gravava o que
+  fosse marcado ou desmarcado: salvava de novo o vínculo que já existia. Os escopos
+  granulares marcados também não chegavam, mas aí a criação era recusada
+  ("formato recurso:acao"), sem gerar chave. A API v1 não tinha o defeito.
+- **Sem escalada de privilégio pela API v1.** Uma chave de conta com o escopo
+  `api-keys:create` conseguia criar chave mais ampla que ela mesma — com
+  `scopes` omitido, a chave nova saía `*:*` —, uma com `api-keys:rotate`
+  rotacionava uma chave mais ampla (e recebia a secreta nova dela), e uma com
+  `api-keys:assign` tirava a restrição de projetos de uma chave mais ampla. A
+  criação e a rotação já exigiam a ação sensível (senha de transação e código
+  por e-mail), então não havia escalada sem a pessoa; ainda assim, uma
+  credencial restrita gerava uma mais ampla. Agora a regra mora no
+  `ApiKeyService`: pela API, a chave criada, rotacionada ou editada tem de
+  caber na chave autenticada — escopos (com curinga: `orders:*` cobre
+  `orders:create`; `*:*` só quem tem `*:*`) e, se ela for restrita, projetos.
+  **`scopes` omitido herda exatamente os escopos da chave autenticada**,
+  nunca `*:*`. A recusa é `403` com código estável no envelope
+  (`api_key_scope_exceeded` ou `api_key_projects_exceeded`, os mesmos da
+  2.x). Pelo painel, nada muda. Ver `docs/api.md`, "Sem escalada de
+  privilégio pela API".
+
+### Corrigido
+- **`<x-checkbox>`:** os atributos que carregam o estado (`wire:model`,
+  `value`, `data-*`, `aria-*`) vão para o `input`, não mais para a `label`
+  (que fica só com a classe); o valor padrão continua `"1"` (caixa única de
+  formulário, como o "Lembrar de mim" do login). Uma lista de caixas com
+  `wire:model` passa a sincronizar no navegador, em qualquer tela.
+- Envelope de erro da API: um 4xx pode trazer um `code` mais específico que o
+  do status, quando a exceção o declara (`ProvidesApiErrorCode`).
+- `SECURITY.md`: a tabela de versões suportadas inclui a linha 1.x.
+
+### Testes
+- `tests/Feature/UiCheckboxTest.php` (o componente e a tela de chaves
+  renderizada: cada projeto e cada escopo com o próprio valor e o
+  `wire:model` no input), `tests/Feature/ApiKeys/ApiKeyPrivilegeTest.php`
+  (pela requisição) e o E2E `tests/e2e/api-key-scopes.spec.js`, que cria
+  chaves marcando escopos e projetos no navegador e confere, pela API v1 com a
+  própria chave, que ela pode exatamente o que foi marcado.
+
+### Atualizando da 1.1.1
+- **Troque o `resources/views/components/checkbox.blade.php`** do seu projeto
+  pelo da versão nova (ou aplique a mesma regra: os atributos, menos a classe,
+  no `input`). Se o seu projeto usa o `<x-checkbox>` em outras telas com
+  `wire:model` de lista, elas também passam a funcionar.
+- **Confira as chaves criadas pela tela que deviam estar restritas a
+  projetos:** as que estão "para a conta toda" sem a pessoa ter escolhido isso
+  nasceram sem a restrição. Restrinja-as pela tela (o modal "Projetos" já
+  funciona) ou rotacione/revogue. As candidatas são as chaves ativas, sem
+  restrição, de quem já tinha projeto quando a chave foi criada (quem não
+  tinha projeto não podia marcar nenhum). Para listá-las:
+
+  ```bash
+  php artisan tinker --execute='
+  App\Core\ApiKeys\Models\ApiKey::query()
+      ->where("restricted_to_projects", false)
+      ->where("status", "active")
+      ->whereExists(fn ($q) => $q->selectRaw("1")->from("projects")
+          ->whereColumn("projects.user_id", "api_keys.user_id")
+          ->whereColumn("projects.created_at", "<=", "api_keys.created_at"))
+      ->with("owner:id,email")
+      ->get()
+      ->each(fn ($k) => print($k->uuid." | ".$k->name." | ".$k->owner?->email." | ".$k->created_at.PHP_EOL));'
+  ```
+
+  A lista inclui as chaves que são da conta toda de propósito e as criadas
+  pela API (que não tinham o defeito): confira com o dono de cada uma. Chave
+  rotacionada herda a falta de restrição da antiga.
+- **Clientes da API v1 que criam, rotacionam ou vinculam chaves** (mudança de
+  contrato):
+  - `POST /api/v1/api-keys` **sem `scopes`** passa a herdar os escopos da
+    chave que fez a chamada (antes: `*:*`). Quem chama com uma chave `*:*`
+    não vê diferença; com uma chave restrita, a chave nova sai com os mesmos
+    escopos dela. Mande `scopes` para escolher menos.
+  - Pedir escopo que a chave autenticada não tem, rotacionar ou editar os
+    projetos de chave mais ampla que ela responde `403` com
+    `api_key_scope_exceeded` (ou `api_key_projects_exceeded`). Trate o
+    `code`, não a mensagem.
+  - Para gerar uma chave mais ampla, use o painel ou uma chave `*:*`.
+- Se você customizou os arquivos de idioma `lang/*/api_keys.php`, traga as
+  chaves novas `scopes.exceeded` e `projects.exceeded`.
+
 ## [1.1.1] — 2026-09-24
 
 Correção de segurança da linha 1.x.
@@ -148,6 +241,7 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
+[1.1.2]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.2
 [1.1.1]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v1.0.0

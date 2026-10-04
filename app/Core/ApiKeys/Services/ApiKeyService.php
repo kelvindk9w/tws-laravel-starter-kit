@@ -8,9 +8,11 @@ use App\Core\ApiKeys\Enums\ApiKeyStatus;
 use App\Core\ApiKeys\Models\ApiKey;
 use App\Core\ApiKeys\Support\ApiKeyGenerator;
 use App\Core\ApiKeys\Support\ApiKeyHasher;
+use App\Core\ApiKeys\Support\Exceptions\ApiKeyPrivilegeExceededException;
 use App\Core\Auth\Models\User;
 use App\Core\Identifiers\UuidColumn;
 use App\Core\Tenancy\Models\Project;
+use App\Core\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -24,6 +26,16 @@ use InvalidArgumentException;
  *   o usuário pode restringir por recurso:ação (menor privilégio).
  * - Rotação: nova chave herda nome, scopes e projetos da antiga; o dono escolhe
  *   a morte da antiga (imediata ou grace period em minutos).
+ * - SEM ESCALADA PELA API (1.1.2): quando quem age é uma CHAVE de API (a
+ *   requisição autenticada pelo resolve.tenant — TenantContext), a chave
+ *   criada, rotacionada ou editada nunca é mais ampla que ela: os escopos têm
+ *   de caber nos da chave autenticada (com curinga: `orders:*` contém
+ *   `orders:create`; `*:*` só quem tem `*:*`) e, se ela for restrita a
+ *   projetos, os projetos também. Na criação, `scopes` omitido HERDA os
+ *   escopos da chave autenticada (nunca `*:*` por omissão). Recusa: 403
+ *   (ApiKeyPrivilegeExceededException, código estável no envelope). A regra
+ *   mora AQUI, não no controller: todo caminho pela API passa por ela. Pela
+ *   sessão (o painel), quem decide é o dono, como antes.
  */
 final class ApiKeyService
 {
@@ -41,10 +53,31 @@ final class ApiKeyService
      */
     public function create(User $user, array $data): array
     {
+        $grantor = $this->grantor();
+
+        // Pela API, o padrão é o que a chave autenticada já pode; no painel,
+        // o padrão da configuração.
+        $scopes = $data['scopes'] ?? ($grantor !== null ? $grantor->scopes : config('api_keys.default_scopes', ['*:*']));
+        $projectIds = $this->resolveProjectIds($user, $data['project_uuids'] ?? null);
+
+        if ($grantor !== null) {
+            $this->assertScopesWithin($grantor, $scopes);
+
+            // Chave autenticada restrita a projetos: sem projetos no pedido, a
+            // nova herda os dela; com projetos, eles têm de estar entre os dela.
+            // (Hoje as rotas de criação exigem chave de conta — account.key —,
+            // então isto é defesa em profundidade para quem chamar o service.)
+            if ($grantor->isRestrictedToProjects() && ($data['project_uuids'] ?? []) === []) {
+                $projectIds = $this->keyProjectIds($grantor);
+            }
+
+            $this->assertProjectsWithin($grantor, $projectIds, $grantor->isRestrictedToProjects());
+        }
+
         $pair = $this->generator->generatePair();
 
         /** @var ApiKey $apiKey */
-        $apiKey = DB::transaction(function () use ($user, $data, $pair): ApiKey {
+        $apiKey = DB::transaction(function () use ($user, $data, $pair, $scopes, $projectIds, $grantor): ApiKey {
             /** @var ApiKey $apiKey */
             $apiKey = ApiKey::createWithPublicCodeRetry([
                 'user_id' => $user->id,
@@ -52,12 +85,12 @@ final class ApiKeyService
                 'public_key' => $pair['public_key'],
                 // SOMENTE o hash — nunca a sk_ em claro.
                 'secret_hash' => $this->hasher->hash($pair['secret_key']),
-                'scopes' => $data['scopes'] ?? config('api_keys.default_scopes', ['*:*']),
+                'scopes' => $scopes,
                 'expires_at' => $data['expires_at'] ?? null,
                 'status' => ApiKeyStatus::Active,
             ]);
 
-            $this->syncProjects($apiKey, $this->resolveProjectIds($user, $data['project_uuids'] ?? null));
+            $this->applyProjects($apiKey, $projectIds, $grantor !== null && $grantor->isRestrictedToProjects());
 
             return $apiKey;
         });
@@ -80,6 +113,15 @@ final class ApiKeyService
     {
         if ($current->status !== ApiKeyStatus::Active) {
             throw new InvalidArgumentException('Somente chaves ativas podem ser rotacionadas.');
+        }
+
+        // A rotação entrega a secreta NOVA a quem pediu: pela API, só de chave
+        // que não seja mais ampla que a autenticada (a si mesma, sempre).
+        $grantor = $this->grantor();
+
+        if ($grantor !== null) {
+            $this->assertScopesWithin($grantor, $current->scopes);
+            $this->assertProjectsWithin($grantor, $this->keyProjectIds($current), $current->isRestrictedToProjects());
         }
 
         $pair = $this->generator->generatePair();
@@ -145,10 +187,85 @@ final class ApiKeyService
      */
     public function syncProjects(ApiKey $apiKey, array $projectIds): void
     {
-        DB::transaction(function () use ($apiKey, $projectIds): void {
-            $apiKey->forceFill(['restricted_to_projects' => $projectIds !== []])->save();
+        // Pela API: só edita chave que não seja mais ampla que a autenticada,
+        // e (se ela for restrita) só dentro dos projetos dela — lista vazia,
+        // que é "conta toda", fica de fora.
+        $grantor = $this->grantor();
+
+        if ($grantor !== null) {
+            $this->assertScopesWithin($grantor, $apiKey->scopes);
+            $this->assertProjectsWithin($grantor, $projectIds, $projectIds !== []);
+        }
+
+        $this->applyProjects($apiKey, $projectIds, $projectIds !== []);
+    }
+
+    /**
+     * @param  list<int>  $projectIds
+     */
+    private function applyProjects(ApiKey $apiKey, array $projectIds, bool $restricted): void
+    {
+        DB::transaction(function () use ($apiKey, $projectIds, $restricted): void {
+            $apiKey->forceFill(['restricted_to_projects' => $restricted || $projectIds !== []])->save();
             $apiKey->projects()->sync($projectIds);
         });
+    }
+
+    /**
+     * A chave de API que está agindo (a requisição autenticada por chave), ou
+     * null fora da API (o painel, um comando).
+     */
+    private function grantor(): ?ApiKey
+    {
+        return app(TenantContext::class)->apiKey();
+    }
+
+    /**
+     * Cada escopo pedido cabe nos da chave autenticada? `ApiKey::allows()` faz
+     * o curinga do lado de quem concede: `orders:*` cobre `orders:create` e
+     * `orders:*`; `*:*` só é coberto por `*:*`.
+     *
+     * @param  array<int, mixed>|null  $scopes
+     *
+     * @throws ApiKeyPrivilegeExceededException
+     */
+    private function assertScopesWithin(ApiKey $grantor, ?array $scopes): void
+    {
+        $exceeding = array_values(array_filter(
+            array_map('strval', $scopes ?? ['*:*']),
+            static fn (string $scope): bool => ! $grantor->allows($scope),
+        ));
+
+        if ($exceeding !== []) {
+            throw ApiKeyPrivilegeExceededException::scopes($exceeding);
+        }
+    }
+
+    /**
+     * Chave autenticada restrita a projetos: o alvo tem de ser restrito e
+     * ficar dentro dos projetos dela.
+     *
+     * @param  list<int>  $projectIds
+     *
+     * @throws ApiKeyPrivilegeExceededException
+     */
+    private function assertProjectsWithin(ApiKey $grantor, array $projectIds, bool $targetRestricted): void
+    {
+        if (! $grantor->isRestrictedToProjects()) {
+            return;
+        }
+
+        if (! $targetRestricted || array_diff($projectIds, $this->keyProjectIds($grantor)) !== []) {
+            throw ApiKeyPrivilegeExceededException::projects();
+        }
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function keyProjectIds(ApiKey $apiKey): array
+    {
+        return array_values(array_map('intval', $apiKey->projects()->pluck('projects.id')->all()));
     }
 
     /**

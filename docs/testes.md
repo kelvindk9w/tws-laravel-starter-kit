@@ -106,6 +106,16 @@ de acesso lido no Mailpit. No fim ele **apaga o que criou**: a conta, pelo
 mensagens dela no Mailpit. Ele usa conta própria de propósito — ligar o
 segundo fator no `e2e@example.com` quebraria o login dos outros specs.
 
+O `api-key-scopes.spec.js` prova as caixas de seleção da tela de chaves de
+API no navegador (o `Livewire::test` não roda o JavaScript): cadastra uma
+conta nova (`e2e-escopos-<carimbo>@example.com`), cria dois projetos e duas
+chaves — uma restrita a um projeto com todas as permissões, outra com escopos
+granulares — e confere, pela API v1 com a própria chave, que ela enxerga só o
+projeto marcado e só tem os escopos marcados; depois edita os projetos de uma
+chave pelo modal e confere de novo. A segunda criação espera o intervalo de
+reenvio do código (60 s). No fim apaga a conta e as mensagens, como os specs
+acima.
+
 Toda a suíte sai do mesmo IP e passa pelo limite de borda (300 requisições
 por minuto por IP — ver
 [Limite de requisições](seguranca.md#limite-de-requisições-rate-limit-e-contenção-da-trilha)).

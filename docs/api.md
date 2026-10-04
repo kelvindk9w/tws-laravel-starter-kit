@@ -111,13 +111,44 @@ anterior (ou a flag) sai, ela passa a receber 401 e precisa ser rotacionada.
 ## Scopes (permissões granulares)
 
 Formato `recurso:acao` (ex.: `customers:read`, `pix:create`, `withdrawals:*`),
-jsonb na coluna `scopes`. **Padrão na criação: tudo habilitado (`['*:*']`)** —
-o usuário restringe pelo menor privilégio. Wildcards: `*:*` e `recurso:*`.
+jsonb na coluna `scopes`. **Padrão na criação pelo painel: tudo habilitado
+(`['*:*']`)** — o usuário restringe pelo menor privilégio. Pela API v1, o
+padrão é herdar os escopos da chave que fez a chamada (ver "Sem escalada de
+privilégio pela API", abaixo). Wildcards: `*:*` e `recurso:*`.
 Checagem no model: `$apiKey->allows('pix:create')`. Proteção de rota:
 
 ```php
 Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 ```
+
+### Sem escalada de privilégio pela API
+
+Desde a 1.1.2, uma chave de API nunca produz uma credencial mais ampla que ela
+mesma. A regra mora no `ApiKeyService` (todo caminho pela API passa por ela) e
+vale quando quem age é uma chave (a requisição autenticada pelo
+`resolve.tenant`); pelo painel, quem decide é o dono, como antes.
+
+| Operação | Regra |
+|---|---|
+| `POST /api/v1/api-keys` | cada escopo pedido tem de caber nos da chave autenticada; **`scopes` omitido herda exatamente os escopos dela** (antes: `*:*`) |
+| `POST /api/v1/api-keys/{uuid}/rotate` | só rotaciona chave cujos escopos caibam nos da autenticada (a si mesma, sempre) — a rotação entrega a secreta nova |
+| `PUT /api/v1/api-keys/{uuid}/projects` | só edita chave cujos escopos caibam nos da autenticada (esvaziar a lista deixa a chave valendo para a conta toda) |
+
+"Caber" usa o curinga do lado de quem concede: `orders:*` cobre
+`orders:create` e `orders:*`; `*:*` só é coberto por `*:*`. Se a chave
+autenticada for restrita a projetos, a chave criada ou editada também tem de
+ficar dentro dos projetos dela (hoje as rotas de criação e vínculo já exigem
+chave de conta — `account.key` —, então isto é defesa em profundidade).
+
+A recusa é `403` com código estável no envelope (trate o `code`, não a
+mensagem):
+
+| `code` | quando |
+|---|---|
+| `api_key_scope_exceeded` | um escopo pedido (ou o da chave alvo) não cabe nos da chave autenticada |
+| `api_key_projects_exceeded` | a chave autenticada é restrita a projetos e o pedido sai deles |
+
+Para gerar uma chave mais ampla, use o painel ou uma chave `*:*`.
 
 ## Contrato de resposta da API (sucesso e erro)
 
@@ -153,7 +184,10 @@ Route::post('/pix', ...)->middleware('scope:pix:create'); // 403 + scope exigido
 Códigos por status: `400 bad_request`, `401 unauthorized`, `403 forbidden`,
 `404 not_found`, `405 method_not_allowed`, `409 conflict`, `419 page_expired`,
 `422 validation_failed`, `429 too_many_requests`, `503 service_unavailable`,
-e `server_error` para qualquer 5xx.
+e `server_error` para qualquer 5xx. Um 4xx pode trazer um código mais
+específico quando a exceção o declara
+(`App\Core\Http\Exceptions\Contracts\ProvidesApiErrorCode`) — hoje,
+`api_key_scope_exceeded` e `api_key_projects_exceeded` (403).
 
 Exemplo de 422:
 
