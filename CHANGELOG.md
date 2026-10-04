@@ -6,6 +6,173 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.15] — 2026-10-03
+
+Webhooks de saída: o aplicativo avisa outros sistemas quando algo acontece
+numa conta, com o envio assinado, a entrega garantida e a proteção contra
+SSRF que cada projeto acabaria esquecendo (#24).
+
+### Adicionado
+
+- **Pacote `twstec/kit-webhooks`** (#24, novo, módulo OPCIONAL `webhooks`,
+  exige `accounts`):
+  - **Disparo:** `Webhooks::dispatch($conta, 'order.created', [...], $projeto)`.
+    O evento precisa estar no catálogo (`WEBHOOKS_EVENTS`); vai para cada
+    endpoint ativo da conta que o assina (com projeto, os sem projeto e os
+    daquele projeto).
+  - **Outbox:** o evento e as entregas são gravados no banco, na transação de
+    quem disparou, antes da fila; as tentativas vão para a fila depois do
+    commit. Fila fora do ar não perde evento: `webhooks:dispatch-pending`
+    (agendado a cada minuto) repõe o que não chegou lá, e a falha da fila
+    nunca sobe para quem disparou. O corpo do evento fica cifrado no banco.
+  - **Assinatura:** `X-Webhook-Signature: t=<timestamp>,v1=<hex>` —
+    HMAC-SHA256 de `timestamp.corpo` com o segredo do endpoint; um `v1` por
+    segredo vigente durante a convivência de uma rotação. `X-Webhook-Id` e o
+    `id` do corpo são o id do EVENTO, o mesmo em toda tentativa e reenvio,
+    para o receptor deduplicar. Exemplo de verificação em PHP
+    (`examples/verify-signature.php`) e em Node, com tolerância de tempo e
+    comparação em tempo constante — o mesmo código que os testes usam.
+  - **Segredo:** gerado no servidor (`whsk_` + 256 bits), mostrado uma vez,
+    guardado cifrado com a `APP_KEY` (o HMAC precisa dele em claro). Revelar
+    e rotacionar (com convivência configurável dos dois segredos) são ações
+    sensíveis, na trilha de auditoria. Criar e alterar o endpoint também.
+  - **SSRF:** a política de destino roda no cadastro, na edição, na
+    reativação e em cada envio, com o DNS resolvido na hora. Só HTTPS em
+    produção; recusa loopback, redes privadas, CGNAT, link-local, metadados
+    de nuvem, reservados, os equivalentes IPv6 (e as formas que carregam um
+    IPv4 dentro), host em forma disfarçada de IP e credencial na URL; todos
+    os endereços resolvidos precisam passar. O envio conecta no IP conferido
+    (`CURLOPT_RESOLVE`) e confere a conexão antes do primeiro byte
+    (`CURLOPT_PREREQFUNCTION`): o rebinding é recusado. Sem redirect, sem
+    proxy, só o esquema conferido, tempo curto. As recusas vão para a trilha
+    (cadastro) ou para o log de entregas e o log da aplicação (envio).
+  - **Entrega:** fila com o job cifrado e só com ids; reserva no banco contra
+    envio duplo; novas tentativas com backoff configurável (1 min, 5 min,
+    30 min, 2 h, 12 h); endpoint desativado depois de N falhas seguidas
+    (padrão 20), com aviso por e-mail ao dono e aos admins e linha na trilha.
+  - **Log de entregas:** status, tentativas, duração, IP da conexão, erro sem
+    URL e o trecho da resposta cortado (1 KB) e redigido; o `correlation_id`
+    liga a tentativa à trilha de saída (`outbound_http_logs`, que não grava
+    cabeçalho, assinatura nem corpo). O webhook não leva o correlation id
+    interno ao receptor.
+  - **Reenvio manual** auditado (`webhook_delivery.resent`, com quem pediu) e
+    evento de teste (`webhook.ping`), com limite por conta.
+  - **Papéis:** todo membro vê; dono e admin gerem. Conta alheia = 404.
+  - **Exclusão:** endpoints, eventos, entregas e tentativas saem com a conta
+    (e com o projeto); a pessoa excluída perde a autoria do que criou.
+    Webhooks não impedem exclusão. `webhooks:prune` apaga eventos com mais de
+    30 dias.
+- **Telas de webhooks nos dois starters** (`/webhooks`, item "Webhooks" no
+  menu, só com o módulo): endpoints, log de entregas com as tentativas e
+  reenvio na mesma tela, sobre as Actions do pacote. Testes de tela e E2E
+  (`tests/e2e/webhooks.spec.*`, com um receptor local que confere a
+  assinatura).
+- **Instalador e comando único:** o módulo `webhooks` em `tws:install`,
+  `tws:add` e no menu do `twstec/kit`, com a regra "exige contas".
+- **Publicação:** o espelho `kelvindk9w/twstec-kit-webhooks` na lista do
+  split e da simulação da instalação publicada.
+
+### Mudado
+
+- `Twstec\Kit\Foundation\Kit` conhece o módulo `webhooks` (opcional, exige
+  `accounts`).
+- `AccountAudit` (`twstec/kit-accounts`) aceita o enum de ações de outro
+  pacote do kit (qualquer enum com valor em texto), para os webhooks
+  gravarem pela mesma porta.
+
+### Segurança
+
+- **Chave de API criada no starter Livewire com a restrição de projetos
+  perdida** (defeito publicado desde a 1.0.0, em todas as versões até a
+  2.0.0-beta.14): as caixas de seleção da tela de chaves de API (`<x-checkbox>`
+  com `wire:model` de lista) não sincronizavam no navegador. Os projetos
+  marcados na criação não chegavam ao servidor, e a chave nascia **valendo
+  para a conta toda**, mais ampla do que a pessoa pediu. A edição dos projetos
+  de uma chave (o modal) também não gravava o que fosse marcado. Os escopos
+  granulares marcados também não chegavam, mas a criação era recusada
+  ("formato recurso:acao"), sem gerar chave. O starter React não tinha o
+  defeito. Ver "Corrigido" e "Atualizando".
+- **"Todas as permissões" é escolha explícita no starter React:** o envio da
+  tela de chaves sem o campo `all_scopes` (pedido vazio ou malformado) é
+  recusado, em vez de valer como "todas" (`*:*`) por omissão. No Livewire, o
+  interruptor é estado da tela, ligado e visível por padrão.
+- **Sem escalada de privilégio na API v1** (`twstec/kit-accounts`): uma chave
+  de API com o escopo `api-keys:create` (ou `api-keys:rotate`,
+  `api-keys:assign`) conseguia criar chave mais ampla que ela mesma — com
+  `scopes` omitido, a chave nova saía `*:*` —, rotacionar uma chave mais ampla
+  (e receber a secreta nova dela) e editar os projetos de uma chave mais ampla.
+  A criação e a rotação já exigiam a ação sensível (senha de transação e
+  código por e-mail), então não havia escalada sem a pessoa; ainda assim, uma
+  credencial restrita gerava uma mais ampla. Agora a regra mora no
+  `ApiKeyService`: pela API, a chave criada, rotacionada ou editada tem de
+  caber na chave autenticada — escopos (com curinga: `orders:*` cobre
+  `orders:create`; `*:*` só quem tem `*:*`) e, se ela for restrita, projetos.
+  **`scopes` omitido herda exatamente os escopos da chave autenticada**,
+  nunca `*:*`. A recusa é `403` com código estável no envelope
+  (`api_key_scope_exceeded` ou `api_key_projects_exceeded`) e fica na trilha
+  (`api_key.privilege_exceeded`, contexto `api`). Pelo painel, vale o papel da
+  pessoa na conta, como antes. Ver `docs/api.md`, "Sem escalada de privilégio
+  pela API".
+
+### Corrigido
+
+- **`<x-checkbox>` do starter Livewire:** os atributos que carregam o estado
+  (`wire:model`, `value`, `data-*`, `aria-*`) vão para o `input`, não mais
+  para a `label`; o valor padrão continua `"1"` (caixa única de formulário).
+  Uma lista de caixas com `wire:model` passa a sincronizar no navegador, em
+  qualquer tela. A tela de webhooks passou a usar o componente. E2E novo
+  (`tests/e2e/api-key-scopes.spec.js`) cria chaves com escopos e projetos
+  marcados e confere, pela API v1 com a própria chave, que ela pode
+  exatamente o que foi marcado.
+- **502 no nginx do starter React com cabeçalho de resposta grande:** uma tela
+  com muitos módulos (a de webhooks) passava de 4 KB de cabeçalhos (o `Link`
+  de pré-carregamento do Vite, a CSP, os cookies) e o nginx respondia "upstream
+  sent too big header". O `prod.conf`, o `nginx.conf.template` de
+  desenvolvimento do projeto e o `react-dev.conf` do monorepo ganharam
+  `fastcgi_buffer_size 32k` e `fastcgi_buffers 8 32k`.
+- **Limpeza do E2E sob o limite de borda:** a busca do `/admin` que confere a
+  exclusão das pessoas criadas espera o `Retry-After` quando recebe 429 (a
+  rodada inteira divide o limite por IP), em vez de acusar sobra.
+
+### Atualizando da 2.0.0-beta.14
+
+- **Starter Livewire — chaves de API:** troque o
+  `resources/views/components/checkbox.blade.php` do seu projeto pelo da
+  versão nova (ou aplique a mesma regra: os atributos, menos a classe, no
+  `input`). Depois, **confira as chaves criadas pela tela** que deviam estar
+  restritas a projetos: as que estão "para a conta toda" sem a pessoa ter
+  escolhido isso nasceram sem a restrição. Restrinja-as pela tela (o modal de
+  projetos já funciona) ou rotacione/revogue. Uma consulta para achá-las:
+  `ApiKey::query()->where('restricted_to_projects', false)->get()` em modo
+  sistema, conferindo com quem as criou.
+- **Starter React em produção:** aplique no `docker/nginx/prod.conf` do seu
+  projeto as duas linhas de `fastcgi_buffer*` (ver "Corrigido").
+- **Clientes da API v1 que criam ou rotacionam chaves** (mudança de
+  contrato):
+  - `POST /api/v1/api-keys` **sem `scopes`** passa a herdar os escopos da
+    chave que fez a chamada (antes: `*:*`). Quem chama com uma chave `*:*`
+    não vê diferença; com uma chave restrita, a chave nova sai com os mesmos
+    escopos dela. Mande `scopes` para escolher menos.
+  - Pedir escopo que a chave autenticada não tem, rotacionar ou editar chave
+    mais ampla que ela responde `403` com `api_key_scope_exceeded` (ou
+    `api_key_projects_exceeded`). Trate o `code`, não a mensagem.
+  - Para gerar uma chave mais ampla, use o painel (dono ou admin da conta) ou
+    uma chave `*:*`.
+- **Quer webhooks?** `php artisan tws:add webhooks` (com o `twstec/kit-accounts`
+  instalado) ou `composer require "twstec/kit-webhooks:^2.0@beta"` e
+  `php artisan migrate`. Depois, declare os eventos em `WEBHOOKS_EVENTS`,
+  dispare com `Webhooks::dispatch(...)` dentro da transação da mudança e dê
+  às contas uma tela (os starters trazem as deles). Fila e agendador
+  precisam estar rodando. Detalhes em `docs/webhooks.md`.
+- **Não quer:** nada muda.
+- **Projeto criado só com a base pelo comando único/instalador:** a lista de
+  módulos opcionais agora tem quatro; para "só a base", use
+  `--without=accounts,uploads,admin,webhooks` (o instalador recusa
+  `webhooks` sem `accounts`).
+- **Troca da `APP_KEY`:** com webhooks, ponha a anterior em
+  `APP_PREVIOUS_KEYS` — os segredos dos endpoints e os corpos dos eventos
+  pendentes são cifrados com ela.
+
 ## [2.0.0-beta.14] — 2026-10-03
 
 A API ganha idempotência nas escritas: o cliente que reenvia um `POST` com o
@@ -1743,7 +1910,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.14...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.15...desenvolvimento
+[2.0.0-beta.15]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.15
 [2.0.0-beta.14]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.14
 [2.0.0-beta.13]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.13
 [2.0.0-beta.12]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.12

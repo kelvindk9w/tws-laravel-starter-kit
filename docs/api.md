@@ -127,8 +127,11 @@ anterior (ou a flag) sai, ela passa a receber 401 e precisa ser rotacionada.
 ## Scopes (permissões granulares)
 
 Formato `recurso:acao` (ex.: `customers:read`, `orders:create`, `invoices:*`),
-jsonb na coluna `scopes`. **Padrão na criação: tudo habilitado (`['*:*']`)** —
-o usuário restringe pelo menor privilégio. Wildcards: `*:*` e `recurso:*`.
+jsonb na coluna `scopes`. **Padrão na criação pelo painel: tudo habilitado
+(`['*:*']`)**, escolhido na tela — o usuário restringe pelo menor privilégio.
+**Pela API, o padrão é o da chave autenticada** (ver
+[Sem escalada de privilégio](#sem-escalada-de-privilégio-pela-api)).
+Wildcards: `*:*` e `recurso:*`.
 Checagem no model: `$apiKey->allows('orders:create')`. Proteção de rota:
 
 ```php
@@ -176,7 +179,9 @@ Códigos próprios, mais específicos que o do status (a exceção implementa
 `Twstec\Kit\Foundation\Http\Exceptions\Contracts\ProvidesApiErrorCode`):
 os da [idempotência](#idempotência-idempotency-key) — `400
 idempotency_key_missing`, `400 idempotency_key_invalid`, `409
-idempotency_request_in_progress` e `422 idempotency_key_reused`.
+idempotency_request_in_progress` e `422 idempotency_key_reused` — e os da
+[escalada de privilégio](#sem-escalada-de-privilégio-pela-api) — `403
+api_key_scope_exceeded` e `403 api_key_projects_exceeded`.
 
 Exemplo de 422:
 
@@ -230,6 +235,42 @@ Além do scope, o **vínculo da chave com projetos** limita o que ela alcança (
 [Projetos](tenancy.md#projetos-multi-empresa-organizacional)): toda rota de `api-keys` e o
 `POST /projects` exigem chave **sem vínculo** — a chave vinculada recebe 403 mesmo com `*:*`,
 salvo para rotacionar ou revogar **a si mesma**.
+
+### Sem escalada de privilégio pela API
+
+Uma chave de API só **cria, rotaciona ou edita** (vínculo com projetos) chave
+que **caiba nela** — a regra mora no `ApiKeyService` (todo caminho pela API
+passa por ela), não no controller:
+
+- **Escopos:** cada escopo da chave criada (ou da chave alvo, na rotação e na
+  edição) tem de ser coberto pelos da chave autenticada, com o curinga do lado
+  de quem concede: `orders:*` cobre `orders:create` e `orders:*`; `*:read`
+  cobre `orders:read`; `*:*` só é coberto por `*:*`.
+- **`scopes` omitido (ou nulo) HERDA exatamente os escopos da chave
+  autenticada** — nunca `*:*` por omissão. Escolhemos herdar em vez de
+  recusar porque a herança não é ambígua (o teto é a própria chave, e quem
+  tem `*:*` continua recebendo `*:*`, como antes); para menos, mande `scopes`.
+- **Projetos:** chave autenticada restrita a projetos só cria ou edita chave
+  restrita a projetos dela (sem projetos no pedido, a nova herda os dela) —
+  defesa em profundidade: hoje essas rotas já exigem chave de conta toda.
+- **Rotação:** rotacionar chave mais ampla que a autenticada é recusado (a
+  secreta nova sairia para quem não a podia ter); a si mesma, sempre pode.
+- **Recusa:** `403` com `api_key_scope_exceeded` (escopo) ou
+  `api_key_projects_exceeded` (projetos), nada criado ou mudado, e a
+  tentativa na trilha (`api_key.privilege_exceeded`, contexto `api`,
+  `denied`, a chave autenticada como alvo).
+- **Pelo painel** (sessão), quem decide é o papel da pessoa na conta (dono e
+  admin gerem chaves), como sempre.
+
+```json
+{
+  "error": {
+    "code": "api_key_scope_exceeded",
+    "message": "A chave de API autenticada não pode conceder escopos que ela mesma não tem: customers:read.",
+    "correlation_id": "01a0…"
+  }
+}
+```
 
 **Ação sensível** (criação e rotação de chave): exigem o token de
 curta duração da [ação sensível](autenticacao.md) (senha de transação + código por e-mail) no header
@@ -603,6 +644,12 @@ mensagem), validade por data, inatividade (aviso 1x, expiração, rearme,
 config off), isolamento de tenant (invisibilidade total + 404 uniforme),
 chave inválida = 401 + request log sem tenant, last_used_at throttled e
 timing-safe estrutural (`hash_equals`).
+
+Escalada de privilégio: `packages/accounts/tests/Protections/ApiKeyPrivilegeTest.php`
+(subconjunto, superconjunto, curingas, omitido, rotação, edição, projetos, a
+trilha) e a requisição de verdade nos starters
+(`tests/Feature/ApiKeys/ApiKeyPrivilegeTest.php` no Livewire,
+`tests/Feature/Api/ApiKeyPrivilegeTest.php` no React).
 
 Idempotência: a regra inteira em
 `packages/foundation/tests/Feature/Idempotency/` e

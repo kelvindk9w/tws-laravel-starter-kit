@@ -8,7 +8,7 @@
 > [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
 
 Um projeto Laravel completo — login, cadastro, verificação de e-mail,
-segundo fator, contas com membros e API, uploads, painel `/admin` — com o
+segundo fator, contas com membros e API, uploads, painel `/admin`, webhooks — com o
 ambiente de desenvolvimento em Docker já pronto. Dois caminhos:
 
 - **Só com o Docker Desktop** (sem PHP, Composer nem Node na máquina): baixe
@@ -84,7 +84,7 @@ resposta sugerida — Enter aceita:**
    livres e mostra quem usa os outros ("0 já é usado por loja-da-maria").
 3. **A interface** — Livewire ou React.
 4. **Os módulos** — contas com membros e API, uploads e foto de perfil, painel
-   `/admin`. Espaço marca e desmarca.
+   `/admin`, webhooks de saída. Espaço marca e desmarca.
 5. **A confirmação.**
 
 O projeto é montado **nesta mesma pasta**: os arquivos do kit dão lugar aos do
@@ -252,9 +252,10 @@ Docker pela linha de comando `docker`, se houver):
    regras de segurança e o `/admin` são os mesmos nas duas.
 3. **Os módulos opcionais** — contas com membros e API
    (`twstec/kit-accounts`), uploads seguros e foto de perfil
-   (`twstec/kit-uploads`) e o painel `/admin` (`twstec/kit-admin`). A base
-   (`twstec/kit-foundation`) e a autenticação (`twstec/kit-auth`) vêm sempre.
-   Uploads precisa de contas: o menu não aceita uploads sem contas.
+   (`twstec/kit-uploads`), o painel `/admin` (`twstec/kit-admin`) e os
+   webhooks de saída (`twstec/kit-webhooks`). A base (`twstec/kit-foundation`)
+   e a autenticação (`twstec/kit-auth`) vêm sempre. Uploads e webhooks
+   precisam de contas: o menu não aceita um deles sem contas.
 4. **A confirmação** do plano.
 
 O resultado é o projeto do starter escolhido **só com os pacotes marcados**
@@ -284,7 +285,7 @@ macOS e no Windows:
 | `TWS_KIT_SLOT` | número do projeto, `0` a `99` (as portas `808N`, `802N`, `803N`, `804N`; de 10 em diante, a centena seguinte) | o primeiro com as quatro portas livres |
 | `TWS_KIT_EXPOSE_DB` | `1` publica o banco em `127.0.0.1:804N`; `0` não | `0` |
 | `TWS_KIT_STACK` | `livewire` ou `react` | `livewire` |
-| `TWS_KIT_WITHOUT` | módulos opcionais que ficam de fora, separados por vírgula (`accounts`, `uploads`, `admin`) | nenhum |
+| `TWS_KIT_WITHOUT` | módulos opcionais que ficam de fora, separados por vírgula (`accounts`, `uploads`, `admin`, `webhooks`) | nenhum |
 | `TWS_KIT_WITH` | módulos opcionais que entram (o padrão já é todos) | todos |
 | `TWS_KIT_LOCALE` | idioma do menu: `pt_BR`, `en` ou `es` | o do sistema, se for um dos três; senão `pt_BR` |
 | `TWS_KIT_VENDOR` | o vendor do nome do pacote no `composer.json` do projeto (`<vendor>/<nome>`): letras minúsculas, números e hífen | `app` |

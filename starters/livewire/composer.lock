@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b8509b172b72887a6743568c948d7a2f",
+    "content-hash": "3e6c7d4b179143baf008ff7c68096807",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8878,6 +8878,84 @@
             }
         },
         {
+            "name": "twstec/kit-webhooks",
+            "version": "2.x-dev",
+            "dist": {
+                "type": "path",
+                "url": "../../packages/webhooks",
+                "reference": "6090a44a15b73ee14833a23743c2548a067f5833"
+            },
+            "require": {
+                "ext-curl": "*",
+                "laravel/framework": "^13.17",
+                "php": "^8.4",
+                "twstec/kit-accounts": "2.x-dev",
+                "twstec/kit-auth": "2.x-dev",
+                "twstec/kit-foundation": "2.x-dev"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^11.0",
+                "pestphp/pest": "^4.7"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Twstec\\Kit\\Webhooks\\WebhooksServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-main": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Twstec\\Kit\\Webhooks\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Twstec\\Kit\\Webhooks\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest"
+                ],
+                "lint": [
+                    "pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "TWS",
+                    "homepage": "https://github.com/kelvindk9w"
+                }
+            ],
+            "description": "Webhooks de saída do TWS Laravel Starter Kit, sem telas: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado).",
+            "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+            "keywords": [
+                "hmac",
+                "laravel",
+                "security",
+                "ssrf",
+                "starter-kit",
+                "webhooks"
+            ],
+            "support": {
+                "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+                "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/webhooks",
+                "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+            },
+            "transport-options": {
+                "relative": true
+            }
+        },
+        {
             "name": "ueberdosis/tiptap-php",
             "version": "2.2.0",
             "source": {
@@ -12969,7 +13047,8 @@
         "twstec/kit-demo": 20,
         "twstec/kit-foundation": 20,
         "twstec/kit-installer": 20,
-        "twstec/kit-uploads": 20
+        "twstec/kit-uploads": 20,
+        "twstec/kit-webhooks": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

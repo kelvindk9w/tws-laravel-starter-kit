@@ -9,8 +9,9 @@ escolhe o que entra:
   Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel — ver
   [Starter React](#starter-react)). Os dois
   usam os mesmos pacotes, com as mesmas regras e mensagens, e o mesmo `/admin`.
-- **Backend:** `foundation` e `auth` vêm **sempre**. `accounts`, `uploads` e
-  `admin` são **opcionais**, marcados um a um.
+- **Backend:** `foundation` e `auth` vêm **sempre**. `accounts`, `uploads`,
+  `admin` e `webhooks` são **opcionais**, marcados um a um (`uploads` e
+  `webhooks` exigem `accounts`).
 - **Demonstração:** o pacote `twstec/kit-demo` (landings, vitrine `/ui`,
   contas demo, massa fictícia) **vive só no monorepo** — não é publicado no
   Packagist. Quem clona o monorepo a tem (e a tira com um comando); quem cria
@@ -87,9 +88,9 @@ já vem com a resposta sugerida, e Enter aceita:
    e o próximo livre;
 3. **a interface** — Livewire ou React;
 4. **os módulos opcionais** — contas com membros e API, uploads e foto, painel
-   `/admin` (todos marcados de início). `foundation` e `auth` vêm sempre.
-   Uploads exige contas: com Uploads marcado e Contas não, o Enter mostra o
-   motivo e a pergunta continua aberta;
+   `/admin`, webhooks de saída (todos marcados de início). `foundation` e
+   `auth` vêm sempre. Uploads e Webhooks exigem contas: com um deles marcado
+   e Contas não, o Enter mostra o motivo e a pergunta continua aberta;
 5. **a confirmação** do plano.
 
 Depois, sem perguntar mais nada:
@@ -134,7 +135,7 @@ e no Windows:
 TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:^2.0@beta" meu-projeto
 
 # Só a base (foundation + auth), Livewire
-TWS_KIT_WITHOUT=accounts,uploads,admin composer create-project "twstec/kit:^2.0@beta" meu-projeto
+TWS_KIT_WITHOUT=accounts,uploads,admin,webhooks composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
 
 ```powershell
@@ -421,7 +422,7 @@ cd meu-app && npm install && npm run build
 
 Como no Livewire, o `post-create-project-cmd` cria o SQLite local e chama o
 instalador (`php artisan tws:install --graceful`): num terminal ele pergunta
-os módulos opcionais (contas, uploads, `/admin`); sem terminal, mantém todos.
+os módulos opcionais (contas, uploads, `/admin`, webhooks); sem terminal, mantém todos.
 Gera a `APP_KEY`, com contas o pepper dedicado das chaves de API e, com
 uploads, a chave dos uploads confidenciais (`UPLOADS_ENCRYPTION_KEY`). O React
 não tem a demonstração, então ela nunca é perguntada. Enquanto a publicação
@@ -487,13 +488,16 @@ php artisan tws:install
 
 ```bash
 # Só a base (foundation + auth), tirando também a demo
-php artisan tws:install --no-interaction --without=accounts,uploads,admin --no-demo
+php artisan tws:install --no-interaction --without=accounts,uploads,admin,webhooks --no-demo
 
 # Tirar só o /admin
 php artisan tws:install --no-interaction --without=admin --no-demo
 
-# Pôr de volta contas e uploads, sem o /admin
-php artisan tws:install --no-interaction --with=accounts,uploads --without=admin
+# Pôr de volta contas, uploads e webhooks, sem o /admin
+php artisan tws:install --no-interaction --with=accounts,uploads,webhooks --without=admin
+
+# Só os webhooks a mais (precisa das contas)
+php artisan tws:add webhooks
 ```
 
 | Opção | O que faz |
@@ -636,6 +640,7 @@ composer require twstec/kit-foundation twstec/kit-auth
 composer require twstec/kit-accounts          # opcional
 composer require twstec/kit-uploads           # opcional (exige accounts)
 composer require twstec/kit-admin             # opcional (traz o Filament)
+composer require twstec/kit-webhooks          # opcional (exige accounts)
 ```
 
 Durante o beta, com a estabilidade mínima `stable` do seu projeto, acrescente
@@ -718,8 +723,9 @@ beta, sem `composer.lock` e sem nenhuma referência à demo; o
 (que aponta para a política do monorepo). O job roda com a variável do
 repositório `KIT_SPLIT_ENABLED=true` e usa o segredo `SPLIT_TOKEN`, que precisa
 dar escrita a **todos** os espelhos da lista — inclusive o
-`kelvindk9w/twstec-kit`, novo na 2.0.0-beta.2 —, e cada espelho novo é
-registrado no Packagist depois do primeiro split.
+`kelvindk9w/twstec-kit`, novo na 2.0.0-beta.2, e o
+`kelvindk9w/twstec-kit-webhooks`, novo na 2.0.0-beta.15 —, e cada espelho novo
+é registrado no Packagist depois do primeiro split.
 
 ### Packagist: atualização automática depois do split
 

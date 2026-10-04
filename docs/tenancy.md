@@ -146,6 +146,10 @@ cada chamada no starter e nos pacotes e reprova a que não foi revisada. Hoje:
 | `ConfidentialAccess` (`twstec/kit-uploads`) | a entrega do upload confidencial: a rota não tem sessão; acha o upload em qualquer conta e quem decide é a regra da URL assinada (a conta tem de ser a do upload e quem gerou, ainda membro dela) |
 | `uploads:reencrypt` (`twstec/kit-uploads`) | rotação da chave dos confidenciais, de todas as contas |
 | `LegalHoldDeletionCheck` (`twstec/kit-uploads`) | guarda legal como impedimento de exclusão: conta os uploads sob guarda das contas que sairiam |
+| `DeliverySender` (`twstec/kit-webhooks`) | a tentativa de entrega reserva a entrega e acha a conta dela (o job carrega só o id); o envio em si roda na conta (`Accounts::actingAs`) |
+| `DeliveryQueue` (`twstec/kit-webhooks`) | a fila caiu depois do commit: desfaz a marca de "na fila" da entrega, pelo id |
+| `webhooks:dispatch-pending` e `webhooks:prune` (`twstec/kit-webhooks`) | o outbox (repõe na fila as entregas vencidas) e a retenção, de todas as contas |
+| `WebhookLifecycle` (`twstec/kit-webhooks`) | exclusão da conta (apaga os webhooks dela) e da pessoa (tira o autor do que ela criou nas contas que ficam) |
 
 A mesma trava reprova `withoutGlobalScope(s)`, `newQueryWithoutScopes()`,
 `newModelQuery()`, `->getQuery()` e query builder cru nas tabelas das contas
@@ -184,7 +188,10 @@ ler**: outra guarda ainda pode recusar), `PersonDeleted` (a pessoa saiu; antes
 de o pacote arrumar as contas) e `AccountDeleting` (na exclusão da conta pelo
 [caminho único](#o-caminho-único-de-exclusão), dentro da transação, antes de
 qualquer linha sair). O `twstec/kit-uploads` usa os três para apagar os arquivos (ver
-[Exclusão em `docs/uploads.md`](uploads.md#exclusão-o-arquivo-sai-junto-lgpd)).
+[Exclusão em `docs/uploads.md`](uploads.md#exclusão-o-arquivo-sai-junto-lgpd));
+o `twstec/kit-webhooks` usa `AccountDeleting` para apagar os endpoints,
+eventos, entregas e tentativas da conta e `PersonDeleted` para tirar o autor
+do que a pessoa criou (ver [Exclusão em `docs/webhooks.md`](webhooks.md#exclusão)).
 
 **Chaves de quem saiu.** A chave é da conta e continua valendo quando quem a
 criou sai da conta ou é excluído. A pessoa por trás da chave (o que é por

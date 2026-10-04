@@ -11,8 +11,9 @@ própria, com a suíte de testes verde antes e depois.
 | [`auth`](auth) | `twstec/kit-auth` | Autenticação sem telas: login com bloqueio por tentativas, cadastro, verificação de e-mail, segundo fator por e-mail, senha de transação, ação sensível, política de senha, status da conta e contratos de resposta para qualquer front | foundation |
 | [`accounts`](accounts) | `twstec/kit-accounts` | Contas e API sem telas: projetos, chaves de API (par pública/secreta, hash com pepper, escopos, vínculo com projetos, rotação com graça, expiração por inatividade), a autenticação e os limites da API, o envelope de erro e a API v1 | foundation, auth |
 | [`uploads`](uploads) | `twstec/kit-uploads` | Uploads seguros sem telas: validação pelo conteúdo real, limite por tipo, re-encode de imagem, nome seguro, entrega por URL assinada, foto de perfil e o `POST /api/v1/uploads` | foundation, auth, accounts |
+| [`webhooks`](webhooks) | `twstec/kit-webhooks` | Webhooks de saída sem telas: endpoints por conta, segredo cifrado mostrado uma vez, assinatura HMAC-SHA256 com carimbo de tempo, outbox e fila cifrada, novas tentativas com backoff, desativação por falhas com aviso, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio, conexão no IP conferido) | foundation, auth, accounts |
 | [`admin`](admin) | `twstec/kit-admin` | O painel de super admin como plugin do Filament 5: usuários, logs de requisição, trilha de auditoria e configurações, login com segundo fator por e-mail, variantes de dashboard, trilha de auditoria de toda ação (falha fechada) e as proteções de acesso ligadas pelo pacote — e as telas de contas, chaves de API, projetos e uploads **quando esses pacotes estão instalados** | foundation, auth, Filament (accounts e uploads **sugeridos**: o painel se adapta ao que existe) |
-| [`installer`](installer) | `twstec/kit-installer` | O instalador `php artisan tws:install`: escolhe os módulos opcionais (accounts, uploads, admin) e a demonstração, e aplica — Composer, migrations, `APP_KEY` e pepper; e o `php artisan tws:add`, que acrescenta pacotes do kit a um aplicativo Laravel que já existe (recusa o que exige dependência ausente). Ferramenta de desenvolvimento (`require-dev` dos starters) | foundation |
+| [`installer`](installer) | `twstec/kit-installer` | O instalador `php artisan tws:install`: escolhe os módulos opcionais (accounts, uploads, admin, webhooks) e a demonstração, e aplica — Composer, migrations, `APP_KEY` e pepper; e o `php artisan tws:add`, que acrescenta pacotes do kit a um aplicativo Laravel que já existe (recusa o que exige dependência ausente). Ferramenta de desenvolvimento (`require-dev` dos starters) | foundation |
 | [`demo`](demo) | `twstec/kit-demo` | A **demonstração** do kit, só para o ambiente de desenvolvimento (`require-dev` do starter): landings, vitrine `/ui`, contato, catálogo e submissões no `/admin`, contas demo protegidas e seeders de dado fictício. O produto não a nomeia — ela entra pela descoberta de pacotes e pelos pontos de extensão | foundation, auth, accounts, uploads, admin, Filament (e o starter, pelos pontos de extensão dele) |
 
 ## Como o starter usa os pacotes
@@ -31,7 +32,8 @@ imagem de produção (`composer install --no-dev`) não os instala, e o
 `.dockerignore` desta pasta os deixa fora do contexto do build.
 
 **Módulos opcionais.** `foundation` e `auth` vêm sempre; `accounts`,
-`uploads` e `admin` são opcionais (`uploads` exige `accounts`). A detecção é
+`uploads`, `admin` e `webhooks` são opcionais (`uploads` e `webhooks` exigem
+`accounts`). A detecção é
 um ponto só, `Twstec\Kit\Foundation\Kit::has()`, e é o que o starter e o
 `admin` perguntam antes de registrar uma tela, rota ou menu de módulo
 opcional. Ver [docs/instalacao.md](../docs/instalacao.md).
@@ -64,6 +66,8 @@ docker compose exec -w /var/packages/accounts app ./vendor/bin/pest
 docker compose exec -w /var/packages/accounts app ./vendor/bin/pint --test
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pest
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pint --test
+docker compose exec -w /var/packages/webhooks app ./vendor/bin/pest
+docker compose exec -w /var/packages/webhooks app ./vendor/bin/pint --test
 docker compose exec -w /var/packages/admin app ./vendor/bin/pest
 docker compose exec -w /var/packages/admin app ./vendor/bin/pint --test
 docker compose exec -w /var/packages/demo app ./vendor/bin/pest
@@ -75,7 +79,7 @@ docker compose exec -w /var/packages/installer app ./vendor/bin/pint --test
 As dependências de desenvolvimento do pacote (`packages/<pacote>/vendor`, fora
 do git) são instaladas com o Composer em container, da raiz do repositório
 (troque `foundation` pelo pacote; o `auth`, o `accounts`, o `uploads`, o
-`admin` e o `demo` acham os irmãos de que dependem pelos path repositories do
+`webhooks`, o `admin` e o `demo` acham os irmãos de que dependem pelos path repositories do
 próprio `composer.json`; no `uploads`, no `admin` e no `demo`, acrescente
 `--ignore-platform-req=ext-gd`, porque a imagem do Composer não traz a GD — a
 suíte roda no container do app, que traz):

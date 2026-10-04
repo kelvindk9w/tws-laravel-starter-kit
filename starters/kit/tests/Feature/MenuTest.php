@@ -42,7 +42,7 @@ it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
     $choice = menu(false)->ask();
 
     expect($choice->stack)->toBe('livewire')
-        ->and($choice->modules)->toBe(['accounts', 'uploads', 'admin'])
+        ->and($choice->modules)->toBe(['accounts', 'uploads', 'admin', 'webhooks'])
         ->and($choice->name)->toBe('meu-app')
         ->and($choice->slot)->toBe(0)
         ->and($choice->exposeDatabase)->toBeFalse();
@@ -62,9 +62,9 @@ it('React, sem uploads: seta, espaço no segundo módulo, e confirma', function 
     $choice = menu(false)->ask();
 
     expect($choice->stack)->toBe('react')
-        ->and($choice->modules)->toBe(['accounts', 'admin']);
+        ->and($choice->modules)->toBe(['accounts', 'admin', 'webhooks']);
 
-    Prompt::assertStrippedOutputContains('Optional modules: Accounts with members, API keys and projects (twstec/kit-accounts), /admin panel with Filament (twstec/kit-admin)');
+    Prompt::assertStrippedOutputContains('Optional modules: Accounts with members, API keys and projects (twstec/kit-accounts), /admin panel with Filament (twstec/kit-admin), Signed outgoing webhooks (twstec/kit-webhooks)');
 });
 
 it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua até a escolha valer', function (): void {
@@ -82,21 +82,44 @@ it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua at�
 
     Prompt::assertStrippedOutputContains('Secure uploads and profile photo (twstec/kit-uploads) needs Accounts with members, API keys and projects (twstec/kit-accounts).');
 
-    expect($choice->modules)->toBe(['accounts', 'uploads', 'admin']);
+    expect($choice->modules)->toBe(['accounts', 'uploads', 'admin', 'webhooks']);
 });
 
-it('desmarcar contas e uploads juntos vale (só a base e o /admin)', function (): void {
-    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
+it('desmarcar contas, uploads e webhooks juntos vale (só a base e o /admin)', function (): void {
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::DOWN, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
 
     expect(menu(false)->ask()->modules)->toBe(['admin']);
 
     Prompt::assertStrippedOutputDoesntContain('(twstec/kit-uploads) needs Accounts');
+    Prompt::assertStrippedOutputDoesntContain('(twstec/kit-webhooks) needs Accounts');
+});
+
+it('IMPEDE webhooks sem contas, mesmo com uploads também desmarcado', function (): void {
+    fakeKeys([
+        ...ACCEPT_NAME_AND_SLOT,
+        Key::ENTER,          // Livewire
+        Key::SPACE,          // desmarca Contas
+        Key::DOWN,
+        Key::SPACE,          // desmarca Uploads (Webhooks continua marcado)
+        Key::ENTER,          // tenta seguir: recusado
+        Key::UP,
+        Key::SPACE,          // marca Contas de novo
+        Key::ENTER,          // agora vale
+        Key::ENTER,          // confirma
+    ]);
+
+    $choice = menu(false)->ask();
+
+    Prompt::assertStrippedOutputContains('Signed outgoing webhooks (twstec/kit-webhooks) needs Accounts with members, API keys and projects (twstec/kit-accounts).');
+
+    expect($choice->modules)->toBe(['accounts', 'admin', 'webhooks']);
 });
 
 it('a regra do menu, sozinha', function (array $values, ?string $error): void {
     expect(menu(false)->validate($values))->toBe($error);
 })->with([
-    'tudo' => [['accounts', 'uploads', 'admin'], null],
+    'tudo' => [['accounts', 'uploads', 'admin', 'webhooks'], null],
+    'webhooks sem contas' => [['webhooks'], 'Signed outgoing webhooks (twstec/kit-webhooks) needs Accounts with members, API keys and projects (twstec/kit-accounts).'],
     'nada' => [[], null],
     'uploads sem contas' => [['uploads'], 'Secure uploads and profile photo (twstec/kit-uploads) needs Accounts with members, API keys and projects (twstec/kit-accounts).'],
     'uploads e admin sem contas' => [['uploads', 'admin'], 'Secure uploads and profile photo (twstec/kit-uploads) needs Accounts with members, API keys and projects (twstec/kit-accounts).'],

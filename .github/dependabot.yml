@@ -3,8 +3,8 @@
 # Composer e npm apontam para o starter Livewire (starters/livewire); os
 # pacotes twstec/kit-foundation (packages/foundation), twstec/kit-auth
 # (packages/auth), twstec/kit-accounts (packages/accounts),
-# twstec/kit-uploads (packages/uploads) e twstec/kit-admin (packages/admin)
-# têm entrada própria.
+# twstec/kit-uploads (packages/uploads), twstec/kit-admin (packages/admin) e
+# twstec/kit-webhooks (packages/webhooks) têm entrada própria.
 version: 2
 updates:
   - package-ecosystem: composer
@@ -64,6 +64,19 @@ updates:
         dependency-type: development
   - package-ecosystem: composer
     directory: /packages/uploads
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: desenvolvimento
+    open-pull-requests-limit: 5
+    versioning-strategy: widen
+    groups:
+      laravel:
+        patterns: ['laravel/*']
+      dev:
+        dependency-type: development
+  - package-ecosystem: composer
+    directory: /packages/webhooks
     schedule:
       interval: weekly
       day: monday

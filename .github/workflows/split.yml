@@ -2,7 +2,7 @@
 #
 # A cada tag `v2.*`, copiaria cada pacote (packages/*), os starters
 # (starters/livewire e starters/react) e o comando único (starters/kit →
-# twstec/kit) para o repositório só-leitura de cada um, com a mesma tag — 9
+# twstec/kit) para o repositório só-leitura de cada um, com a mesma tag — 10
 # destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
 # monorepo, e o starter publicado sai sem ela (ver prepare-composer.php); o
 # Packagist lê esses repositórios (webhook) e publica a versão. Quem usa o kit
@@ -81,6 +81,7 @@ jobs:
             {"path": "packages/accounts", "repository": "twstec-kit-accounts"},
             {"path": "packages/uploads", "repository": "twstec-kit-uploads"},
             {"path": "packages/admin", "repository": "twstec-kit-admin"},
+            {"path": "packages/webhooks", "repository": "twstec-kit-webhooks"},
             {"path": "packages/installer", "repository": "twstec-kit-installer"},
             {"path": "starters/livewire", "repository": "twstec-starter-livewire"},
             {"path": "starters/react", "repository": "twstec-starter-react"},

@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-03, com a versão **2.0.0-beta.14** publicada.
+> Atualizado em 2026-10-03, com a versão **2.0.0-beta.15** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -12,8 +12,8 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 
 | Frente | Estado |
 |---|---|
-| Monorepo com 7 pacotes (`twstec/kit-*`) e 3 pontos de partida (`starter-livewire`, `starter-react`, `kit`) | pronto |
-| Publicação automática em 9 espelhos + Packagist, a cada tag `v2.*` | pronto |
+| Monorepo com 8 pacotes (`twstec/kit-*`) e 3 pontos de partida (`starter-livewire`, `starter-react`, `kit`) | pronto |
+| Publicação automática em 10 espelhos + Packagist, a cada tag `v2.*` | pronto |
 | Três jeitos de começar: só com Docker, comando único com menu, pacote a pacote num app existente | pronto |
 | Contas com membros, papéis fixos e isolamento automático por conta | pronto |
 | Trilha de auditoria no banco para toda ação de admin e de conta, inclusive recusas | pronto |
@@ -26,10 +26,11 @@ base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
 | Segundo fator obrigatório por configuração (todos ou só administradores, no painel e no `/admin`, com carência opcional e recusa de desligar na trilha) e cadastro público desligável | pronto (2.0.0-beta.9) |
 | Uploads confidenciais cifrados em repouso (chave própria, rotação sem indisponibilidade, trilha de cada acesso), retenção legal que segura o apagamento na exclusão do titular e impedimentos de exclusão declarados pelo aplicativo (recusa limpa, nunca o erro bruto do banco) | pronto (2.0.0-beta.10) |
 | Escritas da API com `Idempotency-Key`: replay da resposta original, recusa de chave reusada ou em processamento, corrida decidida pela unicidade no banco, escopo por conta + credencial, só hashes do pedido e resposta cifrada (sem guardar segredo exibido uma vez) | pronto (2.0.0-beta.14) |
+| Webhooks de saída (módulo opcional `twstec/kit-webhooks`): endpoints por conta, segredo cifrado mostrado uma vez, assinatura HMAC com carimbo de tempo e exemplo de verificação, outbox e fila cifrada, novas tentativas com backoff, desativação por falhas com aviso, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio, conexão no IP conferido), com telas nos dois starters | pronto (2.0.0-beta.15) |
 | Linha **1.x** | só correções de segurança, até 6 meses depois da 2.0.0 (ver [SECURITY.md](../SECURITY.md)) |
 
 Cada versão passa pelos mesmos portões: Pint, Larastan nível 8 nos dois
-starters, Pest dos 7 pacotes e dos dois starters (SQLite e PostgreSQL), E2E
+starters, Pest dos 8 pacotes e dos dois starters (SQLite e PostgreSQL), E2E
 dos dois starters, combinações de módulos, simulação da instalação publicada
 com build da imagem de produção, prova do caminho Docker, CodeQL,
 `composer audit` e `npm audit`.
@@ -77,6 +78,9 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    própria. Depois, as escritas da API (#20): um `POST` reenviado (timeout,
    queda de rede, retry do SDK) executava de novo, e cada projeto inventava
    o próprio controle — resolvido na 2.0.0-beta.14 com a `Idempotency-Key`.
+   Depois, avisar outros sistemas (#24): cada projeto escreveria o próprio
+   envio de webhook, com os erros de segurança de sempre — resolvido na
+   2.0.0-beta.15 com o módulo de webhooks.
    Falta usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
@@ -134,13 +138,19 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
   `transactional` fecha essa janela para efeito todo no banco. As linhas de
   uma conta excluída saem na poda, não na exclusão (no máximo 24 h + 1 h).
 
+- **Webhooks sem proxy de saída:** o envio não passa por proxy (nem o do
+  ambiente), porque o proxy resolveria o nome por fora e a conexão no IP
+  conferido perderia o sentido. Um ambiente que só sai por proxy não entrega
+  webhooks. URL de webhook com `@` (até na query) é recusada.
+- **Webhooks sem tela no `/admin` e sem rotas na API v1:** são geridos pelas
+  telas do painel da conta (e pelas Actions do pacote).
+
 ## Depois da 2.0.0 (backlog)
 
 - **CSP com nonce**, eliminando o `unsafe-inline` que ainda existe em
   estilos/scripts.
 - **Autenticação avançada:** app autenticador (TOTP), chaves de acesso
   (passkeys) e gestão de sessões.
-- **Webhooks de saída** assinados, com reenvio e painel de entregas.
 - **Contas avançadas:** papéis customizáveis nas contas dos clientes (os do
   `/admin` já são, desde a 2.0.0-beta.8), SSO corporativo, auditoria por
   membro exportável.

@@ -77,12 +77,12 @@ esac
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 # A demonstração (packages/demo) NÃO é publicada: nem empacotada, nem no
 # starter publicado (prepare-composer.php a tira do require-dev).
-PACKAGES="foundation auth accounts uploads admin installer"
+PACKAGES="foundation auth accounts uploads admin webhooks installer"
 # Os módulos opcionais escolhidos (sem o comando único: todos) e os
 # desmarcados — que não podem chegar ao projeto.
 CHOSEN=
 LEFT_OUT=
-for modulo in accounts uploads admin; do
+for modulo in accounts uploads admin webhooks; do
     case ",$(printf '%s' "$KIT_WITHOUT" | tr -d ' ')," in
         *",$modulo,"*) LEFT_OUT="$LEFT_OUT $modulo" ;;
         *) CHOSEN="$CHOSEN $modulo" ;;

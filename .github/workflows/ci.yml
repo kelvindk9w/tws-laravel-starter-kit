@@ -47,12 +47,12 @@
 # produto sem ela; a conferência da imagem do app prova que ela não chega à
 # produção.
 #
-# MÓDULOS OPCIONAIS (accounts, uploads, admin — `php artisan tws:install`): o
+# MÓDULOS OPCIONAIS (accounts, uploads, admin, webhooks — `php artisan tws:install`): o
 # job do SQLite, depois do "sem a demo", passa pelas combinações principais
 # NO PRÓPRIO CHECKOUT, uma depois da outra, com o instalador (não
-# interativo): sem uploads; só o admin (sem contas nem uploads); só a base
-# (foundation + auth); sem o admin (contas e uploads de volta — o caminho do
-# `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre
+# interativo): sem uploads; só o admin (sem contas, uploads nem webhooks);
+# só a base (foundation + auth); sem o admin (contas, uploads e webhooks de
+# volta — o caminho do `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre
 # (os testes do módulo ausente pulam sozinhos). São PASSOS de um job que já é
 # check obrigatório — nenhum check novo, e uma combinação quebrada deixa o
 # check vermelho. (Um job novo com matriz seria mais rápido, mas não seria
@@ -212,6 +212,24 @@ jobs:
 
       - name: Pacote uploads · testes (Pest)
         working-directory: packages/uploads
+        run: ./vendor/bin/pest --ci
+
+      # Pacote twstec/kit-webhooks: idem; acha o accounts, o auth e o
+      # foundation irmãos pelos path repositories. A suíte sobe uma aplicação
+      # Laravel limpa e prova as proteções dos webhooks (assinatura, SSRF com
+      # DNS revalidado e conexão no IP conferido, outbox, novas tentativas,
+      # desativação, segredo cifrado) — os envios vão para um receptor local
+      # em 127.0.0.1, nada sai da máquina.
+      - name: Pacote webhooks · dependências
+        working-directory: packages/webhooks
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote webhooks · estilo (Pint)
+        working-directory: packages/webhooks
+        run: ./vendor/bin/pint --test
+
+      - name: Pacote webhooks · testes (Pest)
+        working-directory: packages/webhooks
         run: ./vendor/bin/pest --ci
 
       # Pacote twstec/kit-admin: idem; acha os quatro pacotes irmãos pelos
@@ -454,6 +472,14 @@ jobs:
         working-directory: packages/uploads
         run: ./vendor/bin/pest --ci
 
+      - name: Pacote webhooks · dependências
+        working-directory: packages/webhooks
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Pacote webhooks · testes (Pest)
+        working-directory: packages/webhooks
+        run: ./vendor/bin/pest --ci
+
       - name: Pacote admin · dependências
         working-directory: packages/admin
         run: composer update --no-interaction --prefer-dist --no-progress
@@ -494,7 +520,7 @@ jobs:
         env:
           STARTER: kit
           KIT_STACK: livewire
-          KIT_WITHOUT: accounts,uploads,admin
+          KIT_WITHOUT: accounts,uploads,admin,webhooks
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
       # O CAMINHO SÓ COM O DOCKER (sem PHP na máquina), com os ZIPs do passo
@@ -511,7 +537,7 @@ jobs:
         env:
           STARTER: kit
           KIT_STACK: livewire
-          KIT_WITHOUT: accounts,uploads,admin
+          KIT_WITHOUT: accounts,uploads,admin,webhooks
           DOCKER_NAME: ci-docker
         run: sh .github/release/simulate-install.sh docker "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
@@ -563,7 +589,7 @@ jobs:
           npm run build
           ./vendor/bin/pest --ci
 
-      - name: Starter React · Só o admin (sem contas nem uploads) · instalador
+      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · instalador
         working-directory: starters/react
         env:
           DB_CONNECTION: sqlite
@@ -571,9 +597,9 @@ jobs:
           CACHE_STORE: file
           SESSION_DRIVER: file
           QUEUE_CONNECTION: sync
-        run: php artisan tws:install --no-interaction --without=accounts,uploads
+        run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Starter React · Só o admin (sem contas nem uploads) · build e testes
+      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · build e testes
         working-directory: starters/react
         run: |
           npm run build
@@ -587,7 +613,7 @@ jobs:
           CACHE_STORE: file
           SESSION_DRIVER: file
           QUEUE_CONNECTION: sync
-        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads
+        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
       - name: Starter React · Só a base (foundation + auth) · build e testes
         working-directory: starters/react
@@ -597,7 +623,7 @@ jobs:
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
           ./vendor/bin/pest --ci
 
-      - name: Starter React · Sem o admin (contas e uploads de volta) · instalador
+      - name: Starter React · Sem o admin (contas, uploads e webhooks de volta) · instalador
         working-directory: starters/react
         env:
           DB_CONNECTION: sqlite
@@ -605,9 +631,9 @@ jobs:
           CACHE_STORE: file
           SESSION_DRIVER: file
           QUEUE_CONNECTION: sync
-        run: php artisan tws:install --no-interaction --with=accounts,uploads --without=admin
+        run: php artisan tws:install --no-interaction --with=accounts,uploads,webhooks --without=admin
 
-      - name: Starter React · Sem o admin (contas e uploads de volta) · build e testes
+      - name: Starter React · Sem o admin (contas, uploads e webhooks de volta) · build e testes
         working-directory: starters/react
         run: |
           npm run build
@@ -654,16 +680,16 @@ jobs:
           npm run build
           ./vendor/bin/pest --ci --parallel
 
-      - name: Só o admin (sem contas nem uploads) · instalador
-        run: php artisan tws:install --no-interaction --without=accounts,uploads
+      - name: Só o admin (sem contas, uploads nem webhooks) · instalador
+        run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Só o admin (sem contas nem uploads) · build e testes
+      - name: Só o admin (sem contas, uploads nem webhooks) · build e testes
         run: |
           npm run build
           ./vendor/bin/pest --ci --parallel
 
       - name: Só a base (foundation + auth) · instalador
-        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads
+        run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
       - name: Só a base (foundation + auth) · build e testes
         run: |
@@ -672,10 +698,10 @@ jobs:
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
           ./vendor/bin/pest --ci --parallel
 
-      - name: Sem o admin (contas e uploads de volta) · instalador
-        run: php artisan tws:install --no-interaction --with=accounts,uploads --without=admin
+      - name: Sem o admin (contas, uploads e webhooks de volta) · instalador
+        run: php artisan tws:install --no-interaction --with=accounts,uploads,webhooks --without=admin
 
-      - name: Sem o admin (contas e uploads de volta) · build e testes
+      - name: Sem o admin (contas, uploads e webhooks de volta) · build e testes
         run: |
           npm run build
           ./vendor/bin/pest --ci --parallel

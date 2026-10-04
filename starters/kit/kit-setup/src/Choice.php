@@ -143,8 +143,15 @@ final class Choice
 
         $modules = Modules::ordered(array_diff(Modules::OPTIONAL, $without));
 
-        foreach (Modules::missingDependencies($modules) as $module => $needs) {
-            return [null, self::dependencyMessage($t, $module, $needs, true)];
+        $missing = Modules::missingDependencies($modules);
+
+        foreach ($missing as $module => $needs) {
+            // O jeito de corrigir as variáveis: o que já estava de fora, mais
+            // TODO módulo que fica sem o que exige (uploads e webhooks sem
+            // contas saem juntos) — nunca uma sugestão que recusa de novo.
+            $suggestion = Modules::ordered(array_values(array_unique([...$without, ...array_keys($missing)])));
+
+            return [null, self::dependencyMessage($t, $module, $needs, true, $suggestion)];
         }
 
         // Por último o Docker de desenvolvimento: conferir as portas é o
@@ -298,8 +305,9 @@ final class Choice
      * recusa. No ambiente, diz também como corrigir as variáveis.
      *
      * @param  list<string>  $needs
+     * @param  list<string>|null  $without  o TWS_KIT_WITHOUT completo que corrige (padrão: os que faltam e o módulo)
      */
-    public static function dependencyMessage(Translator $t, string $module, array $needs, bool $environment = false): string
+    public static function dependencyMessage(Translator $t, string $module, array $needs, bool $environment = false, ?array $without = null): string
     {
         $message = $t->get('errors.missing_dependency', [
             'module' => $t->get("modules.{$module}"),
@@ -311,7 +319,7 @@ final class Choice
         }
 
         return $message.' '.$t->get('errors.missing_dependency_env', [
-            'both' => implode(',', [...$needs, $module]),
+            'both' => implode(',', $without ?? [...$needs, $module]),
         ]);
     }
 

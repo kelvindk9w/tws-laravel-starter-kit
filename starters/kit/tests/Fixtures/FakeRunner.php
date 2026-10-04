@@ -141,6 +141,7 @@ final class FakeRunner implements Runner
                 'twstec/kit-auth' => '^2.0@beta',
                 'twstec/kit-foundation' => '^2.0@beta',
                 'twstec/kit-uploads' => '^2.0@beta',
+                'twstec/kit-webhooks' => '^2.0@beta',
             ],
             'require-dev' => ['twstec/kit-installer' => '^2.0@beta'],
             'autoload' => ['psr-4' => ['App\\' => 'app/']],

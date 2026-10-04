@@ -120,6 +120,38 @@ cliente recebe a resposta original. As decisões de segurança, em resumo:
 
 Tudo em [docs/api.md](api.md#idempotência-idempotency-key).
 
+## Webhooks de saída: SSRF, assinatura e segredo
+
+Módulo opcional `twstec/kit-webhooks`. Um webhook é uma requisição que o
+servidor faz para um endereço que o usuário escolheu — a porta clássica de
+SSRF. Em resumo:
+
+- **Destino conferido no cadastro e de novo em cada envio**, com o DNS
+  resolvido na hora: loopback, redes privadas, link-local, metadados de nuvem
+  (`169.254.169.254` e afins), reservados e os equivalentes IPv6 (inclusive
+  as formas que carregam um IPv4 dentro) são recusados; basta um endereço
+  proibido entre os que o nome resolve. Host em forma disfarçada de IP
+  (`2130706433`, `0x7f.1`, `127.1`), usuário/senha na URL e `@` são recusados.
+- **Conexão no IP conferido:** `CURLOPT_RESOLVE` fixa o endereço (o cURL não
+  resolve o nome de novo — o rebinding entre conferir e conectar não acontece)
+  e `CURLOPT_PREREQFUNCTION` confere, antes do primeiro byte, que a conexão é
+  mesmo com o IP conferido. Sem redirect, sem proxy, só o esquema conferido,
+  3 s para conectar e 10 s no total.
+- **Só HTTPS em produção**; a liberação de `http` e de redes privadas é só
+  para o desenvolvimento e é ignorada em produção, com aviso no log.
+- **Assinatura** HMAC-SHA256 sobre `timestamp.corpo`, com exemplo de
+  verificação (tolerância contra replay, comparação em tempo constante) e o
+  id do evento para o receptor deduplicar.
+- **Segredo** gerado no servidor, mostrado uma vez, **cifrado** (`APP_KEY`)
+  — não em hash, porque o HMAC precisa dele em claro; revelar e rotacionar
+  (com convivência de dois segredos) são ações sensíveis na trilha. Nunca em
+  log, trilha ou fila; o job carrega só ids e vai cifrado.
+- **Recusas registradas:** no cadastro, na trilha de auditoria; no envio, no
+  log de entregas (`blocked`) e no log da aplicação
+  (`webhooks.destination_blocked`).
+
+Tudo em [docs/webhooks.md](webhooks.md).
+
 ## Filtro de ataques: modo `observe` (padrão) e modo `block`
 
 **A defesa primária contra injeção e XSS é o framework, não o filtro.** Eloquent e o Query

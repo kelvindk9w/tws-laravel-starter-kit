@@ -74,7 +74,7 @@ it('sem perguntas e sem escolha: Livewire com todos os módulos, na ordem do cre
     $json = ($this->composerJson)();
 
     expect($json['name'])->toBe('twstec/starter-livewire')
-        ->and(array_keys($json['require']))->toContain('twstec/kit-accounts', 'twstec/kit-uploads', 'twstec/kit-admin', 'twstec/kit-foundation', 'twstec/kit-auth')
+        ->and(array_keys($json['require']))->toContain('twstec/kit-accounts', 'twstec/kit-uploads', 'twstec/kit-admin', 'twstec/kit-webhooks', 'twstec/kit-foundation', 'twstec/kit-auth')
         // Objeto vazio continua objeto (o composer.json segue válido).
         ->and((string) file_get_contents($this->project.'/composer.json'))->toContain('"allow-plugins": {}');
 });
@@ -99,14 +99,14 @@ it('React sem uploads pelo ambiente: o starter React, sem o pacote desmarcado, e
 
     expect($json['name'])->toBe('twstec/starter-react')
         ->and($json['require'])->not->toHaveKey('twstec/kit-uploads')
-        ->and($json['require'])->toHaveKeys(['twstec/kit-accounts', 'twstec/kit-admin', 'twstec/kit-foundation', 'twstec/kit-auth'])
+        ->and($json['require'])->toHaveKeys(['twstec/kit-accounts', 'twstec/kit-admin', 'twstec/kit-webhooks', 'twstec/kit-foundation', 'twstec/kit-auth'])
         // O instalador (require-dev) fica: ele gera as chaves e roda o banco.
         ->and($json['require-dev'])->toHaveKey('twstec/kit-installer');
 
     $installer = array_values(array_filter($this->runner->calls, fn (array $call): bool => ($call[1][1] ?? '') === 'post-create-project-cmd'))[0];
 
     expect($installer[2])->toBe([
-        'TWS_KIT_WITH' => 'accounts,admin',
+        'TWS_KIT_WITH' => 'accounts,admin,webhooks',
         'TWS_KIT_WITHOUT' => 'uploads',
         'APP_LOCALE' => 'en',
         'TWS_KIT_FROM_KIT' => '1',
@@ -120,11 +120,11 @@ it('React sem uploads pelo ambiente: o starter React, sem o pacote desmarcado, e
 });
 
 it('só a base: nenhum módulo opcional no composer.json', function (): void {
-    expect(($this->create)(['TWS_KIT_WITHOUT' => 'accounts,uploads,admin']))->toBe(0);
+    expect(($this->create)(['TWS_KIT_WITHOUT' => 'accounts,uploads,admin,webhooks']))->toBe(0);
 
     $require = ($this->composerJson)()['require'];
 
-    foreach (['twstec/kit-accounts', 'twstec/kit-uploads', 'twstec/kit-admin'] as $package) {
+    foreach (['twstec/kit-accounts', 'twstec/kit-uploads', 'twstec/kit-admin', 'twstec/kit-webhooks'] as $package) {
         expect($require)->not->toHaveKey($package);
     }
 
@@ -184,7 +184,7 @@ it('o menu: a escolha dele vale; desistir não baixa nada', function (): void {
     expect(($this->create)([], $menu))->toBe(0)
         ->and($asked)->toBe([['livewire' => 'twstec/starter-livewire', 'react' => 'twstec/starter-react'], 'livewire'])
         ->and(($this->composerJson)()['name'])->toBe('twstec/starter-react')
-        ->and(($this->composerJson)()['require'])->not->toHaveKeys(['twstec/kit-accounts', 'twstec/kit-uploads']);
+        ->and(($this->composerJson)()['require'])->not->toHaveKeys(['twstec/kit-accounts', 'twstec/kit-uploads', 'twstec/kit-webhooks']);
 
     removeDirectory($this->project.'/composer.json');
     ($this->writeKit)();

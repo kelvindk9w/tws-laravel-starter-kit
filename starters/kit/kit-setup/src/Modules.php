@@ -28,6 +28,7 @@ final class Modules
         'accounts' => 'twstec/kit-accounts',
         'uploads' => 'twstec/kit-uploads',
         'admin' => 'twstec/kit-admin',
+        'webhooks' => 'twstec/kit-webhooks',
     ];
 
     /**
@@ -42,11 +43,11 @@ final class Modules
      *
      * @var list<string>
      */
-    public const OPTIONAL = ['accounts', 'uploads', 'admin'];
+    public const OPTIONAL = ['accounts', 'uploads', 'admin', 'webhooks'];
 
     /**
-     * Módulo opcional => os opcionais de que ele precisa (o upload pertence a
-     * uma conta).
+     * Módulo opcional => os opcionais de que ele precisa (o upload e o
+     * endpoint de webhook pertencem a uma conta).
      *
      * @var array<string, list<string>>
      */
@@ -54,6 +55,7 @@ final class Modules
         'accounts' => [],
         'uploads' => ['accounts'],
         'admin' => [],
+        'webhooks' => ['accounts'],
     ];
 
     public static function package(string $module): string

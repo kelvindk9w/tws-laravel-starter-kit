@@ -28,9 +28,9 @@ Os dois caminhos fazem as mesmas perguntas, todas com a resposta sugerida
    vários projetos na mesma máquina, sem colisão;
 2. **a interface** — Livewire ou React (Inertia + TypeScript + shadcn/ui);
 3. **os módulos opcionais** — contas com membros e API, uploads e foto de
-   perfil, painel `/admin`. A base (segurança, auditoria, idioma, e-mail) e a
-   autenticação vêm sempre; uploads exige contas, e o menu não aceita a
-   combinação sem elas.
+   perfil, painel `/admin`, webhooks de saída. A base (segurança, auditoria,
+   idioma, e-mail) e a autenticação vêm sempre; uploads e webhooks exigem
+   contas, e o menu não aceita a combinação sem elas.
 
 Sai o projeto pronto: o starter escolhido **só com os pacotes marcados**, a
 `APP_KEY` e o pepper das chaves de API gerados, e o **Docker de
@@ -77,6 +77,9 @@ O que já vem pronto:
 - **Filtro de ataques** (observar ou bloquear), rate limit na borda, proxies e
   hosts confiáveis, cabeçalhos de segurança.
 - **Uploads validados pelo conteúdo** (magic bytes, polyglot, re-encode).
+- **Webhooks de saída assinados** (HMAC com carimbo de tempo), com outbox,
+  novas tentativas, log de entregas, reenvio auditado e proteção contra SSRF
+  (DNS revalidado no envio, conexão no IP conferido).
 - **Painel do usuário** (Livewire) e **super admin** (Filament) com
   dashboards, allowlist de IP e i18n em pt-BR, English e Español.
 - **Produção em Docker** que recusa subir sem chave, sem mailer real ou com
@@ -95,7 +98,7 @@ reutilizáveis e em pontos de partida (starters) de interface.
 | [`starters/livewire/`](starters/livewire) | O aplicativo completo com painel em Livewire e super admin em Filament — é o kit que você roda hoje. |
 | [`starters/kit/`](starters/kit) | O comando único, `twstec/kit`: `composer create-project twstec/kit` pergunta a interface e os módulos e entrega o projeto do starter escolhido. Não é um aplicativo — ele dá lugar ao starter. |
 | [`starters/react/`](starters/react) | O mesmo kit com o painel em React + Inertia + TypeScript + shadcn/ui, a partir do kit oficial do Laravel, e a autenticação dos pacotes: as mesmas telas do Livewire, E2E próprio e imagem de produção própria (`twstec/starter-react`). |
-| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`: o `php artisan tws:install`, que escolhe os módulos de um starter, e o `php artisan tws:add`, que acrescenta pacotes a um aplicativo que já existe). |
+| [`packages/`](packages) | Os pacotes do kit: [`foundation`](packages/foundation) (`twstec/kit-foundation`) e [`auth`](packages/auth) (`twstec/kit-auth`), que vêm sempre; [`accounts`](packages/accounts) (`twstec/kit-accounts`), [`uploads`](packages/uploads) (`twstec/kit-uploads`), [`webhooks`](packages/webhooks) (`twstec/kit-webhooks`) e o painel de administração, [`admin`](packages/admin) (`twstec/kit-admin`, plugin do Filament), que são **opcionais**; a demonstração, [`demo`](packages/demo) (`twstec/kit-demo`, só no desenvolvimento e só neste monorepo — não é publicada); e o instalador, [`installer`](packages/installer) (`twstec/kit-installer`: o `php artisan tws:install`, que escolhe os módulos de um starter, e o `php artisan tws:add`, que acrescenta pacotes a um aplicativo que já existe). |
 | [`docs/`](docs) | A documentação do kit, por assunto. |
 | `docker-compose.yml` | O ambiente de desenvolvimento: Postgres, Redis e Mailpit compartilhados + o starter Livewire em `localhost:8180` e o starter React em `127.0.0.1:8181` (serviços `react-*`, banco próprio; outro host para os cookies dos dois não colidirem). |
 
@@ -147,15 +150,15 @@ Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
 
 ### Escolher os módulos
 
-`foundation` e `auth` vêm sempre; **contas e API** (`accounts`), **uploads**
-e o **painel `/admin`** são opcionais, e a **demonstração** é só de
+`foundation` e `auth` vêm sempre; **contas e API** (`accounts`), **uploads**,
+**webhooks** e o **painel `/admin`** são opcionais, e a **demonstração** é só de
 desenvolvimento. O clone vem com tudo; para tirar o que não quer (ou pôr de
 volta), rode o instalador — interativo, ou com opções:
 
 ```bash
 docker compose exec app php artisan tws:install
 # ou, sem perguntas: só a base, sem a demo
-docker compose exec app php artisan tws:install --no-interaction --without=accounts,uploads,admin --no-demo
+docker compose exec app php artisan tws:install --no-interaction --without=accounts,uploads,admin,webhooks --no-demo
 ```
 
 Ele faz o `composer remove`/`require`, tira a demo do banco antes de tirar o
@@ -236,6 +239,7 @@ E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
 | API v1 e chaves de API | [docs/api.md](docs/api.md) |
 | Tenancy e projetos | [docs/tenancy.md](docs/tenancy.md) |
 | Uploads seguros | [docs/uploads.md](docs/uploads.md) |
+| Webhooks de saída: assinatura, SSRF, novas tentativas, log e reenvio | [docs/webhooks.md](docs/webhooks.md) |
 | Painel do usuário, super admin e dashboards | [docs/admin-e-dashboards.md](docs/admin-e-dashboards.md) |
 | E-mails transacionais | [docs/emails.md](docs/emails.md) |
 | Demonstração (pacote `twstec/kit-demo`), modo demo e contas demo | [docs/demo.md](docs/demo.md) |
@@ -315,6 +319,8 @@ packages/                # pacotes do kit (ver packages/README.md):
                          # API v1 (autenticação, escopos, limites, envelope)
   uploads/               # twstec/kit-uploads — upload validado pelo conteúdo,
                          # re-encode de imagem, URL assinada, foto de perfil
+  webhooks/              # twstec/kit-webhooks — webhooks de saída assinados,
+                         # outbox, novas tentativas, SSRF, log e reenvio
   admin/                 # twstec/kit-admin — o super admin /admin como plugin
                          # do Filament: telas, dashboards, trilha de auditoria
                          # das ações e as proteções do painel

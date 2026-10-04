@@ -1,0 +1,100 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "twstec/kit-webhooks",
+    "description": "Webhooks de saída do TWS Laravel Starter Kit, sem telas: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado).",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
+    "authors": [
+        {
+            "name": "TWS",
+            "homepage": "https://github.com/kelvindk9w"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/kelvindk9w/tws-laravel-starter-kit/issues",
+        "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/webhooks",
+        "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
+    },
+    "keywords": ["laravel", "webhooks", "hmac", "ssrf", "security", "starter-kit"],
+    "require": {
+        "php": "^8.4",
+        "ext-curl": "*",
+        "laravel/framework": "^13.17",
+        "twstec/kit-accounts": "2.x-dev",
+        "twstec/kit-auth": "2.x-dev",
+        "twstec/kit-foundation": "2.x-dev"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Twstec\\Kit\\Webhooks\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Twstec\\Kit\\Webhooks\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Twstec\\Kit\\Webhooks\\WebhooksServiceProvider"
+            ]
+        },
+        "branch-alias": {
+            "dev-main": "2.x-dev"
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "lint": "pint --test"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../accounts",
+            "options": {
+                "versions": {
+                    "twstec/kit-accounts": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../auth",
+            "options": {
+                "versions": {
+                    "twstec/kit-auth": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../foundation",
+            "options": {
+                "versions": {
+                    "twstec/kit-foundation": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        }
+    ],
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "platform": {
+            "php": "8.4.24"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

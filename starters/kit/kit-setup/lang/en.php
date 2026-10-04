@@ -38,13 +38,14 @@ return [
 
     'modules' => [
         'label' => 'Which optional modules?',
-        'hint' => 'Space toggles; Enter confirms. Uploads needs Accounts.',
+        'hint' => 'Space toggles; Enter confirms. Uploads and Webhooks need Accounts.',
         'none' => 'none (only foundation and authentication)',
         'foundation' => 'Foundation (twstec/kit-foundation)',
         'auth' => 'Authentication (twstec/kit-auth)',
         'accounts' => 'Accounts with members, API keys and projects (twstec/kit-accounts)',
         'uploads' => 'Secure uploads and profile photo (twstec/kit-uploads)',
         'admin' => '/admin panel with Filament (twstec/kit-admin)',
+        'webhooks' => 'Signed outgoing webhooks (twstec/kit-webhooks)',
     ],
 
     'plan' => [
@@ -59,7 +60,7 @@ return [
         'required_module' => 'The :module module is always included and cannot be left out (TWS_KIT_WITHOUT).',
         'with_and_without' => 'The :module module is in both TWS_KIT_WITH and TWS_KIT_WITHOUT.',
         'missing_dependency' => ':module needs :needs.',
-        'missing_dependency_env' => 'Leave both out (TWS_KIT_WITHOUT=:both) or keep what is missing.',
+        'missing_dependency_env' => 'Leave out what depends on it too (TWS_KIT_WITHOUT=:both) or keep what is missing.',
         'nothing_installed' => 'Nothing was installed. Fix the variables, delete the :dir folder and run the command again.',
         'in_variable' => 'In :variable:',
         'name_format' => 'the name ":name" does not work: use lowercase letters, digits and hyphen, starting with a letter (suggestion: :suggestion).',

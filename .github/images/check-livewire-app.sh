@@ -18,7 +18,7 @@ IMAGE="${1:?informe a imagem: sh .github/images/check-livewire-app.sh <imagem>}"
 # Os módulos do kit que o projeto TEM (os outros não podem estar na imagem).
 # Padrão: todos — o starter do monorepo. A simulação da instalação publicada
 # pelo comando único (`create-project twstec/kit`) passa a escolha dela.
-KIT_MODULES="${KIT_MODULES:-foundation auth accounts uploads admin}"
+KIT_MODULES="${KIT_MODULES:-foundation auth accounts uploads admin webhooks}"
 export KIT_MODULES
 
 # Extensões: filas (pcntl) e imagem/MIME real do twstec/kit-uploads.
@@ -67,7 +67,7 @@ docker run --rm -e KIT_MODULES --entrypoint sh "$IMAGE" -c '
 
     # Os módulos que o projeto NÃO tem não viajam: nem o pacote, nem o
     # registro dele no Composer.
-    for modulo in accounts uploads admin; do
+    for modulo in accounts uploads admin webhooks; do
         case " $KIT_MODULES " in *" $modulo "*) continue ;; esac
         if [ -e "vendor/twstec/kit-$modulo" ]; then echo "na imagem: vendor/twstec/kit-$modulo (módulo não escolhido)"; exit 1; fi
         if grep -Eq "\"name\": *\"twstec/kit-$modulo\"" vendor/composer/installed.json; then echo "na imagem: twstec/kit-$modulo instalado (módulo não escolhido)"; exit 1; fi

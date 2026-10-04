@@ -161,6 +161,7 @@ docker compose exec -w /var/packages/auth app ./vendor/bin/pest         # pacote
 docker compose exec -w /var/packages/accounts app ./vendor/bin/pest     # pacote twstec/kit-accounts
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pest      # pacote twstec/kit-uploads
 docker compose exec -w /var/packages/admin app ./vendor/bin/pest        # pacote twstec/kit-admin
+docker compose exec -w /var/packages/webhooks app ./vendor/bin/pest     # pacote twstec/kit-webhooks
 ```
 
 Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
@@ -177,7 +178,13 @@ dono); e a do admin sobe o Filament com um painel que só registra o plugin e
 prova que as proteções do painel vêm do pacote (sem acesso para não-admin e
 admin inativo, allowlist de IP nas páginas, nas ações Livewire e no download
 de exports, trilha de auditoria de criar/editar/excluir/bloquear com recusa
-`denied` e falha fechada, foto de perfil só de upload da própria conta). Os testes de ponta a ponta dessas peças (rotas, painel, banco)
+`denied` e falha fechada, foto de perfil só de upload da própria conta); e a
+do webhooks envia de verdade (cURL) para um receptor em `127.0.0.1` — o
+servidor embutido do PHP, que confere a assinatura com o exemplo da
+documentação — e prova a política de destino (SSRF), o rebinding, a conexão
+no IP conferido, o segredo fora de log, trilhas e fila, as novas tentativas
+com o relógio congelado, a desativação e o reenvio auditado (ver
+[webhooks.md](webhooks.md#testes)). Os testes de ponta a ponta dessas peças (rotas, painel, banco)
 continuam na suíte do starter. Como instalar as dependências do
 pacote está em [`packages/README.md`](../packages/README.md).
 
@@ -199,7 +206,7 @@ travas de arquitetura (`tests/Unit/Architecture/AccountIsolationTest.php` e
 Os testes validam **conteúdo** das respostas, não só o status HTTP. Cada
 módulo descreve o que a sua suíte cobre na seção *Testes* do próprio
 documento: [autenticação](autenticacao.md#testes), [API e chaves](api.md#testes),
-[uploads](uploads.md#testes), [painéis e /admin](admin-e-dashboards.md#testes),
+[uploads](uploads.md#testes), [webhooks](webhooks.md#testes), [painéis e /admin](admin-e-dashboards.md#testes),
 [backup](backup.md#testes) e [filas](filas.md#testes).
 
 Os testes da **demonstração** do kit (o pacote `twstec/kit-demo`, instalado
@@ -224,7 +231,7 @@ docker compose exec -T -w /var/packages/demo app ./vendor/bin/pest   # suíte do
 
 ## Módulos opcionais: um teste por módulo, pulando sozinho
 
-`accounts`, `uploads` e `admin` são opcionais ([instalação](instalacao.md)).
+`accounts`, `uploads`, `admin` e `webhooks` são opcionais ([instalação](instalacao.md)).
 Todo teste do starter que exercita um deles fica no **grupo com o nome do
 módulo** — as pastas e os arquivos inteiros em `tests/Pest.php`
 (`pest()->group('accounts')->in('Feature/Tenancy', …)`), os casos soltos com
@@ -246,7 +253,7 @@ Regras para escrever teste novo:
   (classe anônima: `new class implements DeletionCheck { … }`), nunca no topo
   do arquivo. O Pest carrega todos os arquivos antes de decidir o que pula:
   uma classe de topo que estende ou implementa um tipo de `accounts`,
-  `uploads`, `admin` (ou do Filament) derruba a suíte inteira numa instalação
+  `uploads`, `admin`, `webhooks` (ou do Filament) derruba a suíte inteira numa instalação
   sem o módulo ("Interface … not found") — foi o que reprovou a 2.0.0-beta.10
   na simulação "Livewire só a base". `tests/Feature/Architecture/OptionalModuleTestFilesTest.php`
   (nos dois starters) reprova isso. `use` no topo pode: ele não carrega nada.
@@ -272,7 +279,7 @@ localmente, numa CÓPIA do starter (nunca no do repositório — o instalador
 mexe no `composer.json`):
 
 ```bash
-php artisan tws:install --no-interaction --without=accounts,uploads,admin --no-demo
+php artisan tws:install --no-interaction --without=accounts,uploads,admin,webhooks --no-demo
 npm run build && ./vendor/bin/pest
 ```
 
@@ -388,6 +395,33 @@ pelo `global-setup`, e as mensagens dela no Mailpit. Ele usa conta própria de
 propósito — ligar o segundo fator no `e2e@example.com` mudaria o login dos
 outros specs. As mensagens das pessoas fixas (códigos de login e de
 confirmação) saem do Mailpit no fim da rodada (`tests/e2e/global-teardown.js`).
+
+O `webhooks.spec.js` (e o `webhooks.spec.ts` do React) faz a tela de
+webhooks inteira: cria o endpoint com a confirmação de segurança, vê o
+segredo uma vez, tem o destino `169.254.169.254` recusado antes do código,
+envia o teste e confere que ele chega **assinado** a um receptor HTTP que o
+próprio Playwright sobe, reenvia, desativa, reativa e exclui — com a pessoa
+nova apagada no fim (e com ela os webhooks). O worker da fila do projeto
+alcança o receptor pelo IP do host do Docker (o gateway de uma rede bridge;
+`E2E_WEBHOOK_RECEIVER_HOST` força outro). Para o projeto aceitar esse
+destino, o `.env` de **desenvolvimento** do starter precisa de:
+
+```dotenv
+WEBHOOKS_REQUIRE_HTTPS=false
+WEBHOOKS_ALLOWED_PRIVATE_NETWORKS=172.16.0.0/12
+```
+
+Em produção as duas são ignoradas (com aviso no log). Sem elas, o spec pula,
+com o motivo. Depois de mudar o código do pacote, reinicie o worker
+(`docker compose restart queue react-queue` — no Docker de desenvolvimento do kit o `queue:restart` só PARA o worker, que não tem política de reinício).
+
+O `api-key-scopes.spec.js` cria chaves de API marcando escopos e projetos
+e confere, pela API v1 com a própria chave, que ela pode **exatamente** o que
+foi marcado (e a edição dos projetos no modal). É a prova, no navegador, de
+que as caixas de seleção (`<x-checkbox>` com `wire:model` de lista)
+sincronizam — o `Livewire::test` não roda o JavaScript. Ele conversa muito com
+o servidor e começa na terceira janela de minuto da suíte
+(`tests/e2e/support/rate-window.js`; a segunda é do `approvals.spec.js`).
 
 Toda a suíte sai do mesmo IP e passa pelo limite de borda (300 requisições
 por minuto por IP — ver

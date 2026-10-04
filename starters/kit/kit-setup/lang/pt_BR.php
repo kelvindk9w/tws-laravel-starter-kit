@@ -38,13 +38,14 @@ return [
 
     'modules' => [
         'label' => 'Quais módulos opcionais?',
-        'hint' => 'Espaço marca e desmarca; Enter confirma. Uploads precisa de Contas.',
+        'hint' => 'Espaço marca e desmarca; Enter confirma. Uploads e Webhooks precisam de Contas.',
         'none' => 'nenhum (só a base e a autenticação)',
         'foundation' => 'Base (twstec/kit-foundation)',
         'auth' => 'Autenticação (twstec/kit-auth)',
         'accounts' => 'Contas com membros, chaves de API e projetos (twstec/kit-accounts)',
         'uploads' => 'Uploads seguros e foto de perfil (twstec/kit-uploads)',
         'admin' => 'Painel /admin com Filament (twstec/kit-admin)',
+        'webhooks' => 'Webhooks de saída assinados (twstec/kit-webhooks)',
     ],
 
     'plan' => [
@@ -59,7 +60,7 @@ return [
         'required_module' => 'O módulo :module vem sempre e não pode ficar de fora (TWS_KIT_WITHOUT).',
         'with_and_without' => 'O módulo :module está em TWS_KIT_WITH e em TWS_KIT_WITHOUT.',
         'missing_dependency' => ':module precisa de :needs.',
-        'missing_dependency_env' => 'Tire os dois (TWS_KIT_WITHOUT=:both) ou mantenha o que falta.',
+        'missing_dependency_env' => 'Deixe de fora também o que depende dele (TWS_KIT_WITHOUT=:both) ou mantenha o que falta.',
         'nothing_installed' => 'Nada foi instalado. Corrija as variáveis, apague a pasta :dir e rode o comando de novo.',
         'in_variable' => 'Em :variable:',
         'name_format' => 'o nome ":name" não serve: use letras minúsculas, números e hífen, começando por letra (sugestão: :suggestion).',

@@ -2,7 +2,7 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "twstec/starter-livewire",
     "type": "project",
-    "description": "TWS Laravel Starter Kit — starter Livewire: aplicativo Laravel 13 completo (painel do usuário em Livewire 4, autenticação com verificação em duas etapas, segurança e auditoria ligadas pelos pacotes) sobre os pacotes twstec/kit-*. Contas e API, uploads e o painel /admin são opcionais: escolha com `php artisan tws:install`.",
+    "description": "TWS Laravel Starter Kit — starter Livewire: aplicativo Laravel 13 completo (painel do usuário em Livewire 4, autenticação com verificação em duas etapas, segurança e auditoria ligadas pelos pacotes) sobre os pacotes twstec/kit-*. Contas e API, uploads, o painel /admin e os webhooks são opcionais: escolha com `php artisan tws:install`.",
     "keywords": ["laravel", "livewire", "starter-kit", "security", "lgpd"],
     "license": "MIT",
     "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
@@ -21,7 +21,8 @@
         "twstec/kit-admin": "2.x-dev",
         "twstec/kit-auth": "2.x-dev",
         "twstec/kit-foundation": "2.x-dev",
-        "twstec/kit-uploads": "2.x-dev"
+        "twstec/kit-uploads": "2.x-dev",
+        "twstec/kit-webhooks": "2.x-dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -171,6 +172,16 @@
             "options": {
                 "versions": {
                     "twstec/kit-uploads": "2.x-dev"
+                },
+                "reference": "config"
+            }
+        },
+        {
+            "type": "path",
+            "url": "../../packages/webhooks",
+            "options": {
+                "versions": {
+                    "twstec/kit-webhooks": "2.x-dev"
                 },
                 "reference": "config"
             }
