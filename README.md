@@ -114,7 +114,7 @@ Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
 ## Instalação (desenvolvimento)
 
 ```bash
-git clone <repo> meu-projeto && cd meu-projeto/starters/livewire
+git clone https://github.com/kelvindk9w/tws-laravel-starter-kit.git meu-projeto && cd meu-projeto/starters/livewire
 cp .env.example .env
 
 # 1) Dependências PHP (roda em container, nada local). Monta a RAIZ do
