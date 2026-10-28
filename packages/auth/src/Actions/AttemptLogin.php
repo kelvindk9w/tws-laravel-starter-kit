@@ -62,22 +62,26 @@ final class AttemptLogin
 
         $credentials = ['email' => $email, 'password' => $password];
 
-        $user = UserModel::query()->where('email', $email)->first();
-
-        // Credenciais válidas mas conta inativa: mensagem específica (o
-        // atacante já saberia as credenciais — não há vazamento adicional).
-        if ($user !== null && ! $user->isActive() && Auth::validate($credentials)) {
-            throw ValidationException::withMessages([
-                'email' => __('auth.account_inactive'),
-            ]);
-        }
-
+        // A senha é conferida UMA vez, em qualquer caso: conferir de novo só
+        // para a conta inativa daria a ela um tempo de resposta próprio (dois
+        // hashes lentos em vez de um) e denunciaria, pelo relógio, quais
+        // e-mails são de contas bloqueadas.
         if (! Auth::validate($credentials)) {
             RateLimiter::hit($this->throttleKey($request, $email), $this->decaySeconds());
             RateLimiter::hit(self::accountThrottleKey($email), $this->decaySeconds());
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
+            ]);
+        }
+
+        $user = UserModel::query()->where('email', $email)->first();
+
+        // Credenciais válidas mas conta inativa: mensagem específica (o
+        // atacante já saberia as credenciais — não há vazamento adicional).
+        if ($user === null || ! $user->isActive()) {
+            throw ValidationException::withMessages([
+                'email' => __('auth.account_inactive'),
             ]);
         }
 
