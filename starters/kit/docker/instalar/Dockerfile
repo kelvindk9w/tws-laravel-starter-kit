@@ -12,14 +12,17 @@
 # `docker` (só a linha de comando: com o socket do Docker montado, o menu
 # confere os projetos e as portas que já estão em uso na máquina).
 #
+# Imagens de base com a versão exata (como o PHP e o Composer): a mesma
+# imagem para todo mundo que constrói esta versão do instalador.
+#
 # É uma ferramenta de uma vez: não vai para projeto nenhum. A mesma imagem
 # (twstec-kit-instalar:<versão>) serve a todos os projetos criados na
 # máquina; quando ESTE ARQUIVO muda, a versão no compose.yaml muda junto (o
 # roteiro, não: ele é montado da pasta — ver o ENTRYPOINT).
 # =============================================================================
 FROM composer:2.10.3 AS composer-bin
-FROM docker:29-cli AS docker-cli
-FROM node:24-slim AS node
+FROM docker:29.9.2-cli AS docker-cli
+FROM node:24.22.1-slim AS node
 
 FROM php:8.4.24-cli
 

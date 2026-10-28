@@ -77,6 +77,26 @@ final class Choice
     }
 
     /**
+     * A escolha como as variáveis de escolha (TWS_KIT_*): lida de volta por
+     * fromEnvironment(), dá a mesma escolha. O instalador em container
+     * escolhe num passo (com o Docker, para conferir nomes e portas) e cria
+     * o projeto noutro (sem o Docker) — ver docker/instalar/entrypoint.sh.
+     *
+     * @return array<string, string>
+     */
+    public function toEnvironment(): array
+    {
+        return array_filter([
+            'TWS_KIT_STACK' => $this->stack,
+            'TWS_KIT_WITH' => implode(',', $this->modules),
+            'TWS_KIT_WITHOUT' => implode(',', $this->without()),
+            'TWS_KIT_NAME' => $this->name,
+            'TWS_KIT_SLOT' => $this->slot === null ? null : (string) $this->slot,
+            'TWS_KIT_EXPOSE_DB' => $this->exposeDatabase ? '1' : '0',
+        ], static fn (?string $value): bool => $value !== null);
+    }
+
+    /**
      * Os opcionais que ficam de fora.
      *
      * @return list<string>

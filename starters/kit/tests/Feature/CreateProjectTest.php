@@ -445,3 +445,57 @@ it('falha do composer update sem ser extensão: a mensagem de sempre, sem a list
     expect(($this->output)())->not->toContain('PHP extensions missing')
         ->toContain('To finish without starting over, after fixing the cause:');
 });
+
+// O instalador em container: a escolha num passo (com o Docker), o resto
+// noutro (sem ele) — ver docker/instalar/entrypoint.sh.
+it('só a escolha (TWS_KIT_CHOICE_FILE): grava as variáveis de escolha e não baixa nem muda nada', function (): void {
+    $file = $this->project.'/../escolha-'.bin2hex(random_bytes(4)).'.env';
+    $this->host->withProject('outro', 0);
+
+    $choose = fn (array $env = [], ?Closure $menu = null): int => (new CreateProject($this->project, translator(), $this->runner, new Output($this->stream, false), ['TWS_KIT_FOLDER' => 'meu-app', 'TWS_KIT_IN_DOCKER' => '1', ...$env], $this->host, $menu))->chooseInto($file);
+
+    try {
+        expect($choose(['TWS_KIT_STACK' => 'react', 'TWS_KIT_WITHOUT' => 'uploads,webhooks', 'TWS_KIT_EXPOSE_DB' => '1']))->toBe(0)
+            ->and($this->runner->calls)->toBe([])
+            ->and(($this->composerJson)()['name'])->toBe('twstec/kit')
+            ->and((string) file_get_contents($file))->toBe(implode("\n", [
+                'TWS_KIT_STACK=react',
+                'TWS_KIT_WITH=accounts,admin',
+                'TWS_KIT_WITHOUT=uploads,webhooks',
+                'TWS_KIT_NAME=meu-app',
+                'TWS_KIT_SLOT=1',
+                'TWS_KIT_EXPOSE_DB=1',
+            ])."\n");
+
+        // O passo seguinte (sem o Docker) lê a mesma escolha do ambiente.
+        $env = [];
+        foreach (explode("\n", trim((string) file_get_contents($file))) as $line) {
+            [$name, $value] = explode('=', $line, 2);
+            $env[$name] = $value;
+        }
+
+        [$again] = envChoice($env, new FakeHost(available: false));
+
+        expect($again)->toEqual(new Choice('react', ['accounts', 'admin'], 'meu-app', 1, true));
+
+        // O menu também: a escolha dele vai para o arquivo; desistir, não.
+        unlink($file);
+
+        expect($choose([], fn (): Choice => new Choice('livewire', ['accounts'], 'loja', 4)))->toBe(0)
+            ->and((string) file_get_contents($file))->toContain("TWS_KIT_STACK=livewire\nTWS_KIT_WITH=accounts\nTWS_KIT_WITHOUT=uploads,admin,webhooks\nTWS_KIT_NAME=loja\nTWS_KIT_SLOT=4\nTWS_KIT_EXPOSE_DB=0\n");
+
+        unlink($file);
+
+        expect($choose([], fn (): ?Choice => null))->toBe(1)
+            ->and(is_file($file))->toBeFalse()
+            ->and($this->runner->calls)->toBe([]);
+
+        // Escolha inválida: recusada aqui, antes de qualquer código de terceiros.
+        expect($choose(['TWS_KIT_SLOT' => '0']))->toBe(1)
+            ->and(is_file($file))->toBeFalse();
+    } finally {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+});

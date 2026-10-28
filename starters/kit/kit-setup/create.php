@@ -63,4 +63,10 @@ $menu = stream_isatty(STDIN) && ! Choice::inEnvironment($env)
 // chamou (--ignore-platform-req…), quando dá para lê-las.
 $osFamily = (string) ($env['TWS_KIT_OS_FAMILY'] ?? '') !== '' ? (string) $env['TWS_KIT_OS_FAMILY'] : PHP_OS_FAMILY;
 
-exit((new CreateProject($project, $translator, new ProcessRunner($env), Output::stdout(), $env, $host, $menu, $osFamily, PlatformRequirements::callerArguments()))->run());
+$create = new CreateProject($project, $translator, new ProcessRunner($env), Output::stdout(), $env, $host, $menu, $osFamily, PlatformRequirements::callerArguments());
+
+// O instalador em container escolhe primeiro (com o Docker) e grava a escolha
+// neste arquivo; o resto roda depois, sem o Docker (docker/instalar/entrypoint.sh).
+$choiceFile = (string) ($env['TWS_KIT_CHOICE_FILE'] ?? '');
+
+exit($choiceFile !== '' ? $create->chooseInto($choiceFile) : $create->run());

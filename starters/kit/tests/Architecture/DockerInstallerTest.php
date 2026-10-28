@@ -57,3 +57,57 @@ it('o ZIP do GitHub e o do Composer levam o instalador em container (e só a su�
         ->not->toMatch('~^/(compose\.yaml|docker)\b.*export-ignore~m')
         ->toContain('/tests export-ignore');
 });
+
+it('o socket do Docker (root na máquina) só alcança a escolha e a reserva: Composer, instalador do starter e npm rodam sem ele', function () use ($root): void {
+    $entrypoint = (string) file_get_contents($root.'/docker/instalar/entrypoint.sh');
+
+    // O grupo do socket só existe numa variável, usada só pelo run_with_docker.
+    preg_match_all('/^.*--groups=.*$/m', $entrypoint, $grants);
+    preg_match_all('/^.*\$docker_groups\b.*$/m', $entrypoint, $uses);
+
+    expect($grants[0])->toHaveCount(1)
+        ->and($grants[0][0])->toContain('docker_groups="--groups=$(stat -c %g /var/run/docker.sock)"');
+
+    foreach ($uses[0] as $line) {
+        expect(trim($line))->toMatch('/^(docker_groups=|groups=\$\{docker_groups:---clear-groups\}|if \[ -n "\$docker_groups" \])/');
+    }
+
+    expect($entrypoint)->toContain("run_as_owner() {\n    groups=--clear-groups\n");
+
+    // Quem roda com o Docker: o menu (só a escolha, num arquivo) e a reserva.
+    preg_match_all('/^\s*run_with_docker (.+)$/m', $entrypoint, $withDocker);
+
+    expect($withDocker[1])->toBe([
+        'env TWS_KIT_CHOICE_FILE="$choice_file" php kit-setup/create.php',
+        'docker volume create \\',
+    ]);
+
+    // O resto, sem ele; o npm sem os scripts de instalação dos pacotes.
+    expect($entrypoint)->toContain('run_as_owner run composer install --no-interaction')
+        ->toContain('run_as_owner run composer run-script post-create-project-cmd')
+        ->toContain("run_as_owner run sh -c 'npm ci --ignore-scripts --no-audit --no-fund && npm run build'")
+        ->toContain('run_as_owner exec "$@"');
+
+    preg_match_all('/^(?!\s*(#|echo )).*\bnpm (ci|install)\b.*$/m', $entrypoint, $npm);
+
+    expect($npm[0])->not->toBe([]);
+
+    foreach ($npm[0] as $line) {
+        expect($line)->toMatch('/npm (ci|install) --ignore-scripts/');
+    }
+
+    // A escolha volta pelo ambiente — só as variáveis de escolha.
+    foreach (Choice::VARIABLES as $variable) {
+        expect($entrypoint)->toContain($variable);
+    }
+});
+
+it('as imagens de base do instalador têm a versão exata (nada de tag móvel)', function () use ($root): void {
+    preg_match_all('/^FROM (\S+)/m', (string) file_get_contents($root.'/docker/instalar/Dockerfile'), $images);
+
+    expect($images[1])->not->toBe([]);
+
+    foreach ($images[1] as $image) {
+        expect($image)->toMatch('/^[a-z0-9\/._-]+:\d+\.\d+\.\d+(-[a-z0-9.-]+)?$/');
+    }
+});

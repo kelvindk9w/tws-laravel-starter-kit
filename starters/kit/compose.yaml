@@ -17,7 +17,10 @@
 #
 # O socket do Docker é montado SÓ neste container de uma vez (e só durante a
 # instalação): é por ele que o menu vê os projetos e as portas que já estão em
-# uso, para sugerir um nome e um número que não colidem. A rede é a padrão do
+# uso, para sugerir um nome e um número que não colidem. Só o passo da escolha
+# (o menu) e a reserva do nome têm acesso a ele: o Composer, o instalador do
+# starter e o npm — código de terceiros — rodam sem o grupo do socket (ver
+# docker/instalar/entrypoint.sh). A rede é a padrão do
 # Docker e não há volume: nada fica para trás além da imagem do instalador
 # (twstec-kit-instalar, a mesma para todos os projetos). Um volume de cache
 # com nome fixo, compartilhado entre as pastas, faria o Compose avisar a cada
@@ -31,7 +34,7 @@ services:
     # A mesma imagem para todos os projetos da máquina. Mudou o Dockerfile?
     # Suba a versão (aqui e em TWS_KIT_PROBE_IMAGE; um teste confere que as
     # duas batem).
-    image: twstec-kit-instalar:1
+    image: twstec-kit-instalar:2
     network_mode: bridge
     working_dir: /app
     volumes:
@@ -44,7 +47,7 @@ services:
       # O nome desta pasta, como o Compose o vê: a base do nome sugerido.
       - TWS_KIT_FOLDER=${COMPOSE_PROJECT_NAME}
       # A imagem do container descartável que confere as portas.
-      - TWS_KIT_PROBE_IMAGE=twstec-kit-instalar:1
+      - TWS_KIT_PROBE_IMAGE=twstec-kit-instalar:2
       # As escolhas sem perguntas, se estiverem no ambiente de quem chamou.
       - TWS_KIT_NAME
       - TWS_KIT_SLOT

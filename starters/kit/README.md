@@ -228,9 +228,13 @@ compila o front. Os arquivos saem com o **seu** usuário como dono (o do dono
 da pasta), nunca root. O socket do Docker é montado **só nesse container, só
 durante a instalação**: é por ele que o menu vê os outros projetos e as
 portas em uso — e, para conferir se uma porta está livre na máquina, ele sobe
-um container descartável com a porta publicada e o apaga em seguida. Nada
+um container descartável com a porta publicada e o apaga em seguida. Só a
+escolha (o menu) e a reserva do nome do projeto usam o socket: o Composer, o
+instalador do starter e o `npm ci` (sem os scripts de instalação dos
+pacotes) rodam sem acesso a ele — o socket vale root na máquina, e esse é
+código de terceiros. Nada
 fica para trás além da imagem `twstec-kit-instalar` (`docker image rm
-twstec-kit-instalar:1` a apaga; a próxima instalação a constrói de novo).
+twstec-kit-instalar:2` a apaga; a próxima instalação a constrói de novo).
 
 ## Com PHP na máquina (`composer create-project`)
 
