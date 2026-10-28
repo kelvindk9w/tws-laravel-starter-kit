@@ -238,8 +238,11 @@ upload, a **conta** em nome da qual foi gerada (ou "sistema", no `/admin`),
 **quem a gerou**, o contexto e se é para baixar; vale
 `UPLOADS_CONFIDENTIAL_URL_MINUTES` (5). Na entrega, além da assinatura e da
 validade, a regra é conferida **de novo**: o upload ainda é daquela conta e
-quem gerou ainda existe, está ativo e ainda é membro dela (no `/admin`: ainda é
-admin). A rota não usa sessão (serve ao painel, à API e ao `/admin`) e é
+quem gerou ainda existe, está ativo e ainda é membro dela (no `/admin`: ainda
+pode abrir confidencial lá — com o `twstec/kit-admin`, a permissão
+`uploads.view_confidential`; sem ele, `is_admin`. O critério é o contrato
+`Confidential\Contracts\AuthorizesSystemConfidentialDelivery`, que o
+aplicativo pode registrar). A rota não usa sessão (serve ao painel, à API e ao `/admin`) e é
 limitada por IP (`UPLOADS_CONFIDENTIAL_RATE_LIMIT`, 60/min). Resposta: o tipo
 real, o tamanho exato (`Content-Length`), `inline` para visualizar ou
 `attachment` para baixar (nome original saneado), `nosniff`, `no-store`,
@@ -268,7 +271,9 @@ No `/admin`, abrir um confidencial é uma ação à parte ("Abrir documento
 confidencial"), com permissão própria **`uploads.view_confidential`** — fora
 de `*.view`: o papel `auditor` vê a lista, não o documento. A URL nasce no
 clique (nunca ao desenhar a tabela), e a geração e a visualização ficam na
-trilha com o contexto `admin` e o operador.
+trilha com o contexto `admin` e o operador. A entrega confere a permissão
+**de novo**: quem perde `uploads.view_confidential` dentro da validade da URL
+(papel trocado, conta bloqueada) recebe 404, com a recusa na trilha.
 
 Os parâmetros da URL assinada (inclusive `signature`) passam a ser
 **mascarados** na trilha de requisições (`request_logs`): a assinatura, dentro

@@ -9,6 +9,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Twstec\Kit\Admin\Access\PanelAdministrators;
+use Twstec\Kit\Admin\Access\PanelConfidentialUploadDelivery;
 use Twstec\Kit\Admin\Approvals\ApprovalRegistry;
 use Twstec\Kit\Admin\Approvals\Approvals;
 use Twstec\Kit\Admin\Approvals\Enums\ApprovalMode;
@@ -19,7 +20,9 @@ use Twstec\Kit\Admin\Support\AdminAudit;
 use Twstec\Kit\Admin\Support\AdminPanelHardening;
 use Twstec\Kit\Admin\Support\FreshAvatarUploads;
 use Twstec\Kit\Auth\Contracts\IdentifiesAdministrators;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
+use Twstec\Kit\Uploads\Confidential\Contracts\AuthorizesSystemConfidentialDelivery;
 
 /**
  * Provider do twstec/kit-admin (descoberta automática do Laravel).
@@ -59,6 +62,12 @@ final class AdminServiceProvider extends ServiceProvider
         // /admin ou tem algum papel do painel. Um registro do aplicativo
         // (provider dele, depois deste) prevalece.
         $this->app->bind(IdentifiesAdministrators::class, PanelAdministrators::class);
+
+        // Confidencial gerado no /admin: a entrega confere de novo a permissão
+        // de abrir confidencial (o contrato é do twstec/kit-uploads, opcional).
+        if (Kit::has('uploads')) {
+            $this->app->bind(AuthorizesSystemConfidentialDelivery::class, PanelConfidentialUploadDelivery::class);
+        }
         $this->app->singleton(ApprovalRegistry::class);
 
         // Depois que o Filament montou os painéis (os PanelProviders do

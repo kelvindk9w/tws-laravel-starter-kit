@@ -202,7 +202,9 @@ it('só usa accounts e uploads onde pergunta antes se o módulo está instalado'
     // campo que só é registrado quando o módulo existe). Arquivo novo que
     // passe a nomear um dos dois reprova aqui até ser revisado.
     $registradosSoComOModulo = [
-        // Registrados só com o módulo (AdminPlugin::RESOURCES e os dashboards).
+        // Registrados só com o módulo (AdminPlugin::RESOURCES, os dashboards
+        // e o critério da entrega de confidencial, no AdminServiceProvider).
+        'src/Access/PanelConfidentialUploadDelivery.php',
         'src/Resources/Accounts/AccountResource.php',
         'src/Resources/ApiKeys/ApiKeyResource.php',
         'src/Resources/Projects/ProjectResource.php',
@@ -212,6 +214,7 @@ it('só usa accounts e uploads onde pergunta antes se o módulo está instalado'
     ];
 
     $perguntamAntes = [
+        'src/AdminServiceProvider.php',
         'src/Http/Middleware/OperateAdminPanelAsSystem.php',
         'src/Resources/AuditEvents/AuditEventResource.php',
         'src/Resources/Users/Support/UserAdminGuard.php',
