@@ -44,7 +44,7 @@ O `compose.yaml` do `twstec/kit` tem um só serviço, `instalar`: uma imagem
 nativos do front do React são de glibc) e a linha de comando do Docker. Ele
 monta a pasta em `/app` e roda o **mesmo** `post-create-project-cmd` do
 comando único — o menu, o starter, o `composer update`, o instalador do
-starter — e depois `npm ci` e `npm run build`. O projeto é montado **na
+starter — e depois `npm ci --ignore-scripts` e `npm run build`. O projeto é montado **na
 própria pasta**, que deixa de ser o `twstec/kit`.
 
 - **Dono dos arquivos:** tudo roda com o uid/gid de quem é dono da pasta na
@@ -58,7 +58,11 @@ própria pasta**, que deixa de ser o `twstec/kit`.
   em tempos, porque a mudança não chega sozinha ao container).
 - **Socket do Docker:** montado **só** no container do instalador e só
   durante a instalação. É por ele que o menu vê os projetos e as portas em uso
-  (abaixo). A rede do container é a padrão do Docker e não há volume: nada
+  (abaixo). O socket vale root na máquina, então só a **escolha** (o menu, ou
+  as variáveis `TWS_KIT_*` conferidas) e a reserva do nome do projeto o usam;
+  o resto — o `composer update`, os scripts dos pacotes, o instalador do
+  starter, o `npm ci` (sem os scripts de instalação) — roda sem o grupo do
+  socket, com a escolha passada pelo ambiente. A rede do container é a padrão do Docker e não há volume: nada
   fica para trás além da imagem `twstec-kit-instalar` (um volume de cache
   compartilhado entre as pastas faria o Compose avisar, a cada projeto novo,
   que o volume "é de outro projeto").
