@@ -117,8 +117,9 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
 - **Até 10 projetos simultâneos por centena de portas** (números 0–9); acima
   disso o instalador passa para a centena seguinte (818N, 812N…).
 - **Tirar um módulo não apaga as tabelas dele** do banco.
-- **Uploads em disco que não sabe assinar URL** caem em URL comum (os
-  confidenciais não: saem sempre pela rota da aplicação).
+- **Uploads em disco que não sabe assinar URL** ficam sem URL (`url()`
+  recusa, em vez de cair na URL comum); os confidenciais saem sempre pela
+  rota da aplicação.
 - **Link de documento confidencial é credencial durante a validade** (5
   minutos por padrão): quem o receber abre enquanto quem o gerou mantiver o
   acesso — cada abertura fica na trilha, com o IP de quem abriu.

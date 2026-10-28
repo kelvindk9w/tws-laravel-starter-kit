@@ -66,13 +66,19 @@ expõe nada. Ficam com a aplicação, com **aviso no log a cada boot**:
 
 - `UPLOADS_PROTECTIONS=false` (`uploads.protections`) — opt-out explícito: o
   pacote não mexe no disco;
-- disco de uploads com `visibility => public` — a entrega responde sem
-  conferir a assinatura (uploads devem ir para disco privado);
+- disco de uploads com `visibility => public` — o arquivo fica acessível sem
+  conferir a assinatura (uploads devem ir para disco privado). **Em
+  produção, não é só aviso:** gravar e gerar URL num disco público é
+  **recusado** (`Access\PublicUploadsDiskException`). Repare que, sem
+  `UPLOADS_DISK`, vale o `FILESYSTEM_DISK` — apontá-lo para o disco `public`
+  do Laravel tornaria os uploads públicos;
 - outro disco já entregue em `/storage` — ligar derrubaria o boot, então o
   pacote não liga.
 
-Para um driver que não sabe assinar, `url()` cai na URL comum do disco (sem
-assinatura), como na 1.x.
+Para um disco que não sabe assinar (local sem a entrega, driver sem suporte
+a URL temporária), `url()` **recusa** com
+`Access\UploadUrlUnavailableException` — nunca devolve a URL comum do
+disco, que sairia sem assinatura e sem validade (falha fechada).
 
 **Assinar é dar acesso a quem receber a URL**: `url()` só assina upload da
 **conta atual** (ou em modo sistema declarado — o `/admin`, a leitura da foto
