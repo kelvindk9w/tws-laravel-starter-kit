@@ -537,7 +537,12 @@ recusados **antes** de mexer em qualquer coisa.
    com contas, `API_KEYS_HASH_PEPPER` gerado se vazio. Se a `APP_KEY` já
    existia, ela vai para `API_KEYS_PREVIOUS_HASH_PEPPERS` — as chaves de API
    emitidas com o fallback continuam autenticando e migram sozinhas no
-   primeiro uso ([API](api.md)).
+   primeiro uso ([API](api.md)). Toda vez que grava nele (e quando o cria),
+   o instalador deixa o `.env` só para o dono (`chmod 600`): ele guarda a
+   `APP_KEY`, os peppers e as senhas. Os containers de desenvolvimento do kit
+   rodam com o seu uid e continuam lendo; num servidor em que **outro**
+   usuário (o do servidor web) lê o `.env`, dê a leitura pelo grupo
+   (`chmod 640 .env` e o grupo desse usuário).
 6. `php artisan migrate --force`.
 7. Resumo: módulos (instalado, instalado agora, removido, não instalado),
    `APP_KEY`, pepper, chave dos uploads confidenciais, migrations e os próximos passos — recompilar o front
