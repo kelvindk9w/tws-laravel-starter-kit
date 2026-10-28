@@ -35,7 +35,9 @@ publicação.
   projeto): `docker-compose.prod.yml`, `.env.prod.example` (variável nova
   `PROD_SERVER_NAMES`), `docker/nginx/prod.conf`, `docker/nginx/Dockerfile`,
   `docker/nginx/server-names.envsh`, `docker/php/entrypoint-prod.sh`,
-  `config/livewire.php`, `config/auth.php`, `config/uploads.php`,
+  `config/livewire.php`, `config/auth.php`, `config/uploads.php`, no React
+  `app/Http/Responses/Inertia/SessionEndedResponse.php` e o registro dele no
+  `AppServiceProvider`,
   `app/Providers/HorizonServiceProvider.php`, `phpstan.modules.php`,
   `phpstan.neon.dist`, `scripts/verificar`, `docker/dev/ci.yml`,
   `package-lock.json` (dependências do front) e os `.env.example`. Num
@@ -76,6 +78,11 @@ publicação.
   (nem pede ou aprova a exclusão) nem marca o e-mail de quem tem papel que ele
   não poderia conceder — na tela e no servidor. E-mail trocado pelo painel
   volta a "não verificado"; trocar e-mail ou senha renova o "lembrar de mim".
+- **`/admin` com as mesmas proteções do login do aplicativo:** o login do
+  painel usa os mesmos contadores de bloqueio (IPv6 pelo prefixo e o teto por
+  conta somando `/login` e `/admin/login`), e ligar ou desligar o segundo
+  fator em outro lugar encerra também as sessões abertas no painel (páginas e
+  ações Livewire), que voltam ao login do painel.
 - **`/horizon` respeita os papéis do painel** (permissão `horizon.access`).
 - **Idempotência: a retomada de uma chave podia executar a operação duas
   vezes.** Agora ela só vale sobre a linha que ainda está no estado que a
@@ -169,6 +176,9 @@ publicação.
 
 ### Adicionado
 
+- **Contrato de resposta `SessionEndedResponse`** (twstec/kit-auth), para a
+  sessão encerrada por troca de senha ou do segundo fator; o starter React
+  traz a versão Inertia (carga completa no login, com o aviso).
 - **Larastan no `scripts/verificar` e no CI do projeto criado** (antes só no
   CI do kit), com teste que exige a etapa nos dois. A simulação da instalação
   publicada roda o Larastan também nos projetos sem módulos opcionais.
