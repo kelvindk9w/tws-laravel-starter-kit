@@ -140,9 +140,12 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
 - **Limites dentro das regras** (valem com qualquer controller ou front):
   bloqueio de login por cliente (IPv6 pelo prefixo) e por conta
   (`auth.login`), segundo fator por código, conta e origem
-  (`auth.two_factor`, `auth.verification`), intervalos de reenvio.
+  (`auth.two_factor`, `auth.verification`), senha de login atual e senha de
+  transação erradas por conta (`auth.password_confirmation` —
+  `Services\PasswordConfirmation`, que o front também usa ao conferir a senha
+  atual na troca de senha), intervalos de reenvio.
 - **Configuração padrão** das chaves do kit em `config('auth')`
-  (`password_rules`, `login`, `transaction_password`, `verification`,
+  (`password_rules`, `login`, `password_confirmation`, `transaction_password`, `verification`,
   `email_verification`, `sensitive_action`, `two_factor`, `registration`,
   `web_protections`).
   As chaves de primeiro nível do `config/auth.php` do aplicativo prevalecem.

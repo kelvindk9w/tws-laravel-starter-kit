@@ -33,6 +33,9 @@ return [
         'not_verified' => 'Confirme seu e-mail para continuar.',
         'wrong_account' => 'Este link é de outra conta. Saia e entre com a conta que recebeu o e-mail.',
     ],
+    'password_confirmation' => [
+        'locked' => 'Muitas tentativas com senha incorreta. Por segurança, aguarde :minutes minuto(s) e tente novamente.',
+    ],
     'transaction_password' => [
         'invalid' => 'A senha de transação informada está incorreta.',
         'current_invalid' => 'A senha de transação atual está incorreta.',

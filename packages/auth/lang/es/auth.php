@@ -33,6 +33,9 @@ return [
         'not_verified' => 'Confirma tu correo para continuar.',
         'wrong_account' => 'Este enlace es de otra cuenta. Cierra sesión e ingresa con la cuenta que recibió el correo.',
     ],
+    'password_confirmation' => [
+        'locked' => 'Demasiados intentos con contraseña incorrecta. Por seguridad, espera :minutes minuto(s) e inténtalo de nuevo.',
+    ],
     'transaction_password' => [
         'invalid' => 'La contraseña de transacción ingresada es incorrecta.',
         'current_invalid' => 'La contraseña de transacción actual es incorrecta.',

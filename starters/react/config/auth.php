@@ -170,6 +170,17 @@ return [
         'lockout_minutes' => (int) env('AUTH_LOGIN_LOCKOUT_MINUTES', 15),
     ],
 
+    // Conferência de senha de quem JÁ ESTÁ LOGADO (senha de login atual na
+    // troca de senha; senha de transação na ação sensível e na troca dela) —
+    // Twstec\Kit\Auth\Services\PasswordConfirmation. Tentativas erradas por
+    // conta e por senha, em qualquer front (inclusive ações Livewire, que não
+    // passam pelo throttle da rota); esgotadas, nem a senha certa passa até a
+    // janela acabar.
+    'password_confirmation' => [
+        'max_attempts' => (int) env('AUTH_PASSWORD_CONFIRMATION_MAX_ATTEMPTS', 5),
+        'lockout_minutes' => (int) env('AUTH_PASSWORD_CONFIRMATION_LOCKOUT_MINUTES', 15),
+    ],
+
     // Senha de TRANSAÇÃO (separada da senha de login).
     'transaction_password' => [
         'min_length' => (int) env('AUTH_TRANSACTION_PASSWORD_MIN', 8),

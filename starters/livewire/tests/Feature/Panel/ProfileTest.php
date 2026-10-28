@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Twstec\Kit\Auth\Support\SessionFingerprint;
@@ -200,3 +201,71 @@ it('texto renomeado para .png é recusado com a mensagem da validação por cont
         ->and(comoSistema(fn (): int => Upload::query()->count()))->toBe(0)
         ->and($user->fresh()->avatar_upload_id)->toBeNull();
 })->group('uploads');
+
+// Ações Livewire não passam pelo `throttle:sensitive` da rota: o limite de
+// senha errada vem das regras do pacote (PasswordConfirmation), por conta.
+
+it('troca de senha: senha atual errada demais bloqueia, até com a certa', function () {
+    config()->set('auth.password_confirmation.max_attempts', 2);
+    $user = User::factory()->create(['password' => 'SenhaAtual123']);
+    $perfil = Livewire::actingAs($user)->test(Profile::class);
+
+    foreach (['Errada1', 'Errada2'] as $errada) {
+        $perfil->set('currentPassword', $errada)
+            ->set('password', 'NovaSenhaForte456')
+            ->set('passwordConfirmation', 'NovaSenhaForte456')
+            ->call('updatePassword')
+            ->assertHasErrors(['currentPassword' => __('panel.profile.current_password_invalid')]);
+    }
+
+    $perfil->set('currentPassword', 'SenhaAtual123')
+        ->set('password', 'NovaSenhaForte456')
+        ->set('passwordConfirmation', 'NovaSenhaForte456')
+        ->call('updatePassword')
+        ->assertHasErrors('currentPassword');
+
+    expect($perfil->errors()->first('currentPassword'))->toStartWith(rtrim((string) strstr(__('auth.password_confirmation.locked').':', ':', true)))
+        ->and(Hash::check('SenhaAtual123', (string) $user->fresh()->password))->toBeTrue();
+});
+
+it('troca da senha de transação: a atual errada demais bloqueia, até com a certa', function () {
+    config()->set('auth.password_confirmation.max_attempts', 2);
+    $user = User::factory()->create(['transaction_password' => 'TransacaoAtual1', 'transaction_password_set_at' => now()]);
+    $perfil = Livewire::actingAs($user)->test(Profile::class);
+
+    foreach (['Errada111', 'Errada222'] as $errada) {
+        $perfil->set('currentTransactionPassword', $errada)
+            ->set('transactionPassword', 'TransacaoNova1')
+            ->set('transactionPasswordConfirmation', 'TransacaoNova1')
+            ->call('updateTransactionPassword')
+            ->assertHasErrors(['currentTransactionPassword' => __('auth.transaction_password.current_invalid')]);
+    }
+
+    $perfil->set('currentTransactionPassword', 'TransacaoAtual1')
+        ->call('updateTransactionPassword')
+        ->assertHasErrors('currentTransactionPassword');
+
+    expect($perfil->errors()->first('currentTransactionPassword'))->toStartWith(rtrim((string) strstr(__('auth.password_confirmation.locked').':', ':', true)))
+        ->and(Hash::check('TransacaoAtual1', (string) $user->fresh()->transaction_password))->toBeTrue();
+});
+
+it('confirmação de ação sensível: senha de transação errada demais bloqueia o envio do código', function () {
+    Mail::fake();
+    config()->set('auth.password_confirmation.max_attempts', 2);
+    $user = User::factory()->create(['transaction_password' => 'TransacaoAtual1', 'transaction_password_set_at' => now()]);
+    $perfil = Livewire::actingAs($user)->test(Profile::class);
+
+    foreach (['Errada111', 'Errada222'] as $errada) {
+        $perfil->set('sensitivePassword', $errada)
+            ->call('sendSensitiveCode')
+            ->assertHasErrors(['sensitivePassword' => __('auth.transaction_password.invalid')]);
+    }
+
+    $perfil->set('sensitivePassword', 'TransacaoAtual1')
+        ->call('sendSensitiveCode')
+        ->assertHasErrors('sensitivePassword')
+        ->assertSet('codeSent', false);
+
+    expect($perfil->errors()->first('sensitivePassword'))->toStartWith(rtrim((string) strstr(__('auth.password_confirmation.locked').':', ':', true)));
+    Mail::assertNothingQueued();
+});

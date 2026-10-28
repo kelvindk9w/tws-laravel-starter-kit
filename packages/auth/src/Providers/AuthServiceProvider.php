@@ -48,7 +48,10 @@ use Twstec\Kit\Foundation\Localization\PackageTranslations;
  * As proteções que ficam nas próprias regras continuam lá e não dependem de
  * rota nem de provider: bloqueio de login por tentativas (AttemptLogin),
  * limites do código do segundo fator por código, conta e IP (TwoFactorLogin),
- * intervalo de reenvio (EmailVerification, VerificationCodes). Os controllers
+ * senha de login atual e senha de transação erradas por conta
+ * (PasswordConfirmation — vale também para ações Livewire, que não passam
+ * pelo throttle da rota), intervalo de reenvio (EmailVerification,
+ * VerificationCodes). Os controllers
  * do pacote trazem o próprio `throttle:sensitive` (HasMiddleware).
  *
  * Opt-out das proteções web: `auth.web_protections.enabled = false`

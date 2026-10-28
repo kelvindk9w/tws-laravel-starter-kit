@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Twstec\Kit\Auth\Services;
 
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Twstec\Kit\Auth\Contracts\AuthUser;
@@ -27,7 +26,9 @@ use Twstec\Kit\Auth\Models\VerificationCode;
  *                       chave de API...). USO ÚNICO.
  *
  * Invariantes: código e token NUNCA em plaintext no banco (somente hash),
- * sempre com expiração; reenvio com cooldown; tentativas limitadas. O código
+ * sempre com expiração; reenvio com cooldown; tentativas limitadas — as do
+ * código (VerificationCodes) e as da senha de transação, por conta
+ * (PasswordConfirmation). O código
  * em si é do motor comum (VerificationCodes), o mesmo do segundo fator do
  * login — cada fluxo com a sua finalidade. A configuração do segundo fator
  * obrigatório passa pela mesma exigência, em família própria
@@ -37,12 +38,14 @@ final class SensitiveActionService
 {
     public function __construct(
         private readonly VerificationCodes $codes,
+        private readonly PasswordConfirmation $passwords,
     ) {}
 
     /**
      * Passo 1: valida a senha de transação e dispara o código de verificação.
      *
-     * @throws ValidationException Senha incorreta/não definida ou cooldown ativo.
+     * @throws ValidationException Senha incorreta/não definida, tentativas
+     *                             erradas esgotadas ou cooldown ativo.
      */
     public function sendCode(AuthUser $user, #[\SensitiveParameter] string $transactionPassword, ?VerificationChannel $channel = null): VerificationCode
     {
@@ -129,7 +132,10 @@ final class SensitiveActionService
      */
     private function send(AuthUser $user, #[\SensitiveParameter] string $transactionPassword, VerificationPurpose $purpose, ?VerificationChannel $channel = null): VerificationCode
     {
-        if (! $user->hasTransactionPassword() || ! Hash::check($transactionPassword, (string) $user->transaction_password)) {
+        // Senha errada conta no limite por conta (PasswordConfirmation): vale
+        // para qualquer front, inclusive ação Livewire, que não passa pelo
+        // throttle da rota.
+        if (! $this->passwords->confirmTransactionPassword($user, $transactionPassword, 'transaction_password')) {
             throw ValidationException::withMessages([
                 'transaction_password' => __('auth.transaction_password.invalid'),
             ]);

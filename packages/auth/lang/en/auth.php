@@ -33,6 +33,9 @@ return [
         'not_verified' => 'Confirm your email to continue.',
         'wrong_account' => 'This link belongs to another account. Sign out and sign in with the account that received the email.',
     ],
+    'password_confirmation' => [
+        'locked' => 'Too many incorrect password attempts. For your security, wait :minutes minute(s) and try again.',
+    ],
     'transaction_password' => [
         'invalid' => 'The provided transaction password is incorrect.',
         'current_invalid' => 'The current transaction password is incorrect.',

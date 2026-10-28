@@ -84,10 +84,27 @@ conta é mais alto que o por cliente, o bloqueio é sempre temporário e a
 entra pelo "esqueci minha senha", que exige o e-mail dela. Quem preferir outro
 equilíbrio ajusta `AUTH_LOGIN_MAX_ATTEMPTS_PER_ACCOUNT`.
 
-Todos os envios sensíveis passam por `throttle:sensitive` (5/min padrão,
-`config/security.php`) além dos limites de negócio próprios. O limite vem com o
-**controller do pacote** (`HasMiddleware`), não com a declaração da rota: uma
-rota que aponte para ele já nasce limitada.
+Os envios sensíveis têm limite em duas camadas:
+
+- **Na rota:** todo envio que chega por um controller do pacote passa por
+  `throttle:sensitive` (5/min padrão, `config/security.php`). O limite vem com o
+  **controller** (`HasMiddleware`), não com a declaração da rota: uma rota que
+  aponte para ele já nasce limitada. O starter React declara o mesmo nos
+  controllers dele (troca de senha no perfil).
+- **Na regra, por conta (vale para qualquer front):** uma ação Livewire chega
+  pelo endpoint de atualização do Livewire, sem o throttle da rota. Por isso
+  as próprias regras limitam o que se pode adivinhar com a sessão aberta
+  (`Services\PasswordConfirmation`): a **senha de transação** errada (no
+  pedido do código da ação sensível, na configuração do segundo fator
+  obrigatório e na troca da própria senha de transação — um contador só) e a
+  **senha de login atual** errada (troca de senha no perfil, nos dois
+  starters) contam até `AUTH_PASSWORD_CONFIRMATION_MAX_ATTEMPTS` (padrão 5)
+  por conta; esgotadas, nem a senha certa passa por
+  `AUTH_PASSWORD_CONFIRMATION_LOCKOUT_MINUTES` (padrão 15). A recusa "a senha
+  de transação não pode ser igual à de login" também conta no limite da senha
+  de login: sem isso, quem está com a sessão de outra pessoa a usaria para
+  testar palpites da senha de login. Os códigos têm os limites deles
+  (tentativas por código, intervalo de reenvio).
 
 ## Regra em Actions, resposta em contratos (trocar o front sem tocar na regra)
 
@@ -575,7 +592,8 @@ pacote, com as próprias telas e respostas.
 - o `throttle:sensitive` de cada envio, declarado nos próprios controllers;
 - os limites que moram nas regras: bloqueio de login por cliente e por conta
   (`AttemptLogin`), limites do código do segundo fator por código, conta e IP
-  (`TwoFactorLogin`), intervalos de reenvio;
+  (`TwoFactorLogin`), senha de login atual e senha de transação erradas por
+  conta (`PasswordConfirmation`), intervalos de reenvio;
 - as migrations (com os nomes de sempre), a configuração padrão das chaves do
   kit em `config('auth')` e as traduções do domínio.
 
