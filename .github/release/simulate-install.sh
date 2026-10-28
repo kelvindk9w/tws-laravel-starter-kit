@@ -290,6 +290,10 @@ build() {
 
 run_tests() {
     cd "$WORK/app"
+    # A análise estática do projeto criado — inclusive sem módulos opcionais
+    # (KIT_WITHOUT): o phpstan.modules.php do starter tira da análise as telas
+    # do módulo ausente.
+    ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
     ./vendor/bin/pest --ci
 }
 

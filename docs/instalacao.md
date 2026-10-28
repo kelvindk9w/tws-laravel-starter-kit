@@ -345,9 +345,9 @@ pergunta — as duas se trocam depois no `composer.json`, sem efeito colateral.
 O projeto nasce com o mesmo conjunto de verificação em dois lugares:
 
 - **`scripts/verificar`**, na máquina, pelo Docker de desenvolvimento (sem
-  PHP nem Node instalados): Pint, `composer audit`, `npm audit` (dependências
-  de produção, alta ou crítica), o build do front e o Pest contra o
-  PostgreSQL (`<banco>_test`). Para no primeiro passo que falhar. No Windows,
+  PHP nem Node instalados): Pint, Larastan (nível 8, sem baseline),
+  `composer audit`, `npm audit` (dependências de produção, alta ou
+  crítica), o build do front e o Pest contra o PostgreSQL (`<banco>_test`). Para no primeiro passo que falhar. No Windows,
   no terminal do WSL ou no Git Bash.
 - **`.github/workflows/ci.yml`**, no GitHub Actions: os mesmos passos, com o
   PostgreSQL 18 como serviço do job. Roda **à mão** (Actions → CI → Run

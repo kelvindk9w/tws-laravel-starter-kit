@@ -10,7 +10,7 @@ Na raiz do projeto, com ele no ar (`docker compose up -d`). Nada disso exige
 PHP ou Node na máquina.
 
 ```bash
-# Tudo o que o CI confere, de uma vez (Pint, auditorias, build, Pest PostgreSQL):
+# Tudo o que o CI confere, de uma vez (Pint, Larastan, auditorias, build, Pest PostgreSQL):
 scripts/verificar
 
 # Ou cada camada:
@@ -111,9 +111,17 @@ docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
   métodos, não as colunas: o e-mail é `getEmailForVerification()`. Coluna
   lida de um objeto tipado pelo contrato (`$user->email`) reprova no nível 8.
 - **Projeto criado sem algum módulo opcional:** as telas do módulo ausente
-  continuam em `app/` (as rotas e o menu não as registram) e citam classes
-  que não estão instaladas; a análise acusa essas citações. Ela não entra no
-  `scripts/verificar` por isso. Com todos os módulos, passa limpa.
+  continuam em `app/` (as rotas e o menu não as registram, e o
+  `tws:add <módulo>` as reaproveita) e citam classes que não estão
+  instaladas. O `phpstan.modules.php` do starter (incluído pelo
+  `phpstan.neon.dist`) confere o `vendor/` e, para cada módulo ausente, tira
+  da análise os arquivos exclusivos dele e, nos arquivos mistos (código da
+  base protegido por `Kit::has`), ignora só os erros que citam as classes do
+  módulo, só naquele arquivo. Com todos os módulos, não tira nada. Arquivo
+  novo que cite um módulo opcional entra no mapa — a simulação de instalação
+  do CI (React sem uploads, Livewire só com a base) roda o Larastan e
+  reprova se faltar. Por isso a análise roda no `scripts/verificar` e no CI
+  do projeto criado.
 
 ### Pacotes divididos: a pegadinha do `arch()` do Pest
 
