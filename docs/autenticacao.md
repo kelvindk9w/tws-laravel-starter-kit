@@ -62,8 +62,11 @@ era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
 ### Bloqueio do login por tentativas
 
 Duas camadas, as duas no `AttemptLogin` (valem para qualquer front que entre
-pelo pacote; o login do `/admin` é o do Filament, com o limite próprio dele),
-numa janela de `AUTH_LOGIN_LOCKOUT_MINUTES` (padrão 15):
+pelo pacote e também para o login do `/admin`, que é o do Filament mas aplica
+a mesma regra, com os **mesmos contadores** — alternar entre `/login` e
+`/admin/login` não dá orçamento novo; o limite próprio do Filament, por IP
+exato, continua por baixo), numa janela de `AUTH_LOGIN_LOCKOUT_MINUTES`
+(padrão 15):
 
 | Camada | Chave | Limite | Para quê |
 |---|---|---|---|

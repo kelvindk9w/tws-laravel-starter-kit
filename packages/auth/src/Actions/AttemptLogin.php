@@ -67,8 +67,7 @@ final class AttemptLogin
         // hashes lentos em vez de um) e denunciaria, pelo relógio, quais
         // e-mails são de contas bloqueadas.
         if (! Auth::validate($credentials)) {
-            RateLimiter::hit($this->throttleKey($request, $email), $this->decaySeconds());
-            RateLimiter::hit(self::accountThrottleKey($email), $this->decaySeconds());
+            $this->recordFailedAttempt($request, $email);
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
@@ -85,8 +84,7 @@ final class AttemptLogin
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey($request, $email));
-        RateLimiter::clear(self::accountThrottleKey($email));
+        $this->clearFailedAttempts($request, $email);
 
         /** @var AuthUser $user */
         if ($this->twoFactor->enabledFor($user)) {
@@ -154,14 +152,39 @@ final class AttemptLogin
     }
 
     /**
+     * Senha errada (ou conta inexistente): conta nas duas camadas.
+     *
+     * Pública para o OUTRO login por senha do kit — o do /admin
+     * (twstec/kit-admin) — contar nos MESMOS contadores: quem testa senhas não
+     * ganha orçamento novo alternando entre /login e /admin/login.
+     */
+    public function recordFailedAttempt(Request $request, string $email): void
+    {
+        RateLimiter::hit($this->throttleKey($request, $email), $this->decaySeconds());
+        RateLimiter::hit(self::accountThrottleKey($email), $this->decaySeconds());
+    }
+
+    /**
+     * Senha certa: zera as duas camadas (o login do /admin também chama).
+     */
+    public function clearFailedAttempts(Request $request, string $email): void
+    {
+        RateLimiter::clear($this->throttleKey($request, $email));
+        RateLimiter::clear(self::accountThrottleKey($email));
+    }
+
+    /**
      * Bloqueio após N tentativas do mesmo cliente (auth.login.max_attempts)
      * ou M tentativas contra a mesma conta, de qualquer origem
      * (auth.login.max_attempts_per_account). A mensagem é a mesma nos dois
      * casos — e para conta inexistente.
      *
+     * Pública para o login do /admin aplicar a mesma regra; `$field` é o
+     * campo que recebe a mensagem (no formulário do Filament, `data.email`).
+     *
      * @throws ValidationException
      */
-    private function ensureIsNotRateLimited(Request $request, string $email): void
+    public function ensureIsNotRateLimited(Request $request, string $email, string $field = 'email'): void
     {
         $seconds = null;
 
@@ -182,7 +205,7 @@ final class AttemptLogin
         }
 
         throw ValidationException::withMessages([
-            'email' => __('auth.throttle', [
+            $field => __('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => (int) ceil($seconds / 60),
             ]),
