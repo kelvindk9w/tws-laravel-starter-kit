@@ -499,3 +499,40 @@ it('só a escolha (TWS_KIT_CHOICE_FILE): grava as variáveis de escolha e não b
         }
     }
 });
+
+it('pasta com espaço ou aspa: o cd mostrado vem entre aspas, pronto para copiar e colar (sh e PowerShell)', function (): void {
+    $folder = dirname($this->project).'/meu projeto d\'água '.bin2hex(random_bytes(3));
+    rename($this->project, $folder);
+    $this->project = $folder;
+
+    $this->runner->failing['update'] = 2;
+    $this->runner->failingOutput['update'] = MISSING_EXTENSIONS_OUTPUT;
+
+    ($this->create)();
+
+    $quoted = "'".str_replace("'", "'\\''", $folder)."'";
+
+    expect(($this->output)())->toContain("    cd {$quoted}\n    composer update\n")
+        ->not->toContain("    cd {$folder}\n");
+
+    // No Windows (PowerShell): aspas simples, a aspa de dentro dobrada.
+    removeDirectory($folder.'/composer.json');
+    ($this->writeKit)();
+    mkdir($folder.'/kit-setup/src', 0777, true);
+    file_put_contents($folder.'/kit-setup/create.php', "<?php\n");
+    ftruncate($this->stream, 0);
+    rewind($this->stream);
+
+    ($this->create)([], null, 'en', 'Windows');
+
+    expect(($this->output)())->toContain("    cd '".str_replace("'", "''", $folder)."'\n    \$env:COMPOSER_IGNORE_PLATFORM_REQ = \"ext-pcntl,ext-posix\"\n");
+});
+
+it('projeto pronto numa pasta com espaço: o cd dos próximos passos vem entre aspas', function (): void {
+    $folder = dirname($this->project).'/meu projeto '.bin2hex(random_bytes(3));
+    rename($this->project, $folder);
+    $this->project = $folder;
+
+    expect(($this->create)())->toBe(0)
+        ->and(($this->output)())->toContain("    cd '{$folder}'\n");
+});

@@ -453,11 +453,11 @@ final class CreateProject
             }
 
             $this->out->line($this->t->get($missing === [] ? 'failures.finish' : 'failures.finish_after_extensions'));
-            $this->out->command('cd '.$this->directory);
+            $this->out->command('cd '.$this->shellArgument($this->directory));
 
             // O que foi ignorado aqui vale para os comandos de terminar.
             foreach ($this->platform as $name => $value) {
-                $this->out->command($this->windows ? "\$env:{$name} = \"{$value}\"" : "export {$name}={$value}");
+                $this->out->command($this->windows ? "\$env:{$name} = ".$this->shellArgument($value, quoted: true) : "export {$name}=".$this->shellArgument($value));
             }
 
             foreach (array_slice($steps, $index) as [, $remaining]) {
@@ -524,7 +524,7 @@ final class CreateProject
             $this->dockerSummary($choice);
         } else {
             $this->out->line($this->t->get('done.next'));
-            $this->out->command('cd '.$this->directory);
+            $this->out->command('cd '.$this->shellArgument($this->directory));
             $this->out->command('npm install && npm run build');
             $this->out->command('composer dev');
         }
@@ -563,7 +563,7 @@ final class CreateProject
         $this->out->line($this->t->get('done.next'));
 
         if (! $this->inDocker) {
-            $this->out->command('cd '.$this->directory);
+            $this->out->command('cd '.$this->shellArgument($this->directory));
         }
 
         $this->out->command('docker compose up -d');
@@ -586,6 +586,29 @@ final class CreateProject
             'TWS_KIT_SLOT' => (string) $choice->slot,
             'TWS_KIT_EXPOSE_DB' => $choice->exposeDatabase ? '1' : '0',
         ];
+    }
+
+    /**
+     * Um argumento para o comando mostrado na tela, pronto para copiar e
+     * colar: como está, se só tem caracteres sem significado para o shell;
+     * senão entre aspas simples — no Windows as do PowerShell (aspa dobrada),
+     * fora dele as do sh (aspa vira '\''). $quoted: sempre entre aspas (o
+     * valor de `$env:NOME = …` no PowerShell) — duplas, quando nada nele
+     * expande.
+     */
+    private function shellArgument(string $value, bool $quoted = false): string
+    {
+        $plain = $value !== '' && preg_match('~^[A-Za-z0-9_./:,=+@%-]+$~', $value) === 1;
+
+        if ($plain && ! $quoted) {
+            return $value;
+        }
+
+        if ($this->windows) {
+            return $plain ? "\"{$value}\"" : "'".str_replace("'", "''", $value)."'";
+        }
+
+        return "'".str_replace("'", "'\\''", $value)."'";
     }
 
     /**
