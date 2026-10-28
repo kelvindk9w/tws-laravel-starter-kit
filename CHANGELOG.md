@@ -6,11 +6,119 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
-Webhooks de saída mais robustos (nenhum evento se perde com o endpoint fora
-do ar), análise estática no projeto criado mesmo sem módulos opcionais e a
-conferência de que todo pacote está no Packagist depois da publicação.
+Revisão de segurança antes da divulgação do kit como código aberto (login,
+sessões, painel `/admin`, idempotência, uploads, convites, ambiente de
+desenvolvimento, instalador e produção), webhooks de saída mais robustos
+(nenhum evento se perde com o endpoint fora do ar), análise estática no
+projeto criado mesmo sem módulos opcionais, compatibilidade com o Filament
+5.11 e a conferência de que todo pacote está no Packagist depois da
+publicação.
+
+### Atenção ao atualizar
+
+- **Senha mínima de login passa de 6 para 8 caracteres** (`AUTH_PASSWORD_MIN`)
+  para quem não define a variável. Senhas antigas continuam entrando; vale
+  para as novas.
+- **Trocar a senha ou ligar/desligar o segundo fator encerra as outras
+  sessões** da conta e invalida os cookies "lembrar de mim" (quem fez a
+  mudança continua logado). Um middleware novo entra no grupo `web`.
+- **`/horizon` exige a permissão `horizon.access`** (de fábrica: `owner` e
+  `operations`); `support` e auditoria deixam de abrir. Projeto com
+  `config/admin.php` publicado: acrescente `'horizon.access'` ao papel que
+  deve abrir o dashboard.
+- **Demonstração fechada fora de `local` e `testing`** (antes, só em
+  `production`), salvo o opt-out declarado.
+- **Uploads:** disco de uploads público é recusado em produção; `url()` de um
+  disco que não assina lança exceção em vez de devolver a URL sem assinatura;
+  chave de API vinculada a projetos recebe 403 em `POST /api/v1/uploads`.
+- **Arquivos de starter que não chegam pelo Composer** (copie à mão no
+  projeto): `docker-compose.prod.yml`, `.env.prod.example` (variável nova
+  `PROD_SERVER_NAMES`), `docker/nginx/prod.conf`, `docker/nginx/Dockerfile`,
+  `docker/nginx/server-names.envsh`, `docker/php/entrypoint-prod.sh`,
+  `config/livewire.php`, `config/auth.php`, `config/uploads.php`,
+  `app/Providers/HorizonServiceProvider.php`, `phpstan.modules.php`,
+  `phpstan.neon.dist`, `scripts/verificar`, `docker/dev/ci.yml`,
+  `package-lock.json` (dependências do front) e os `.env.example`. No Livewire, também
+  `app/Livewire/Profile.php` e `app/Livewire/Concerns/ConfirmsSensitiveAction.php`
+  (e a view do modal); no React, `app/Http/Controllers/Panel/PasswordController.php`.
+- **Monorepo:** rode `scripts/preparar-dev` uma vez — o ambiente de
+  desenvolvimento não tem mais senha padrão.
+
+### Segurança
+
+- **Login: tentativa de senha sem limite real.** O bloqueio contava
+  "e-mail + IP exato": trocando de endereço IPv6 (uma rede inteira por
+  máquina) ou usando uma botnet, dava para testar senhas de uma conta sem
+  parar. Agora o IPv6 conta pelo prefixo, há um teto por conta somando todas
+  as origens (`AUTH_LOGIN_MAX_ATTEMPTS_PER_ACCOUNT`, padrão 20) e a
+  redefinição de senha por e-mail tira a conta do bloqueio. O código do
+  segundo fator e o limitador `sensitive` também contam o IPv6 pelo prefixo.
+- **Sessões antigas sobreviviam à troca de senha.** Redefinir ou trocar a
+  senha, ou ligar o segundo fator, não derrubava a sessão de quem já estava
+  dentro. Agora cada sessão guarda uma impressão da senha e do segundo fator;
+  a que não confere mais é encerrada na requisição seguinte, com qualquer
+  driver de sessão.
+- **Senha errada com limite por conta nas próprias regras**
+  (`AUTH_PASSWORD_CONFIRMATION_MAX_ATTEMPTS`, padrão 5;
+  `AUTH_PASSWORD_CONFIRMATION_LOCKOUT_MINUTES`, padrão 15): senha atual,
+  senha de transação e envio do código da ação sensível — no Livewire essas
+  ações não tinham limite nenhum. A recusa "senha de transação igual à de
+  login" deixa de servir para adivinhar a senha de login.
+- **Login confere a senha uma vez só**, também para conta inativa: o tempo de
+  resposta não revela mais quais contas estão bloqueadas.
+- **Livewire:** a senha de transação digitada no modal sai do estado do
+  componente logo após o envio do código.
+- **`/admin`: um papel não age sobre quem está acima dele.** A `operations`
+  podia editar um `owner` (trocar e-mail e senha e entrar como ele),
+  bloqueá-lo ou excluí-lo. Agora ninguém edita, bloqueia, desbloqueia, exclui
+  (nem pede ou aprova a exclusão) nem marca o e-mail de quem tem papel que ele
+  não poderia conceder — na tela e no servidor. E-mail trocado pelo painel
+  volta a "não verificado"; trocar e-mail ou senha renova o "lembrar de mim".
+- **`/horizon` respeita os papéis do painel** (permissão `horizon.access`).
+- **Idempotência: a retomada de uma chave podia executar a operação duas
+  vezes.** Agora ela só vale sobre a linha que ainda está no estado que a
+  justificou; se a execução dona conclui no meio, a repetição recebe o
+  replay. A documentação diz que a retomada do modo `transactional` só é
+  segura quando todo o efeito está no banco (chamada a provedor externo: modo
+  normal, sem retomada, e a idempotência do provedor).
+- **Chaves de API:** a chave criada ou rotacionada pela API não vale além da
+  validade da chave autenticada (herda a validade quando omitida; além dela,
+  403 `api_key_expiry_exceeded`).
+- **Uploads:** envio pela API exige chave de conta; a URL falha fechada; disco
+  público recusado em produção; a entrega do confidencial gerado no `/admin`
+  confere de novo a permissão `uploads.view_confidential`; o upload temporário
+  do Livewire não pré-visualiza mais SVG, áudio nem vídeo e tem o teto dos
+  uploads.
+- **Convites:** revogar e reenviar só valem com o convite ainda aberto (sem
+  corrida com o aceite); reenviar um expirado passa pelas recusas da criação
+  (já é membro, outro pendente, limite).
+- **Ambiente de desenvolvimento do monorepo** publicava banco, Redis (sem
+  senha), Mailpit e os sites em todas as interfaces, com senha fixa. Agora só
+  em 127.0.0.1 (`DEV_BIND` para abrir), sem senha padrão (`scripts/preparar-dev`
+  gera), e o Redis exige senha.
+- **Instalador em container:** só a escolha e a reserva do volume têm o
+  socket do Docker; Composer e npm rodam sem ele, o `npm ci` sem scripts e as
+  imagens com versão exata (`twstec-kit-instalar:2`).
+- **nginx de produção só atende os nomes do site** (host do `APP_URL` ou
+  `PROD_SERVER_NAMES`): Host desconhecido recebe 444, SNI desconhecido é
+  recusado, e o redirecionamento para HTTPS não reflete mais o Host.
+- **Demonstração fechada fora de `local` e `testing`**; o segredo de exemplo
+  da landing usa um valor obviamente fictício.
+- **`.env` criado pelo instalador com permissão 0600.**
+- **Ações do CI e do CodeQL fixadas por commit**, com trava no CI.
 
 ### Corrigido
+
+- **Admin com o Filament 5.11:** o estado de tabela salvo com os nomes da 1.x
+  continua migrando (formato novo da chave de sessão); a suíte passa no 5.8 e
+  no 5.11.
+- **Produção:** o `public/` é sincronizado no volume do nginx sem deixar
+  arquivo velho, e falha na cópia derruba a subida; healthchecks no app, no
+  Redis e no nginx, com cada serviço subindo na ordem do pronto.
+- **Instalador:** os comandos de terminar mostrados levam aspas quando a pasta
+  tem espaço ou aspa.
+- **Simulação da instalação** só apaga a pasta que ela mesma criou.
+- **E2E do monorepo** lê o Mailpit por 127.0.0.1.
 
 - **Webhooks: endpoint desativado não perde mais eventos.** A desativação
   automática exige as falhas seguidas (`WEBHOOKS_DISABLE_AFTER_FAILURES`) **e**
@@ -73,6 +181,10 @@ conferência de que todo pacote está no Packagist depois da publicação.
   variáveis novas, também nos `.env` de exemplo dos starters.
 - `docs/testes.md` e `docs/instalacao.md`: a análise estática no projeto
   criado e o mapa dos módulos opcionais.
+- `README.md`: o `git clone` com o endereço real do repositório;
+  `docs/autenticacao.md`, `docs/admin-e-dashboards.md`, `docs/filas.md`,
+  `docs/api.md`, `docs/uploads.md`, `docs/tenancy.md`, `docs/producao.md` e
+  `docs/seguranca.md` com o comportamento novo.
 
 ## [2.0.0-beta.15] — 2026-10-03
 
