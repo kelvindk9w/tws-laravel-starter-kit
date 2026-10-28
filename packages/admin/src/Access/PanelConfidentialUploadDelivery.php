@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Twstec\Kit\Admin\Authorization\AdminPermissions;
 use Twstec\Kit\Admin\Resources\Uploads\UploadResource;
 use Twstec\Kit\Auth\Contracts\AuthUser;
-use Twstec\Kit\Uploads\Confidential\Contracts\AuthorizesSystemConfidentialDelivery;
 
 /**
  * A entrega de um upload CONFIDENCIAL cuja URL foi gerada no /admin confere,
@@ -18,9 +17,13 @@ use Twstec\Kit\Uploads\Confidential\Contracts\AuthorizesSystemConfidentialDelive
  * retirado) dentro da validade da URL não abre mais o documento.
  *
  * Registrado pelo AdminServiceProvider só quando o twstec/kit-uploads está
- * instalado (o contrato é dele).
+ * instalado. A classe NÃO implementa o contrato do uploads
+ * (Confidential\Contracts\AuthorizesSystemConfidentialDelivery): sem o módulo,
+ * carregá-la (um `class_exists`, a descoberta de classes) derrubaria o
+ * aplicativo com "interface não encontrada". Quem implementa o contrato é o
+ * adaptador criado no AdminServiceProvider, só com o módulo presente.
  */
-final class PanelConfidentialUploadDelivery implements AuthorizesSystemConfidentialDelivery
+final class PanelConfidentialUploadDelivery
 {
     public function allows(AuthUser&Model $actor): bool
     {

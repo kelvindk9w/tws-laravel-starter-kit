@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Twstec\Kit\Admin;
 
 use Filament\PanelRegistry;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -19,6 +20,7 @@ use Twstec\Kit\Admin\Resources\Users\Support\DeleteUserApproval;
 use Twstec\Kit\Admin\Support\AdminAudit;
 use Twstec\Kit\Admin\Support\AdminPanelHardening;
 use Twstec\Kit\Admin\Support\FreshAvatarUploads;
+use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Contracts\IdentifiesAdministrators;
 use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
@@ -65,8 +67,16 @@ final class AdminServiceProvider extends ServiceProvider
 
         // Confidencial gerado no /admin: a entrega confere de novo a permissão
         // de abrir confidencial (o contrato é do twstec/kit-uploads, opcional).
+        // O adaptador anônimo só é declarado aqui, com o módulo presente: a
+        // interface é do uploads (ver PanelConfidentialUploadDelivery).
         if (Kit::has('uploads')) {
-            $this->app->bind(AuthorizesSystemConfidentialDelivery::class, PanelConfidentialUploadDelivery::class);
+            $this->app->bind(AuthorizesSystemConfidentialDelivery::class, fn (): AuthorizesSystemConfidentialDelivery => new class implements AuthorizesSystemConfidentialDelivery
+            {
+                public function allows(AuthUser&Model $actor): bool
+                {
+                    return app(PanelConfidentialUploadDelivery::class)->allows($actor);
+                }
+            });
         }
         $this->app->singleton(ApprovalRegistry::class);
 

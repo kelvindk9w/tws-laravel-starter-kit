@@ -23,6 +23,7 @@ use Twstec\Kit\Foundation\Audit\Enums\AuditOutcome;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 use Twstec\Kit\Uploads\Classification\UploadClassification;
 use Twstec\Kit\Uploads\Confidential\ConfidentialAccess;
+use Twstec\Kit\Uploads\Confidential\AdministratorFlagDelivery;
 use Twstec\Kit\Uploads\Confidential\Contracts\AuthorizesSystemConfidentialDelivery;
 use Twstec\Kit\Uploads\Models\Upload;
 use Twstec\Kit\Uploads\Retention\LegalHold;
@@ -140,7 +141,7 @@ it('a URL gerada no /admin confere de novo a PERMISSÃO na entrega: quem perdeu 
         ->and($recusa->actor_uuid)->toBe((string) $this->operador->uuid)
         ->and($recusa->reason)->toBe(__('uploads.confidential.no_longer_allowed'))
         ->and(PanelConfidentialUploadDelivery::permission())->toBe('uploads.view_confidential')
-        ->and(app(AuthorizesSystemConfidentialDelivery::class))->toBeInstanceOf(PanelConfidentialUploadDelivery::class);
+        ->and(app(AuthorizesSystemConfidentialDelivery::class))->not->toBeInstanceOf(AdministratorFlagDelivery::class);
 
     // Com a permissão de volta (ainda dentro da validade), a mesma URL abre.
     $this->operador->forceFill(['admin_role' => 'owner'])->save();
