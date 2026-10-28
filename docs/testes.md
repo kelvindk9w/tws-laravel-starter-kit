@@ -353,7 +353,7 @@ No monorepo, o E2E do Livewire usa a demonstração (o super admin demo faz
 login no `/admin` e a limpeza); sem ela, o admin do E2E de
 `tests/e2e/fixtures.php`. Os endereços vêm do `.env` do starter (a `APP_URL`);
 sem `DEV_MAIL_PORT` no `.env`, o Mailpit é o do `docker-compose.yml` da raiz
-(`http://localhost:18025`) — só quando o `composer.json` instala os pacotes
+(`http://127.0.0.1:18025` — o compose publica só em IPv4, e o Node não tenta o outro endereço sozinho) — só quando o `composer.json` instala os pacotes
 por path repository (o monorepo).
 
 Depois rode a suíte, **de dentro de `starters/livewire`** (é onde estão o
@@ -374,7 +374,7 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 O `email-verification.spec.js` faz o fluxo real do cadastro: registra uma
 conta nova (`e2e-verificacao-<carimbo>@example.com`), lê o e-mail de
 verificação na API do **Mailpit** (entregue pelo worker `queue`, então os dois
-precisam estar no ar; `E2E_MAILPIT_URL`, no monorepo `http://localhost:18025`),
+precisam estar no ar; `E2E_MAILPIT_URL`, no monorepo `http://127.0.0.1:18025`),
 clica no link e confere o painel liberado. No fim — passando ou falhando — ele
 **apaga o que criou**, como o `two-factor.spec.js` abaixo: a conta, pelo
 `/admin` com o super admin demo, e as mensagens dela no Mailpit.
