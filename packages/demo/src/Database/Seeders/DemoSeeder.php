@@ -19,7 +19,8 @@ final class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // FAIL-CLOSED: em APP_ENV=production nada de demonstração é semeado,
+        // FAIL-CLOSED: fora de APP_ENV=local/testing (em produção ou qualquer
+        // outro ambiente) nada de demonstração é semeado,
         // nem com DEMO_LOGIN_ENABLED=true. Aqui a recusa é um AVISO e não uma
         // exceção — este agregador roda dentro do que um script de deploy
         // executa (`php artisan migrate --seed --force`), e derrubar o deploy
@@ -29,7 +30,7 @@ final class DemoSeeder extends Seeder
         // exceção: ali a intenção foi declarada e o silêncio enganaria.
         if (! DemoSurface::allowed()) {
             $this->command?->warn(
-                'APP_ENV=production: semeadura de DEMONSTRAÇÃO recusada (contas demo, '
+                'APP_ENV='.app()->environment().': semeadura de DEMONSTRAÇÃO recusada (contas demo, '
                 .'massa fictícia e histórico dos dashboards não foram criados). Isto é a '
                 .'proteção do kit, não uma falha. Para uma demo pública hospedada, declare '
                 .'DEMO_ALLOW_IN_PRODUCTION=true.'

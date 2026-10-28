@@ -123,3 +123,50 @@ it('fora de produção, as flags continuam desligando a demo (segunda barreira)'
 
     $this->get('/ui')->assertNotFound();
 });
+
+it('fora de local e testing — staging, sandbox, um nome digitado errado — a demonstração também não existe (a lista é do que libera)', function (string $environment): void {
+    $this->bootWith([
+        'app.env' => $environment,
+        'ui.demo_login.enabled' => true,
+        'ui.showcase_enabled' => true,
+    ], migrate: false);
+
+    expect(app()->environment())->toBe($environment)
+        ->and(DemoSurface::allowed())->toBeFalse()
+        ->and(DemoSurface::loginEnabled())->toBeFalse()
+        ->and(DemoSurface::showcaseEnabled())->toBeFalse()
+        ->and(app(MailPreviewGate::class)->allows())->toBeFalse()
+        ->and(LoginPrefill::for('web'))->toBeNull()
+        ->and(DemoSurface::allowedInProductionByOptOut())->toBeFalse();
+
+    $this->get('/ui')->assertNotFound();
+})->with(['staging', 'sandbox', 'homologacao', 'prodution']);
+
+it('fora de local e testing, o opt-out DECLARADO libera — e avisa no log a cada boot, com o ambiente', function (): void {
+    $log = sys_get_temp_dir().'/kit-demo-log-'.uniqid().'.log';
+
+    $this->bootWith([
+        'app.env' => 'staging',
+        'ui.demo_login.enabled' => true,
+        'ui.demo.allow_in_production' => true,
+        'logging.default' => 'kitdemo',
+        'logging.channels.kitdemo' => ['driver' => 'single', 'path' => $log],
+    ], migrate: false);
+
+    expect(DemoSurface::allowed())->toBeTrue()
+        ->and(DemoSurface::allowedInProductionByOptOut())->toBeTrue()
+        ->and(LoginPrefill::for('web')?->email)->toBe('demo@tws.dev');
+
+    expect(is_file($log) ? (string) file_get_contents($log) : '')->toContain('WARNING: DEMO_ALLOW_IN_PRODUCTION está ligado: em APP_ENV=staging');
+
+    if (is_file($log)) {
+        unlink($log);
+    }
+});
+
+it('em local e testing o opt-out não é aviso: lá a demonstração já existe', function (string $environment): void {
+    $this->bootWith(['app.env' => $environment, 'ui.demo.allow_in_production' => true], migrate: false);
+
+    expect(DemoSurface::allowed())->toBeTrue()
+        ->and(DemoSurface::allowedInProductionByOptOut())->toBeFalse();
+})->with(['local', 'testing']);

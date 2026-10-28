@@ -59,7 +59,7 @@ eles, a demo sobe sem essas duas ligações.
 | `resources/views`, `lang/` | as landings, a vitrine, o contato e o layout público `<x-layouts.landing>`; traduções nos três idiomas |
 | `resources/js`, `resources/css`, `resources/img` | os bundles das duas landings e as capturas de tela |
 | `vite.js` | o que a demo acrescenta ao build do Vite do aplicativo (entradas, imagens, fontes do Tailwind) — carregado pelo `vite.config.js` do starter só quando o pacote está instalado |
-| `Support\DemoSurface` | a regra **fail-closed**: em `APP_ENV=production` a demo não existe, qualquer que seja a flag, a não ser com `DEMO_ALLOW_IN_PRODUCTION=true` declarado (e avisado no log a cada boot) |
+| `Support\DemoSurface` | a regra **fail-closed**: fora de `APP_ENV=local`/`testing` (em produção ou qualquer outro ambiente) a demo não existe, qualquer que seja a flag, a não ser com `DEMO_ALLOW_IN_PRODUCTION=true` declarado (e avisado no log a cada boot) |
 | `Accounts\…` | a proteção das contas demo (model e gatilhos do PostgreSQL) |
 | `Console\UninstallDemo` | `php artisan demo:uninstall [--drop-tables]` — tira do banco o que a demo instalou, antes de remover o pacote |
 | `Database\Seeders\…`, `Database\Factories\…` | a massa fictícia e as contas demo |

@@ -171,10 +171,11 @@ final class DemoServiceProvider extends ServiceProvider
 
         // Opt-out da superfície de demonstração (DEMO_ALLOW_IN_PRODUCTION):
         // legítimo para a demo pública hospedada do roadmap, e por isso
-        // BARULHENTO. Um opt-out de segurança que ninguém vê deixa de ser
-        // decisão e volta a ser esquecimento.
-        if ($this->app->isProduction() && DemoSurface::allowedInProductionByOptOut()) {
-            Log::warning('DEMO_ALLOW_IN_PRODUCTION está ligado: em produção, as contas demo de credenciais públicas, a vitrine /ui, a galeria /mail-preview e os seeders de dado fictício estão LIBERADOS. Só use isto numa instalação descartável.');
+        // BARULHENTO — em produção e em qualquer ambiente fora do
+        // desenvolvimento. Um opt-out de segurança que ninguém vê deixa de
+        // ser decisão e volta a ser esquecimento.
+        if (DemoSurface::allowedInProductionByOptOut()) {
+            Log::warning('DEMO_ALLOW_IN_PRODUCTION está ligado: em APP_ENV='.$this->app->environment().', as contas demo de credenciais públicas, a vitrine /ui, a galeria /mail-preview e os seeders de dado fictício estão LIBERADOS. Só use isto numa instalação descartável.');
         }
     }
 

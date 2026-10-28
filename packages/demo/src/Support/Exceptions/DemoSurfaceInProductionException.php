@@ -7,7 +7,8 @@ namespace Twstec\Kit\Demo\Support\Exceptions;
 use RuntimeException;
 
 /**
- * Alguém pediu, em PRODUÇÃO, uma peça que só existe para demonstrar o kit:
+ * Alguém pediu, em PRODUÇÃO (ou em qualquer ambiente fora do
+ * desenvolvimento — ver DemoSurface), uma peça que só existe para demonstrar o kit:
  * semear as contas demo, semear massa fictícia, abrir a vitrine de
  * componentes, abrir a galeria de e-mails.
  *
@@ -40,10 +41,13 @@ final class DemoSurfaceInProductionException extends RuntimeException
      */
     public static function seeder(string $surface): self
     {
+        $environment = (string) app()->environment();
+
         return new self(
-            "O seeder [{$surface}] cria dado FICTÍCIO e foi recusado porque APP_ENV=production. "
+            "O seeder [{$surface}] cria dado FICTÍCIO e foi recusado porque APP_ENV={$environment} "
+            .'(a demonstração só existe em APP_ENV=local ou testing). '
             .'Isto não é um erro de configuração: é a proteção do kit. Se esta instalação é de '
-            .'fato uma demonstração pública hospedada em produção, declare '
+            .'fato uma demonstração pública hospedada fora do desenvolvimento, declare '
             .'DEMO_ALLOW_IN_PRODUCTION=true no ambiente — e assuma que o banco inteiro é '
             .'descartável. Se é uma instalação real, não rode este seeder.',
             surface: $surface,

@@ -163,12 +163,15 @@ caminho normal de um starter kit (`cp .env.example .env`, ajustar, subir) levava
 a demonstração toda para produção. **Esquecer não pode ser o mesmo que
 autorizar.**
 
-Quem decide é `Twstec\Kit\Demo\Support\DemoSurface` (`packages/demo/src/Support/DemoSurface.php`), e a regra é: em
-`APP_ENV=production` a superfície de demonstração **não existe**,
-independentemente do que as flags disserem. As flags continuam valendo — mas
-como **segunda** barreira, para desligar a demo fora de produção.
+Quem decide é `Twstec\Kit\Demo\Support\DemoSurface` (`packages/demo/src/Support/DemoSurface.php`), e a regra é: a
+superfície de demonstração só existe em `APP_ENV=local` e `APP_ENV=testing`. Em
+**qualquer outro** ambiente — `production`, mas também `staging`, `sandbox`, um
+nome novo ou digitado errado — ela **não existe**, independentemente do que as
+flags disserem. A lista é do que libera, não do que fecha: o ambiente que
+ninguém previu fica fechado. As flags continuam valendo — mas como **segunda**
+barreira, para desligar a demo no desenvolvimento.
 
-Em produção, portanto:
+Em produção (e em qualquer ambiente fora de `local`/`testing`), portanto:
 
 | Superfície | O que acontece | Por que assim |
 | --- | --- | --- |
@@ -195,8 +198,9 @@ DEMO_ALLOW_IN_PRODUCTION=true
 ```
 
 A variável não tem valor padrão verdadeiro, não aparece descomentada em nenhum
-`.env` de exemplo e, enquanto estiver ligada em produção, a aplicação grava um
-aviso no log **a cada boot** (`DemoServiceProvider`): um opt-out de segurança que
+`.env` de exemplo e libera a demo fora do desenvolvimento (em produção ou em
+qualquer ambiente que não seja `local`/`testing`); enquanto ela estiver
+liberando, a aplicação grava um aviso no log **a cada boot** (`DemoServiceProvider`): um opt-out de segurança que
 ninguém vê deixa de ser decisão e volta a ser esquecimento. **Silêncio nunca
 significa permitido.**
 

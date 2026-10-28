@@ -23,26 +23,30 @@ use Twstec\Kit\Demo\Support\Exceptions\DemoSurfaceInProductionException;
  * .env` — ou seja, o caminho normal levava a demonstração inteira para
  * produção. Esquecer não pode ser o mesmo que autorizar.
  *
- * SOLUÇÃO (fail-CLOSED): em `APP_ENV=production` a superfície de demonstração
- * não existe, independentemente do que a flag disser. A flag continua
- * valendo — mas como SEGUNDA barreira, para desligar a demo fora de produção,
- * não como única barreira dentro dela.
+ * SOLUÇÃO (fail-CLOSED): a superfície de demonstração só existe nos ambientes
+ * de desenvolvimento e de teste (`APP_ENV=local` ou `testing` — LOCAL_ENVIRONMENTS).
+ * Em qualquer outro — `production`, mas também `staging`, `sandbox`, um nome
+ * novo ou digitado errado — ela não existe, independentemente do que a flag
+ * disser. A lista é do que libera, não do que fecha: ambiente que ninguém
+ * previu fica fechado. A flag continua valendo — mas como SEGUNDA barreira,
+ * para desligar a demo no desenvolvimento, não como única barreira fora dele.
  *
  * ESCAPE HATCH: o roadmap do kit prevê uma demo pública hospedada (com reset
  * automático), que é legitimamente uma demonstração rodando em produção. Para
  * isso existe `DEMO_ALLOW_IN_PRODUCTION` — uma variável cujo nome diz
- * exatamente o que ela faz, que não tem valor padrão verdadeiro e que não
- * aparece descomentada em nenhum arquivo de exemplo. Silêncio nunca significa
- * permitido; permitido é declarado. Quando ela está ligada em produção, o
- * DemoServiceProvider grava um aviso no log a cada boot: um opt-out de
+ * exatamente o que ela faz (libera a demo fora do desenvolvimento: em
+ * produção e em qualquer outro ambiente), que não tem valor padrão verdadeiro
+ * e que não aparece descomentada em nenhum arquivo de exemplo. Silêncio nunca
+ * significa permitido; permitido é declarado. Quando ela libera a demo fora
+ * do desenvolvimento, o DemoServiceProvider grava um aviso no log a cada
+ * boot: um opt-out de
  * segurança que ninguém vê deixa de ser uma decisão e volta a ser um
  * esquecimento.
  *
  * POR QUE `APP_ENV` E NÃO OUTRO SINAL: é o único sinal que o operador declara
  * sobre a própria instalação e que o Laravel já usa para decidir HTTPS
  * forçado, cache de config e comportamento de erro. Amarrar a demo a ele faz
- * a proteção viajar junto com tudo o mais que já depende de "isto é
- * produção".
+ * a proteção viajar junto com tudo o mais que já depende do ambiente.
  *
  * COMO A RECUSA É DADA, e por quê:
  *
@@ -64,14 +68,30 @@ use Twstec\Kit\Demo\Support\Exceptions\DemoSurfaceInProductionException;
 final class DemoSurface
 {
     /**
+     * Os únicos ambientes (APP_ENV) em que a demonstração existe sem o
+     * opt-out: o desenvolvimento e a suíte de testes.
+     *
+     * @var list<string>
+     */
+    public const LOCAL_ENVIRONMENTS = ['local', 'testing'];
+
+    /**
      * A superfície de demonstração pode existir neste ambiente?
      *
-     * Fora de produção: sim (é para isso que ela serve). Em produção: só com
-     * o opt-out declarado.
+     * No desenvolvimento e nos testes: sim (é para isso que ela serve). Em
+     * qualquer outro ambiente: só com o opt-out declarado.
      */
     public static function allowed(): bool
     {
-        return ! app()->isProduction() || self::allowedInProduction();
+        return self::localEnvironment() || self::allowedInProduction();
+    }
+
+    /**
+     * APP_ENV é um dos ambientes de desenvolvimento e teste?
+     */
+    public static function localEnvironment(): bool
+    {
+        return app()->environment(self::LOCAL_ENVIRONMENTS);
     }
 
     /**
@@ -86,12 +106,13 @@ final class DemoSurface
     }
 
     /**
-     * Produção com a demonstração liberada por decisão explícita — o estado
-     * que merece aviso no log.
+     * Fora do desenvolvimento (produção ou qualquer outro ambiente) com a
+     * demonstração liberada por decisão explícita — o estado que merece aviso
+     * no log.
      */
     public static function allowedInProductionByOptOut(): bool
     {
-        return app()->isProduction() && self::allowedInProduction();
+        return ! self::localEnvironment() && self::allowedInProduction();
     }
 
     /**

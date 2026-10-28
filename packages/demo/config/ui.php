@@ -6,13 +6,14 @@
 // DemoServiceProvider junta este arquivo ao config/ui.php do aplicativo (numa
 // mesma chave, o do aplicativo vence).
 //
-// Segurança: as flags abaixo são a SEGUNDA barreira, não a única. Em
-// APP_ENV=production a superfície de demonstração (contas demo, vitrine /ui,
-// galeria /mail-preview e os seeders de dado fictício) é recusada mesmo com as
-// flags ligadas — quem decide é Twstec\Kit\Demo\Support\DemoSurface. As
-// flags continuam servindo para desligar a demo FORA de produção.
+// Segurança: as flags abaixo são a SEGUNDA barreira, não a única. Fora de
+// APP_ENV=local/testing (em produção ou qualquer outro ambiente) a superfície
+// de demonstração (contas demo, vitrine /ui, galeria /mail-preview e os
+// seeders de dado fictício) é recusada mesmo com as flags ligadas — quem
+// decide é Twstec\Kit\Demo\Support\DemoSurface. As flags continuam
+// servindo para desligar a demo no desenvolvimento.
 //
-// Único jeito de ter demonstração em produção: declarar o opt-out
+// Único jeito de ter demonstração fora do desenvolvimento: declarar o opt-out
 // DEMO_ALLOW_IN_PRODUCTION=true (abaixo). Esquecimento não autoriza nada.
 // =============================================================================
 
