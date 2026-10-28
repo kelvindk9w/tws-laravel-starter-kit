@@ -46,8 +46,10 @@ Webhooks::dispatch($conta, 'order.shipped', [...], $projeto);
 - Evento fora do catálogo lança `InvalidArgumentException` (erro de
   programação — nunca um envio silencioso). O evento de teste
   (`webhook.ping`) é do pacote e só sai pelo botão "Enviar teste".
-- **Outbox:** o evento e uma entrega por endpoint ativo que o assina são
-  gravados no banco, na transação em volta. Desfeita a transação, não sobra
+- **Outbox:** o evento e uma entrega por endpoint que o assina são
+  gravados no banco, na transação em volta. Endpoint **desativado** também
+  recebe a entrega, **pausada**: ela não sai agora e vai para a fila quando
+  ele for reativado — desativar nunca faz evento se perder. Desfeita a transação, não sobra
   evento nem envio. Confirmada, as tentativas vão para a fila depois do
   commit. Se a fila estiver fora, a entrega fica pendente no banco e o
   `webhooks:dispatch-pending` (agendado a cada minuto) a põe na fila; a
@@ -73,6 +75,14 @@ X-Webhook-Signature: t=1767225600,v1=5f2b…
 - **`id`** (corpo e `X-Webhook-Id`): o identificador do EVENTO, o mesmo em
   toda tentativa e em todo reenvio manual. **Deduplique por ele**: a entrega
   é "pelo menos uma vez" (uma tentativa cuja resposta se perdeu sai de novo).
+- **Ordem NÃO garantida.** Cada entrega tem a sua fila e as suas novas
+  tentativas: um `order.shipped` pode chegar antes do `order.created` (por
+  exemplo, se o primeiro falhou uma vez), e um evento reenviado chega depois
+  de outros mais novos. O receptor não pode depender da ordem de chegada:
+  compare o `created_at` do corpo (a hora em que o evento aconteceu,
+  congelada no disparo) com o último que ele aplicou para aquele recurso e
+  ignore o mais velho — ou, mais simples e mais seguro, trate o evento como
+  um aviso e **consulte o estado atual** do recurso na API antes de agir.
 - **Resposta esperada:** qualquer `2xx`. Redirect (`3xx`) **não é seguido** e
   conta como falha. Responda rápido (o envio desiste em 10 s) e processe
   depois.
@@ -194,8 +204,9 @@ export function verifyWebhookSignature(rawBody, header, secret, toleranceSeconds
 
 - **Gerado no servidor** (`random_bytes`, 256 bits, `whsk_` + base64url) na
   criação do endpoint. Ninguém escolhe o segredo.
-- **Mostrado uma vez:** na resposta imediata da criação, da revelação ou da
-  rotação — no React, como dado de uma resposta só do Inertia (fora das props
+- **Mostrado só quando pedido:** na resposta imediata da criação, da
+  revelação ou da rotação — cada uma mostra o valor uma vez; para vê-lo de
+  novo, "Revelar segredo" (ação sensível, na trilha) — no React, como dado de uma resposta só do Inertia (fora das props
   e do histórico do navegador); no Livewire, até a pessoa clicar em "Já
   guardei". Nunca na listagem.
 - **Guardado CIFRADO** (cast `encrypted`, `APP_KEY`), não em hash: o HMAC
@@ -225,9 +236,9 @@ máquina). A política de destino (`Security\DestinationPolicy`) roda no
 
 | Regra | Por quê |
 |---|---|
-| Só `https` em produção (`http` só fora dela, com `WEBHOOKS_REQUIRE_HTTPS=false`) | dado da conta não trafega em claro |
+| Só `https` fora dos ambientes liberados (`http` só em `WEBHOOKS_RELAXED_ENVIRONMENTS`, padrão `local,testing`, e com `WEBHOOKS_REQUIRE_HTTPS=false`) | dado da conta não trafega em claro |
 | Recusa loopback (`127.0.0.0/8`, `::1`), redes privadas (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), CGNAT, link-local (`169.254/16`, `fe80::/10`), "esta rede", multicast, reservados, documentação e tudo que o PHP não considera global (`FILTER_FLAG_GLOBAL_RANGE`) | a rede interna não é destino |
-| Recusa metadados de nuvem (`169.254.169.254`, `169.254.170.2`, `100.100.100.200`, `168.63.129.16`, `192.0.0.192`, `fd00:ec2::254`) — nem a lista de desenvolvimento libera | é onde ficam as credenciais da máquina |
+| Recusa metadados de nuvem (`169.254.169.254`, `169.254.170.2`, `100.100.100.200`, `168.63.129.16`, `192.0.0.192`, `fd00:ec2::254`, `fd20:ce::254`) — nem a lista de desenvolvimento libera | é onde ficam as credenciais da máquina |
 | Recusa as formas de transição do IPv6 que carregam um IPv4 (`::ffff:0:0/96`, `::/96`, NAT64, 6to4, Teredo) | o IPv4 de dentro poderia ser privado |
 | Recusa host que não é nome DNS em ASCII nem IP canônico (`2130706433`, `0x7f.1`, `0177.0.0.1`, `127.1`, último rótulo numérico) | o resolvedor do sistema leria como IP e a conferência veria outro endereço |
 | Recusa usuário/senha e `@` na URL, barra invertida, espaço, caractere de controle, não ASCII | cada leitor de URL entende essas formas de um jeito |
@@ -243,12 +254,22 @@ com o motivo). No envio, a tentativa sai como `blocked` no log de entregas
 (nada é enviado) e o log da aplicação recebe `webhooks.destination_blocked`
 com o host, o endereço e o motivo — conta como falha seguida.
 
+**A tela não vira sonda da rede:** para a pessoa, "o nome não resolve", "o
+endereço é interno" e "é de metadados" têm o **mesmo** texto genérico
+(`webhooks.destination.not_allowed`), no formulário e no log de entregas. O
+motivo exato fica só na trilha e no log da aplicação. Erros de formato (URL
+malformada, esquema, credencial na URL) continuam específicos — não revelam
+nada da rede.
+
 **Desenvolvimento:** para um receptor na rede do Docker (o E2E dos
 starters), o `.env` de desenvolvimento libera `http` e a rede privada:
 `WEBHOOKS_REQUIRE_HTTPS=false` e
-`WEBHOOKS_ALLOWED_PRIVATE_NETWORKS=172.16.0.0/12`. **Em produção as duas são
-ignoradas**, com aviso no log a cada boot. Metadados e link-local nunca são
-liberados.
+`WEBHOOKS_ALLOWED_PRIVATE_NETWORKS=172.16.0.0/12`. As duas folgas só valem
+nos ambientes da lista **explícita** `WEBHOOKS_RELAXED_ENVIRONMENTS` (padrão
+`local,testing`; `production` nunca entra, mesmo listado). Em **qualquer
+outro** — `production`, `staging`, um sandbox público, um `APP_ENV` digitado
+errado — elas são **ignoradas** (falha fechada), com aviso no log a cada
+boot. Metadados e link-local nunca são liberados.
 
 **Limites conhecidos:** o envio não usa proxy de saída (um ambiente que só
 sai por proxy não entrega webhooks — o proxy resolveria o nome e a conexão
@@ -260,24 +281,59 @@ no IP conferido perderia o sentido); URL com `@` (até na query) é recusada.
   quem pediu) e vai **cifrado** para a fila (`ShouldBeEncrypted`).
 - Antes de enviar, a tentativa **reserva** a entrega no banco (UPDATE
   condicional): dois jobs para a mesma entrega não enviam duas vezes. Uma
-  entrega "em andamento" cujo processo morreu volta depois de
-  `WEBHOOKS_LOCK_SECONDS`.
+  entrega "em andamento" cujo processo morreu volta depois do prazo da
+  reserva — `WEBHOOKS_LOCK_SECONDS`, mas **nunca menos** que o tempo máximo
+  do job (conectar + enviar + 30 s) mais 30 s: um valor menor é elevado
+  sozinho, para a reserva não vencer com a tentativa ainda no ar. Se ela já
+  tinha usado todas as tentativas, é **encerrada como falha** (com uma
+  tentativa registrada e `webhooks.delivery_abandoned` no log), nunca
+  reservada de novo para sempre.
+- **Gravação conferida:** o resultado só muda a entrega se a reserva ainda é
+  daquela tentativa; se outro worker assumiu, o resultado vai só para o log
+  (`webhooks.reservation_lost`).
+- **Erro inesperado** antes do envio (segredo ou corpo que não decifram —
+  troca da `APP_KEY` sem `APP_PREVIOUS_KEYS` —, conta que sumiu, falha do
+  resolvedor): vira tentativa **falha registrada**, com texto genérico na tela
+  (`webhooks.errors.internal`) e o detalhe no log (`webhooks.attempt_crashed`),
+  e segue o backoff. Não conta para a desativação (a culpa não é do
+  receptor).
 - **Novas tentativas** com backoff exponencial configurável
   (`WEBHOOKS_BACKOFF`, padrão **1 min, 5 min, 30 min, 2 h, 12 h** — seis
-  tentativas ao todo); depois, a entrega fica `failed`.
-- **Desativação:** depois de `WEBHOOKS_DISABLE_AFTER_FAILURES` (padrão 20)
-  tentativas falhas **seguidas** no endpoint (qualquer sucesso zera), ele é
-  desativado (`disabled_reason = failures`), as entregas em aberto dele saem
-  como falhas, a desativação vai para a trilha de auditoria e para o log, e
-  o **dono e os administradores da conta recebem um e-mail** (só o nome e o
-  host do endpoint). Reativar pela tela confere o destino de novo e zera as
-  falhas.
+  tentativas automáticas ao todo); depois, a entrega fica `failed`. A
+  tentativa com atraso fica marcada na fila para a **hora em que vence**: o
+  `webhooks:dispatch-pending` só a repõe `WEBHOOKS_REQUEUE_AFTER_SECONDS`
+  depois disso (o job se perdeu), nunca antes.
+- **Desativação automática:** só quando valem as **duas** condições —
+  `WEBHOOKS_DISABLE_AFTER_FAILURES` (padrão 20) tentativas falhas
+  **seguidas** e falhando **sem parar** há `WEBHOOKS_DISABLE_AFTER_HOURS`
+  (padrão 72) horas (qualquer sucesso zera as duas; `0` horas = só a
+  contagem). Um receptor fora do ar por alguns minutos, mesmo recebendo
+  muitos eventos, não é desativado: as novas tentativas dão conta. Ao
+  desativar (`disabled_reason = failures`): a desativação vai para a trilha
+  de auditoria e para o log, e o **dono e os administradores da conta
+  recebem um e-mail** (só o nome e o host do endpoint).
+- **Desativado = pausado, nunca perdido.** Desativar (à mão ou por falhas)
+  **pausa** (`paused`) as entregas que ainda não saíram; a que estava em
+  envio termina e, se falhar, também fica pausada; os eventos disparados
+  enquanto ele está desativado são gravados pausados. **Reativar** confere o
+  destino de novo, zera as falhas e devolve à fila as pausadas criadas
+  dentro de `WEBHOOKS_PRUNE_DAYS` (30) — as mais velhas viram `failed`
+  (`webhooks.errors.paused_expired`), porque o evento já sairia na limpeza.
+  A trilha da reativação registra quantas voltaram (`resumed_deliveries`).
 - **Reenvio manual** (dono/admin): o mesmo evento, uma tentativa agora, com
   os segredos vigentes e o destino conferido de novo; **auditado**
   (`webhook_delivery.resent`, com quem pediu) e a tentativa guarda quem
-  pediu. Recusado com o endpoint desativado, com uma tentativa em andamento
-  ou acima de 30 por minuto na conta. O "Enviar teste" tem limite de 10 por
-  minuto.
+  pediu. A volta a "pendente" é um UPDATE **condicional** ao estado lido: se
+  um worker reservou a entrega nesse meio-tempo, o reenvio é recusado ("já
+  está sendo enviada"), sem atropelar. O backoff conta só as tentativas
+  **automáticas**: um reenvio que falha numa entrega que ainda não tinha
+  chegado **não cancela** as automáticas que faltavam (a próxima fica
+  marcada pelo backoff); reenvio de algo já entregue que falha termina em
+  `failed`. Recusado com o endpoint desativado, com uma tentativa em
+  andamento, para entregas criadas **antes da última troca de URL** do
+  endpoint (`url_changed_at` — evento antigo não vai para um destino novo,
+  mesmo que alguém com acesso troque a URL) ou acima de 30 por minuto na
+  conta. O "Enviar teste" tem limite de 10 por minuto.
 
 ## Log de entregas
 
@@ -323,7 +379,10 @@ conta, geridos por quem é dela).
   (registro do que aconteceu, com poda por idade própria). Nenhuma guarda
   segredo, assinatura ou corpo de evento.
 - **Retenção:** `webhooks:prune` (agendado, 04:20 UTC) apaga eventos com mais
-  de `WEBHOOKS_PRUNE_DAYS` (30) dias sem entrega em aberto.
+  de `WEBHOOKS_PRUNE_DAYS` (30) dias sem entrega em aberto (pendente, em
+  envio ou aguardando nova tentativa). Entrega **pausada** não segura o
+  evento além desse prazo: dentro dele, reativar o endpoint a envia; depois,
+  ela sai com o evento.
 
 ## Configuração
 
@@ -333,11 +392,14 @@ conta, geridos por quem é dela).
 | Variável | Padrão | |
 |---|---|---|
 | `WEBHOOKS_EVENTS` | vazio | o catálogo (separado por vírgula) |
-| `WEBHOOKS_REQUIRE_HTTPS` | `true` | ignorado em produção (sempre HTTPS) |
-| `WEBHOOKS_ALLOWED_PRIVATE_NETWORKS` | vazio | CIDRs liberados fora de produção |
+| `WEBHOOKS_RELAXED_ENVIRONMENTS` | `local,testing` | os únicos ambientes em que as duas folgas abaixo valem (`production` nunca) |
+| `WEBHOOKS_REQUIRE_HTTPS` | `true` | `false` só vale nos ambientes liberados |
+| `WEBHOOKS_ALLOWED_PRIVATE_NETWORKS` | vazio | CIDRs liberados, só nos ambientes liberados |
 | `WEBHOOKS_CONNECT_TIMEOUT` / `WEBHOOKS_TIMEOUT` | 3 / 10 s | |
 | `WEBHOOKS_BACKOFF` | `60,300,1800,7200,43200` | espera antes de cada nova tentativa |
-| `WEBHOOKS_DISABLE_AFTER_FAILURES` | 20 | falhas seguidas até desativar |
+| `WEBHOOKS_DISABLE_AFTER_FAILURES` / `WEBHOOKS_DISABLE_AFTER_HOURS` | 20 / 72 | falhas seguidas E horas falhando sem parar até desativar (0 horas = só a contagem) |
+| `WEBHOOKS_LOCK_SECONDS` | 120 | prazo da reserva (nunca menor que o tempo do job + 30 s) |
+| `WEBHOOKS_REQUEUE_AFTER_SECONDS` | 300 | o outbox só repõe na fila depois disso |
 | `WEBHOOKS_RESPONSE_EXCERPT_BYTES` | 1024 | trecho da resposta no log |
 | `WEBHOOKS_SECRET_MAX_OVERLAP_MINUTES` / `..._DEFAULT_...` | 10080 / 1440 | convivência na rotação |
 | `WEBHOOKS_QUEUE` / `WEBHOOKS_QUEUE_CONNECTION` | padrão | fila dos envios |
@@ -356,8 +418,11 @@ A fila e o agendador precisam estar rodando (no Docker do kit, os serviços
   sistema não conhece, é entregue); rebinding; redirect para IP privado;
   tempo esgotado; resposta cortada e redigida; o segredo fora de log, trilhas
   e fila (com o worker de verdade e a fila no banco); outbox com a fila fora;
-  reserva contra envio duplo; backoff com o relógio congelado; desativação
-  com aviso; reenvio auditado; exclusão.
+  reserva contra envio duplo e gravação conferida contra a reserva; backoff
+  com o relógio congelado; desativação só com contagem e prazo, com aviso,
+  pausa e retomada; erro inesperado e entrega travada; reenvio auditado, sem
+  corrida, sem cancelar as automáticas e recusado depois da troca de URL;
+  ambientes liberados em lista explícita; exclusão.
 - **Starters:** as telas (Livewire e React) sobre as Actions — confirmação
   sensível de verdade, segredo uma vez, SSRF recusado antes de pedir o
   código, papel, conta alheia, log e reenvio.

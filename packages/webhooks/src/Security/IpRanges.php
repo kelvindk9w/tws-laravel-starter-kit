@@ -14,7 +14,7 @@ namespace Twstec\Kit\Webhooks\Security;
  * - NEVER: nem a lista de redes liberadas de desenvolvimento abre — metadados
  *   de nuvem (AWS/GCP/Azure/OpenStack 169.254.169.254, ECS 169.254.170.2,
  *   Alibaba 100.100.100.200, Azure 168.63.129.16, Oracle 192.0.0.192, AWS IPv6
- *   fd00:ec2::254), link-local inteiro (v4 e v6), "esta rede" (0.0.0.0/8),
+ *   fd00:ec2::254, GCP IPv6 fd20:ce::254), link-local inteiro (v4 e v6), "esta rede" (0.0.0.0/8),
  *   multicast, broadcast, reservado, e as FORMAS DE TRANSIÇÃO do IPv6 que
  *   carregam um IPv4 dentro (::ffff:0:0/96 mapeado, ::/96 compatível,
  *   64:ff9b::/96 NAT64, 2002::/16 6to4, 2001::/32 Teredo) — recusadas
@@ -39,6 +39,7 @@ final class IpRanges
         '168.63.129.16/32',
         '192.0.0.192/32',
         'fd00:ec2::254/128',
+        'fd20:ce::254/128',
     ];
 
     /**

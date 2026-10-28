@@ -17,7 +17,8 @@ use Illuminate\Contracts\Foundation\Application;
  * O que é recusado (código em BlockedDestinationException::$reason):
  * - URL malformada, com espaço, barra invertida, caractere de controle ou
  *   maior que 2048 caracteres (`invalid_url`);
- * - esquema fora de https — http só fora de produção e com
+ * - esquema fora de https — http só num ambiente da lista
+ *   `webhooks.destination.relaxed_environments` e com
  *   `webhooks.destination.require_https = false` (`scheme_not_allowed`);
  * - usuário/senha na URL (`credentials_in_url`): credencial em URL vaza em
  *   log, e o `@` é o truque clássico para confundir quem lê a URL;
@@ -31,8 +32,15 @@ use Illuminate\Contracts\Foundation\Application;
  *   um A público e outro privado é recusado inteiro.
  *
  * Redes privadas liberadas (`webhooks.destination.allowed_private_networks`)
- * valem SÓ FORA DE PRODUÇÃO, e nunca para metadados nem para as faixas
+ * valem SÓ nos ambientes da lista explícita
+ * `webhooks.destination.relaxed_environments` (padrão `local,testing`) — em
+ * qualquer outro, inclusive um `APP_ENV` digitado errado, são ignoradas
+ * (falha fechada) —, e nunca para metadados nem para as faixas
  * IpRanges::NEVER.
+ *
+ * A mensagem para a pessoa (BlockedDestinationException::publicMessage) não
+ * diferencia "nome não resolve" de "endereço interno": o motivo exato fica
+ * só no log e na trilha, para a tela não virar sonda do DNS interno.
  *
  * O resultado (ValidatedDestination) traz a URL REMONTADA das partes
  * conferidas e o IP em que a conexão vai acontecer — o envio passa esse IP ao
@@ -99,21 +107,35 @@ final class DestinationPolicy
     }
 
     /**
-     * HTTPS obrigatório agora? Em produção, sempre.
+     * As folgas de desenvolvimento (http e redes privadas liberadas) valem
+     * neste ambiente? Só se ele estiver na lista explícita
+     * `webhooks.destination.relaxed_environments` — qualquer outro, inclusive
+     * um nome desconhecido, é tratado como produção.
      */
-    public function requiresHttps(): bool
+    public function relaxed(): bool
     {
-        return $this->app->isProduction() || config('webhooks.destination.require_https', true) !== false;
+        $environment = (string) $this->app->environment();
+
+        return ! $this->app->isProduction() && in_array($environment, self::relaxedEnvironments(), true);
     }
 
     /**
-     * As redes privadas liberadas que valem agora (nenhuma em produção).
+     * HTTPS obrigatório agora? Fora dos ambientes liberados, sempre.
+     */
+    public function requiresHttps(): bool
+    {
+        return ! $this->relaxed() || config('webhooks.destination.require_https', true) !== false;
+    }
+
+    /**
+     * As redes privadas liberadas que valem agora (nenhuma fora dos ambientes
+     * liberados).
      *
      * @return list<string>
      */
     public function allowedPrivateNetworks(): array
     {
-        if ($this->app->isProduction()) {
+        if (! $this->relaxed()) {
             return [];
         }
 
@@ -131,13 +153,14 @@ final class DestinationPolicy
     public function warnings(): array
     {
         $warnings = [];
+        $environment = (string) $this->app->environment();
 
-        if ($this->app->isProduction() && config('webhooks.destination.require_https', true) === false) {
-            $warnings[] = 'webhooks.destination.require_https=false IGNORADO em produção: webhooks só saem por HTTPS.';
+        if (! $this->relaxed() && config('webhooks.destination.require_https', true) === false) {
+            $warnings[] = 'webhooks.destination.require_https=false IGNORADO no ambiente "'.$environment.'" (fora de webhooks.destination.relaxed_environments): webhooks só saem por HTTPS.';
         }
 
-        if ($this->app->isProduction() && array_filter((array) config('webhooks.destination.allowed_private_networks', [])) !== []) {
-            $warnings[] = 'webhooks.destination.allowed_private_networks IGNORADO em produção: webhooks nunca vão para a rede interna.';
+        if (! $this->relaxed() && array_filter((array) config('webhooks.destination.allowed_private_networks', [])) !== []) {
+            $warnings[] = 'webhooks.destination.allowed_private_networks IGNORADO no ambiente "'.$environment.'" (fora de webhooks.destination.relaxed_environments): webhooks nunca vão para a rede interna.';
         }
 
         foreach ((array) config('webhooks.destination.allowed_private_networks', []) as $range) {
@@ -147,6 +170,17 @@ final class DestinationPolicy
         }
 
         return $warnings;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function relaxedEnvironments(): array
+    {
+        return array_values(array_filter(
+            array_map(static fn (mixed $name): string => trim((string) $name), (array) config('webhooks.destination.relaxed_environments', ['local', 'testing'])),
+            static fn (string $name): bool => $name !== '' && $name !== 'production',
+        ));
     }
 
     /**

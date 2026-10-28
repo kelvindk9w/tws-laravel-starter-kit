@@ -33,7 +33,20 @@ final class DeliverWebhook implements ShouldBeEncrypted, ShouldQueue
         public readonly bool $manual = false,
         public readonly int|string|null $requestedBy = null,
     ) {
-        $this->timeout = (int) ceil((float) config('webhooks.delivery.timeout', config('webhooks.destination.timeout', 10))) + 30;
+        $this->timeout = self::timeoutSeconds();
+    }
+
+    /**
+     * O tempo máximo do job, em segundos: conectar + o envio inteiro + uma
+     * folga para o DNS, o banco e a assinatura. O prazo da reserva
+     * (DeliverySender::lockSeconds) nunca é menor que isto mais uma folga.
+     */
+    public static function timeoutSeconds(): int
+    {
+        $connect = max(0.5, (float) config('webhooks.destination.connect_timeout', 3));
+        $total = max(1.0, (float) config('webhooks.destination.timeout', 10));
+
+        return (int) ceil($connect + $total) + 30;
     }
 
     public function handle(DeliverySender $sender): void

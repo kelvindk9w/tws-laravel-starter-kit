@@ -26,18 +26,25 @@ use Twstec\Kit\Webhooks\Models\WebhookEndpoint;
 use Twstec\Kit\Webhooks\Support\WebhookAudit;
 
 /**
- * A SAÚDE de um endpoint: tentativas falhas SEGUIDAS.
+ * A SAÚDE de um endpoint: tentativas falhas SEGUIDAS e desde quando ele falha
+ * sem parar (`failing_since`).
  *
- * - Sucesso zera a conta.
- * - Falha soma um (UPDATE atômico). Ao chegar em
- *   `webhooks.delivery.disable_after_failures`, o endpoint é DESATIVADO
- *   (`disabled_reason = failures`) — uma vez só, mesmo com várias tentativas
- *   falhando ao mesmo tempo (UPDATE condicionado a estar ativo) —, as
- *   entregas em aberto dele são encerradas como falhas, a desativação vai
- *   para a trilha de auditoria (contexto console, sem pessoa) e para o log, e
- *   o dono e os administradores da conta recebem o AVISO por e-mail.
+ * - Sucesso zera as duas.
+ * - Falha soma um (UPDATE atômico) e marca `failing_since` se ainda não
+ *   houver. O endpoint é DESATIVADO (`disabled_reason = failures`) só quando
+ *   as DUAS condições valem: `webhooks.delivery.disable_after_failures`
+ *   falhas seguidas E falhando há pelo menos
+ *   `webhooks.delivery.disable_after_hours` horas (0 = só a contagem). Um
+ *   receptor fora do ar por alguns minutos, mesmo com muito volume, não é
+ *   desativado: as novas tentativas dão conta.
+ * - Na desativação — uma vez só, mesmo com várias tentativas falhando ao
+ *   mesmo tempo (UPDATE condicionado a estar ativo) — as entregas em aberto
+ *   ficam PAUSADAS (nunca falhas: saem ao reativar), a desativação vai para a
+ *   trilha de auditoria (contexto console, sem pessoa) e para o log, e o dono
+ *   e os administradores da conta recebem o AVISO por e-mail.
  *
- * Reativar é ação da tela (Actions\EnableEndpoint), que zera a conta.
+ * Reativar é ação da tela (Actions\SetEndpointStatus), que zera a conta e
+ * devolve as pausadas à fila (resumePausedDeliveries).
  */
 final class EndpointHealth
 {
@@ -47,20 +54,32 @@ final class EndpointHealth
     {
         WebhookEndpoint::query()->whereKey($endpoint->getKey())->update([
             'consecutive_failures' => 0,
+            'failing_since' => null,
             'last_success_at' => Carbon::now(),
         ]);
     }
 
     public function failed(WebhookEndpoint $endpoint): void
     {
+        $now = Carbon::now();
+
         WebhookEndpoint::query()->whereKey($endpoint->getKey())->increment('consecutive_failures', 1, [
-            'last_failure_at' => Carbon::now(),
+            'last_failure_at' => $now,
+        ]);
+
+        WebhookEndpoint::query()->whereKey($endpoint->getKey())->whereNull('failing_since')->update([
+            'failing_since' => $now,
         ]);
 
         $limit = (int) config('webhooks.delivery.disable_after_failures', 20);
+        $hours = max(0, (int) config('webhooks.delivery.disable_after_hours', 72));
         $endpoint->refresh();
 
         if ($limit < 1 || $endpoint->consecutive_failures < $limit || ! $endpoint->isActive()) {
+            return;
+        }
+
+        if ($hours > 0 && ($endpoint->failing_since === null || $endpoint->failing_since->greaterThan($now->copy()->subHours($hours)))) {
             return;
         }
 
@@ -85,7 +104,7 @@ final class EndpointHealth
                 return false;
             }
 
-            self::closeOpenDeliveries($endpoint);
+            self::pauseOpenDeliveries($endpoint);
 
             $this->trail->within(AuditScope::console('webhooks:deliver', 'disabled'), fn () => $this->trail->record(
                 WebhookAuditEvent::EndpointDisabled->value,
@@ -118,19 +137,71 @@ final class EndpointHealth
     }
 
     /**
-     * Encerra as entregas em aberto do endpoint (desativado ou em
-     * desativação): saem como falhas, com o motivo.
+     * PAUSA as entregas do endpoint (desativado ou em desativação) que ainda
+     * não saíram: pendentes e aguardando nova tentativa. A que está "em
+     * envio" termina a tentativa dela e, ao gravar, também vira pausada. Nada
+     * é dado como falha por causa da desativação.
      */
-    public static function closeOpenDeliveries(WebhookEndpoint $endpoint): void
+    public static function pauseOpenDeliveries(WebhookEndpoint $endpoint): void
     {
         WebhookDelivery::query()
             ->where('webhook_endpoint_id', $endpoint->getKey())
             ->whereIn('status', [DeliveryStatus::Pending->value, DeliveryStatus::Retrying->value])
             ->update([
+                'status' => DeliveryStatus::Paused->value,
+                'next_attempt_at' => null,
+                'queued_at' => null,
+                'error' => __('webhooks.errors.paused'),
+            ]);
+    }
+
+    /**
+     * REATIVAÇÃO: as entregas pausadas voltam a sair — as criadas dentro do
+     * prazo de retenção (`webhooks.prune.days`) voltam a `pending` e vão para
+     * a fila depois do commit; as mais velhas (o evento já sairia na limpeza)
+     * viram falhas, com o motivo. Chamado dentro da transação da reativação.
+     *
+     * @return int quantas voltaram à fila
+     */
+    public static function resumePausedDeliveries(WebhookEndpoint $endpoint): int
+    {
+        $now = Carbon::now();
+        $cutoff = $now->copy()->subDays(max(1, (int) config('webhooks.prune.days', 30)));
+
+        WebhookDelivery::query()
+            ->where('webhook_endpoint_id', $endpoint->getKey())
+            ->where('status', DeliveryStatus::Paused->value)
+            ->where('created_at', '<', $cutoff)
+            ->update([
                 'status' => DeliveryStatus::Failed->value,
                 'next_attempt_at' => null,
-                'error' => __('webhooks.errors.endpoint_disabled'),
+                'error' => __('webhooks.errors.paused_expired'),
             ]);
+
+        $resumed = WebhookDelivery::query()
+            ->where('webhook_endpoint_id', $endpoint->getKey())
+            ->where('status', DeliveryStatus::Paused->value)
+            ->orderBy('id')
+            ->get();
+
+        if ($resumed->isEmpty()) {
+            return 0;
+        }
+
+        WebhookDelivery::query()->whereKey($resumed->modelKeys())->update([
+            'status' => DeliveryStatus::Pending->value,
+            'next_attempt_at' => $now,
+            'locked_until' => null,
+            'error' => null,
+        ]);
+
+        $queue = app(DeliveryQueue::class);
+
+        foreach ($resumed as $delivery) {
+            $queue->push($delivery);
+        }
+
+        return $resumed->count();
     }
 
     /**

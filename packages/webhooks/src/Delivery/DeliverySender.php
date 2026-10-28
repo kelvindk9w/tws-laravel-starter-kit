@@ -56,14 +56,24 @@ use Twstec\Kit\Webhooks\Signing\Signature;
  *    - tempo curto para conectar e no total;
  *    - sem o cabeçalho de correlation id (é interno; o receptor recebe o id
  *      do evento).
- * 5. Grava a TENTATIVA (status, duração, trecho cortado e redigido da
- *    resposta, erro sem URL, correlation_id) e o novo estado da entrega:
- *    sucesso; nova tentativa marcada pelo backoff; ou falha final. O reenvio
- *    manual é UMA tentativa (sem novas automáticas).
+ * 5. Grava o novo estado da entrega — SÓ se a reserva ainda é desta
+ *    tentativa (mesmo id, `delivering` e o mesmo número de tentativas; senão
+ *    outro worker assumiu e o resultado vai só para o log) — e a TENTATIVA
+ *    (status, duração, trecho cortado e redigido da resposta, erro sem URL,
+ *    correlation_id): sucesso; nova tentativa marcada pelo backoff; ou falha
+ *    final. O backoff conta só as tentativas AUTOMÁTICAS: o reenvio manual é
+ *    uma tentativa a mais e, se falhar numa entrega que ainda não tinha
+ *    chegado, não cancela as automáticas que faltavam (a próxima fica marcada
+ *    pelo backoff); num reenvio do que já foi entregue, a falha é final.
  * 6. Atualiza a saúde do endpoint (EndpointHealth): zera ou soma as falhas
- *    seguidas — e desativa, com aviso, no limite.
+ *    seguidas — e desativa, com aviso, no limite. Endpoint desativado
+ *    (antes ou durante a tentativa): a entrega fica PAUSADA, não falha.
  *
- * Nada aqui lança para o worker: qualquer erro vira tentativa falha.
+ * Nada aqui lança para o worker: qualquer erro — inclusive antes do envio
+ * (segredo que não decifra, conta que sumiu) — vira tentativa falha
+ * registrada, com o texto genérico para a tela e o detalhe só no log. Uma
+ * entrega "em envio" cujo processo morreu e que já esgotou as tentativas é
+ * encerrada como falha (abandonExhausted), nunca reservada para sempre.
  */
 final class DeliverySender
 {
@@ -85,18 +95,88 @@ final class DeliverySender
             return;
         }
 
-        /** @var Account $account */
-        $account = $delivery->account()->firstOrFail();
+        try {
+            /** @var Account $account */
+            $account = $delivery->account()->firstOrFail();
 
-        Accounts::actingAs($account, fn () => $this->send($delivery, $manual, $requestedBy));
+            Accounts::actingAs($account, fn () => $this->send($delivery, $manual, $requestedBy));
+        } catch (Throwable $exception) {
+            $this->crashed($delivery, $manual, $requestedBy, $exception);
+        }
+    }
+
+    /**
+     * O prazo da reserva, em segundos: o configurado, mas nunca menos que o
+     * tempo máximo do job mais uma folga — senão outro worker reservaria a
+     * entrega enquanto esta tentativa ainda está no ar.
+     */
+    public static function lockSeconds(): int
+    {
+        return max(30, (int) config('webhooks.delivery.lock_seconds', 120), DeliverWebhook::timeoutSeconds() + 30);
+    }
+
+    /**
+     * Encerra como FALHA as entregas "em envio" com o prazo estourado (o
+     * processo morreu) que já usaram todas as tentativas automáticas — em vez
+     * de reservá-las de novo para sempre. Com `$deliveryId`, só aquela.
+     *
+     * @return int quantas foram encerradas
+     */
+    public static function abandonExhausted(?int $deliveryId = null): int
+    {
+        return Accounts::asSystem('webhooks:deliver', static function () use ($deliveryId): int {
+            $stale = WebhookDelivery::query()
+                ->when($deliveryId !== null, fn ($query) => $query->whereKey($deliveryId))
+                ->where('status', DeliveryStatus::Delivering->value)
+                ->where('locked_until', '<', Carbon::now())
+                ->where('attempts', '>=', RetrySchedule::maxAttempts())
+                ->get();
+
+            $closed = 0;
+
+            foreach ($stale as $delivery) {
+                $changed = WebhookDelivery::query()
+                    ->whereKey($delivery->getKey())
+                    ->where('status', DeliveryStatus::Delivering->value)
+                    ->where('attempts', $delivery->attempts)
+                    ->update([
+                        'status' => DeliveryStatus::Failed->value,
+                        'locked_until' => null,
+                        'next_attempt_at' => null,
+                        'error' => __('webhooks.errors.abandoned'),
+                    ]);
+
+                if ($changed !== 1) {
+                    continue;
+                }
+
+                WebhookDeliveryAttempt::query()->create([
+                    'account_id' => $delivery->account_id,
+                    'webhook_delivery_id' => $delivery->getKey(),
+                    'attempt' => $delivery->attempts,
+                    'manual' => false,
+                    'outcome' => AttemptOutcome::Failed->value,
+                    'error' => __('webhooks.errors.abandoned'),
+                ]);
+
+                Log::warning('webhooks.delivery_abandoned', ['delivery' => $delivery->uuid, 'attempts' => $delivery->attempts]);
+
+                $closed++;
+            }
+
+            return $closed;
+        });
     }
 
     /**
      * A reserva: pendente/aguardando nova tentativa e vencida, ou "em
-     * andamento" com o prazo estourado (processo que morreu).
+     * andamento" com o prazo estourado (processo que morreu) e ainda com
+     * tentativa sobrando.
      */
     private function claim(int $deliveryId): ?WebhookDelivery
     {
+        self::abandonExhausted($deliveryId);
+
         $now = Carbon::now();
 
         $claimed = WebhookDelivery::query()
@@ -110,7 +190,7 @@ final class DeliverySender
                     ->where('locked_until', '<', $now)))
             ->increment('attempts', 1, [
                 'status' => DeliveryStatus::Delivering->value,
-                'locked_until' => $now->copy()->addSeconds(max(30, (int) config('webhooks.delivery.lock_seconds', 120))),
+                'locked_until' => $now->copy()->addSeconds(self::lockSeconds()),
                 'last_attempt_at' => $now,
             ]);
 
@@ -125,14 +205,21 @@ final class DeliverySender
     {
         $endpoint = $delivery->endpoint;
 
+        // Desativado depois de a entrega ir para a fila: não sai, e não
+        // gasta a tentativa — fica pausada até a reativação.
         if (! $endpoint->isActive()) {
-            $delivery->forceFill([
-                'status' => DeliveryStatus::Failed->value,
-                'locked_until' => null,
-                'next_attempt_at' => null,
-                'attempts' => max(0, $delivery->attempts - 1),
-                'error' => __('webhooks.errors.endpoint_disabled'),
-            ])->save();
+            WebhookDelivery::query()
+                ->whereKey($delivery->getKey())
+                ->where('status', DeliveryStatus::Delivering->value)
+                ->where('attempts', $delivery->attempts)
+                ->update([
+                    'status' => DeliveryStatus::Paused->value,
+                    'locked_until' => null,
+                    'next_attempt_at' => null,
+                    'queued_at' => null,
+                    'attempts' => max(0, $delivery->attempts - 1),
+                    'error' => __('webhooks.errors.paused'),
+                ]);
 
             return;
         }
@@ -149,7 +236,8 @@ final class DeliverySender
             $destination = $this->policy->check($endpoint->url);
         } catch (BlockedDestinationException $blocked) {
             $outcome = AttemptOutcome::Blocked;
-            $error = $blocked->reason.': '.$blocked->getMessage();
+            // Para a tela, o texto genérico; o motivo exato fica no log.
+            $error = $blocked->publicMessage();
 
             Log::warning('webhooks.destination_blocked', [
                 'endpoint' => $endpoint->uuid,
@@ -188,7 +276,35 @@ final class DeliverySender
 
         $duration = intdiv(hrtime(true) - $started, 1_000_000);
 
-        $this->record($delivery, $endpoint, $outcome, $response?->status(), $duration, $excerpt, $error, $destination, $manual, $requestedBy);
+        $this->record($delivery, $outcome, $response?->status(), $duration, $excerpt, $error, $destination, $manual, $requestedBy, true);
+    }
+
+    /**
+     * Erro inesperado antes de a tentativa ser gravada (segredo ou corpo que
+     * não decifram, conta que sumiu, falha do resolvedor...): vira tentativa
+     * FALHA, com texto genérico (o detalhe vai só para o log), e segue o
+     * backoff — sem contar para a saúde do endpoint (a culpa não é do
+     * receptor). Se nem isso der para gravar, o log registra e a reserva
+     * vence: o outbox reserva de novo, e abandonExhausted encerra quando as
+     * tentativas acabarem.
+     */
+    private function crashed(WebhookDelivery $delivery, bool $manual, int|string|null $requestedBy, Throwable $exception): void
+    {
+        Log::error('webhooks.attempt_crashed', [
+            'delivery' => $delivery->uuid,
+            'attempt' => $delivery->attempts,
+            'exception' => $exception::class,
+            'message' => $this->redactor->redactString((string) preg_replace('#\b[a-z][a-z0-9+.-]*://\S+#i', '[url]', $exception->getMessage())),
+        ]);
+
+        try {
+            Accounts::asSystem('webhooks:deliver', fn () => $this->record($delivery, AttemptOutcome::Failed, null, 0, null, __('webhooks.errors.internal'), null, $manual, $requestedBy, false));
+        } catch (Throwable $again) {
+            Log::error('webhooks.attempt_record_failed', [
+                'delivery' => $delivery->uuid,
+                'exception' => $again::class,
+            ]);
+        }
     }
 
     /**
@@ -279,7 +395,6 @@ final class DeliverySender
 
     private function record(
         WebhookDelivery $delivery,
-        WebhookEndpoint $endpoint,
         AttemptOutcome $outcome,
         ?int $status,
         int $duration,
@@ -288,12 +403,67 @@ final class DeliverySender
         ?ValidatedDestination $destination,
         bool $manual,
         int|string|null $requestedBy,
+        bool $countsForHealth,
     ): void {
         $now = Carbon::now();
         $correlationId = CorrelationId::current();
         $error = $error !== null ? Str::limit($error, 480, '…') : null;
+        $succeeded = $outcome === AttemptOutcome::Succeeded;
+
+        // O backoff conta só as tentativas automáticas (esta inclusa).
+        $automatic = WebhookDeliveryAttempt::query()
+            ->where('webhook_delivery_id', $delivery->getKey())
+            ->where('manual', false)
+            ->count() + ($manual ? 0 : 1);
+
+        $next = null;
+
+        // Manual que falhou numa entrega que ainda não tinha chegado: as
+        // automáticas que faltavam continuam, a partir de agora. Entrega que
+        // já tinha chegado (reenvio de algo entregue) não reabre automáticas.
+        $owed = ! $manual || $delivery->delivered_at === null;
+
+        if (! $succeeded && $owed && $automatic < RetrySchedule::maxAttempts()) {
+            // Automática: a espera depois desta.
+            $delay = RetrySchedule::delayAfter(max(1, $automatic));
+            $next = $delay !== null ? $now->copy()->addSeconds($delay) : null;
+        }
+
+        // A reserva ainda é desta tentativa? Senão outro worker assumiu (o
+        // prazo venceu): o resultado vai só para o log.
+        $updated = WebhookDelivery::query()
+            ->whereKey($delivery->getKey())
+            ->where('status', DeliveryStatus::Delivering->value)
+            ->where('attempts', $delivery->attempts)
+            ->update([
+                'status' => match (true) {
+                    $succeeded => DeliveryStatus::Succeeded->value,
+                    $next !== null => DeliveryStatus::Retrying->value,
+                    default => DeliveryStatus::Failed->value,
+                },
+                'locked_until' => null,
+                'next_attempt_at' => $next,
+                // A marca de "na fila" é refeita pelo push da nova tentativa;
+                // sem push (erro interno), o outbox a põe na fila ao vencer.
+                'queued_at' => null,
+                'delivered_at' => $succeeded ? $now : $delivery->delivered_at,
+                'response_status' => $status,
+                'duration_ms' => $duration,
+                'error' => $error,
+            ]);
+
+        if ($updated !== 1) {
+            Log::warning('webhooks.reservation_lost', [
+                'delivery' => $delivery->uuid,
+                'attempt' => $delivery->attempts,
+                'outcome' => $outcome->value,
+            ]);
+
+            return;
+        }
 
         WebhookDeliveryAttempt::query()->create([
+            'account_id' => $delivery->account_id,
             'webhook_delivery_id' => $delivery->getKey(),
             'attempt' => $delivery->attempts,
             'manual' => $manual,
@@ -307,29 +477,41 @@ final class DeliverySender
             'correlation_id' => UuidColumn::isValid($correlationId) ? $correlationId : null,
         ]);
 
-        $succeeded = $outcome === AttemptOutcome::Succeeded;
-        $delay = (! $succeeded && ! $manual) ? RetrySchedule::delayAfter($delivery->attempts) : null;
-        $next = $delay !== null ? $now->copy()->addSeconds($delay) : null;
+        $endpoint = WebhookEndpoint::query()->find($delivery->webhook_endpoint_id);
 
-        $delivery->forceFill([
-            'status' => match (true) {
-                $succeeded => DeliveryStatus::Succeeded->value,
-                $next !== null => DeliveryStatus::Retrying->value,
-                default => DeliveryStatus::Failed->value,
-            },
-            'locked_until' => null,
-            'next_attempt_at' => $next,
-            'delivered_at' => $succeeded ? $now : $delivery->delivered_at,
-            'response_status' => $status,
-            'duration_ms' => $duration,
-            'error' => $error,
-        ])->save();
-
-        $succeeded ? $this->health->succeeded($endpoint) : $this->health->failed($endpoint);
-
-        if ($next !== null && $endpoint->refresh()->isActive()) {
-            $this->queue->push($delivery, $next);
+        if ($endpoint === null) {
+            return;
         }
+
+        if ($countsForHealth) {
+            $succeeded ? $this->health->succeeded($endpoint) : $this->health->failed($endpoint);
+        }
+
+        if ($next === null) {
+            return;
+        }
+
+        if ($endpoint->refresh()->isActive()) {
+            // Sem fila agora (erro interno, em modo sistema): o outbox põe na
+            // fila quando vencer.
+            if ($countsForHealth) {
+                $this->queue->push($delivery, $next);
+            }
+
+            return;
+        }
+
+        // Desativado durante a tentativa: a nova tentativa espera a
+        // reativação, pausada.
+        WebhookDelivery::query()
+            ->whereKey($delivery->getKey())
+            ->where('status', DeliveryStatus::Retrying->value)
+            ->update([
+                'status' => DeliveryStatus::Paused->value,
+                'next_attempt_at' => null,
+                'queued_at' => null,
+                'error' => __('webhooks.errors.paused'),
+            ]);
     }
 
     /**

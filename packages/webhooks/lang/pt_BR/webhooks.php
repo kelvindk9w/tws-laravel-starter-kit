@@ -23,6 +23,7 @@ return [
         'retrying' => 'Nova tentativa agendada',
         'succeeded' => 'Entregue',
         'failed' => 'Falhou',
+        'paused' => 'Pausada (endpoint desativado)',
     ],
 
     'attempt_outcome' => [
@@ -55,6 +56,7 @@ return [
         'unresolvable' => 'Não foi possível encontrar este servidor (DNS).',
         'private_address' => 'Este endereço aponta para uma rede interna ou reservada e não é permitido.',
         'metadata_address' => 'Este endereço é de serviço interno de nuvem e não é permitido.',
+        'not_allowed' => 'Não foi possível usar este endereço. Use um servidor público, acessível pela internet.',
     ],
 
     'validation' => [
@@ -71,6 +73,11 @@ return [
         'sensitive_required' => 'Confirme a ação com a senha de transação e o código enviado por e-mail.',
         'too_many' => 'Muitas solicitações. Tente de novo em :seconds segundos.',
         'in_progress' => 'Esta entrega já está sendo enviada.',
+        'internal' => 'Erro interno ao preparar o envio. Uma nova tentativa foi agendada, se ainda houver.',
+        'abandoned' => 'A tentativa foi interrompida várias vezes e as tentativas acabaram.',
+        'paused' => 'O endpoint está desativado. A entrega sai quando ele for reativado.',
+        'paused_expired' => 'A entrega ficou pausada além do prazo de retenção e não foi enviada.',
+        'url_changed' => 'A URL do endpoint mudou depois desta entrega. Por segurança, eventos anteriores à mudança não são reenviados para o novo destino.',
     ],
 
     'mail' => [
@@ -78,11 +85,11 @@ return [
             'subject' => 'Endpoint de webhook desativado — :platform',
             'preheader' => 'Desativado depois de :failures tentativas falhas seguidas.',
             'heading' => 'Endpoint de webhook desativado',
-            'intro' => 'Paramos de enviar eventos para este endpoint depois de :failures tentativas falhas seguidas.',
+            'intro' => 'Paramos de enviar eventos para este endpoint: ele acumulou :failures tentativas falhas seguidas, sem nenhuma entrega bem-sucedida por um longo período.',
             'account_label' => 'Conta',
             'name_label' => 'Endpoint',
             'host_label' => 'Servidor',
-            'action' => 'Confira se o receptor está no ar e respondendo 2xx, depois reative o endpoint na tela de webhooks. As entregas que falharam podem ser reenviadas de lá.',
+            'action' => 'Confira se o receptor está no ar e respondendo 2xx, depois reative o endpoint na tela de webhooks. Os eventos desse período ficaram pausados e saem assim que você reativar.',
             'cta' => 'Abrir webhooks',
         ],
     ],
@@ -97,7 +104,7 @@ return [
         'subtitle' => 'Avise outros sistemas quando algo acontece nesta conta. Cada envio é assinado com o segredo do endpoint.',
         'new' => 'Novo endpoint',
         'empty' => 'Nenhum endpoint cadastrado.',
-        'empty_hint' => 'Cadastre a URL que vai receber os eventos. O segredo de assinatura é gerado aqui e mostrado uma vez.',
+        'empty_hint' => 'Cadastre a URL que vai receber os eventos. O segredo de assinatura é gerado aqui e mostrado na criação; depois, só com confirmação.',
         'name' => 'Nome',
         'url' => 'URL de destino',
         'url_hint' => 'Endereço público, com HTTPS.',
@@ -126,7 +133,7 @@ return [
         'rotate_overlap' => 'Convivência do segredo anterior (minutos)',
         'rotate_hint' => 'Durante a convivência, cada envio leva as duas assinaturas: troque o segredo no receptor sem perder eventos. Zero encerra o anterior agora.',
         'secret_title' => 'Segredo de assinatura',
-        'secret_once' => 'Copie e guarde agora: ele não será mostrado de novo.',
+        'secret_once' => 'Copie e guarde agora. Para vê-lo de novo, use “Revelar segredo”, que pede confirmação.',
         'secret_saved' => 'Já guardei',
         'copy' => 'Copiar',
         'copied' => 'Copiado',
@@ -144,7 +151,7 @@ return [
         'next_attempt' => 'Próxima tentativa: :date',
         'last_success' => 'Última entrega: :date',
         'failures' => ':count falha(s) seguida(s)',
-        'disabled_by_failures' => 'Desativado depois de :count falhas seguidas. Corrija o receptor e reative.',
+        'disabled_by_failures' => 'Desativado depois de :count falhas seguidas. Os eventos ficam pausados: corrija o receptor e reative para recebê-los.',
         'previous_secret_until' => 'Segredo anterior ainda aceito até :date.',
         'sensitive_requires_password' => 'Defina a senha de transação no perfil antes: criar, alterar e mexer no segredo de um endpoint pedem confirmação.',
         'read_only' => 'Só o dono e os administradores da conta gerenciam webhooks.',

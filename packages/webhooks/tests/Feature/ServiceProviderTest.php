@@ -25,21 +25,27 @@ it('traz a configuração padrão: HTTPS obrigatório, nenhuma rede privada libe
         ->and(config('webhooks.destination.connect_timeout'))->toBe(3.0)
         ->and(config('webhooks.destination.timeout'))->toBe(10.0)
         ->and(config('webhooks.delivery.backoff'))->toBe([60, 300, 1800, 7200, 43200])
+        ->and(config('webhooks.destination.relaxed_environments'))->toBe(['local', 'testing'])
         ->and(config('webhooks.delivery.disable_after_failures'))->toBe(20)
+        ->and(config('webhooks.delivery.disable_after_hours'))->toBe(72)
         ->and(config('webhooks.delivery.response_excerpt_bytes'))->toBe(1024)
         ->and(config('webhooks.secret.max_overlap_minutes'))->toBe(10080)
         ->and(config('webhooks.prune.days'))->toBe(30);
 });
 
-it('roda a migration das quatro tabelas', function (): void {
+it('roda a migration das quatro tabelas e a do endurecimento da entrega', function (): void {
     $arquivos = array_map('basename', glob(dirname(__DIR__, 2).'/database/migrations/*.php'));
 
-    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php'])
+    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php', '2026_10_29_000001_harden_webhook_delivery.php'])
         ->and(Schema::hasTable('webhook_endpoints'))->toBeTrue()
         ->and(Schema::hasTable('webhook_events'))->toBeTrue()
         ->and(Schema::hasTable('webhook_deliveries'))->toBeTrue()
         ->and(Schema::hasTable('webhook_delivery_attempts'))->toBeTrue()
-        ->and(Schema::hasColumns('webhook_endpoints', ['uuid', 'account_id', 'project_id', 'created_by', 'url', 'events', 'secret', 'previous_secret', 'previous_secret_expires_at', 'status', 'consecutive_failures']))->toBeTrue();
+        ->and(Schema::hasColumns('webhook_endpoints', ['uuid', 'account_id', 'project_id', 'created_by', 'url', 'events', 'secret', 'previous_secret', 'previous_secret_expires_at', 'status', 'consecutive_failures', 'failing_since', 'url_changed_at']))->toBeTrue()
+        ->and(Schema::hasIndex('webhook_deliveries', ['webhook_event_id']))->toBeTrue()
+        ->and(Schema::hasIndex('webhook_events', ['created_at']))->toBeTrue()
+        // O índice parcial das entregas em aberto (o que o outbox varre).
+        ->and(collect(Schema::getIndexes('webhook_deliveries'))->pluck('name')->all())->toContain('webhook_deliveries_open_due_index');
 });
 
 it('registra os comandos e agenda o outbox e a limpeza', function (): void {

@@ -52,6 +52,7 @@ it('recusa loopback, metadados de nuvem, rede privada, IPv6 equivalentes e forma
     'IPv6 mapeado de 169.254.169.254' => ['https://[::ffff:a9fe:a9fe]/', 'private_address'],
     'IPv6 ULA' => ['https://[fd12:3456::1]/', 'private_address'],
     'IPv6 metadados AWS' => ['https://[fd00:ec2::254]/', 'metadata_address'],
+    'IPv6 metadados GCP' => ['https://[fd20:ce::254]/', 'metadata_address'],
     'IPv6 link-local' => ['https://[fe80::1]/', 'private_address'],
     'NAT64 de IPv4 privado' => ['https://[64:ff9b::a00:1]/', 'private_address'],
     '6to4' => ['https://[2002:a00:1::1]/', 'private_address'],
@@ -110,6 +111,75 @@ it('em produção, HTTPS é obrigatório e a lista de redes liberadas é ignorad
     expect(destinationReason('http://hooks.example.com/hook'))->toBe('scheme_not_allowed')
         ->and(destinationReason('https://127.0.0.1/hook'))->toBe('private_address')
         ->and(app(DestinationPolicy::class)->warnings())->toHaveCount(2);
+});
+
+it('fora da lista explícita de ambientes (staging, sandbox, nome errado), http e redes privadas são IGNORADOS — falha fechada, com aviso', function (string $environment): void {
+    $this->app->detectEnvironment(fn (): string => $environment);
+    config([
+        'webhooks.destination.require_https' => false,
+        'webhooks.destination.allowed_private_networks' => ['127.0.0.1/32', '10.0.0.0/8'],
+    ]);
+
+    $policy = app(DestinationPolicy::class);
+
+    expect($policy->relaxed())->toBeFalse()
+        ->and(destinationReason('http://hooks.example.com/hook'))->toBe('scheme_not_allowed')
+        ->and(destinationReason('https://127.0.0.1/hook'))->toBe('private_address')
+        ->and(destinationReason('https://10.1.2.3/hook'))->toBe('private_address')
+        ->and($policy->warnings())->toHaveCount(2)
+        ->and($policy->warnings()[0])->toContain('"'.$environment.'"');
+})->with(['staging', 'sandbox', 'prod', 'producao', 'Local']);
+
+it('a lista de ambientes liberados é configurável — e production nunca entra nela', function (): void {
+    config([
+        'webhooks.destination.relaxed_environments' => ['staging', 'production'],
+        'webhooks.destination.require_https' => false,
+        'webhooks.destination.allowed_private_networks' => ['127.0.0.1/32'],
+    ]);
+
+    $this->app->detectEnvironment(fn (): string => 'staging');
+    expect(destinationReason('http://127.0.0.1:8080/hook'))->toBeNull();
+
+    $this->app->detectEnvironment(fn (): string => 'testing');
+    expect(destinationReason('http://127.0.0.1:8080/hook'))->toBe('scheme_not_allowed');
+
+    $this->app->detectEnvironment(fn (): string => 'production');
+    expect(destinationReason('http://127.0.0.1:8080/hook'))->toBe('scheme_not_allowed')
+        ->and(destinationReason('https://127.0.0.1/hook'))->toBe('private_address');
+});
+
+it('metadados de nuvem (inclusive o IPv6 do GCP) continuam recusados mesmo com a faixa ULA liberada', function (): void {
+    config(['webhooks.destination.allowed_private_networks' => ['fd00::/8']]);
+
+    expect(destinationReason('https://[fd20:ce::254]/'))->toBe('metadata_address')
+        ->and(destinationReason('https://[fd00:ec2::254]/'))->toBe('metadata_address')
+        ->and(destinationReason('https://[fd12:3456::1]/'))->toBeNull();
+});
+
+it('a mensagem para a pessoa não diferencia "não resolve" de "endereço interno"; o motivo exato continua na exceção', function (): void {
+    $this->dns->records['interno.example.com'] = ['10.0.0.5'];
+
+    $mensagens = [];
+    $motivos = [];
+
+    foreach (['https://nao-existe.example.com/', 'https://interno.example.com/', 'https://169.254.169.254/'] as $url) {
+        try {
+            app(DestinationPolicy::class)->check($url);
+        } catch (BlockedDestinationException $blocked) {
+            $mensagens[] = $blocked->publicMessage();
+            $motivos[] = $blocked->reason;
+        }
+    }
+
+    expect($motivos)->toBe(['unresolvable', 'private_address', 'metadata_address'])
+        ->and(array_unique($mensagens))->toBe([__('webhooks.destination.not_allowed')]);
+
+    // Erro de formato continua específico (não revela nada da rede).
+    try {
+        app(DestinationPolicy::class)->check('ftp://hooks.example.com/');
+    } catch (BlockedDestinationException $blocked) {
+        expect($blocked->publicMessage())->toBe(__('webhooks.destination.scheme_not_allowed'));
+    }
 });
 
 it('aceita IPv6 público e prefere IPv4 quando o nome tem os dois', function (): void {

@@ -21,8 +21,10 @@ use Twstec\Kit\Webhooks\Models\WebhookDelivery;
  * rodada. A falha da fila NUNCA sobe para quem disparou o evento (a mudança
  * de negócio dele já foi confirmada).
  *
- * `queued_at` marca quando foi posta, para o comando não repor o que ainda
- * está esperando na fila.
+ * `queued_at` marca quando a tentativa fica pronta para o worker — agora,
+ * ou, num envio com atraso (nova tentativa), a hora em que vence —, para o
+ * comando não repor o que ainda está esperando na fila: ele só repõe
+ * `webhooks.outbox.requeue_after_seconds` depois dessa marca.
  */
 final class DeliveryQueue
 {
@@ -41,15 +43,18 @@ final class DeliveryQueue
             $job->onQueue($queue);
         }
 
+        $readyAt = Carbon::now();
+
         if ($at !== null && Carbon::instance($at)->isFuture()) {
             $job->delay($at);
+            $readyAt = Carbon::instance($at);
         }
 
         // Quem chama está no contexto da conta da entrega (ou em modo
         // sistema, no comando): o escopo da conta vale normalmente. Marcado
         // ANTES do envio: com a fila `sync`, o job roda dentro do dispatch e
         // a marca não pode chegar depois do resultado.
-        WebhookDelivery::query()->whereKey($delivery->getKey())->update(['queued_at' => Carbon::now()]);
+        WebhookDelivery::query()->whereKey($delivery->getKey())->update(['queued_at' => $readyAt]);
 
         $id = (int) $delivery->getKey();
         $uuid = $delivery->uuid;

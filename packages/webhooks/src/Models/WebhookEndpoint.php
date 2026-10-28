@@ -22,7 +22,8 @@ use Twstec\Kit\Webhooks\Enums\EndpointStatus;
  * atual). O SEGREDO de assinatura é guardado CIFRADO (cast `encrypted`, com a
  * APP_KEY — `APP_PREVIOUS_KEYS` continua decifrando depois de uma troca): o
  * atributo em memória, num dump ou num log do model é o texto cifrado; o
- * valor em claro só existe na hora de assinar e na tela que o mostra uma vez.
+ * valor em claro só existe na hora de assinar, na tela da criação e na
+ * revelação (Actions\RevealSecret — ação sensível, registrada na trilha).
  * Fora da serialização (`$hidden`): nem cifrado ele sai num toArray/JSON.
  *
  * Criado, alterado e excluído SÓ pelas Actions do pacote (Actions\*), que
@@ -46,6 +47,8 @@ use Twstec\Kit\Webhooks\Enums\EndpointStatus;
  * @property int $consecutive_failures
  * @property Carbon|null $last_success_at
  * @property Carbon|null $last_failure_at
+ * @property Carbon|null $failing_since
+ * @property Carbon|null $url_changed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Project|null $project
@@ -81,6 +84,8 @@ class WebhookEndpoint extends Model
         'consecutive_failures',
         'last_success_at',
         'last_failure_at',
+        'failing_since',
+        'url_changed_at',
     ];
 
     /**
@@ -123,6 +128,8 @@ class WebhookEndpoint extends Model
             'consecutive_failures' => 'integer',
             'last_success_at' => 'datetime',
             'last_failure_at' => 'datetime',
+            'failing_since' => 'datetime',
+            'url_changed_at' => 'datetime',
         ];
     }
 

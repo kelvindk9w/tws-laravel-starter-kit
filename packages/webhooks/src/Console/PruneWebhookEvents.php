@@ -16,7 +16,10 @@ use Twstec\Kit\Webhooks\Models\WebhookEvent;
 /**
  * `webhooks:prune` — RETENÇÃO: apaga os eventos mais velhos que
  * `webhooks.prune.days` (com as entregas e o log de tentativas deles), desde
- * que nenhuma entrega do evento esteja em aberto. Os corpos cifrados não
+ * que nenhuma entrega do evento esteja em aberto (pendente, em envio ou
+ * aguardando nova tentativa). Entrega PAUSADA não segura o evento além desse
+ * prazo: dentro dele, a reativação do endpoint a envia; depois, ela sai com o
+ * evento (a reativação também não a enviaria mais). Os corpos cifrados não
  * ficam guardados para sempre. Agendado pelo pacote (`webhooks.prune.schedule`).
  */
 final class PruneWebhookEvents extends Command
@@ -36,11 +39,7 @@ final class PruneWebhookEvents extends Command
             do {
                 $ids = WebhookEvent::query()
                     ->where('created_at', '<', $cutoff)
-                    ->whereDoesntHave('deliveries', fn ($query) => $query->whereIn('status', [
-                        DeliveryStatus::Pending->value,
-                        DeliveryStatus::Delivering->value,
-                        DeliveryStatus::Retrying->value,
-                    ]))
+                    ->whereDoesntHave('deliveries', fn ($query) => $query->whereIn('status', DeliveryStatus::openValues()))
                     ->orderBy('id')
                     ->limit(500)
                     ->pluck('id');

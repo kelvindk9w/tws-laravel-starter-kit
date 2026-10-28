@@ -113,7 +113,7 @@ trait GuardsWebhookAction
         } catch (BlockedDestinationException $blocked) {
             $this->audit()->denied($attempt, Accounts::current(), $actor, $blocked->reason.': '.$blocked->getMessage(), WebhookAudit::endpointType(), $subjectUuid);
 
-            throw ValidationException::withMessages(['url' => $blocked->getMessage()]);
+            throw ValidationException::withMessages(['url' => $blocked->publicMessage()]);
         }
 
         return ['name' => trim((string) $validated['name']), 'url' => $url, 'events' => $events, 'project' => $project];

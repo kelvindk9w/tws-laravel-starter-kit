@@ -11,7 +11,9 @@ Webhooks de saída do **TWS Laravel Starter Kit**, como pacote Laravel **sem
 telas**: o aplicativo dispara um evento para uma conta e o pacote o entrega,
 **assinado** (HMAC-SHA256 sobre `timestamp.corpo`), a cada endpoint da conta
 que o assina — com outbox durável, fila cifrada, novas tentativas com backoff
-exponencial, desativação depois de falhas seguidas (com aviso por e-mail),
+exponencial, desativação só depois de falhas seguidas E de um prazo sem
+sucesso (com aviso por e-mail; as entregas ficam pausadas e saem ao
+reativar),
 log de entregas redigido, reenvio auditado e **proteção contra SSRF** (DNS
 revalidado em cada envio e conexão no IP conferido, sem redirect nem proxy).
 
@@ -67,7 +69,9 @@ require 'verify-signature.php';
 $ok = verify_webhook_signature($corpoBruto, $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? '', $segredo);
 ```
 
-E deduplica pelo `id` do evento (o mesmo em toda tentativa e reenvio).
+E deduplica pelo `id` do evento (o mesmo em toda tentativa e reenvio). A
+ordem de chegada não é garantida: compare o `created_at` do corpo ou consulte
+o estado atual do recurso antes de agir.
 Detalhes, o exemplo em Node, a tabela do SSRF e as decisões em
 [docs/webhooks.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks.md).
 

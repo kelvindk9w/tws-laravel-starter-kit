@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Webhooks\Delivery\DeliveryQueue;
+use Twstec\Kit\Webhooks\Delivery\DeliverySender;
 use Twstec\Kit\Webhooks\Enums\DeliveryStatus;
 use Twstec\Kit\Webhooks\Models\WebhookDelivery;
 
@@ -18,8 +19,13 @@ use Twstec\Kit\Webhooks\Models\WebhookDelivery;
  * nunca chegaram lá (a fila estava fora no disparo), as de nova tentativa
  * cujo job se perdeu e as "em andamento" cujo processo morreu (prazo
  * `locked_until` estourado). Uma entrega já posta na fila só volta depois de
- * `webhooks.outbox.requeue_after_seconds`. Dois jobs para a mesma entrega não
- * enviam duas vezes: a tentativa reserva a entrega no banco antes.
+ * `webhooks.outbox.requeue_after_seconds` (contados de quando ela fica pronta:
+ * numa nova tentativa com atraso, a hora em que vence). Dois jobs para a
+ * mesma entrega não enviam duas vezes: a tentativa reserva a entrega no banco
+ * antes. Entrega "em andamento" cujo processo morreu e que já usou todas as
+ * tentativas é encerrada como falha, não reposta (DeliverySender::
+ * abandonExhausted). Entregas PAUSADAS (endpoint desativado) ficam de fora:
+ * voltam pela reativação.
  *
  * Agendado pelo pacote (`webhooks.outbox.schedule`, padrão a cada minuto).
  */
@@ -34,6 +40,8 @@ final class DispatchPendingDeliveries extends Command
         $limit = max(1, (int) $this->option('limit'));
         $now = Carbon::now();
         $requeueBefore = $now->copy()->subSeconds(max(30, (int) config('webhooks.outbox.requeue_after_seconds', 300)));
+
+        DeliverySender::abandonExhausted();
 
         $count = Accounts::asSystem('webhooks:dispatch-pending', function () use ($queue, $limit, $now, $requeueBefore): int {
             $due = WebhookDelivery::query()

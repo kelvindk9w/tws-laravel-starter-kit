@@ -7,7 +7,8 @@ declare(strict_types=1);
 // aplicação pode publicar a própria cópia (`vendor:publish
 // --tag=webhooks-config`); as chaves de primeiro nível dela prevalecem.
 //
-// Política: o segredo de assinatura é gerado pelo servidor, mostrado UMA vez e
+// Política: o segredo de assinatura é gerado pelo servidor, mostrado na
+// criação (depois, só pela revelação — ação sensível, registrada na trilha) e
 // guardado CIFRADO (APP_KEY); o corpo do evento fica cifrado no banco e o job
 // da fila só carrega identificadores, também cifrados. O destino é conferido
 // contra SSRF no cadastro E de novo na hora de cada envio (DNS resolvido de
@@ -28,16 +29,21 @@ return [
 
     // --- Destino (SSRF) ----------------------------------------------------------
     'destination' => [
-        // HTTPS obrigatório. Em PRODUÇÃO vale sempre, mesmo com `false`
-        // aqui (com aviso no log a cada boot). Fora de produção, `false`
-        // aceita http:// — útil para um receptor local de desenvolvimento.
+        // Ambientes em que as duas FOLGAS abaixo (http e redes privadas)
+        // valem — lista explícita, separada por vírgula. Em QUALQUER outro
+        // ambiente (production, staging, sandbox, um nome digitado errado...)
+        // elas são IGNORADAS, com aviso no log a cada boot: falha fechada.
+        'relaxed_environments' => array_values(array_filter(array_map('trim', explode(',', (string) env('WEBHOOKS_RELAXED_ENVIRONMENTS', 'local,testing'))))),
+
+        // HTTPS obrigatório. `false` aceita http:// — útil para um receptor
+        // local de desenvolvimento —, mas SÓ nos `relaxed_environments`.
         'require_https' => env('WEBHOOKS_REQUIRE_HTTPS', true),
 
-        // Redes privadas LIBERADAS fora de produção (CIDR, separados por
-        // vírgula — ex.: a rede do Docker de desenvolvimento). Em PRODUÇÃO a
-        // lista é IGNORADA (com aviso no log a cada boot): o destino de um
-        // webhook é sempre um endereço público. Endereço de metadados de
-        // nuvem nunca é liberado, nem com esta lista.
+        // Redes privadas LIBERADAS (CIDR, separados por vírgula — ex.: a rede
+        // do Docker de desenvolvimento), SÓ nos `relaxed_environments`. Fora
+        // deles a lista é IGNORADA: o destino de um webhook é sempre um
+        // endereço público. Endereço de metadados de nuvem nunca é liberado,
+        // nem com esta lista.
         'allowed_private_networks' => array_values(array_filter(array_map('trim', explode(',', (string) env('WEBHOOKS_ALLOWED_PRIVATE_NETWORKS', ''))))),
 
         // Tempo para conectar e tempo total do envio, em segundos.
@@ -61,10 +67,15 @@ return [
         // tentativas ao todo (a primeira e cinco novas).
         'backoff' => array_values(array_map('intval', array_filter(array_map('trim', explode(',', (string) env('WEBHOOKS_BACKOFF', '60,300,1800,7200,43200'))), 'strlen'))),
 
-        // Endpoint DESATIVADO depois de tantas tentativas falhas SEGUIDAS
-        // (qualquer sucesso zera a conta), com aviso por e-mail ao dono e aos
-        // administradores da conta e linha na trilha de auditoria.
+        // Endpoint DESATIVADO quando as DUAS condições valem: pelo menos
+        // tantas tentativas falhas SEGUIDAS e falhando sem parar há pelo menos
+        // tantas horas (qualquer sucesso zera as duas). Uma queda curta do
+        // receptor, mesmo com muito volume, não desativa. Ao desativar: aviso
+        // por e-mail ao dono e aos administradores da conta e linha na trilha.
+        // As entregas não se perdem: ficam PAUSADAS e voltam ao reativar.
+        // `disable_after_hours = 0` desativa só pela contagem.
         'disable_after_failures' => (int) env('WEBHOOKS_DISABLE_AFTER_FAILURES', 20),
+        'disable_after_hours' => (int) env('WEBHOOKS_DISABLE_AFTER_HOURS', 72),
 
         // Quanto da RESPOSTA do receptor fica no log de entregas (bytes,
         // redigido). O resto nem é lido.
@@ -75,7 +86,9 @@ return [
         'connection' => env('WEBHOOKS_QUEUE_CONNECTION'),
 
         // Uma entrega "em andamento" cujo processo morreu volta a ser
-        // tentada depois deste prazo (segundos). Precisa passar o timeout.
+        // tentada depois deste prazo (segundos). O pacote nunca usa menos que
+        // o tempo máximo do job (conexão + envio + folga): um valor menor
+        // aqui é elevado sozinho, para dois workers nunca enviarem juntos.
         'lock_seconds' => (int) env('WEBHOOKS_LOCK_SECONDS', 120),
     ],
 
@@ -91,7 +104,10 @@ return [
 
     // --- Retenção ----------------------------------------------------------------
     // `webhooks:prune` apaga eventos (com as entregas e tentativas) mais
-    // velhos que `days` e já resolvidos. Cron vazio desliga, com aviso.
+    // velhos que `days` e já resolvidos — entrega PAUSADA (endpoint
+    // desativado) conta como resolvida só depois desse prazo: dentro dele,
+    // reativar o endpoint a envia; fora, ela sai com o evento. Cron vazio
+    // desliga, com aviso.
     'prune' => [
         'days' => (int) env('WEBHOOKS_PRUNE_DAYS', 30),
         'schedule' => env('WEBHOOKS_PRUNE_SCHEDULE', '20 4 * * *'),

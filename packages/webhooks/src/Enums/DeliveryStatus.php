@@ -11,8 +11,10 @@ namespace Twstec\Kit\Webhooks\Enums;
  * - delivering: uma tentativa em andamento (com prazo — `locked_until`);
  * - retrying: falhou e tem nova tentativa marcada (`next_attempt_at`);
  * - succeeded: o receptor respondeu 2xx;
- * - failed: esgotou as tentativas, ou o endpoint foi desativado ou excluído
- *   antes de ela sair.
+ * - paused: o endpoint está DESATIVADO (à mão ou por falhas): a entrega
+ *   espera, sem sair, e volta a `pending` quando ele é reativado (dentro do
+ *   prazo de retenção). Nunca se perde por causa da desativação;
+ * - failed: esgotou as tentativas, ou ficou pausada além da retenção.
  */
 enum DeliveryStatus: string
 {
@@ -21,6 +23,7 @@ enum DeliveryStatus: string
     case Retrying = 'retrying';
     case Succeeded = 'succeeded';
     case Failed = 'failed';
+    case Paused = 'paused';
 
     public function label(): string
     {
@@ -32,6 +35,26 @@ enum DeliveryStatus: string
      */
     public function isOpen(): bool
     {
-        return in_array($this, [self::Pending, self::Delivering, self::Retrying], true);
+        return in_array($this, self::open(), true);
+    }
+
+    /**
+     * Os estados que o outbox e o worker ainda enviam.
+     *
+     * @return list<self>
+     */
+    public static function open(): array
+    {
+        return [self::Pending, self::Delivering, self::Retrying];
+    }
+
+    /**
+     * Os valores de open(), para consultas.
+     *
+     * @return list<string>
+     */
+    public static function openValues(): array
+    {
+        return array_map(static fn (self $status): string => $status->value, self::open());
     }
 }

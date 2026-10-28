@@ -88,11 +88,12 @@ it('agenda as novas tentativas em 1 min, 5 min, 30 min, 2 h e 12 h e desiste dep
     expect(count($this->receiver->requests()))->toBe(6);
 });
 
-it('DESATIVA o endpoint depois de N falhas seguidas, encerra o que estava em aberto, avisa dono e admins e registra', function (): void {
+it('DESATIVA o endpoint depois de N falhas seguidas, PAUSA o que estava em aberto (e o que chega depois), avisa dono e admins e registra', function (): void {
     $this->freezeSecond();
     $logged = new ArrayObject;
     Event::listen(MessageLogged::class, fn (MessageLogged $message) => $logged->append($message));
-    config(['webhooks.delivery.disable_after_failures' => 3]);
+    // Só a contagem (sem o prazo): o prazo tem teste próprio abaixo.
+    config(['webhooks.delivery.disable_after_failures' => 3, 'webhooks.delivery.disable_after_hours' => 0]);
 
     $owner = $this->owner();
     $account = $this->accountOf($owner);
@@ -116,9 +117,11 @@ it('DESATIVA o endpoint depois de N falhas seguidas, encerra o que estava em abe
     expect($endpoint->status)->toBe(EndpointStatus::Disabled)
         ->and($endpoint->disabled_reason)->toBe(DisabledReason::Failures)
         ->and($endpoint->consecutive_failures)->toBe(3)
-        // As três primeiras falharam (e as em aberto foram encerradas); a
-        // quarta nem saiu: o endpoint já não estava ativo.
-        ->and($deliveries->pluck('status')->all())->toBe([DeliveryStatus::Failed, DeliveryStatus::Failed, DeliveryStatus::Failed])
+        // As três primeiras falharam uma vez e ficaram PAUSADAS (não
+        // falhas: saem na reativação); a quarta nem saiu — o endpoint já
+        // estava desativado — mas também foi guardada, pausada.
+        ->and($deliveries->pluck('status')->all())->toBe([DeliveryStatus::Paused, DeliveryStatus::Paused, DeliveryStatus::Paused, DeliveryStatus::Paused])
+        ->and($deliveries->pluck('next_attempt_at')->filter()->all())->toBe([])
         ->and(count($this->receiver->requests()))->toBe(3);
 
     $row = AuditEvent::query()->where('action', 'webhook_endpoint.disabled')->sole();

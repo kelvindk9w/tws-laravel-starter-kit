@@ -61,6 +61,8 @@ it('SSRF no cadastro: destino proibido é recusado como erro de validação E re
     $row = deniedAudit('webhook_endpoint.created');
 
     expect($row)->not->toBeNull()
+        // O motivo exato fica na trilha; a tela recebe o texto genérico.
+        ->and($exception->errors()['url'][0])->toBe(__('webhooks.destination.not_allowed'))
         ->and($row->reason)->toMatch('/^(private_address|metadata_address)/')
         ->and(Accounts::asSystem('teste', fn () => WebhookEndpoint::query()->count()))->toBe(0);
 })->with([

@@ -42,7 +42,7 @@ it('evento fora do catálogo é recusado no disparo (erro de programação)', fu
         ->and(fn () => Webhooks::dispatch($this->accountOf($owner), 'webhook.ping', []))->toThrow(InvalidArgumentException::class);
 });
 
-it('só vai para os endpoints ATIVOS da conta que ASSINAM o evento — e respeita o projeto', function (): void {
+it('só sai para os endpoints ATIVOS da conta que ASSINAM o evento — o desativado guarda a entrega PAUSADA — e respeita o projeto', function (): void {
     Queue::fake();
 
     $owner = $this->owner();
@@ -64,14 +64,24 @@ it('só vai para os endpoints ATIVOS da conta que ASSINAM o evento — e respeit
 
     Webhooks::dispatch($account, 'order.created', ['n' => 1], $project);
 
-    expect(allDeliveries()->pluck('webhook_endpoint_id')->sort()->values()->all())
-        ->toBe(collect([$todos->id, $criados->id, $doProjeto->id])->sort()->values()->all());
+    $pendentes = allDeliveries()->where('status', DeliveryStatus::Pending);
+    $pausadas = allDeliveries()->where('status', DeliveryStatus::Paused);
+
+    expect($pendentes->pluck('webhook_endpoint_id')->sort()->values()->all())
+        ->toBe(collect([$todos->id, $criados->id, $doProjeto->id])->sort()->values()->all())
+        // O desativado não recebe agora, mas o evento não se perde.
+        ->and($pausadas->pluck('webhook_endpoint_id')->all())->toBe([$desativado->id])
+        ->and($pausadas->first()->next_attempt_at)->toBeNull()
+        ->and(allDeliveries())->toHaveCount(4);
+
+    // Só as ativas foram para a fila.
+    Queue::assertPushed(DeliverWebhook::class, 3);
 
     // Sem projeto: o endpoint de projeto não recebe.
     Webhooks::dispatch($account, 'order.shipped', ['n' => 2]);
 
     expect(allDeliveries()->where('webhook_event_id', '!=', allDeliveries()->first()->webhook_event_id)->pluck('webhook_endpoint_id')->sort()->values()->all())
-        ->toBe(collect([$todos->id, $enviados->id])->sort()->values()->all())
+        ->toBe(collect([$todos->id, $enviados->id, $desativado->id])->sort()->values()->all())
         ->and(Accounts::asSystem('teste', fn () => $deOutroProjeto->deliveries()->count()))->toBe(0);
 });
 

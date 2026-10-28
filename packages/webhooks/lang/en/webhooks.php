@@ -23,6 +23,7 @@ return [
         'retrying' => 'Retry scheduled',
         'succeeded' => 'Delivered',
         'failed' => 'Failed',
+        'paused' => 'Paused (endpoint disabled)',
     ],
 
     'attempt_outcome' => [
@@ -55,6 +56,7 @@ return [
         'unresolvable' => 'This server could not be found (DNS).',
         'private_address' => 'This address points to an internal or reserved network and is not allowed.',
         'metadata_address' => 'This address belongs to an internal cloud service and is not allowed.',
+        'not_allowed' => 'This address cannot be used. Use a public server reachable from the internet.',
     ],
 
     'validation' => [
@@ -71,6 +73,11 @@ return [
         'sensitive_required' => 'Confirm the action with your transaction password and the code sent by e-mail.',
         'too_many' => 'Too many requests. Try again in :seconds seconds.',
         'in_progress' => 'This delivery is already being sent.',
+        'internal' => 'Internal error while preparing the delivery. A new attempt was scheduled, if any are left.',
+        'abandoned' => 'The attempt was interrupted several times and no attempts are left.',
+        'paused' => 'The endpoint is disabled. The delivery goes out when it is enabled again.',
+        'paused_expired' => 'The delivery stayed paused beyond the retention period and was not sent.',
+        'url_changed' => 'The endpoint URL changed after this delivery. For security, events from before the change are not resent to the new destination.',
     ],
 
     'mail' => [
@@ -78,11 +85,11 @@ return [
             'subject' => 'Webhook endpoint disabled — :platform',
             'preheader' => 'Disabled after :failures consecutive failed attempts.',
             'heading' => 'Webhook endpoint disabled',
-            'intro' => 'We stopped sending events to this endpoint after :failures consecutive failed attempts.',
+            'intro' => 'We stopped sending events to this endpoint: it piled up :failures consecutive failed attempts, with no successful delivery for a long period.',
             'account_label' => 'Account',
             'name_label' => 'Endpoint',
             'host_label' => 'Server',
-            'action' => 'Check that the receiver is up and answering 2xx, then enable the endpoint again on the webhooks screen. Failed deliveries can be resent from there.',
+            'action' => 'Check that the receiver is up and answering 2xx, then enable the endpoint again on the webhooks screen. Events from this period were paused and go out as soon as you enable it.',
             'cta' => 'Open webhooks',
         ],
     ],
@@ -97,7 +104,7 @@ return [
         'subtitle' => 'Notify other systems when something happens in this account. Every request is signed with the endpoint secret.',
         'new' => 'New endpoint',
         'empty' => 'No endpoints yet.',
-        'empty_hint' => 'Register the URL that will receive the events. The signing secret is generated here and shown once.',
+        'empty_hint' => 'Register the URL that will receive the events. The signing secret is generated here and shown on creation; after that, only with confirmation.',
         'name' => 'Name',
         'url' => 'Destination URL',
         'url_hint' => 'Public address, with HTTPS.',
@@ -126,7 +133,7 @@ return [
         'rotate_overlap' => 'Previous secret overlap (minutes)',
         'rotate_hint' => 'During the overlap every request carries both signatures: change the secret on the receiver without losing events. Zero ends the previous one now.',
         'secret_title' => 'Signing secret',
-        'secret_once' => 'Copy and store it now: it will not be shown again.',
+        'secret_once' => 'Copy and store it now. To see it again, use “Reveal secret”, which asks for confirmation.',
         'secret_saved' => 'I have stored it',
         'copy' => 'Copy',
         'copied' => 'Copied',
@@ -144,7 +151,7 @@ return [
         'next_attempt' => 'Next attempt: :date',
         'last_success' => 'Last delivery: :date',
         'failures' => ':count consecutive failure(s)',
-        'disabled_by_failures' => 'Disabled after :count consecutive failures. Fix the receiver and enable it again.',
+        'disabled_by_failures' => 'Disabled after :count consecutive failures. Events are paused: fix the receiver and enable it again to receive them.',
         'previous_secret_until' => 'Previous secret still accepted until :date.',
         'sensitive_requires_password' => 'Set your transaction password on your profile first: creating, changing and handling the secret of an endpoint require confirmation.',
         'read_only' => 'Only the account owner and administrators manage webhooks.',

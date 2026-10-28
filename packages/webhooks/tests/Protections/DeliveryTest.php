@@ -112,7 +112,10 @@ it('REBINDING: o nome muda para a rede interna entre o cadastro e o envio → bl
 
     expect($this->receiver->requests())->toBe([])
         ->and($attempt->outcome)->toBe(AttemptOutcome::Blocked)
-        ->and($attempt->error)->toStartWith('metadata_address')
+        // Para a tela, o texto genérico (não diz o que o nome virou); o
+        // motivo exato fica no log, conferido abaixo.
+        ->and($attempt->error)->toBe(__('webhooks.destination.not_allowed'))
+        ->and($attempt->error)->not->toContain('169.254')
         ->and($delivery->status)->toBe(DeliveryStatus::Retrying);
 
     $blocked = collect($logged->getArrayCopy())->filter(fn (MessageLogged $m): bool => $m->message === 'webhooks.destination_blocked');

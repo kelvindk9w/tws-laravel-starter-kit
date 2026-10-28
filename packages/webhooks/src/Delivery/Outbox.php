@@ -27,7 +27,10 @@ use Twstec\Kit\Webhooks\Support\EventCatalog;
  * - As tentativas vão para a fila DEPOIS do commit (`afterCommit`). Se a fila
  *   estiver fora, a entrega fica pendente no banco e o
  *   `webhooks:dispatch-pending` (agendado) a põe na fila.
- * - Sem endpoint ativo que assine o evento (na conta e, se o evento é de um
+ * - Endpoint DESATIVADO que assina o evento também recebe a entrega, como
+ *   PAUSADA: ela não sai agora e volta à fila quando o endpoint for
+ *   reativado — a desativação nunca faz evento se perder.
+ * - Sem endpoint que assine o evento (na conta e, se o evento é de um
  *   projeto, sem projeto ou do mesmo projeto), nada é gravado.
  */
 final class Outbox
@@ -70,7 +73,7 @@ final class Outbox
         return Accounts::actingAs($account, function () use ($type, $payload, $project, $only): ?WebhookEvent {
             [$event, $deliveries] = DB::transaction(function () use ($type, $payload, $project, $only): array {
                 $endpoints = $only ?? WebhookEndpoint::query()
-                    ->where('status', EndpointStatus::Active->value)
+                    ->whereIn('status', [EndpointStatus::Active->value, EndpointStatus::Disabled->value])
                     ->where(fn ($query) => $project === null
                         ? $query->whereNull('project_id')
                         : $query->whereNull('project_id')->orWhere('project_id', $project->getKey()))
@@ -96,12 +99,19 @@ final class Outbox
                 $deliveries = [];
 
                 foreach ($endpoints as $endpoint) {
-                    $deliveries[] = WebhookDelivery::query()->create([
+                    $active = $endpoint->isActive();
+
+                    $delivery = WebhookDelivery::query()->create([
                         'webhook_endpoint_id' => $endpoint->getKey(),
                         'webhook_event_id' => $event->getKey(),
-                        'status' => DeliveryStatus::Pending->value,
-                        'next_attempt_at' => $now,
+                        'status' => $active ? DeliveryStatus::Pending->value : DeliveryStatus::Paused->value,
+                        'next_attempt_at' => $active ? $now : null,
+                        'error' => $active ? null : __('webhooks.errors.paused'),
                     ]);
+
+                    if ($active) {
+                        $deliveries[] = $delivery;
+                    }
                 }
 
                 return [$event, $deliveries];

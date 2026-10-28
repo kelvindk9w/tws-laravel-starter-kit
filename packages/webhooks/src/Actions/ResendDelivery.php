@@ -26,7 +26,13 @@ use Twstec\Kit\Webhooks\Models\WebhookDelivery;
  * O MESMO evento (mesmo id e mesmo corpo: o receptor deduplica pelo id), uma
  * tentativa agora, assinada com os segredos vigentes e com o destino
  * conferido de novo. Recusado: endpoint desativado (reative antes), tentativa
- * em andamento, ou acima do limite por conta.
+ * em andamento (inclusive uma que um worker reservou entre a leitura e a
+ * gravação — a volta a "pendente" é um UPDATE condicional ao estado lido),
+ * entrega criada ANTES da última troca de URL do endpoint (evento antigo não
+ * vai para um destino novo), ou acima do limite por conta.
+ *
+ * Se o reenvio falhar, as tentativas automáticas que ainda faltavam
+ * continuam (DeliverySender conta só as automáticas no backoff).
  */
 final class ResendDelivery
 {
@@ -55,6 +61,12 @@ final class ResendDelivery
             $this->refuse($actor, $delivery, __('webhooks.errors.in_progress'));
         }
 
+        $urlChangedAt = $delivery->endpoint->url_changed_at;
+
+        if ($urlChangedAt !== null && $delivery->created_at !== null && $delivery->created_at->lessThan($urlChangedAt)) {
+            $this->refuse($actor, $delivery, __('webhooks.errors.url_changed'));
+        }
+
         $key = 'webhooks:resend:'.$account->uuid;
 
         if (RateLimiter::tooManyAttempts($key, self::RATE_PER_MINUTE)) {
@@ -63,21 +75,37 @@ final class ResendDelivery
 
         RateLimiter::hit($key, 60);
 
-        DB::transaction(function () use ($actor, $delivery, $account, $type): void {
+        $reset = DB::transaction(function () use ($actor, $delivery, $account, $type): bool {
             $before = $delivery->status->value;
 
-            $delivery->forceFill([
-                'status' => DeliveryStatus::Pending->value,
-                'next_attempt_at' => Carbon::now(),
-                'locked_until' => null,
-            ])->save();
+            // Condicional ao estado lido: se um worker reservou a entrega
+            // nesse meio-tempo, nada muda e o reenvio é recusado.
+            $changed = WebhookDelivery::query()
+                ->whereKey($delivery->getKey())
+                ->where('status', $before)
+                ->where('attempts', $delivery->attempts)
+                ->update([
+                    'status' => DeliveryStatus::Pending->value,
+                    'next_attempt_at' => Carbon::now(),
+                    'locked_until' => null,
+                ]);
+
+            if ($changed !== 1) {
+                return false;
+            }
 
             $this->audit()->record(WebhookAuditEvent::DeliveryResent, $account, $actor, $type, $delivery->uuid, [
                 'status' => ['before' => $before, 'after' => DeliveryStatus::Pending->value],
                 'endpoint' => ['before' => null, 'after' => $delivery->endpoint->uuid],
                 'event' => ['before' => null, 'after' => $delivery->event->uuid],
             ]);
+
+            return true;
         });
+
+        if (! $reset) {
+            $this->refuse($actor, $delivery, __('webhooks.errors.in_progress'));
+        }
 
         app(DeliveryQueue::class)->push($delivery, null, true, $actor->getAuthIdentifier());
 

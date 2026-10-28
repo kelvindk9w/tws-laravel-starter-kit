@@ -6,6 +6,7 @@ namespace Twstec\Kit\Webhooks\Actions;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Twstec\Kit\Accounts\Accounts;
@@ -19,6 +20,10 @@ use Twstec\Kit\Webhooks\Support\WebhookAudit;
  * Altera nome, URL, eventos e projeto de um endpoint da conta atual — com o
  * destino conferido de novo e AÇÃO SENSÍVEL (mudar a URL ou os eventos muda
  * para onde e o que sai da conta). O segredo não muda aqui (RotateSecret).
+ *
+ * Mudar a URL marca `url_changed_at`: o reenvio manual passa a recusar as
+ * entregas criadas antes da troca — quem trocou a URL não puxa para o destino
+ * novo os eventos antigos da conta.
  */
 final class UpdateEndpoint
 {
@@ -48,7 +53,13 @@ final class UpdateEndpoint
                 'url' => $valid['url'],
                 'events' => $valid['events'],
                 'project_id' => $valid['project']?->getKey(),
-            ])->save();
+            ]);
+
+            if ($endpoint->isDirty('url')) {
+                $endpoint->forceFill(['url_changed_at' => Carbon::now()]);
+            }
+
+            $endpoint->save();
 
             $endpoint->setRelation('project', $valid['project']);
             $after = WebhookAudit::snapshot($endpoint);

@@ -24,10 +24,12 @@ use Twstec\Kit\Webhooks\Support\WebhookAudit;
 /**
  * Desativa ou REATIVA um endpoint da conta atual.
  *
- * - Desativar: as entregas em aberto dele saem como falhas (o reenvio manual
- *   continua possível depois de reativar).
- * - Reativar: o destino é conferido de novo (SSRF, DNS de agora) e as falhas
- *   seguidas voltam a zero.
+ * - Desativar: as entregas que ainda não saíram ficam PAUSADAS, e os eventos
+ *   disparados enquanto ele está desativado também são gravados como
+ *   pausados — nada se perde.
+ * - Reativar: o destino é conferido de novo (SSRF, DNS de agora), as falhas
+ *   seguidas voltam a zero e as entregas pausadas dentro do prazo de
+ *   retenção voltam à fila (as mais velhas viram falhas, com o motivo).
  */
 final class SetEndpointStatus
 {
@@ -55,7 +57,7 @@ final class SetEndpointStatus
             } catch (BlockedDestinationException $blocked) {
                 $this->audit()->denied($attempt, Accounts::current(), $actor, $blocked->reason.': '.$blocked->getMessage(), WebhookAudit::endpointType(), $endpoint->uuid);
 
-                throw ValidationException::withMessages(['url' => $blocked->getMessage()]);
+                throw ValidationException::withMessages(['url' => $blocked->publicMessage()]);
             }
         }
 
@@ -67,19 +69,22 @@ final class SetEndpointStatus
                 'disabled_reason' => null,
                 'disabled_at' => null,
                 'consecutive_failures' => 0,
+                'failing_since' => null,
             ] : [
                 'status' => EndpointStatus::Disabled->value,
                 'disabled_reason' => DisabledReason::Manual->value,
                 'disabled_at' => Carbon::now(),
             ])->save();
 
-            if (! $active) {
-                EndpointHealth::closeOpenDeliveries($endpoint);
+            $changes = ['status' => ['before' => $before, 'after' => $endpoint->status->value]];
+
+            if ($active) {
+                $changes['resumed_deliveries'] = ['before' => null, 'after' => EndpointHealth::resumePausedDeliveries($endpoint)];
+            } else {
+                EndpointHealth::pauseOpenDeliveries($endpoint);
             }
 
-            $this->audit()->record($attempt, Accounts::current(), $actor, WebhookAudit::endpointType(), $endpoint->uuid, [
-                'status' => ['before' => $before, 'after' => $endpoint->status->value],
-            ]);
+            $this->audit()->record($attempt, Accounts::current(), $actor, WebhookAudit::endpointType(), $endpoint->uuid, $changes);
 
             return $endpoint;
         });
