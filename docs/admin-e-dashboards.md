@@ -392,12 +392,31 @@ papel e da flag). Regras (no serviço, não na tela):
   comparando os PADRÕES (quem tem só `users.view` e `users.update` não
   concede `users.*`, que daria também as ações que ainda vão existir); o papel
   de dono, só o dono concede;
-- ninguém mexe em quem tem um papel acima do seu;
+- ninguém mexe em quem tem um papel acima do seu (nem no papel, nem no
+  resto — ver abaixo);
 - o último dono ativo não é rebaixado, bloqueado nem excluído;
 - conta protegida é intocável.
 
 A flag "Admin" do formulário (entrada no painel) pede `users.assign_role`;
 tirá-la tira também o papel, e devolvê-la não devolve o papel antigo.
+
+### Ninguém mexe em quem está acima
+
+A regra "ninguém mexe em quem tem um papel acima do seu" não vale só para
+o papel: **editar** (nome, e-mail, senha, situação), **bloquear**,
+**desbloquear**, **excluir** (inclusive pedir ou aprovar a exclusão em dois
+passos) e **marcar o e-mail como verificado** também são recusados quando o
+papel ATUAL do alvo é um que o ator não poderia conceder
+(`AdminPermissions::canGrant` — `Resources\Users\Support\UserAdminGuard`,
+regra 7). Sem isso, a `operations` (que tem `users.update`) trocava o e-mail
+e a senha de um `owner` e entrava como ele. A recusa é no servidor: a policy
+do resource nega `update`/`delete` (a edição nem abre pela URL e o "Salvar"
+de uma tela aberta antes é 403), e cada ação reconfere a guarda e deixa a
+linha `denied` na trilha; os botões somem da linha. De fábrica: o `owner`
+mexe em todos; a `operations` mexe na `operations`, no `support`, no
+`auditor` e em quem não tem papel, mas não no `owner`; o `support` não marca
+o e-mail de quem é `operations`, `auditor` ou `owner`. Papel igual pode. Vale também com `ADMIN_AUTHORIZATION=false`, como
+a regra do "Alterar papel".
 
 **Migração sem perda de acesso:** quem já era `is_admin` vira `owner` na
 migration. Depois dela, `is_admin` sozinho dá só a entrada: o papel vem do
