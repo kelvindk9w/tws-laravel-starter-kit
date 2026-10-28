@@ -1,0 +1,9 @@
+# Opções do "New issue". Vulnerabilidade nunca vai por issue pública.
+blank_issues_enabled: true
+contact_links:
+  - name: Reportar uma vulnerabilidade (canal privado)
+    url: https://github.com/kelvindk9w/tws-laravel-starter-kit/security/advisories/new
+    about: Falhas de segurança vão pelo canal privado do GitHub — nunca por issue pública (ver SECURITY.md).
+  - name: Documentação
+    url: https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs
+    about: Instalação, testes, produção e segurança do kit.

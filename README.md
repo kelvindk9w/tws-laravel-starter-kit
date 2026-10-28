@@ -263,7 +263,7 @@ E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
 **Estado do kit e roteiro** (o que falta para a 2.0.0 estável e o que vem
 depois): [docs/roadmap.md](docs/roadmap.md).
 
-Vulnerabilidades: [SECURITY.md](SECURITY.md) · Contribuir: [CONTRIBUTING.md](CONTRIBUTING.md).
+Vulnerabilidades: [SECURITY.md](SECURITY.md) · Contribuir: [CONTRIBUTING.md](CONTRIBUTING.md) · Conduta: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Pendências conhecidas / o que este kit não cobre
 

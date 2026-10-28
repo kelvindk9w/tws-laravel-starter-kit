@@ -195,6 +195,11 @@ publicação.
 
 ### Documentação
 
+- **Para a comunidade:** `CODE_OF_CONDUCT.md` novo; `SECURITY.md` com o
+  e-mail de contato do mantenedor além do canal privado do GitHub;
+  `CONTRIBUTING.md` diz que pull requests são bem-vindos (contra
+  `desenvolvimento`, sob a licença MIT); o "New issue" do GitHub aponta o
+  canal privado para vulnerabilidades.
 - `docs/webhooks.md`: a ordem de chegada não é garantida (o receptor compara
   o `created_at` ou consulta o estado atual); o comportamento novo acima e as
   variáveis novas, também nos `.env` de exemplo dos starters.

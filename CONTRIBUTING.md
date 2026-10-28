@@ -1,9 +1,17 @@
 # Contribuindo
 
-Obrigado pelo interesse. Regras curtas:
+Obrigado pelo interesse. O kit está em **beta público** (linha 2.x): issues
+com defeitos, dúvidas de uso e sugestões são bem-vindas, e pull requests
+também — para mudança grande, abra uma issue antes para combinar o caminho.
+Ao participar, você concorda com o [código de conduta](CODE_OF_CONDUCT.md).
+Ao enviar um pull request, você concorda em licenciar a contribuição sob a
+[licença MIT](LICENSE) do projeto.
 
-1. **Branches**: trabalho em `desenvolvimento`; `sandbox` e `producao` são
-   protegidas e só recebem fast-forward com o CI verde.
+Regras curtas:
+
+1. **Branches**: abra o pull request contra `desenvolvimento`; `sandbox` e
+   `producao` são protegidas e só recebem fast-forward com o CI verde, na
+   publicação de cada versão.
 2. **Ambiente**: uma vez por clone, `scripts/preparar-dev` na raiz (cria o
    `.env` dos starters e o `.env` da raiz com as senhas de desenvolvimento do
    PostgreSQL e do Redis); depois, `docker compose up -d` (ver README). As
