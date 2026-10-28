@@ -24,6 +24,11 @@
 # vazio e os pacotes vêm do Packagist).
 #
 # Uso: simulate-install.sh [etapa] [pasta]
+#   pasta: a da simulação. Sem ela, uma pasta nova e exclusiva (mktemp -d) —
+#   só para a etapa all (as etapas avulsas precisam da pasta da anterior). A
+#   pasta é APAGADA e recriada pela etapa copy: o script só aceita uma que
+#   não existe ou que ele mesmo criou (tem o arquivo-marca
+#   .simulacao-twstec-kit), nunca a raiz, a pasta pessoal ou o monorepo.
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
 #           test (pest) | image (docker: imagens de produção e conferências) |
 #           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
@@ -60,7 +65,7 @@ set -eu
 (set -o pipefail) 2>/dev/null && set -o pipefail
 
 STEP=${1:-all}
-WORK=${2:-${RUNNER_TEMP:-/tmp}/kit-publicado}
+WORK=${2:-}
 VERSION=${VERSION:-2.0.0-beta.1}
 STARTER=${STARTER:-livewire}
 KIT_STACK=${KIT_STACK:-livewire}
@@ -75,6 +80,29 @@ case "$STARTER" in
     *) echo "starter desconhecido: $STARTER (livewire | react | kit)"; exit 2 ;;
 esac
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+
+# A PASTA DA SIMULAÇÃO (ver o uso no cabeçalho): o `rm -rf` da etapa copy só
+# alcança uma pasta que este script criou.
+MARKER=.simulacao-twstec-kit
+if [ -z "$WORK" ]; then
+    if [ "$STEP" != all ]; then echo "a etapa $STEP precisa da pasta da simulação (a mesma das etapas anteriores)"; exit 2; fi
+    WORK=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/kit-publicado.XXXXXXXX")
+    touch "$WORK/$MARKER"
+fi
+case "$WORK" in
+    /*) ;;
+    *) WORK=$(pwd)/$WORK ;;
+esac
+WORK=${WORK%/}
+case "$WORK" in
+    ''|/|/tmp|/home|/root|"${HOME:-/}"|"$ROOT"|"$ROOT"/*)
+        echo "pasta da simulação recusada: ${WORK:-/} (a raiz, uma pasta do sistema, a pessoal ou o monorepo)"; exit 2 ;;
+esac
+if [ -e "$WORK" ] && [ ! -f "$WORK/$MARKER" ]; then
+    echo "pasta da simulação recusada: $WORK já existe e não foi criada por este script (sem $MARKER) — apague-a ou use outra"; exit 2
+fi
+if [ -L "$WORK" ]; then echo "pasta da simulação recusada: $WORK é um link"; exit 2; fi
+echo "pasta da simulação: $WORK"
 # A demonstração (packages/demo) NÃO é publicada: nem empacotada, nem no
 # starter publicado (prepare-composer.php a tira do require-dev).
 PACKAGES="foundation auth accounts uploads admin webhooks installer"
@@ -105,8 +133,10 @@ copy_tree() {
 }
 
 copy() {
-    rm -rf "$WORK"
+    # Só uma pasta com a marca (ver o começo) é apagada.
+    if [ -e "$WORK" ]; then rm -rf "$WORK"; fi
     mkdir -p "$WORK/src" "$WORK/packages" "$WORK/tree"
+    touch "$WORK/$MARKER"
 
     for pkg in $PACKAGES; do
         copy_tree "packages/$pkg" "$WORK/src/$pkg"
