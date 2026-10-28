@@ -326,7 +326,10 @@ final class LandingV2Controller
                 'raw' => [
                     'project' => 'prj_9f2c',
                     'scopes' => 'projects:read,uploads:write',
-                    'api_secret' => 'sk_live_2f9a41c7d0e84b6f',
+                    // Valor OBVIAMENTE fictício: o formato de uma chave de
+                    // verdade (sk_live_ + hex) dispara os detectores de
+                    // segredo. Quem mascara é a CHAVE `api_secret`.
+                    'api_secret' => 'sk_demo_segredo_ficticio',
                 ],
             ],
             [
