@@ -473,6 +473,11 @@ onde pôr chave estrangeira recria a tabela, a migration guarda e devolve
   `UPLOADS_API_ROUTES=false` e `Twstec\Kit\Uploads\Http\UploadRoutes::register()`
   (a autenticação por chave entra sempre).
 
+  **Só chave de conta** (`account.key`): o upload é da **conta**, não de um
+  projeto. Chave vinculada a projetos recebe `403` (com a recusa na trilha,
+  `api_key.account_key_required`), mesmo com `*:*` — como na gestão de chaves
+  e na criação de projetos ([Tenancy](tenancy.md)).
+
   **Idempotência** (`Idempotency-Key`, opcional — ver
   [docs/api.md](api.md#idempotência-idempotency-key)):
   - o reenvio do **mesmo arquivo** com a mesma chave não grava de novo, nem no

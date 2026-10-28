@@ -13,6 +13,8 @@ use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Http\Controllers\AvatarController;
 use Twstec\Kit\Uploads\Models\Upload;
@@ -290,6 +292,22 @@ it('a rota de upload exige credencial e o escopo uploads:create', function (): v
         ->assertJsonPath('error.code', 'forbidden');
 
     assertNothingStored();
+});
+
+it('chave vinculada a projetos não envia arquivo de CONTA (account.key): 403, nada gravado e a recusa na trilha', function (): void {
+    $owner = $this->owner();
+    $projeto = $this->inAccountOf($owner, fn () => Project::query()->create(['name' => 'Loja']));
+    ['api_key' => $key, 'secret_key' => $secret] = $this->keyFor($owner, ['scopes' => ['*:*'], 'project_uuids' => [$projeto->uuid]]);
+
+    $this->post('/api/v1/uploads', ['file' => fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf')], $this->credentials($key, $secret))
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'forbidden');
+
+    assertNothingStored();
+    expect(AuditEvent::query()->where('action', 'api_key.account_key_required')->count())->toBe(1);
+
+    // A chave de conta toda, com o mesmo escopo, envia.
+    $this->postUpload($owner, fixtureArquivoEnviado(fixtureBytesPdf(), 'doc.pdf'))->assertCreated();
 });
 
 // --- Disco sem a entrega declarada e opt-out -----------------------------------

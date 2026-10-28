@@ -587,6 +587,7 @@ organizacionais.
 | Criar projeto | sim (`projects:create`) | **403** — é operação de conta |
 | Listar, criar, vincular chaves | sim (scopes `api-keys:*`) | **403** — uma chave vinculada que pudesse se vincular a "nada" viraria conta toda |
 | Revogar / rotacionar chave | qualquer chave da conta | **só a si mesma** (nenhuma das duas amplia acesso; a rotação herda scopes **e** restrição) |
+| Enviar arquivo (`POST /uploads`, com o `twstec/kit-uploads`) | sim (`uploads:create`) | **403** — o arquivo é da conta, não de um projeto |
 
 O vínculo **limita** o scope, nunca o contrário: a chave vinculada criada com o
 padrão `*:*` continua sem poder fazer operação de conta.
