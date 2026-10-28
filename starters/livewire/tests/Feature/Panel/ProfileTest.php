@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Support\SessionFingerprint;
 use Twstec\Kit\Uploads\Models\Upload;
 
@@ -268,4 +269,31 @@ it('confirmação de ação sensível: senha de transação errada demais bloque
 
     expect($perfil->errors()->first('sensitivePassword'))->toStartWith(rtrim((string) strstr(__('auth.password_confirmation.locked').':', ':', true)));
     Mail::assertNothingQueued();
+});
+
+it('a senha de transação digitada no modal não fica no estado do componente', function () {
+    Mail::fake();
+    $user = User::factory()->create(['transaction_password' => 'TransacaoAtual1', 'transaction_password_set_at' => now()]);
+    $perfil = Livewire::actingAs($user)->test(Profile::class);
+
+    // Errou: sai do estado mesmo assim.
+    $perfil->set('sensitivePassword', 'Errada111')
+        ->call('sendSensitiveCode')
+        ->assertHasErrors('sensitivePassword')
+        ->assertSet('sensitivePassword', '');
+    expect(json_encode($perfil->snapshot))->not->toContain('Errada111');
+
+    // Acertou: o código foi enviado e a senha já não está no snapshot.
+    $perfil->set('sensitivePassword', 'TransacaoAtual1')
+        ->call('sendSensitiveCode')
+        ->assertHasNoErrors()
+        ->assertSet('codeSent', true)
+        ->assertSet('sensitivePassword', '');
+    expect(json_encode($perfil->snapshot))->not->toContain('TransacaoAtual1');
+    Mail::assertQueued(VerificationCodeMail::class);
+
+    // Pedir outro código volta ao passo da senha.
+    $perfil->call('resendSensitiveCode')
+        ->assertSet('codeSent', false)
+        ->assertSet('sensitiveCode', '');
 });
