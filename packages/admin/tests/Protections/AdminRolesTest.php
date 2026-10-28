@@ -451,6 +451,42 @@ it('SEM ESCALADA PELO ALVO: o dono mexe em todos; papel igual pode; o suporte n�
     expect($colega->fresh()->status)->toBe(UserStatus::Blocked);
 });
 
+it('trocar o e-mail pela edição volta a pedir confirmação e renova o remember_token; a senha também renova', function (): void {
+    $alvo = User::fixture(['email' => 'antigo@example.com']);
+    $alvo->forceFill(['remember_token' => 'token-antigo'])->save();
+    $this->actingAs($this->dono);
+
+    // Só o nome: nada muda no acesso.
+    Livewire::test(EditUser::class, ['record' => $alvo->uuid])
+        ->fillForm(['name' => 'Outro Nome'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($alvo->fresh()->email_verified_at)->not->toBeNull()
+        ->and($alvo->fresh()->remember_token)->toBe('token-antigo');
+
+    Livewire::test(EditUser::class, ['record' => $alvo->uuid])
+        ->fillForm(['email' => 'novo@example.com'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $alvo->refresh();
+
+    expect($alvo->email)->toBe('novo@example.com')
+        ->and($alvo->email_verified_at)->toBeNull()
+        ->and($alvo->remember_token)->not->toBe('token-antigo');
+
+    $alvo->forceFill(['remember_token' => 'token-antigo', 'email_verified_at' => now()])->save();
+
+    Livewire::test(EditUser::class, ['record' => $alvo->uuid])
+        ->fillForm(['password' => 'Nova!Senha#2026x', 'password_confirmation' => 'Nova!Senha#2026x'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($alvo->fresh()->remember_token)->not->toBe('token-antigo')
+        ->and($alvo->fresh()->email_verified_at)->not->toBeNull();
+});
+
 it('a flag de acesso no formulário: pede `users.assign_role`, e tirá-la tira também o papel', function (): void {
     $operador = adminWithRole('operations');
     $alvo = adminWithRole('support', ['email' => 'suporte@example.com']);

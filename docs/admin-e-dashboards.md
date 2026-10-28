@@ -200,8 +200,13 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   listagem e no detalhe — só para conta não verificada, com confirmação,
   registrada na trilha de auditoria de ações como
   `user.email_marked_verified` — e filtro **E-mail verificado: sim/não**; guardas de servidor no `UserAdminGuard`: contas demo
-  intocáveis, o admin não se exclui nem se bloqueia e o último admin ativo
-  não perde a flag/acesso; `UserSeeder` idempotente com 40 usuários
+  intocáveis, o admin não se exclui nem se bloqueia, o último admin ativo
+  não perde a flag/acesso e ninguém mexe em quem tem papel acima do seu (ver
+  [Ninguém mexe em quem está acima](#ninguém-mexe-em-quem-está-acima)); trocar
+  o **e-mail** de alguém pela edição volta a conta a "não verificada" (quem
+  confirma é o dono da caixa nova) e trocar o e-mail ou a **senha** renova o
+  `remember_token` (o "lembrar de mim" antigo cai; a troca de senha derruba
+  também as sessões do `/admin` da pessoa); `UserSeeder` idempotente com 40 usuários
   realistas para paginação e filtros nascerem com conteúdo),
   Chaves de API (visão global de todos os tenants + revogar), Projetos,
   **Produtos** (vitrine de CRUD: foto por upload validado ou URL, valor

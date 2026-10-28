@@ -87,8 +87,11 @@ it('EDITAR usuário pelo painel grava user.updated só com o que mudou', functio
     $evento = adminAuditRow('user.updated', $alvo->uuid);
 
     expect($alvo->fresh()->name)->toBe('Carlos Novo')
-        ->and(array_keys($evento->changes))->toEqualCanonicalizing(['name', 'password'])
+        // Senha trocada renova o `remember_token` (o "lembrar de mim" antigo
+        // cai) — registrado, e redigido como a senha.
+        ->and(array_keys($evento->changes))->toEqualCanonicalizing(['name', 'password', 'remember_token'])
         ->and($evento->changes['password'])->toBe(['before' => '[REDACTED]', 'after' => '[REDACTED]'])
+        ->and($evento->changes['remember_token']['after'])->toBe('[REDACTED]')
         ->and($evento->actor_uuid)->toBe($this->operador->uuid)
         ->and(json_encode($evento->getAttributes()))->not->toContain('Outra-Senha456');
 });

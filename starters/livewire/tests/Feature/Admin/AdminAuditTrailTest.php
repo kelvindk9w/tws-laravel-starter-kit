@@ -106,9 +106,12 @@ it('editar usuário grava user.updated só com os campos que mudaram (senha nova
 
     $evento = auditRow('user.updated', $alvo->uuid);
 
-    expect(array_keys($evento->changes))->toEqualCanonicalizing(['name', 'password'])
+    // Senha trocada renova o `remember_token` (o "lembrar de mim" antigo
+    // cai) — registrado, e redigido como a senha.
+    expect(array_keys($evento->changes))->toEqualCanonicalizing(['name', 'password', 'remember_token'])
         ->and($evento->changes['name'])->toBe(['before' => 'C*** A***', 'after' => 'C*** N***'])
         ->and($evento->changes['password'])->toBe(['before' => '[REDACTED]', 'after' => '[REDACTED]'])
+        ->and($evento->changes['remember_token']['after'])->toBe('[REDACTED]')
         ->and(json_encode($evento->getAttributes()))->not->toContain('Outra-Senha456');
 });
 
