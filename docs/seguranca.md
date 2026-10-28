@@ -218,7 +218,7 @@ Os limites, do mais largo ao mais estreito, com orçamentos independentes:
 | `throttle:api` | grupo `api` | **chave de API** (ou tenant); IP em rota sem autenticação | 60/min | `RATE_LIMIT_API`, `RATE_LIMIT_API_BY` |
 | Falhas de autenticação da API — por credencial | `resolve.tenant` | IP (IPv6 por prefixo) + chave pública apresentada | 20/min | `RATE_LIMIT_API_AUTH_FAILURES`, `RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS` |
 | Falhas de autenticação da API — teto do IP | `resolve.tenant` | IP (IPv6 por prefixo); não barra chave já autenticada daquele IP | 100/min | `RATE_LIMIT_API_AUTH_FAILURES_PER_IP`, `RATE_LIMIT_API_AUTH_KNOWN_CLIENT_TTL_SECONDS` |
-| `throttle:sensitive` | login, códigos, recuperação de senha | usuário ou IP | 5/min | `RATE_LIMIT_SENSITIVE` |
+| `throttle:sensitive` | login, códigos, recuperação de senha | usuário; visitante pelo IP (IPv6 por prefixo) | 5/min | `RATE_LIMIT_SENSITIVE`, `RATE_LIMIT_IPV6_PREFIX` |
 
 **Por que a borda é global, e não `throttle:` no grupo `web`.** Middleware de grupo não roda em
 rota inexistente — e o flood de 404 de varredura era metade do problema — nem no `/up`, que é
