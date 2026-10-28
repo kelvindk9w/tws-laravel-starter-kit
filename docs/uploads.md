@@ -50,6 +50,16 @@ Arquivo rejeitado **não toca o disco nem o banco** — só o log. Essas regras
 moram no domínio (serviço e validador) e valem em qualquer aplicação que
 instale o pacote, sem configuração.
 
+**Upload temporário do Livewire** (telas Livewire e o `/admin` do Filament):
+antes do serviço, o arquivo passa pelo upload temporário do Livewire, que tem
+regras próprias. O padrão do pacote aceita arquivo de até 12 MB e
+pré-visualiza SVG, áudio e vídeo. Os starters ajustam em
+`config/livewire.php` (`temporary_file_upload`): o teto passa a ser o maior
+limite por tipo do catálogo (`UPLOADS_IMAGE_MAX_KB`/`UPLOADS_PDF_MAX_KB`) e a
+pré-visualização fica só para imagem raster (`png`, `jpg`, `jpeg`, `webp`) —
+SVG carrega script. O **tipo** não é conferido ali: quem decide é a regra por
+conteúdo (`SafeFile`/serviço), com a mensagem que explica a recusa.
+
 ## Entrega por URL assinada
 
 `Upload::url()` devolve uma **URL temporária assinada** (validade em
