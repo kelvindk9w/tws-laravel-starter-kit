@@ -419,8 +419,9 @@ WEBHOOKS_REQUIRE_HTTPS=false
 WEBHOOKS_ALLOWED_PRIVATE_NETWORKS=172.16.0.0/12
 ```
 
-Em produção as duas são ignoradas (com aviso no log). Sem elas, o spec pula,
-com o motivo. Depois de mudar o código do pacote, reinicie o worker
+Fora dos ambientes de `WEBHOOKS_RELAXED_ENVIRONMENTS` (padrão `local,testing`)
+as duas são ignoradas (com aviso no log). Sem elas, o spec pula, com o
+motivo — antes de liberar uma versão, rode o E2E com elas. Depois de mudar o código do pacote, reinicie o worker
 (`docker compose restart queue react-queue` — no Docker de desenvolvimento do kit o `queue:restart` só PARA o worker, que não tem política de reinício).
 
 O `api-key-scopes.spec.js` cria chaves de API marcando escopos e projetos

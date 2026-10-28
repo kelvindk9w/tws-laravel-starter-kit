@@ -133,6 +133,8 @@ publicação.
   tem espaço ou aspa.
 - **Simulação da instalação** só apaga a pasta que ela mesma criou.
 - **E2E do monorepo** lê o Mailpit por 127.0.0.1.
+- **E2E de webhooks** confere o texto genérico do destino recusado (e que o
+  motivo exato não aparece), como a tela passou a mostrar.
 
 - **Webhooks: endpoint desativado não perde mais eventos.** A desativação
   automática exige as falhas seguidas (`WEBHOOKS_DISABLE_AFTER_FAILURES`) **e**
@@ -198,7 +200,9 @@ publicação.
   variáveis novas, também nos `.env` de exemplo dos starters.
 - `docs/testes.md` e `docs/instalacao.md`: a análise estática no projeto
   criado e o mapa dos módulos opcionais.
-- `README.md`: o `git clone` com o endereço real do repositório;
+- `README.md`: o `git clone` com o endereço real do repositório; as portas
+  do ambiente do monorepo dizem o que ajustar no `.env` de cada starter e
+  como rodar uma segunda cópia (`docker compose -p`);
   `docs/autenticacao.md`, `docs/admin-e-dashboards.md`, `docs/filas.md`,
   `docs/api.md`, `docs/uploads.md`, `docs/tenancy.md`, `docs/producao.md` e
   `docs/seguranca.md` com o comportamento novo.

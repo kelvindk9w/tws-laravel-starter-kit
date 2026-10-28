@@ -186,7 +186,7 @@ e-mail — em dev o link chega no Mailpit (desligável com
 `AUTH_EMAIL_VERIFICATION_REQUIRED=false`; ver
 [Autenticação](docs/autenticacao.md#verificação-de-e-mail-no-cadastro)).
 
-Portas conflitando? Exporte `DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT` ou `DEV_MAILPIT_*` no shell (ou num `.env` na **raiz** do repositório, que é o que o Compose lê para montar o `docker-compose.yml`) e recrie os containers. O `starters/livewire/.env` é o ambiente da aplicação, não do Compose; se trocar `DB_DATABASE` ou `DB_USERNAME` nele, ponha o mesmo valor no `.env` da raiz. As senhas (`DB_PASSWORD`, `REDIS_PASSWORD`) vêm só do `.env` da raiz: o Compose as entrega aos containers dos dois starters, por cima das do `.env` de cada um.
+Portas conflitando? Exporte `DEV_WEB_PORT`, `DEV_REACT_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT` ou `DEV_MAILPIT_*` no shell (ou num `.env` na **raiz** do repositório, que é o que o Compose lê para montar o `docker-compose.yml`) e recrie os containers. Com outra porta do site, ajuste também, no `.env` de cada starter, o `APP_URL` e o `PLATFORM_OFFICIAL_URL` (e o `DEV_MAIL_PORT`, com outra porta do Mailpit) — o E2E lê o site e o Mailpit de lá. Para rodar uma segunda cópia do ambiente ao lado da primeira, use outro nome de projeto (`docker compose -p <nome> ...`) em todos os comandos. O `starters/livewire/.env` é o ambiente da aplicação, não do Compose; se trocar `DB_DATABASE` ou `DB_USERNAME` nele, ponha o mesmo valor no `.env` da raiz. As senhas (`DB_PASSWORD`, `REDIS_PASSWORD`) vêm só do `.env` da raiz: o Compose as entrega aos containers dos dois starters, por cima das do `.env` de cada um.
 
 ## Credenciais demo
 
