@@ -515,6 +515,28 @@ falhas:
   lenta da rota), a repetição retoma a chave **com segurança** e executa uma
   vez.
 
+**Execução LENTA não é execução morta.** A retomada depois de
+`IDEMPOTENCY_LOCK_SECONDS` não sabe se a primeira execução morreu ou só está
+demorando. Se ela ainda estiver rodando, as duas passam a rodar ao mesmo
+tempo:
+
+- quando a primeira termina, a conclusão dela é recusada (a chave já tem
+  outro dono) e a transação dela é **desfeita** — no banco, só a segunda
+  fica;
+- se a primeira **termina antes** de a retomada gravar (inclusive quando o
+  UPDATE da retomada espera a trava da linha e só roda depois do commit
+  dela), a retomada perde: ela só vale sobre a linha que **continua** "em
+  processamento" com o prazo vencido, e a repetição recebe o replay da
+  resposta da primeira. Nunca uma segunda execução sobre uma chave já
+  concluída;
+- o que **não** volta atrás é efeito fora do banco. Por isso a retomada do
+  modo transacional só é segura para rota cujo efeito é **todo no banco**
+  (as condições abaixo). Rota que chama um provedor externo (cobrança,
+  transferência, envio) não deve usar `transactional` com retomada: a
+  chamada da primeira execução aconteceu e a segunda a repete. Nesses casos,
+  use o modo comum com `IDEMPOTENCY_ABANDONED_TAKEOVER_SECONDS=0` e a
+  idempotência do próprio provedor (a mesma chave repassada a ele).
+
 Condições para usar:
 
 - o efeito da rota é **todo no banco**, na **mesma conexão** da tabela de
