@@ -52,9 +52,16 @@ return [
 
     // Bloqueio por tentativas de login (throttle + contador).
     'login' => [
-        // Tentativas consecutivas antes do bloqueio.
+        // Tentativas erradas do MESMO cliente (e-mail + IP; IPv6 pelo
+        // prefixo) antes do bloqueio.
         'max_attempts' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS', 5),
-        // Duração do bloqueio (decay do rate limiter), em minutos.
+        // Tentativas erradas contra a MESMA conta, somando todas as origens,
+        // antes do bloqueio — o teto de quem testa senhas de uma conta a
+        // partir de muitos IPs. Mais alto que o de cima: quem conhece o
+        // e-mail consegue bloquear a conta por uma janela; a redefinição de
+        // senha por e-mail zera este contador.
+        'max_attempts_per_account' => (int) env('AUTH_LOGIN_MAX_ATTEMPTS_PER_ACCOUNT', 20),
+        // Duração do bloqueio (janela dos dois contadores acima), em minutos.
         'lockout_minutes' => (int) env('AUTH_LOGIN_LOCKOUT_MINUTES', 15),
     ],
 

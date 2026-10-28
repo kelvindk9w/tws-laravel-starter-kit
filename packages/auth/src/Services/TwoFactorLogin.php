@@ -17,6 +17,7 @@ use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 use Twstec\Kit\Foundation\Audit\AuditScope;
 use Twstec\Kit\Foundation\Audit\AuditTrail;
 use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
+use Twstec\Kit\Foundation\Security\ClientBucket;
 
 /**
  * A REGRA da verificação em duas etapas no login, em um lugar só.
@@ -46,8 +47,11 @@ use Twstec\Kit\Foundation\Audit\Enums\AuditContext;
  *   1. por CÓDIGO (AUTH_VERIFICATION_CODE_MAX_ATTEMPTS): o código morre;
  *   2. por CONTA (AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_ACCOUNT): sem ele, bastaria
  *      pedir código novo a cada N erros e continuar tentando;
- *   3. por IP (AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP): a mesma origem tentando
- *      várias contas.
+ *   3. por ORIGEM (AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP): a mesma origem
+ *      tentando várias contas. A origem é o balde do cliente (ClientBucket:
+ *      IPv4 exato, IPv6 pelo prefixo) — trocar de endereço dentro do próprio
+ *      /64 não dá orçamento novo. Quem chama passa o IP como veio; o balde
+ *      é calculado aqui, para valer igual no painel e no /admin.
  * As duas últimas somam dentro da janela AUTH_TWO_FACTOR_LOCKOUT_MINUTES.
  *
  * CONTAS PROTEGIDAS (Twstec\Kit\Auth\Contracts\AccountProtection): enquanto
@@ -329,7 +333,7 @@ final class TwoFactorLogin
 
     private function ipKey(string $ip): string
     {
-        return 'two-factor-login|ip|'.$ip;
+        return 'two-factor-login|ip|'.ClientBucket::forAddress($ip);
     }
 
     private function maxAttemptsPerAccount(): int

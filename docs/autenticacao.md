@@ -51,13 +51,38 @@ era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
 |---|---|---|
 | Registro | `GET/POST /register` | senha forte via config (`AUTH_PASSWORD_MIN`); sessão regenerada; com a verificação ligada, envia o e-mail e vai à tela de aviso; desligável — ver [Cadastro público](#cadastro-público-aberto-ou-fechado) |
 | Verificação de e-mail | `GET /email/verify`, `POST /email/verification-notification`, `GET /email/verify/{uuid}/{hash}` | ver [Verificação de e-mail](#verificação-de-e-mail-no-cadastro) |
-| Login | `GET/POST /login` | **bloqueio por tentativas** (RateLimiter, e-mail+IP — `AUTH_LOGIN_MAX_ATTEMPTS`/`AUTH_LOGIN_LOCKOUT_MINUTES`); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
+| Login | `GET/POST /login` | **bloqueio por tentativas** em duas camadas — ver [Bloqueio do login](#bloqueio-do-login-por-tentativas); mensagem única anti-enumeração; `session()->regenerate()` (fixation) |
 | Segundo fator do login | `GET/POST /two-factor-challenge`, `POST /two-factor-challenge/resend`, `POST /two-factor-challenge/cancel` | só para quem ligou; ver [Verificação em duas etapas](#verificação-em-duas-etapas-no-login-opcional) |
 | Configuração do segundo fator obrigatório | `GET /two-factor/setup`, `POST /two-factor/setup/code`, `POST /two-factor/setup` | só com `AUTH_TWO_FACTOR_REQUIRED`; ver [Segundo fator obrigatório](#segundo-fator-obrigatório) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
 | Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
 | Ação sensível | `POST /sensitive-actions/code` + `POST /sensitive-actions/confirm` | ver abaixo |
+
+### Bloqueio do login por tentativas
+
+Duas camadas, as duas no `AttemptLogin` (valem para qualquer front que entre
+pelo pacote; o login do `/admin` é o do Filament, com o limite próprio dele),
+numa janela de `AUTH_LOGIN_LOCKOUT_MINUTES` (padrão 15):
+
+| Camada | Chave | Limite | Para quê |
+|---|---|---|---|
+| Por cliente | e-mail normalizado + cliente (IPv4 exato; IPv6 pelo prefixo, `RATE_LIMIT_IPV6_PREFIX`, padrão /64) | `AUTH_LOGIN_MAX_ATTEMPTS` (padrão 5) | quem erra a própria senha, ou um atacante numa origem só |
+| Por conta | só o e-mail normalizado, somando todas as origens | `AUTH_LOGIN_MAX_ATTEMPTS_PER_ACCOUNT` (padrão 20) | ataque distribuído (botnet, rotação de endereços) contra **uma** conta |
+
+O cliente IPv6 conta pelo prefixo porque um único host recebe um /64 inteiro
+e trocaria de endereço a cada tentativa para ganhar orçamento novo. Durante o
+bloqueio, nem a senha certa entra; a mensagem é a mesma nas duas camadas, e
+e-mail inexistente bloqueia igual (sem enumeração). O acerto zera os dois
+contadores.
+
+**O preço do limite por conta:** quem conhece o e-mail de alguém consegue
+mantê-lo bloqueado, janela após janela, errando a senha de propósito. É o
+custo de não deixar uma botnet testar senhas sem teto. Por isso o limite por
+conta é mais alto que o por cliente, o bloqueio é sempre temporário e a
+**redefinição de senha por e-mail zera o contador da conta**: a dona da conta
+entra pelo "esqueci minha senha", que exige o e-mail dela. Quem preferir outro
+equilíbrio ajusta `AUTH_LOGIN_MAX_ATTEMPTS_PER_ACCOUNT`.
 
 Todos os envios sensíveis passam por `throttle:sensitive` (5/min padrão,
 `config/security.php`) além dos limites de negócio próprios. O limite vem com o
@@ -262,8 +287,9 @@ conclui login, e vice-versa):
   (`AUTH_VERIFICATION_CODE_MAX_ATTEMPTS` — a tentativa é reservada no banco
   antes da conferência, então nem requisições simultâneas passam do limite),
   por **conta** (`AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_ACCOUNT`, padrão 10 — sem
-  ele bastaria pedir código novo e seguir tentando) e por **IP**
-  (`AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP`, padrão 30), as duas últimas numa
+  ele bastaria pedir código novo e seguir tentando) e por **origem**
+  (`AUTH_TWO_FACTOR_MAX_ATTEMPTS_PER_IP`, padrão 30 — IPv4 exato, IPv6 pelo
+  prefixo, como no login), as duas últimas numa
   janela de `AUTH_TWO_FACTOR_LOCKOUT_MINUTES` (padrão 15). Ao atingir o
   limite, o estado intermediário acaba, o código morre e a senha certa não
   reabre o desafio até a janela passar. As rotas ainda passam pelo
@@ -522,7 +548,7 @@ pacote, com as próprias telas e respostas.
   `sensitive.token` (um alias de mesmo nome declarado pelo aplicativo
   prevalece);
 - o `throttle:sensitive` de cada envio, declarado nos próprios controllers;
-- os limites que moram nas regras: bloqueio de login por e-mail+IP
+- os limites que moram nas regras: bloqueio de login por cliente e por conta
   (`AttemptLogin`), limites do código do segundo fator por código, conta e IP
   (`TwoFactorLogin`), intervalos de reenvio;
 - as migrations (com os nomes de sempre), a configuração padrão das chaves do

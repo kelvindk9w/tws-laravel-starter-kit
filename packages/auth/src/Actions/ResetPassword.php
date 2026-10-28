@@ -6,6 +6,7 @@ namespace Twstec\Kit\Auth\Actions;
 
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 
@@ -32,6 +33,11 @@ final class ResetPassword
                     'password' => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
+
+                // Quem provou ser dona do e-mail sai do bloqueio por conta do
+                // login (AttemptLogin): sem isso, um terceiro que conhece o
+                // e-mail manteria a conta bloqueada janela após janela.
+                RateLimiter::clear(AttemptLogin::accountThrottleKey($user->getEmailForPasswordReset()));
 
                 event(new PasswordReset($user));
             },
