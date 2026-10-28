@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-03, com a versão **2.0.0-beta.15** publicada.
+> Atualizado em 2026-10-28, com a versão **2.0.0-beta.16** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -80,7 +80,10 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    o próprio controle — resolvido na 2.0.0-beta.14 com a `Idempotency-Key`.
    Depois, avisar outros sistemas (#24): cada projeto escreveria o próprio
    envio de webhook, com os erros de segurança de sempre — resolvido na
-   2.0.0-beta.15 com o módulo de webhooks.
+   2.0.0-beta.15 com o módulo de webhooks. Antes da divulgação como código
+   aberto, uma revisão de segurança de todos os pacotes (login, sessões,
+   `/admin`, idempotência, uploads, convites, ambiente de desenvolvimento,
+   instalador e produção) — resolvida na 2.0.0-beta.16.
    Falta usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
