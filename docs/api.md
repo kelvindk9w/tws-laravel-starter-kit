@@ -181,7 +181,8 @@ os da [idempotência](#idempotência-idempotency-key) — `400
 idempotency_key_missing`, `400 idempotency_key_invalid`, `409
 idempotency_request_in_progress` e `422 idempotency_key_reused` — e os da
 [escalada de privilégio](#sem-escalada-de-privilégio-pela-api) — `403
-api_key_scope_exceeded` e `403 api_key_projects_exceeded`.
+api_key_scope_exceeded`, `403 api_key_projects_exceeded` e `403
+api_key_expiry_exceeded`.
 
 Exemplo de 422:
 
@@ -253,10 +254,17 @@ passa por ela), não no controller:
 - **Projetos:** chave autenticada restrita a projetos só cria ou edita chave
   restrita a projetos dela (sem projetos no pedido, a nova herda os dela) —
   defesa em profundidade: hoje essas rotas já exigem chave de conta toda.
+- **Validade:** chave autenticada com validade (`expires_at`, ou o fim da
+  carência de uma rotação, se vier antes) só cria chave que vença **até** a
+  mesma data. `expires_at` omitido herda a validade dela (nunca "sem
+  validade" por omissão); `expires_at` depois dela é recusado. Na rotação, a
+  nova herda a validade da antiga: rotacionar chave sem validade (ou que vence
+  depois) com uma chave que vence é recusado.
 - **Rotação:** rotacionar chave mais ampla que a autenticada é recusado (a
   secreta nova sairia para quem não a podia ter); a si mesma, sempre pode.
-- **Recusa:** `403` com `api_key_scope_exceeded` (escopo) ou
-  `api_key_projects_exceeded` (projetos), nada criado ou mudado, e a
+- **Recusa:** `403` com `api_key_scope_exceeded` (escopo),
+  `api_key_projects_exceeded` (projetos) ou `api_key_expiry_exceeded`
+  (validade), nada criado ou mudado, e a
   tentativa na trilha (`api_key.privilege_exceeded`, contexto `api`,
   `denied`, a chave autenticada como alvo).
 - **Pelo painel** (sessão), quem decide é o papel da pessoa na conta (dono e
