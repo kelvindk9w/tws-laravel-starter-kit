@@ -46,6 +46,12 @@ Para produção real:
 > **Dados NUNCA se perdem ao reiniciar/recriar containers**: banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
 
+**Ordem de subida e healthchecks:** o Redis (`redis-cli ping`, com a senha), o
+app (o php-fpm aceitando conexão na porta 9000) e o nginx (um endereço interno,
+`127.0.0.1:8081/nginx-health`, que não é publicado) têm healthcheck; o app só
+sobe com o Redis e o PostgreSQL prontos e as migrations concluídas, e o nginx,
+o Horizon e o scheduler só sobem com o app pronto.
+
 ### Arquivos estáticos e o disco `public`
 
 O nginx de produção não tem o código: ele serve o `public/` que o container
