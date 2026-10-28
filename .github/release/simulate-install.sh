@@ -442,8 +442,17 @@ image() {
         set -e
         test -f /etc/nginx/certs/server.crt
         test -f /etc/nginx/certs/server.key
-        grep -q "listen 443" /etc/nginx/conf.d/default.conf
+        grep -q "listen 443" /etc/nginx/templates/default.conf.template
+        grep -q "return 444" /etc/nginx/templates/default.conf.template
+        test -x /docker-entrypoint.d/05-server-names.envsh
+        test ! -e /etc/nginx/conf.d/default.conf
     '
+    # Ao subir, a configuração é montada com os nomes do site (o host da
+    # APP_URL) e é válida; sem nome válido, o container não sobe.
+    docker run --rm --add-host app:127.0.0.1 -e APP_URL=https://exemplo.test "$tag-nginx:sim" nginx -t
+    if docker run --rm --add-host app:127.0.0.1 -e APP_URL='https://exemplo.test;x' "$tag-nginx:sim" nginx -t >/dev/null 2>&1; then
+        echo 'o nginx de produção subiu com um nome de site inválido'; exit 1
+    fi
 
     if [ "${KEEP_IMAGES:-0}" != 1 ]; then
         docker rmi "$tag-app:sim" "$tag-nginx:sim" >/dev/null

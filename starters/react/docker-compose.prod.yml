@@ -170,6 +170,13 @@ services:
             - app_public:/var/www/html/public:ro
         # Para TLS real, descomentar e apontar para seus certificados:
         #   - ./docker/nginx/certs:/etc/nginx/certs:ro
+        # Os NOMES DO SITE: só eles são atendidos (host desconhecido: 444 / TLS
+        # recusado), e o redirect para HTTPS vai para eles — ver o cabeçalho do
+        # docker/nginx/prod.conf. Sem PROD_SERVER_NAMES (nomes separados por
+        # espaço, ex.: o domínio com e sem www), o host da PROD_APP_URL.
+        environment:
+            APP_URL: ${PROD_APP_URL:-https://localhost}
+            NGINX_SERVER_NAMES: ${PROD_SERVER_NAMES:-}
         depends_on:
             - app
         restart: unless-stopped

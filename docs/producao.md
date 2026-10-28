@@ -25,6 +25,11 @@ Para produção real:
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
 3. TLS real: monte seus certificados (`server.crt`/`server.key`) em
    `/etc/nginx/certs` — ver comentário no `docker-compose.prod.yml`.
+   O nginx só atende os **nomes do site**: o host da `PROD_APP_URL` ou, com
+   mais de um (o domínio com e sem `www`), os de `PROD_SERVER_NAMES`
+   (separados por espaço). Outro `Host` (o IP do servidor, um domínio alheio)
+   leva 444 no HTTP e o TLS recusado no HTTPS — ver
+   [Segurança](seguranca.md#na-borda-nginx-só-o-indexphp-executa-e-nenhuma-versão-é-anunciada).
 4. **Não rode `db:seed`.** Todo seeder do kit cria dado de demonstração, e em
    `APP_ENV=production` eles se recusam a rodar (ver
    [Superfície de demonstração: fail-closed em produção](demo.md#superfície-de-demonstração-fail-closed-em-produção)).

@@ -339,6 +339,14 @@ fazem parte da segurança:
   (`docker/php/php-dev.ini`, `php-prod.ini`) — sem `X-Powered-By: PHP/8.4.x`. O nginx ainda
   descarta o `X-Powered-By` que viesse do php-fpm (`fastcgi_hide_header`), para o caso de alguém
   reverter o ini. Divulgar a versão exata só encurta, para quem varre, a busca pelo CVE certo.
+- **Na produção, só os nomes do site são atendidos.** O `docker/nginx/prod.conf` é um modelo: ao
+  subir, o nginx recebe os nomes do site (`PROD_SERVER_NAMES`, ou o host da `PROD_APP_URL`), e
+  qualquer outro `Host` — o IP do servidor, um domínio alheio apontado para cá, um `Host` forjado —
+  cai nos servidores padrão: **444** no HTTP (a conexão fecha sem resposta) e o **handshake TLS
+  recusado** no HTTPS. O redirect 80→443 vai para o nome que o cliente pediu, que ali é sempre um
+  dos declarados — nunca um `Host` inventado. O `TrustHosts` do Laravel (abaixo) continua como
+  segunda barreira. Consequência para sondas externas: batem no site **pelo nome dele** (ou direto
+  no container `app`); `Host: localhost` passando pelo nginx de produção não é atendido.
 
 Estas regras vivem na imagem, não no volume: depois de mexer nos `.conf` ou nos `.ini`, recrie os
 containers (`export UID GID=$(id -g); docker compose up -d --build`) — um `restart` sozinho não
