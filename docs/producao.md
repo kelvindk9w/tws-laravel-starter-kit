@@ -41,6 +41,25 @@ Para produção real:
 > **Dados NUNCA se perdem ao reiniciar/recriar containers**: banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
 
+### Arquivos estáticos e o disco `public`
+
+O nginx de produção não tem o código: ele serve o `public/` que o container
+`app` **sincroniza** no volume `app_public` a cada subida
+(`docker/php/entrypoint-prod.sh`). É uma sincronia, não uma cópia por cima: o
+que a versão nova não tem mais (os assets do build anterior, com outro hash)
+sai do volume — primeiro entra o novo, depois sai o que sobrou, para o site
+nunca ficar sem assets no meio do deploy —, e uma falha aqui **impede o app de
+subir**, em vez de deixar o site com os arquivos da versão anterior.
+
+**O disco `public` do Laravel (`storage/app/public`) não é servido pelo nginx
+nesta stack.** O link `public/storage` vai junto para o volume, mas aponta para
+`/var/www/html/storage/app/public`, que só existe no container `app` (e, sem
+volume, não sobrevive à recriação). Os uploads do kit não dependem dele (ficam
+no disco privado e saem por URL assinada da aplicação). Para servir arquivos
+do disco `public`: um armazenamento externo (S3 e afins, com a URL pública
+dele) ou um volume nomeado montado em `/var/www/html/storage/app/public` no
+`app` **e** no `nginx` (no nginx, só leitura).
+
 ## A imagem de produção: como ela é construída e o que vai dentro
 
 `docker/php/Dockerfile` (target `prod`) e `docker/nginx/Dockerfile` (target

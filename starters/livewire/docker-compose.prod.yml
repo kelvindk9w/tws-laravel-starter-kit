@@ -143,7 +143,7 @@ services:
       # container — chave gerada na subida é diferente em cada container e não
       # sobrevive ao restart, o que corrompe em silêncio tudo que depende dela.
     volumes:
-      # Compartilha o public/ com o nginx (entrypoint copia na subida).
+      # Compartilha o public/ com o nginx (o entrypoint sincroniza na subida).
       - app_public:/app-public
     depends_on:
       postgres:
