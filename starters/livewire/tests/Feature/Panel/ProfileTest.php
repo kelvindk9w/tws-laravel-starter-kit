@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Twstec\Kit\Auth\Support\SessionFingerprint;
 use Twstec\Kit\Uploads\Models\Upload;
 
 // =============================================================================
@@ -58,6 +59,34 @@ it('troca a senha de login exigindo a senha atual', function () {
         ->assertHasNoErrors();
 
     expect(Hash::check('NovaSenhaForte456', (string) $user->fresh()->password))->toBeTrue();
+});
+
+it('trocar a senha mantém esta sessão e derruba a de outro aparelho e o "lembrar de mim"', function () {
+    $user = User::factory()->create(['password' => 'SenhaAtual123']);
+
+    $this->post('/login', ['email' => $user->email, 'password' => 'SenhaAtual123'])->assertRedirect();
+    $this->get('/dashboard')->assertOk();
+    // O que uma sessão aberta em outro aparelho guarda (mesma senha de antes).
+    $outroAparelho = session(SessionFingerprint::SESSION_KEY);
+    $lembrarDeMim = $user->fresh()->getRememberToken();
+
+    Livewire::test(Profile::class)
+        ->set('currentPassword', 'SenhaAtual123')
+        ->set('password', 'NovaSenhaForte456')
+        ->set('passwordConfirmation', 'NovaSenhaForte456')
+        ->call('updatePassword')
+        ->assertHasNoErrors();
+
+    $this->get('/dashboard')->assertOk();
+    $this->assertAuthenticatedAs($user);
+    expect($user->fresh()->getRememberToken())->not->toBe($lembrarDeMim)->not->toBeEmpty();
+
+    session()->put(SessionFingerprint::SESSION_KEY, $outroAparelho);
+
+    $this->get('/dashboard')
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors(['email' => __('auth.session_ended')]);
+    $this->assertGuest();
 });
 
 it('rejeita troca de senha com a senha atual errada', function () {

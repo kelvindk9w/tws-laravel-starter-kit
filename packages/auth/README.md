@@ -112,6 +112,13 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   depois do `SetLocale`, para a recusa sair no idioma da conta). Conta
   bloqueada ou pendente com sessão aberta perde a sessão na requisição
   seguinte.
+- **Outras sessões encerradas na troca de credencial:** trocar a senha de
+  login (redefinição, perfil, `/admin`) ou ligar/desligar o segundo fator
+  renova o `remember_token` e derruba, na requisição seguinte, toda sessão
+  aberta com o estado anterior (`EndsOtherSessions` no model,
+  `EnsureSessionIsCurrent` no grupo `web`, logo depois do status da conta). A
+  sessão de quem fez a mudança continua aberta. Funciona com qualquer driver
+  de sessão.
 - **Segundo fator obrigatório** (`AUTH_TWO_FACTOR_REQUIRED` = `none`,
   `admins` ou `all`): `EnsureTwoFactorIsConfigured`, logo depois do status da
   conta, leva quem ainda não ligou à tela `two-factor.setup` antes de
@@ -131,8 +138,9 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   próprio limite (`HasMiddleware`). Uma rota que aponte para ele já nasce
   limitada; o limitador `sensitive` é do foundation.
 - **Limites dentro das regras** (valem com qualquer controller ou front):
-  bloqueio de login por e-mail+IP (`auth.login`), segundo fator por código,
-  conta e IP (`auth.two_factor`, `auth.verification`), intervalos de reenvio.
+  bloqueio de login por cliente (IPv6 pelo prefixo) e por conta
+  (`auth.login`), segundo fator por código, conta e origem
+  (`auth.two_factor`, `auth.verification`), intervalos de reenvio.
 - **Configuração padrão** das chaves do kit em `config('auth')`
   (`password_rules`, `login`, `transaction_password`, `verification`,
   `email_verification`, `sensitive_action`, `two_factor`, `registration`,
@@ -150,8 +158,9 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   `/mail-preview` do foundation.
 
 **Opt-out** (só explícito): `AUTH_WEB_PROTECTIONS=false`
-(`auth.web_protections.enabled`) não instala o middleware de status nem os
-dois aliases — e o pacote grava um aviso no log a cada boot. Só é seguro se a
+(`auth.web_protections.enabled`) não instala os middlewares do grupo `web`
+(status da conta, sessão com credencial antiga, segundo fator obrigatório)
+nem os dois aliases — e o pacote grava um aviso no log a cada boot. Só é seguro se a
 aplicação instalar as mesmas proteções por conta própria.
 
 ## O que o front liga

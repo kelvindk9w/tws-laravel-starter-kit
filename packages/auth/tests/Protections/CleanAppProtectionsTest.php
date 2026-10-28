@@ -10,6 +10,7 @@ use Twstec\Kit\Auth\Enums\UserStatus;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Http\Middleware\EnsureAccountIsActive;
 use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
+use Twstec\Kit\Auth\Http\Middleware\EnsureSessionIsCurrent;
 use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Providers\AuthServiceProvider;
@@ -109,11 +110,12 @@ it('conta bloqueada com sessão aberta perde a sessão na requisição seguinte 
 
     $this->assertGuest();
 
-    // E está no fim do grupo web, onde o pacote o pôs — seguido só pela
-    // outra barreira do pacote (segundo fator obrigatório), que roda depois
-    // dele: conta inativa sai antes.
+    // E está no fim do grupo web, onde o pacote o pôs — seguido só pelas
+    // outras barreiras do pacote (sessão com credencial que já mudou,
+    // segundo fator obrigatório), que rodam depois dele: conta inativa sai
+    // antes.
     $web = $this->app['router']->getMiddlewareGroups()['web'];
-    expect(array_slice($web, -2))->toBe([EnsureAccountIsActive::class, EnsureTwoFactorIsConfigured::class]);
+    expect(array_slice($web, -3))->toBe([EnsureAccountIsActive::class, EnsureSessionIsCurrent::class, EnsureTwoFactorIsConfigured::class]);
 });
 
 it('segundo fator ligado: a senha certa NÃO autentica — abre o desafio e manda o código', function (): void {

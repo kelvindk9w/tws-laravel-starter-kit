@@ -19,6 +19,7 @@ namespace Twstec\Kit\Auth\Models\Concerns;
  */
 trait KitAuthenticatable
 {
+    use EndsOtherSessions;
     use HasAccountStatus;
     use HasPreferredLocale;
     use HasTransactionPassword;

@@ -14,6 +14,7 @@ return [
     'account_inactive' => 'This account is not active. Please contact support.',
     'registered' => 'Account created successfully. Welcome!',
     'logged_out' => 'Signed out successfully.',
+    'session_ended' => 'Your session was ended because the password or two-step verification of the account changed. Please sign in again.',
     'password_policy' => [
         'min' => 'at least :min characters',
         'with' => ':min, with :rules',

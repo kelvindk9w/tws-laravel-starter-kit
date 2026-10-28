@@ -55,7 +55,7 @@ era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
 | Segundo fator do login | `GET/POST /two-factor-challenge`, `POST /two-factor-challenge/resend`, `POST /two-factor-challenge/cancel` | só para quem ligou; ver [Verificação em duas etapas](#verificação-em-duas-etapas-no-login-opcional) |
 | Configuração do segundo fator obrigatório | `GET /two-factor/setup`, `POST /two-factor/setup/code`, `POST /two-factor/setup` | só com `AUTH_TWO_FACTOR_REQUIRED`; ver [Segundo fator obrigatório](#segundo-fator-obrigatório) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
-| Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; `remember_token` renovado no reset |
+| Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; as outras sessões caem e o `remember_token` é renovado — ver [Sessão e CSRF](#sessão-e-csrf) |
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
 | Ação sensível | `POST /sensitive-actions/code` + `POST /sensitive-actions/confirm` | ver abaixo |
 
@@ -107,7 +107,7 @@ com implementação padrão registrada no container pelo
 | Logout | `Logout` (invalida a sessão, renova o CSRF) | `LogoutResponse` |
 | Cadastro | `RegisterUser` (conta, idioma, sessão regenerada, e-mail de verificação) | `RegisterResponse` |
 | Link de redefinição | `SendPasswordResetLink` | `PasswordResetLinkSentResponse` |
-| Redefinição | `ResetPassword` (senha nova, `remember_token` renovado, evento `PasswordReset`) | `PasswordResetResponse`, `FailedPasswordResetResponse` |
+| Redefinição | `ResetPassword` (senha nova, outras sessões encerradas, `remember_token` renovado, bloqueio do login por conta zerado, evento `PasswordReset`) | `PasswordResetResponse`, `FailedPasswordResetResponse` |
 | Verificação de e-mail | `VerifyEmail`, `ResendEmailVerification` | `VerifyEmailResponse`, `EmailVerificationResponse` |
 
 As Actions devolvem um **resultado** (`LoginOutcome`, `TwoFactorChallengeResult`,
@@ -526,6 +526,29 @@ Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no e
 - Cookies de sessão: `HttpOnly` + `SameSite=Lax` sempre; `Secure` por padrão em
   produção (`config/session.php` — `SESSION_SECURE_COOKIE`, default
   `APP_ENV=production`). Sessão regenerada no login, invalidada no logout.
+- **Trocar a senha de login ou ligar/desligar o segundo fator encerra as outras
+  sessões da conta** — por qualquer caminho: redefinição por e-mail, perfil do
+  painel, `/admin`, comando. A regra mora no model (trait
+  `EndsOtherSessions`, parte da `KitAuthenticatable`) e no grupo `web`
+  (`EnsureSessionIsCurrent`, instalado pelo pacote):
+  - cada sessão autenticada guarda uma impressão (HMAC com a `APP_KEY`) do
+    hash da senha e do estado do segundo fator (`SessionFingerprint`); a
+    sessão cuja impressão não bate mais com a conta é encerrada na requisição
+    seguinte (página, formulário ou ação Livewire), vai ao login com
+    `auth.session_ended` (JSON: 401 com a mesma mensagem);
+  - o `remember_token` é renovado na mesma gravação: nenhum cookie "lembrar
+    de mim" emitido antes volta a abrir sessão — nem o do aparelho que fez a
+    troca, que segue logado pela sessão atual até ela expirar;
+  - a sessão de **quem fez a mudança continua aberta** (a impressão dela é
+    atualizada na hora, assim como o hash de senha que o `AuthenticateSession`
+    do `/admin` guarda);
+  - funciona com qualquer driver de sessão (`redis`, `database`, `file`):
+    ninguém precisa listar as sessões da conta, cada uma se confere sozinha.
+    As sessões encerradas continuam no armazenamento até expirar, mas não
+    autenticam mais.
+  - O `/admin` (Filament) tem pilha própria, com o `AuthenticateSession` do
+    framework: lá, a troca de **senha** derruba as outras sessões; ligar o
+    segundo fator, ainda não (o `EnsureSessionIsCurrent` é do grupo `web`).
 - CSRF nativo do grupo `web` (Laravel 13: `PreventRequestForgery` — token +
   validação de origem `Sec-Fetch-Site`/`Origin`), testado com e sem token.
 - Credenciais nunca aparecem em logs: `password`, `transaction_password`, `code`
@@ -543,7 +566,9 @@ pacote, com as próprias telas e respostas.
 - o status da conta a cada requisição do grupo `web` (`EnsureAccountIsActive`,
   anexado ao fim do grupo — no starter, logo depois do `SetLocale`) e, logo
   depois dele, o segundo fator obrigatório (`EnsureTwoFactorIsConfigured`,
-  que não faz nada com `AUTH_TWO_FACTOR_REQUIRED=none`);
+  que não faz nada com `AUTH_TWO_FACTOR_REQUIRED=none`); entre os dois, a
+  sessão aberta com uma senha ou um estado do segundo fator que já mudou
+  (`EnsureSessionIsCurrent` — ver [Sessão e CSRF](#sessão-e-csrf));
 - os aliases `verified` (a regra do kit, que substitui o do framework) e
   `sensitive.token` (um alias de mesmo nome declarado pelo aplicativo
   prevalece);
@@ -554,15 +579,16 @@ pacote, com as próprias telas e respostas.
 - as migrations (com os nomes de sempre), a configuração padrão das chaves do
   kit em `config('auth')` e as traduções do domínio.
 
-Opt-out só explícito: `AUTH_WEB_PROTECTIONS=false` desliga o middleware de
-status e os dois aliases, e o pacote grava um aviso no log a cada boot.
+Opt-out só explícito: `AUTH_WEB_PROTECTIONS=false` desliga os middlewares do
+grupo `web` (status, sessão com credencial antiga, segundo fator obrigatório)
+e os dois aliases, e o pacote grava um aviso no log a cada boot.
 
 **O que um front novo faz para ligar o pacote:**
 
 1. **Model de usuário:** o seu `App\Models\User` estende o `User` do framework,
    implementa `Twstec\Kit\Auth\Contracts\AuthUser` (e `HasLocalePreference`)
    e usa a trait `Twstec\Kit\Auth\Models\Concerns\KitAuthenticatable` (ou as
-   partes dela: `HasAccountStatus`, `HasTransactionPassword`, `HasTwoFactor`,
+   partes dela: `EndsOtherSessions`, `HasAccountStatus`, `HasTransactionPassword`, `HasTwoFactor`,
    `ProtectsAccounts`, `VerifiesEmail`, `SendsPasswordResetNotification`,
    `HasPreferredLocale`). Configure-o em `auth.providers.users.model`. A tabela
    `users` é a do esqueleto Laravel; as colunas do kit vêm das migrations do

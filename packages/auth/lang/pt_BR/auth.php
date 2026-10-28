@@ -14,6 +14,7 @@ return [
     'account_inactive' => 'Esta conta não está ativa. Fale com o suporte.',
     'registered' => 'Conta criada com sucesso. Bem-vindo(a)!',
     'logged_out' => 'Sessão encerrada com sucesso.',
+    'session_ended' => 'Sua sessão foi encerrada porque a senha ou a verificação em duas etapas da conta mudou. Entre novamente.',
     'password_policy' => [
         'min' => 'mínimo de :min caracteres',
         'with' => ':min, com :rules',

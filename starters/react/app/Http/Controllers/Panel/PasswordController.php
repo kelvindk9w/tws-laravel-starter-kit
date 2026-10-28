@@ -18,6 +18,10 @@ use Twstec\Kit\Auth\PasswordPolicy;
  * política do cadastro (PasswordPolicy) — as regras, os rótulos e as
  * mensagens do starter Livewire (Profile::updatePassword). Senha errada é
  * tentativa de adivinhação: o envio passa pelo `throttle:sensitive`.
+ *
+ * Trocar a senha encerra as OUTRAS sessões da conta e invalida os cookies
+ * "lembrar de mim" — regra do model (twstec/kit-auth, EndsOtherSessions);
+ * esta sessão continua aberta.
  */
 final class PasswordController implements HasMiddleware
 {

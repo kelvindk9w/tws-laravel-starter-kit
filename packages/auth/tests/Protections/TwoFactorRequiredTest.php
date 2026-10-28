@@ -9,6 +9,7 @@ use Twstec\Kit\Auth\Contracts\IdentifiesAdministrators;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Exceptions\TwoFactorRequiredException;
 use Twstec\Kit\Auth\Http\Middleware\EnsureAccountIsActive;
+use Twstec\Kit\Auth\Http\Middleware\EnsureSessionIsCurrent;
 use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Models\SensitiveActionToken;
@@ -80,6 +81,7 @@ it('o middleware vem do pacote, no fim do grupo `web`, depois do status da conta
     expect($web)->toContain(EnsureTwoFactorIsConfigured::class)
         ->and(AuthServiceProvider::WEB_MIDDLEWARE)->toBe([
             EnsureAccountIsActive::class,
+            EnsureSessionIsCurrent::class,
             EnsureTwoFactorIsConfigured::class,
         ]);
 });

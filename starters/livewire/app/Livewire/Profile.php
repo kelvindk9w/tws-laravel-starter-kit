@@ -91,6 +91,10 @@ final class Profile extends Component
     /**
      * Troca da senha de LOGIN: exige a senha atual e aplica as mesmas
      * regras de força do cadastro (config/auth.php password_rules).
+     *
+     * Trocar a senha encerra as OUTRAS sessões da conta e invalida os cookies
+     * "lembrar de mim" — regra do model (twstec/kit-auth, EndsOtherSessions);
+     * esta sessão continua aberta.
      */
     public function updatePassword(): void
     {
