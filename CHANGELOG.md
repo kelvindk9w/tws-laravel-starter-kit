@@ -38,7 +38,9 @@ publicação.
   `config/livewire.php`, `config/auth.php`, `config/uploads.php`,
   `app/Providers/HorizonServiceProvider.php`, `phpstan.modules.php`,
   `phpstan.neon.dist`, `scripts/verificar`, `docker/dev/ci.yml`,
-  `package-lock.json` (dependências do front) e os `.env.example`. No Livewire, também
+  `package-lock.json` (dependências do front) e os `.env.example`. Num
+  projeto existente, as dependências PHP com aviso saem com
+  `composer update livewire/livewire symfony/mime`. No Livewire, também
   `app/Livewire/Profile.php` e `app/Livewire/Concerns/ConfirmsSensitiveAction.php`
   (e a view do modal); no React, `app/Http/Controllers/Panel/PasswordController.php`.
 - **Monorepo:** rode `scripts/preparar-dev` uma vez — o ambiente de
@@ -106,6 +108,9 @@ publicação.
   da landing usa um valor obviamente fictício.
 - **`.env` criado pelo instalador com permissão 0600.**
 - **Ações do CI e do CodeQL fixadas por commit**, com trava no CI.
+- **Dependências PHP dos starters com aviso de segurança** atualizadas:
+  `livewire/livewire` 4.4.8 (desvio do `#[Authorize]`, GHSA-mhf7-xp6r-6qrc) e
+  `symfony/mime` 8.1.10 (injeção de cabeçalho de e-mail, CVE-2026-45070).
 
 ### Corrigido
 
