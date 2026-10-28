@@ -1,0 +1,72 @@
+#!/bin/sh
+# =============================================================================
+# PREPARA O AMBIENTE DE DESENVOLVIMENTO DO MONOREPO (uma vez por clone).
+#
+#   scripts/preparar-dev
+#
+# Cria o que falta — nunca sobrescreve um arquivo que já existe:
+#
+# - .env da RAIZ (o que o Compose lê para montar o docker-compose.yml): as
+#   senhas do PostgreSQL (DB_PASSWORD) e do Redis (REDIS_PASSWORD) do ambiente
+#   de desenvolvimento, aleatórias. O docker-compose.yml recusa subir sem
+#   elas e as entrega aos containers PHP dos dois starters (vencem as do
+#   .env de cada starter).
+#   Quem JÁ tem o banco de desenvolvimento (o volume
+#   tws-laravel-starter-kit_postgres_data, criado antes deste script) continua
+#   com a senha com que ele nasceu: a do DB_PASSWORD do
+#   starters/livewire/.env (o PostgreSQL só aplica a senha na criação do
+#   volume).
+# - starters/livewire/.env e starters/react/.env, a partir do .env.example
+#   de cada um.
+#
+# Só precisa do sh e do Docker (nada de PHP ou Node na máquina).
+# =============================================================================
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
+
+# 32 caracteres hexadecimais (16 bytes do gerador do sistema).
+random_secret() {
+    od -An -tx1 -N16 /dev/urandom | tr -d ' \n'
+}
+
+for starter in livewire react; do
+    if [ ! -f "starters/$starter/.env" ]; then
+        cp "starters/$starter/.env.example" "starters/$starter/.env"
+        echo "criado: starters/$starter/.env (a partir do .env.example)"
+    fi
+done
+
+if [ -f .env ]; then
+    for variable in DB_PASSWORD REDIS_PASSWORD; do
+        if ! grep -Eq "^$variable=.+" .env; then
+            echo "o .env da raiz já existe, mas sem $variable: acrescente uma senha (ex.: $variable=$(random_secret))" >&2
+            exit 1
+        fi
+    done
+    echo ".env da raiz já existe: nada a fazer"
+    exit 0
+fi
+
+db_password=$(random_secret)
+if docker volume inspect tws-laravel-starter-kit_postgres_data >/dev/null 2>&1; then
+    existing=$(sed -n 's/^DB_PASSWORD=//p' starters/livewire/.env | tail -n 1)
+    if [ -n "$existing" ]; then
+        db_password=$existing
+        echo "banco de desenvolvimento já existe: mantida a senha do starters/livewire/.env"
+    fi
+fi
+
+umask 077
+cat > .env <<EOF
+# Ambiente do Compose do monorepo (docker-compose.yml), gerado pelo
+# scripts/preparar-dev. Fora do git. As senhas valem para os containers dos
+# dois starters (vencem as do .env de cada um).
+DB_PASSWORD=$db_password
+REDIS_PASSWORD=$(random_secret)
+# Portas publicadas só em 127.0.0.1. Para abrir para a rede (nunca numa
+# máquina com acesso público): DEV_BIND=0.0.0.0
+# DEV_BIND=127.0.0.1
+EOF
+echo "criado: .env da raiz (senhas do PostgreSQL e do Redis de desenvolvimento)"

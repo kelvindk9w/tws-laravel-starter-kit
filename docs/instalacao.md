@@ -438,7 +438,8 @@ e cookie de sessão com nome próprio, para um não derrubar a sessão, a fila o
 o cache do outro:
 
 ```bash
-cd starters/react && cp .env.example .env
+scripts/preparar-dev   # uma vez por clone: .env dos starters e senhas no .env da raiz
+cd starters/react
 # composer install e npm install/build: ver starters/react/README.md
 cd ../.. && export UID GID=$(id -g)
 docker compose up -d react-nginx react-queue react-scheduler

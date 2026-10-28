@@ -114,8 +114,13 @@ Apenas **Docker** (com Compose v2+). Nada de PHP, Composer ou Node na máquina.
 ## Instalação (desenvolvimento)
 
 ```bash
-git clone https://github.com/kelvindk9w/tws-laravel-starter-kit.git meu-projeto && cd meu-projeto/starters/livewire
-cp .env.example .env
+git clone https://github.com/kelvindk9w/tws-laravel-starter-kit.git meu-projeto && cd meu-projeto
+
+# 0) Uma vez por clone: cria o .env de cada starter (do .env.example) e o .env
+#    da RAIZ com as senhas aleatórias do PostgreSQL e do Redis de
+#    desenvolvimento — o docker-compose.yml não sobe sem elas.
+scripts/preparar-dev
+cd starters/livewire
 
 # 1) Dependências PHP (roda em container, nada local). Monta a RAIZ do
 #    repositório: o starter instala os pacotes de packages/ por path
@@ -148,6 +153,12 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 
 Aplicação: http://localhost:8180 · Mailpit: http://localhost:18025
 
+As portas do ambiente de desenvolvimento (site, PostgreSQL, Redis, Mailpit)
+são publicadas **só em 127.0.0.1** — porta publicada pelo Docker passa por
+cima do firewall da máquina. Para abrir para a rede de propósito (nunca numa
+máquina com acesso público): `DEV_BIND=0.0.0.0` no `.env` da raiz. O Redis
+exige a senha do `.env` da raiz.
+
 ### Escolher os módulos
 
 `foundation` e `auth` vêm sempre; **contas e API** (`accounts`), **uploads**,
@@ -175,7 +186,7 @@ e-mail — em dev o link chega no Mailpit (desligável com
 `AUTH_EMAIL_VERIFICATION_REQUIRED=false`; ver
 [Autenticação](docs/autenticacao.md#verificação-de-e-mail-no-cadastro)).
 
-Portas conflitando? Exporte `DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT` ou `DEV_MAILPIT_*` no shell (ou num `.env` na **raiz** do repositório, que é o que o Compose lê para montar o `docker-compose.yml`) e recrie os containers. O `starters/livewire/.env` é o ambiente da aplicação, não do Compose; se trocar `DB_*` nele, exporte os mesmos valores antes do `docker compose up`.
+Portas conflitando? Exporte `DEV_WEB_PORT`, `DEV_POSTGRES_PORT`, `DEV_REDIS_PORT` ou `DEV_MAILPIT_*` no shell (ou num `.env` na **raiz** do repositório, que é o que o Compose lê para montar o `docker-compose.yml`) e recrie os containers. O `starters/livewire/.env` é o ambiente da aplicação, não do Compose; se trocar `DB_DATABASE` ou `DB_USERNAME` nele, ponha o mesmo valor no `.env` da raiz. As senhas (`DB_PASSWORD`, `REDIS_PASSWORD`) vêm só do `.env` da raiz: o Compose as entrega aos containers dos dois starters, por cima das do `.env` de cada um.
 
 ## Credenciais demo
 

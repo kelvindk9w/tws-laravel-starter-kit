@@ -4,14 +4,18 @@ Obrigado pelo interesse. Regras curtas:
 
 1. **Branches**: trabalho em `desenvolvimento`; `sandbox` e `producao` são
    protegidas e só recebem fast-forward com o CI verde.
-2. **Antes de abrir o PR**: `./vendor/bin/pint`,
+2. **Ambiente**: uma vez por clone, `scripts/preparar-dev` na raiz (cria o
+   `.env` dos starters e o `.env` da raiz com as senhas de desenvolvimento do
+   PostgreSQL e do Redis); depois, `docker compose up -d` (ver README). As
+   portas ficam só em 127.0.0.1.
+3. **Antes de abrir o PR**: `./vendor/bin/pint`,
    `./vendor/bin/phpstan analyse` (Larastan nível 8, sem baseline),
    `./vendor/bin/pest` e `npm run build` passando (tudo em container, rodando no starter —
    `starters/livewire` —, ver README).
-3. **Convenções**: código em inglês, comentários e docs em português;
+4. **Convenções**: código em inglês, comentários e docs em português;
    nada hardcoded (config/platform.php e .env); toda string de UI passa por
    `__()` nos três idiomas; todo comportamento novo vem com teste.
-4. **Segurança**: vulnerabilidades vão pelo canal privado (SECURITY.md),
+5. **Segurança**: vulnerabilidades vão pelo canal privado (SECURITY.md),
    nunca por issue.
-5. **Commits**: mensagem no imperativo, descrevendo o comportamento
+6. **Commits**: mensagem no imperativo, descrevendo o comportamento
    (`feat(admin): ...`, `fix(api): ...`).

@@ -23,6 +23,7 @@
 # que, visto de /var/www/html, é exatamente /var/packages. Edição no pacote
 # vale na hora, sem reinstalar.
 #
+#   scripts/preparar-dev          # uma vez por clone: .env da raiz e dos starters
 #   export UID GID=$(id -g)
 #   docker compose up -d --build
 #   docker compose exec app php artisan migrate
@@ -35,11 +36,24 @@
 # tws-laravel-starter-kit_redis_data. Mudar esse nome cria volumes novos e
 # vazios — o banco de desenvolvimento "some" (continua no volume antigo).
 #
-# Variáveis DB_* e DEV_*_PORT usadas AQUI (no Postgres e nas portas) vêm do
-# ambiente do shell ou de um .env na raiz, não do starters/livewire/.env; os
-# padrões são os mesmos do .env.example do starter. Quem trocar DB_* no .env do
-# starter precisa exportar o mesmo valor antes do `docker compose up`.
+# Variáveis DB_*, REDIS_PASSWORD, DEV_BIND e DEV_*_PORT usadas AQUI vêm do
+# ambiente do shell ou do .env da RAIZ, não do starters/livewire/.env. As
+# SENHAS são obrigatórias (sem padrão): o scripts/preparar-dev gera as duas
+# no .env da raiz, e o Compose as entrega aos containers PHP dos dois
+# starters (DB_PASSWORD e REDIS_PASSWORD vencem as do .env de cada starter).
+# Os outros padrões (DB_DATABASE, DB_USERNAME) são os do .env.example do
+# starter; quem trocar um deles no .env do starter precisa pôr o mesmo valor
+# no .env da raiz.
+#
+# SEGURANÇA: toda porta é publicada só em 127.0.0.1 (DEV_BIND) — porta
+# publicada pelo Docker passa por cima do firewall da máquina. Para abrir para
+# a rede de propósito: DEV_BIND=0.0.0.0 no .env da raiz. O Redis exige senha.
 # =============================================================================
+
+# O que todo container PHP dos starters recebe do .env da raiz.
+x-dev-secrets: &dev-secrets
+  DB_PASSWORD: ${DB_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
 
 name: tws-laravel-starter-kit
 
@@ -55,6 +69,7 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     env_file: ./starters/livewire/.env
+    environment: *dev-secrets
     volumes:
       - ./starters/livewire:/var/www/html
       # Pacotes do kit: o starter os instala por path repository
@@ -64,7 +79,7 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - backend
 
@@ -74,7 +89,7 @@ services:
   nginx:
     image: nginx:stable-alpine3.24
     ports:
-      - "${DEV_WEB_PORT:-8180}:80"
+      - "${DEV_BIND:-127.0.0.1}:${DEV_WEB_PORT:-8180}:80"
     volumes:
       - ./starters/livewire:/var/www/html:ro
       - ./docker/nginx/livewire-dev.conf:/etc/nginx/conf.d/default.conf:ro
@@ -88,7 +103,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-tws_starter}
       POSTGRES_USER: ${DB_USERNAME:-tws}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-tws_dev_password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
       # PGDATA explícito dentro do volume nomeado (persistência garantida).
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
@@ -96,7 +111,7 @@ services:
       # Cria o banco da suíte de testes (tws_starter_test) na primeira subida.
       - ./starters/livewire/docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${DEV_POSTGRES_PORT:-15432}:5432"
+      - "${DEV_BIND:-127.0.0.1}:${DEV_POSTGRES_PORT:-15432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-tws} -d ${DB_DATABASE:-tws_starter}"]
       interval: 5s
@@ -107,20 +122,28 @@ services:
 
   redis:
     image: redis:8.10-alpine
-    # AOF ligado: reduz a janela de perda de jobs em reinício.
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    # Com senha e AOF ligado (reduz a janela de perda de jobs em reinício).
+    command: sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - redis_data:/data
     ports:
-      - "${DEV_REDIS_PORT:-16379}:6379"
+      - "${DEV_BIND:-127.0.0.1}:${DEV_REDIS_PORT:-16379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
     networks:
       - backend
 
   mailpit:
     image: axllent/mailpit:v1.30.7
     ports:
-      - "${DEV_MAILPIT_SMTP_PORT:-11025}:1025"  # SMTP
-      - "${DEV_MAILPIT_WEB_PORT:-18025}:8025"  # Interface web
+      - "${DEV_BIND:-127.0.0.1}:${DEV_MAILPIT_SMTP_PORT:-11025}:1025"  # SMTP
+      - "${DEV_BIND:-127.0.0.1}:${DEV_MAILPIT_WEB_PORT:-18025}:8025"  # Interface web
     networks:
       - backend
 
@@ -135,6 +158,7 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     env_file: ./starters/livewire/.env
+    environment: *dev-secrets
     command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
     volumes:
       - ./starters/livewire:/var/www/html
@@ -158,6 +182,7 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     env_file: ./starters/livewire/.env
+    environment: *dev-secrets
     # Loop do scheduler nativo do Laravel (equivale ao cron de 1 em 1 minuto).
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
@@ -190,7 +215,7 @@ services:
     environment:
       PGHOST: postgres
       PGUSER: ${DB_USERNAME:-tws}
-      PGPASSWORD: ${DB_PASSWORD:-tws_dev_password}
+      PGPASSWORD: ${DB_PASSWORD}
       PGDATABASE: ${DB_DATABASE:-tws_starter}
     command:
       - sh
@@ -220,6 +245,7 @@ services:
     env_file:
       - path: ./starters/react/.env
         required: false
+    environment: *dev-secrets
     volumes:
       - ./starters/react:/var/www/html
       # Pacotes do kit por path repository (`../../packages/…`), como no Livewire.
@@ -228,14 +254,14 @@ services:
       react-db-init:
         condition: service_completed_successfully
       redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - backend
 
   react-nginx:
     image: nginx:stable-alpine3.24
     ports:
-      - "${DEV_REACT_WEB_PORT:-8181}:80"
+      - "${DEV_BIND:-127.0.0.1}:${DEV_REACT_WEB_PORT:-8181}:80"
     volumes:
       - ./starters/react:/var/www/html:ro
       - ./docker/nginx/react-dev.conf:/etc/nginx/conf.d/default.conf:ro
@@ -257,6 +283,7 @@ services:
     env_file:
       - path: ./starters/react/.env
         required: false
+    environment: *dev-secrets
     command: php artisan queue:work --sleep=3 --tries=3 --backoff=5
     volumes:
       - ./starters/react:/var/www/html
@@ -280,6 +307,7 @@ services:
     env_file:
       - path: ./starters/react/.env
         required: false
+    environment: *dev-secrets
     command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
     volumes:
       - ./starters/react:/var/www/html
