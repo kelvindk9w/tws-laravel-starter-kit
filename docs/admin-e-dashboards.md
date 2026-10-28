@@ -326,7 +326,7 @@ pode é um diff revisado, não um clique. De fábrica:
 | Papel | O que pode |
 | --- | --- |
 | `owner` (o `super_role`) | tudo, sempre — e só ele concede o papel de dono |
-| `operations` | ver tudo; criar, editar, bloquear, desbloquear e excluir usuário; marcar e-mail verificado; revogar chave; aprovar, recusar e executar pedidos |
+| `operations` | ver tudo; criar, editar, bloquear, desbloquear e excluir usuário (abaixo do dono); marcar e-mail verificado; revogar chave; aprovar, recusar e executar pedidos; abrir o `/horizon` (`horizon.access`) |
 | `support` | ver usuários, contas, projetos, chaves e pedidos; marcar e-mail verificado |
 | `auditor` | só leitura (`*.view`), inclusive a trilha e as configurações |
 
@@ -339,7 +339,11 @@ depois de `admin.` no `$translationKey`: `users`, `api_keys`, `accounts`,
 `view_confidential`, `legal_hold`). O padrão aceita `*`: `users.*`, `*.view`,
 `*`. Abrir upload confidencial (`uploads.view_confidential`) e mexer na guarda
 legal (`uploads.legal_hold`) ficam de fora de `*.view` de propósito: de
-fábrica, só o `owner` os tem. Um papel novo do projeto:
+fábrica, só o `owner` os tem. Fora do painel, `horizon.access` abre o
+dashboard de filas (`/horizon`, gate `viewHorizon` do aplicativo —
+`Access\HorizonAccess`): de fábrica, `owner` e `operations`; fora de `*.view`
+de propósito (o dashboard mostra payload de job e refaz/apaga job). Um papel
+novo do projeto:
 
 ```php
 // config/admin.php (publicado com --tag=admin-config)

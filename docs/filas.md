@@ -1,10 +1,19 @@
 # Filas (Horizon)
 
-- **Dashboard `/horizon`**: restrito a `is_admin` **com conta ativa** (gate
-  `viewHorizon` no `HorizonServiceProvider` do starter, que lê o MESMO
-  critério do `/admin` — `Twstec\Kit\Admin\Access\AdminAccess`, do pacote
-  twstec/kit-admin — fora do ambiente `local`, guest, usuário
-  comum e admin desativado recebem 403). O gate olhava só `is_admin`, então
+- **Dashboard `/horizon`**: restrito a admin **com conta ativa** e com a
+  permissão **`horizon.access`** no papel (gate `viewHorizon` no
+  `HorizonServiceProvider` do starter, que lê o critério do pacote
+  twstec/kit-admin — `Twstec\Kit\Admin\Access\HorizonAccess`, que confere a
+  entrada no `/admin`, `AdminAccess`, antes do papel; fora do ambiente
+  `local`, guest, usuário comum, admin desativado e admin sem a permissão
+  recebem 403). De fábrica só o `owner` e a `operations` a têm
+  (`config/admin.php` → `authorization.roles`): o dashboard mostra o payload
+  dos jobs (dado pessoal) e deixa refazer e apagar job, então o `support` e a
+  auditoria (`*.view`) ficam de fora — o nome não termina em `.view` de
+  propósito. Projeto com `config/admin.php` publicado: acrescente
+  `'horizon.access'` ao papel que deve abrir o dashboard (sem isso, só o
+  `owner` abre). Com `ADMIN_AUTHORIZATION=false`, todo admin ativo abre. O
+  gate olhava só `is_admin`, então
   desativar um administrador tirava o `/admin` e **não** tirava o
   `/horizon`: com a sessão viva ele seguia operando a fila. O middleware
   `Authenticate` do pacote está declarado no `config/horizon.php` em vez de
@@ -59,7 +68,7 @@
 
 Suíte Pest (Feature) — os testes de backup estão em [Backup](backup.md#testes).
 Horizon: gating (guest/usuário comum =
-403, admin = 200), IP allowlist aplicada às rotas (dashboard e API), CSP
+403, `support`/`auditor` = 403, `operations`/`owner` = 200), IP allowlist aplicada às rotas (dashboard e API), CSP
 dedicada, supervisores por ambiente, payload criptografado dos jobs de e-mail,
 retenção e poda da `failed_jobs`
 (`tests/Feature/Horizon/QueuePayloadConfidentialityTest.php`). Correlation id na
