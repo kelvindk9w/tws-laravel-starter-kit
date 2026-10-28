@@ -6,6 +6,74 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+Webhooks de saída mais robustos (nenhum evento se perde com o endpoint fora
+do ar), análise estática no projeto criado mesmo sem módulos opcionais e a
+conferência de que todo pacote está no Packagist depois da publicação.
+
+### Corrigido
+
+- **Webhooks: endpoint desativado não perde mais eventos.** A desativação
+  automática exige as falhas seguidas (`WEBHOOKS_DISABLE_AFTER_FAILURES`) **e**
+  um tempo sem nenhum sucesso (`WEBHOOKS_DISABLE_AFTER_HOURS`, padrão 72 h; 0 =
+  só a contagem). Com o endpoint desativado (à mão ou por falhas), as entregas
+  em aberto e os eventos novos ficam no status novo `paused`; ao reativar, as
+  pausadas dentro da retenção voltam para a fila (as mais velhas viram falha,
+  com o motivo). O `webhooks:prune` trata a pausada como resolvida.
+- **Webhooks: entrega presa "em envio".** Erro antes de gravar a tentativa
+  (segredo que não decifra, conta que sumiu, DNS) vira tentativa falha
+  registrada, com texto genérico na tela e o detalhe no log, e segue as novas
+  tentativas; não conta para desativar o endpoint. Entrega abandonada que já
+  usou todas as tentativas é encerrada como falha, em vez de reservada para
+  sempre.
+- **Webhooks: reenvio manual.** Só volta para "pendente" se a entrega
+  continua no estado lido (sem corrida com o worker), e a falha do reenvio
+  não cancela as novas tentativas automáticas que faltavam.
+- **Webhooks: reserva conferida.** O resultado só é gravado se a reserva
+  ainda é da tentativa; o prazo da reserva nunca fica abaixo do tempo máximo
+  do job + 30 s. A nova tentativa com atraso não gera job repetido na fila.
+- **Webhooks: índices** para a limpeza e a exclusão em escala
+  (`webhook_deliveries.webhook_event_id`, `webhook_events.created_at` e um
+  índice parcial das entregas em aberto), numa migration nova.
+- **Webhooks: liberações de desenvolvimento só em ambiente listado.**
+  `WEBHOOKS_REQUIRE_HTTPS=false` e `WEBHOOKS_ALLOWED_PRIVATE_NETWORKS` valem só
+  nos ambientes de `WEBHOOKS_RELAXED_ENVIRONMENTS` (padrão `local,testing`;
+  nunca `production`). Antes, qualquer `APP_ENV` diferente de `production`
+  (staging, sandbox) as aceitava.
+- **Webhooks: destino recusado sem detalhe na tela.** "Nome não resolve",
+  "endereço interno" e "metadados de nuvem" mostram o mesmo texto (o motivo
+  fica na trilha e no log) — a tela não serve mais para sondar o DNS interno.
+- **Webhooks:** o endereço de metadados IPv6 do GCP (`fd20:ce::254`) entra na
+  lista bloqueada; o reenvio recusa entregas criadas antes da última troca da
+  URL do endpoint; os textos sobre o segredo dizem que ele pode ser revelado
+  de novo, com confirmação.
+- **Projeto criado sem algum módulo opcional reprovava na análise estática**
+  (ex.: sem webhooks, 27 erros no `WebhooksController`). O
+  `phpstan.modules.php` novo de cada starter confere o `vendor/` e tira da
+  análise as telas do módulo ausente (que continuam no `app/` para o
+  `tws:add`); com todos os módulos, não tira nada.
+- **Dependências do front dos starters** com falha de segurança conhecida
+  (`vite` e `concurrently`, 2 altas e 2 críticas nas de produção) atualizadas.
+
+### Adicionado
+
+- **Larastan no `scripts/verificar` e no CI do projeto criado** (antes só no
+  CI do kit), com teste que exige a etapa nos dois. A simulação da instalação
+  publicada roda o Larastan também nos projetos sem módulos opcionais.
+- **Publicação que falha fica vermelha** (`split.yml`). O `twstec/kit-webhooks`
+  da beta.15 nunca chegou ao Packagist: o `SPLIT_TOKEN` não tinha o espelho,
+  o push levou 403, a ação de split engoliu o erro e o job saiu verde com o
+  espelho vazio. Agora cada split confere no espelho a tag e a branch `main`,
+  e, depois do aviso, cada pacote da lista precisa responder no Packagist com
+  a versão da tag (pega também o espelho nunca registrado).
+
+### Documentação
+
+- `docs/webhooks.md`: a ordem de chegada não é garantida (o receptor compara
+  o `created_at` ou consulta o estado atual); o comportamento novo acima e as
+  variáveis novas, também nos `.env` de exemplo dos starters.
+- `docs/testes.md` e `docs/instalacao.md`: a análise estática no projeto
+  criado e o mapa dos módulos opcionais.
+
 ## [2.0.0-beta.15] — 2026-10-03
 
 Webhooks de saída: o aplicativo avisa outros sistemas quando algo acontece
