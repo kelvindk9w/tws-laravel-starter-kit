@@ -391,10 +391,15 @@ pessoa segue recusada enquanto a conta tiver outros membros).
 - **Uso único** (`accepted_at` gravado com UPDATE condicional: dois aceites ao
   mesmo tempo não viram dois membros), **validade** configurável, **reenvio**
   (gera link novo — o antigo morre — e renova a validade), **revogação**,
-  **recusa** pela pessoa convidada.
+  **recusa** pela pessoa convidada. Aceite, recusa, revogação e reenvio são
+  UPDATEs condicionais ao convite ainda aberto: se a pessoa aceita enquanto
+  alguém revoga (ou reenvia), só um vale, e quem perdeu recebe a recusa com o
+  estado novo — nunca "revogado" para um convite que já virou membro.
 - **Recusas** na criação: e-mail inválido, quem já é membro, convite pendente
   para o mesmo e-mail (reenvie), limite de pendentes da conta, intervalo por
-  conta e por pessoa (novos e reenvios contam juntos).
+  conta e por pessoa (novos e reenvios contam juntos). O **reenvio de um
+  convite expirado** é um convite novo: passa pelas mesmas recusas (quem já é
+  membro, outro pendente para o e-mail, limite de pendentes).
 - **Sem enumeração:** o convite para um e-mail que já tem conta na plataforma e
   para um que não tem é criado igual, com a mesma resposta e o mesmo e-mail — é
   a tela do link que decide entre "entrar" e "criar a conta".
