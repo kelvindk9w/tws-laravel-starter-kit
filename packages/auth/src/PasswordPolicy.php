@@ -24,7 +24,7 @@ final class PasswordPolicy
     {
         $config = (array) config('auth.password_rules', []);
 
-        $rule = Password::min((int) ($config['min_length'] ?? 6));
+        $rule = Password::min((int) ($config['min_length'] ?? 8));
 
         if ($config['letters'] ?? false) {
             $rule->letters();
@@ -67,7 +67,7 @@ final class PasswordPolicy
             }
         }
 
-        $minimo = __('auth.password_policy.min', ['min' => (int) ($config['min_length'] ?? 6)]);
+        $minimo = __('auth.password_policy.min', ['min' => (int) ($config['min_length'] ?? 8)]);
 
         if ($partes === []) {
             return $minimo;

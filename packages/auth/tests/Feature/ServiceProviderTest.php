@@ -27,7 +27,7 @@ it('traz a configuração padrão das chaves do kit dentro de config(auth)', fun
         ->and(config('auth.two_factor.max_attempts_per_account'))->toBe(10)
         ->and(config('auth.verification.max_attempts'))->toBe(5)
         ->and(config('auth.email_verification.required'))->toBeTrue()
-        ->and(config('auth.password_rules.min_length'))->toBe(6)
+        ->and(config('auth.password_rules.min_length'))->toBe(8)
         ->and(config('auth.web_protections.enabled'))->toBeTrue()
         // As do framework continuam lá.
         ->and(config('auth.defaults.guard'))->toBe('web');

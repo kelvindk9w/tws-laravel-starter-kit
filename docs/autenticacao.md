@@ -691,10 +691,10 @@ telas, convite e `/admin` ainda criando contas).
 Um lugar só decide o que uma senha de login precisa ter:
 `Twstec\Kit\Auth\PasswordPolicy`, lido por registro, reset por e-mail, troca
 no perfil e criação/edição de usuário no `/admin`. O kit nasce com o mínimo
-(6 caracteres) e as demais exigências prontas para ligar no `.env`:
+(8 caracteres) e as demais exigências prontas para ligar no `.env`:
 
 ```dotenv
-AUTH_PASSWORD_MIN=6
+AUTH_PASSWORD_MIN=8
 #AUTH_PASSWORD_LETTERS=true        # pelo menos uma letra
 #AUTH_PASSWORD_MIXED_CASE=true     # maiúscula E minúscula
 #AUTH_PASSWORD_NUMBERS=true        # pelo menos um número
