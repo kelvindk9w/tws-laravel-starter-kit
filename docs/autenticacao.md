@@ -122,6 +122,7 @@ com implementação padrão registrada no container pelo
 | Login por senha | `AttemptLogin` (bloqueio por tentativas, conta ativa, anti-enumeração, sessão regenerada, início do segundo fator) | `LoginResponse`, `TwoFactorRequiredResponse` |
 | Segundo fator | `CompleteTwoFactorLogin` (código, reenvio, desistência; conta conferida de novo; sessão nova) | `TwoFactorLoginResponse`, `TwoFactorChallengeResponse` |
 | Logout | `Logout` (invalida a sessão, renova o CSRF) | `LogoutResponse` |
+| Sessão encerrada (senha ou segundo fator mudou em outro lugar) | `EnsureSessionIsCurrent` (middleware) | `SessionEndedResponse` |
 | Cadastro | `RegisterUser` (conta, idioma, sessão regenerada, e-mail de verificação) | `RegisterResponse` |
 | Link de redefinição | `SendPasswordResetLink` | `PasswordResetLinkSentResponse` |
 | Redefinição | `ResetPassword` (senha nova, outras sessões encerradas, `remember_token` renovado, bloqueio do login por conta zerado, evento `PasswordReset`) | `PasswordResetResponse`, `FailedPasswordResetResponse` |
@@ -563,9 +564,13 @@ Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no e
     ninguém precisa listar as sessões da conta, cada uma se confere sozinha.
     As sessões encerradas continuam no armazenamento até expirar, mas não
     autenticam mais.
-  - O `/admin` (Filament) tem pilha própria, com o `AuthenticateSession` do
-    framework: lá, a troca de **senha** derruba as outras sessões; ligar o
-    segundo fator, ainda não (o `EnsureSessionIsCurrent` é do grupo `web`).
+  - O `/admin` (Filament) tem pilha própria, fora do grupo `web`: o
+    twstec/kit-admin põe o mesmo `EnsureSessionIsCurrent` na pilha de
+    autenticação **persistente** do painel (páginas e ações Livewire), então
+    trocar a senha **ou** ligar/desligar o segundo fator também encerra as
+    outras sessões do `/admin`. Quem estava no painel volta ao login **do
+    painel** (`/admin/login`), com o aviso: a resposta é o contrato
+    `SessionEndedResponse`, que o pacote do painel decora.
 - CSRF nativo do grupo `web` (Laravel 13: `PreventRequestForgery` — token +
   validação de origem `Sec-Fetch-Site`/`Origin`), testado com e sem token.
 - Credenciais nunca aparecem em logs: `password`, `transaction_password`, `code`

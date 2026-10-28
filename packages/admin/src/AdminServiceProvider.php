@@ -16,12 +16,14 @@ use Twstec\Kit\Admin\Approvals\Approvals;
 use Twstec\Kit\Admin\Approvals\Enums\ApprovalMode;
 use Twstec\Kit\Admin\Authorization\AdminPermissions;
 use Twstec\Kit\Admin\Console\MakeAdminUser;
+use Twstec\Kit\Admin\Http\Responses\AdminSessionEndedResponse;
 use Twstec\Kit\Admin\Resources\Users\Support\DeleteUserApproval;
 use Twstec\Kit\Admin\Support\AdminAudit;
 use Twstec\Kit\Admin\Support\AdminPanelHardening;
 use Twstec\Kit\Admin\Support\FreshAvatarUploads;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Contracts\IdentifiesAdministrators;
+use Twstec\Kit\Auth\Contracts\Responses\SessionEndedResponse;
 use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 use Twstec\Kit\Uploads\Confidential\Contracts\AuthorizesSystemConfidentialDelivery;
@@ -79,6 +81,11 @@ final class AdminServiceProvider extends ServiceProvider
             });
         }
         $this->app->singleton(ApprovalRegistry::class);
+
+        // Sessão encerrada pela troca de senha/segundo fator em outro lugar:
+        // quem estava no /admin volta ao login do painel (decora a resposta
+        // do twstec/kit-auth — inclusive a que o aplicativo registrar).
+        $this->app->extend(SessionEndedResponse::class, fn (SessionEndedResponse $fallback): SessionEndedResponse => new AdminSessionEndedResponse($fallback));
 
         // Depois que o Filament montou os painéis (os PanelProviders do
         // aplicativo terminaram de configurá-los) e antes de as rotas deles

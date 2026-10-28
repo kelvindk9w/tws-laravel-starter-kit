@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Symfony\Component\HttpFoundation\Response;
 use Twstec\Kit\Auth\Actions\ResetPassword;
+use Twstec\Kit\Auth\Contracts\Responses\SessionEndedResponse;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Auth\Services\SensitiveActionService;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
@@ -139,4 +142,23 @@ it('mudança que não toca credencial (nome, idioma) não derruba ninguém', fun
     $this->assertAuthenticatedAs($user);
     expect(session(SessionFingerprint::SESSION_KEY))->toBe($before)
         ->and($user->fresh()?->getRememberToken())->toBe($rememberToken);
+});
+
+it('para onde vai quem caiu é um contrato: outra superfície (o /admin) troca a resposta', function (): void {
+    app()->bind(SessionEndedResponse::class, fn (): SessionEndedResponse => new class implements SessionEndedResponse
+    {
+        public function toResponse(Request $request): Response
+        {
+            return redirect('/outro-login');
+        }
+    });
+
+    $user = otherSessionsUser();
+    signInAndOpenPanel($user);
+
+    Auth::forgetGuards();
+    $user->forceFill(['two_factor_enabled_at' => now()])->save();
+
+    $this->get('/dashboard')->assertRedirect('/outro-login');
+    $this->assertGuest();
 });

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use Twstec\Kit\Auth\Contracts\AuthUser;
+use Twstec\Kit\Auth\Contracts\Responses\SessionEndedResponse;
 use Twstec\Kit\Auth\Support\SessionFingerprint;
 
 /**
@@ -28,6 +29,9 @@ use Twstec\Kit\Auth\Support\SessionFingerprint;
  *
  * Sessão sem impressão (aberta antes desta proteção, ou que acabou de
  * autenticar) ganha a impressão do estado atual da conta.
+ *
+ * O /admin (twstec/kit-admin) a põe também na pilha do painel, que não
+ * passa pelo grupo `web` — e decora a resposta para mandar ao login dele.
  *
  * O encerramento é o do aparelho atual (logoutCurrentDevice): não renova o
  * `remember_token` da conta — a mudança de credencial já o renovou.
@@ -68,8 +72,6 @@ final class EnsureSessionIsCurrent
 
     private function endSession(Request $request): Response
     {
-        $message = __('auth.session_ended');
-
         $guard = Auth::guard('web');
 
         if ($guard instanceof SessionGuard) {
@@ -81,10 +83,8 @@ final class EnsureSessionIsCurrent
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        if ($request->expectsJson()) {
-            return response()->json(['message' => $message], Response::HTTP_UNAUTHORIZED);
-        }
-
-        return redirect()->route('login')->withErrors(['email' => $message]);
+        // Para onde vai quem caiu: contrato Contracts\Responses\SessionEndedResponse
+        // (o padrão é o login do aplicativo; o /admin manda ao login dele).
+        return app(SessionEndedResponse::class)->toResponse($request);
     }
 }

@@ -84,6 +84,7 @@ final class AuthServiceProvider extends ServiceProvider
         Responses\VerifyEmailResponse::class => Defaults\VerifyEmailResponse::class,
         Responses\EmailVerificationResponse::class => Defaults\EmailVerificationResponse::class,
         Responses\TwoFactorSetupResponse::class => Defaults\TwoFactorSetupResponse::class,
+        Responses\SessionEndedResponse::class => Defaults\SessionEndedResponse::class,
     ];
 
     /**
