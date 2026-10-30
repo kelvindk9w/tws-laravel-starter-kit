@@ -23,64 +23,71 @@
 # =============================================================================
 version: 2
 updates:
-  - package-ecosystem: composer
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    groups:
-      twstec:
-        patterns: ['twstec/*']
-      framework:
-        dependency-type: production
-        patterns: ['laravel/*', 'livewire/*', 'filament/*', 'inertiajs/*', 'spatie/*']
-      dev:
-        dependency-type: development
+    - package-ecosystem: composer
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 5
+      groups:
+          twstec:
+              patterns: ['twstec/*']
+          framework:
+              dependency-type: production
+              patterns:
+                  [
+                      'laravel/*',
+                      'livewire/*',
+                      'filament/*',
+                      'inertiajs/*',
+                      'spatie/*',
+                  ]
+          dev:
+              dependency-type: development
 
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    groups:
-      producao:
-        dependency-type: production
-      dev:
-        dependency-type: development
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 5
+      groups:
+          producao:
+              dependency-type: production
+          dev:
+              dependency-type: development
 
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    groups:
-      actions:
-        patterns: ['*']
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 3
+      groups:
+          actions:
+              patterns: ['*']
 
-  - package-ecosystem: docker
-    directories: ['/docker/php', '/docker/nginx']
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    groups:
-      imagens:
-        patterns: ['*']
+    - package-ecosystem: docker
+      directories: ['/docker/php', '/docker/nginx']
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 3
+      groups:
+          imagens:
+              patterns: ['*']
 
-  # A versão MAJOR do PostgreSQL não sobe sozinha: trocar exige migrar os
-  # dados (pg_upgrade ou dump e restauração), não só a imagem.
-  - package-ecosystem: docker-compose
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    ignore:
-      - dependency-name: postgres
-        update-types: ['version-update:semver-major']
-    groups:
-      compose:
-        patterns: ['*']
+    # A versão MAJOR do PostgreSQL não sobe sozinha: trocar exige migrar os
+    # dados (pg_upgrade ou dump e restauração), não só a imagem.
+    - package-ecosystem: docker-compose
+      directory: /
+      schedule:
+          interval: weekly
+          day: monday
+      open-pull-requests-limit: 3
+      ignore:
+          - dependency-name: postgres
+            update-types: ['version-update:semver-major']
+      groups:
+          compose:
+              patterns: ['*']
