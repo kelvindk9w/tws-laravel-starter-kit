@@ -103,7 +103,7 @@ it('o Dependabot modelo: os cinco ecossistemas nos caminhos do projeto, twstec/*
     $dependabot = developmentFile('.github/dependabot.yml', 'docker/dev/dependabot.yml');
 
     expect($dependabot)->toContain("version: 2\n")
-        ->toContain("twstec:\n        patterns: ['twstec/*']")
+        ->toMatch("/^\\s+twstec:\\n\\s+patterns: \\[[\"']twstec\\/\\*[\"']\\]/m")
         ->not->toMatch('/starters\/|packages\//');
 
     preg_match_all('/package-ecosystem: (\S+)/', $dependabot, $ecosystems);
