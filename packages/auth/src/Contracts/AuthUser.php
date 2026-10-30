@@ -7,6 +7,7 @@ namespace Twstec\Kit\Auth\Contracts;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * O que o pacote de autenticação espera do model de usuário da aplicação.
@@ -30,6 +31,15 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
  * `transaction_password`, `transaction_password_set_at`,
  * `two_factor_enabled_at`, `locale`, além de `email`, `password`,
  * `email_verified_at` e `remember_token`.
+ *
+ * Para a análise estática (Larastan/PHPStan) de quem recebe um AuthUser: o
+ * contrato só é implementado por model Eloquent (`@phpstan-require-extends`
+ * — `getKey()`, relações e atributos ficam conhecidos sem `Model&AuthUser`)
+ * e o e-mail vai tipado (é a coluna de login, obrigatória e única).
+ *
+ * @phpstan-require-extends Model
+ *
+ * @property string $email
  */
 interface AuthUser extends Authenticatable, CanResetPassword, MustVerifyEmail
 {

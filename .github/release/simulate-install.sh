@@ -30,7 +30,8 @@
 #   não existe ou que ele mesmo criou (tem o arquivo-marca
 #   .simulacao-twstec-kit), nunca a raiz, a pasta pessoal ou o monorepo.
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
-#           test (pest) | image (docker: imagens de produção e conferências) |
+#           test (larastan, sonda da análise e pest) | analyse (só a sonda
+#           da análise — ver analysis_probe) | image (docker: imagens de produção e conferências) |
 #           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
 #           abaixo; depois de copy e package)
 #   VERSION (padrão 2.0.0-beta.1)
@@ -157,7 +158,8 @@ copy() {
 # do projeto, depois do instalador): a identidade no composer.json, a licença
 # do kit como aviso, o banco de teste com o nome do projeto nos dois lugares,
 # o .env.example e o compose de produção com os valores dele, o limite de dev
-# das rotas sensíveis, o CI base e o script de verificação — e nenhum arquivo
+# das rotas sensíveis, o CI base, o Dependabot e os scripts de verificação
+# (ver automation_files) — e nenhum arquivo
 # ou comentário do monorepo nos arquivos de desenvolvimento publicados.
 created_project() {
     name=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
@@ -189,6 +191,7 @@ created_project() {
     test -f .github/workflows/ci.yml
     test -x scripts/verificar
     test ! -e docker/dev/ci.yml
+    automation_files
 
     # Nada que só existe no monorepo.
     for monorepo_file in docker/nginx/dev.conf tests/Feature/Localization/SharedTextsWithLivewireTest.php tests/e2e/smoke.spec.js tests/e2e/landing.spec.js; do
@@ -197,12 +200,42 @@ created_project() {
     if grep -Eq '^FROM .* AS dev$' docker/nginx/Dockerfile; then echo 'alvo dev do nginx (só do monorepo) no projeto'; exit 1; fi
     citacoes=$(grep -n -i -E 'monorepo|starters/|react-(app|queue|nginx|scheduler|db-init)' \
         compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
-        docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* scripts/verificar .github/workflows/ci.yml \
+        docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* .github/workflows/ci.yml .github/dependabot.yml \
+        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh \
         $(find tests/e2e -type f ! -path '*/.auth/*') 2>/dev/null || true)
     citacoes="$citacoes$(grep -v '^[[:space:]]*#.*só no monorepo' docker-compose.prod.yml | grep -n -i -E 'monorepo|starters/' || true)"
     if [ -n "$citacoes" ]; then echo "arquivos de desenvolvimento do projeto citam o monorepo:"; echo "$citacoes"; exit 1; fi
 
     echo "projeto criado com a identidade dele: app/$name, banco de teste ${database}_test"
+}
+
+# A AUTOMAÇÃO DO PROJETO CRIADO (rode na pasta do projeto): o Dependabot
+# modelo em .github/dependabot.yml, válido contra o schema oficial (o do
+# SchemaStore, embutido no check-jsonschema) e com os pacotes do kit num
+# grupo próprio; o CI base com o job de E2E limpo no actionlint (que passa os
+# `run:` pelo shellcheck); e os scripts da verificação local com selo
+# (opcional) executáveis e limpos no shellcheck. As ferramentas rodam em
+# container, com as imagens fixadas por digest (a imagem do actionlint traz
+# também o ShellCheck).
+ACTIONLINT_IMAGE=rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+PYTHON_IMAGE=python:3.13-alpine@sha256:7984cf56ceaddebe4fefeb75d64000b9f45d8b77b11a09b24524da6cdc3af0c8
+CHECK_JSONSCHEMA_VERSION=0.39.0
+automation_files() {
+    test -f .github/dependabot.yml
+    test ! -e docker/dev/dependabot.yml
+    grep -q "patterns: \['twstec/\*'\]" .github/dependabot.yml
+    for script in scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push; do
+        if [ ! -x "$script" ]; then echo "script da automação ausente ou sem permissão de execução: $script"; exit 1; fi
+    done
+    test -f scripts/lib/selo.sh
+
+    docker run --rm -v "$(pwd)/.github:/w:ro" "$PYTHON_IMAGE" sh -ec \
+        "pip install --quiet --disable-pip-version-check --root-user-action=ignore check-jsonschema==$CHECK_JSONSCHEMA_VERSION
+         check-jsonschema --builtin-schema vendor.dependabot /w/dependabot.yml"
+    docker run --rm -v "$(pwd):/w:ro" -w /w "$ACTIONLINT_IMAGE" -no-color .github/workflows/ci.yml
+    docker run --rm -v "$(pwd):/w:ro" -w /w --entrypoint shellcheck "$ACTIONLINT_IMAGE" -x -s sh \
+        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh
+    echo "automação do projeto: Dependabot válido, CI limpo no actionlint, scripts limpos no shellcheck"
 }
 
 package() {
@@ -269,6 +302,11 @@ package() {
         for proibido in tests phpunit.xml; do
             if [ -e "vendor/twstec/kit-$pkg/$proibido" ]; then echo "no pacote publicado kit-$pkg: $proibido"; exit 1; fi
         done
+        # Pacote com tabelas publica a extensão do Larastan (as colunas e os
+        # casts dos models dele para a análise do projeto).
+        if [ -d "vendor/twstec/kit-$pkg/database/migrations" ] && [ ! -f "vendor/twstec/kit-$pkg/extension.neon" ]; then
+            echo "pacote publicado kit-$pkg sem o extension.neon"; exit 1
+        fi
     done
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
     # A ORIGEM de cada pacote instalado (dist) é o ZIP, nunca um caminho do
@@ -322,9 +360,84 @@ run_tests() {
     cd "$WORK/app"
     # A análise estática do projeto criado — inclusive sem módulos opcionais
     # (KIT_WITHOUT): o phpstan.modules.php do starter tira da análise as telas
-    # do módulo ausente.
-    ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+    # do módulo ausente. Pelo script do projeto (`composer analyse`).
+    composer analyse -- --no-progress
+    analysis_probe
     ./vendor/bin/pest --ci
+}
+
+# A ANÁLISE ENXERGA O KIT: um arquivo de sonda no app/ do projeto criado, com
+# os tipos que o Larastan tem de deduzir das extensões dos pacotes (colunas
+# das migrations do vendor/, casts do casts() e das traits, e-mail no
+# contrato) e um erro de nulidade proposital numa coluna do kit — a análise
+# tem de sair com 1 e dizer exatamente isto. Sem as extensões, as colunas do
+# kit somem ("Access to an undefined property") e a sonda reprova. A sonda
+# sai do projeto no fim.
+analysis_probe() {
+    cd "$WORK/app"
+    probe=app/KitAnalysisProbe.php
+    cat > "$probe" <<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use App\Models\User;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+
+final class KitAnalysisProbe
+{
+    public function types(User $user, AuthUser $person): void
+    {
+        \PHPStan\dumpType($user->locale);
+        \PHPStan\dumpType($user->status);
+        \PHPStan\dumpType($user->email_verified_at);
+        \PHPStan\dumpType($person->email);
+    }
+
+    public function nullable(User $user): string
+    {
+        return $user->two_factor_enabled_at->format('c');
+    }
+}
+PHP
+    expected='14:Dumped type: string|null
+15:Dumped type: Twstec\Kit\Auth\Enums\UserStatus
+16:Dumped type: Carbon\Carbon|null
+17:Dumped type: string
+22:Cannot call method format() on Illuminate\Support\Carbon|null.'
+    case " $CHOSEN " in
+        *" uploads "*)
+            cat > app/KitAnalysisUploadsProbe.php <<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use Twstec\Kit\Uploads\Models\Upload;
+
+function kitAnalysisUploadsProbe(Upload $upload): void
+{
+    \PHPStan\dumpType($upload->size);
+}
+PHP
+            expected="$expected
+11:Dumped type: int<0, max>" ;;
+    esac
+
+    if ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G --error-format=raw app/KitAnalysis*.php > "$WORK/sonda.txt" 2>&1; then
+        cat "$WORK/sonda.txt"; echo 'a análise não acusou o erro de nulidade proposital da sonda'; exit 1
+    fi
+    found=$(grep -E '/app/KitAnalysis[A-Za-z]*\.php:' "$WORK/sonda.txt" | sed -E 's#^.*/app/KitAnalysis[A-Za-z]*\.php:##' | sort)
+    if [ "$found" != "$(printf '%s\n' "$expected" | sort)" ]; then
+        cat "$WORK/sonda.txt"
+        printf 'a análise não enxerga as colunas e os casts do kit como devia.\nesperado:\n%s\nobtido:\n%s\n' "$expected" "$found"
+        exit 1
+    fi
+    rm -f app/KitAnalysis*.php "$WORK/sonda.txt"
+    echo "a análise enxerga as colunas e os casts do kit (sonda:$CHOSEN): ok"
 }
 
 # Imagens de PRODUÇÃO do projeto criado (app e nginx), com o Dockerfile e o
@@ -364,6 +477,7 @@ docker_path() {
     grep -qx "COMPOSE_PROJECT_NAME=$name" .env
     created_project
     grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
+    grep -Eq '^DB_MIGRATION_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^APP_KEY=base64:.+' .env
     test -f public/build/manifest.json
@@ -385,6 +499,10 @@ docker_path() {
     done
     if [ "$ok" != 1 ]; then docker compose ps -a; docker compose logs --tail 80; echo "o site não respondeu em http://$name.localhost:$port"; exit 1; fi
     echo "site no ar: http://$name.localhost:$port/up → 200"
+    # Dois papéis no PostgreSQL: o app conecta com o papel da aplicação, que
+    # o migrate do init criou — sem superusuário, sem posse, só SELECT/INSERT
+    # nas trilhas só-acréscimo.
+    docker compose exec -T app php artisan db:check-roles
     test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
 
     # O Vite de desenvolvimento libera no CORS a origem do SITE — e só ela
@@ -425,7 +543,7 @@ image() {
     if grep -v '^[[:space:]]*#' docker-compose.prod.yml | grep -Eq 'additional_contexts|\.\./\.\./packages'; then
         echo 'docker-compose.prod.yml publicado cita o monorepo'; exit 1
     fi
-    PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao \
+    PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
         docker compose -f docker-compose.prod.yml config --quiet
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
 
@@ -465,6 +583,7 @@ case "$STEP" in
     package) package ;;
     build) build ;;
     test) run_tests ;;
+    analyse) analysis_probe ;;
     image) image ;;
     docker) docker_path ;;
     all) copy; package; build; run_tests; image ;;

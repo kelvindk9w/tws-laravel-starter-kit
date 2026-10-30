@@ -7,10 +7,13 @@
 # Cria o que falta — nunca sobrescreve um arquivo que já existe:
 #
 # - .env da RAIZ (o que o Compose lê para montar o docker-compose.yml): as
-#   senhas do PostgreSQL (DB_PASSWORD) e do Redis (REDIS_PASSWORD) do ambiente
-#   de desenvolvimento, aleatórias. O docker-compose.yml recusa subir sem
-#   elas e as entrega aos containers PHP dos dois starters (vencem as do
-#   .env de cada starter).
+#   senhas do PostgreSQL — a do superusuário do container, que é o papel de
+#   MIGRAÇÃO (DB_PASSWORD), e a do papel da APLICAÇÃO (DB_APP_PASSWORD) — e a
+#   do Redis (REDIS_PASSWORD) do ambiente de desenvolvimento, aleatórias. O
+#   docker-compose.yml recusa subir sem elas e as entrega aos containers PHP
+#   dos dois starters (vencem as do .env de cada starter).
+#   .env da raiz de ANTES dos dois papéis (sem DB_APP_PASSWORD): o script
+#   acrescenta a senha que falta, sem mexer nas outras.
 #   Quem JÁ tem o banco de desenvolvimento (o volume
 #   tws-laravel-starter-kit_postgres_data, criado antes deste script) continua
 #   com a senha com que ele nasceu: a do DB_PASSWORD do
@@ -45,6 +48,15 @@ if [ -f .env ]; then
             exit 1
         fi
     done
+    if ! grep -Eq "^DB_APP_PASSWORD=.+" .env; then
+        {
+            echo "# O papel da APLICAÇÃO no PostgreSQL (tws_app): sem superusuário e sem"
+            echo "# posse. O primeiro \`php artisan migrate\` de cada starter o cria."
+            echo "DB_APP_PASSWORD=$(random_secret)"
+        } >> .env
+        echo "acrescentado ao .env da raiz: DB_APP_PASSWORD (o papel da aplicação; rode o migrate de cada starter e recrie os containers)"
+        exit 0
+    fi
     echo ".env da raiz já existe: nada a fazer"
     exit 0
 fi
@@ -63,10 +75,14 @@ cat > .env <<EOF
 # Ambiente do Compose do monorepo (docker-compose.yml), gerado pelo
 # scripts/preparar-dev. Fora do git. As senhas valem para os containers dos
 # dois starters (vencem as do .env de cada um).
+# O superusuário do PostgreSQL (tws): o papel de MIGRAÇÃO dos starters.
 DB_PASSWORD=$db_password
+# O papel da APLICAÇÃO (tws_app): sem superusuário e sem posse. O primeiro
+# \`php artisan migrate\` de cada starter o cria.
+DB_APP_PASSWORD=$(random_secret)
 REDIS_PASSWORD=$(random_secret)
 # Portas publicadas só em 127.0.0.1. Para abrir para a rede (nunca numa
 # máquina com acesso público): DEV_BIND=0.0.0.0
 # DEV_BIND=127.0.0.1
 EOF
-echo "criado: .env da raiz (senhas do PostgreSQL e do Redis de desenvolvimento)"
+echo "criado: .env da raiz (senhas dos dois papéis do PostgreSQL e do Redis de desenvolvimento)"

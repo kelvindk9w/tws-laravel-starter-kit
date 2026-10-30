@@ -23,7 +23,12 @@ nome no `phpunit.pgsql.xml`, e o serviço `db-init` do `compose.yaml` cria o
 mesmo (`${DB_DATABASE}_test`) na subida. A `tests/TestCase.php` recusa
 qualquer banco que não termine em `_test`.
 
-**E2E (Playwright), sem Node na máquina:**
+**E2E (Playwright), sem Node na máquina:** `scripts/e2e` faz tudo — sobe o
+projeto, espera o site e o Vite, respeita os 60 s entre rodadas, cria as
+pessoas fixas, roda o Playwright na imagem da versão do `package-lock.json` e
+confere que nada sobrou (`scripts/verificar --e2e` o roda depois dos outros
+passos; o CI base, no disparo manual com "Rodar também o E2E"). À mão, passo
+a passo:
 
 ```bash
 # As pessoas fixas do E2E (e2e@, login-e2e@, admin-e2e@ e — no React —
@@ -92,10 +97,12 @@ Arquivos: `tests/Unit/Architecture/ProjectGuardsTest.php` e
 
 O projeto nasce com o [Larastan](https://github.com/larastan/larastan)
 (PHPStan com as regras do Laravel) em `require-dev` e o `phpstan.neon.dist` na
-raiz: **nível 8** no código do aplicativo (`app/`), **sem baseline**.
+raiz: **nível 8** no código do aplicativo (`app/`, `bootstrap/`, `config/`,
+`database/` e `routes/`), **sem baseline**.
 
 ```bash
-docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
+docker compose exec app composer analyse
+# o mesmo que: docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
 ```
 
 - O código dos starters passa limpo, e o CI do kit roda essa análise nos dois
@@ -104,12 +111,35 @@ docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
   entrada de `ignoreErrors` é o aviso `trait.unused` das peças neutras dos
   módulos opcionais (`app/Models/Concerns/Fallbacks`), que só entram em uso sem
   o módulo — com `reportUnmatched: false`, porque sem o módulo o aviso some.
-- Os models dos pacotes (`Account`, `AccountMembership`, `ApiKey`, `Project`,
-  `RequestLog`) declaram as colunas em `@property`: as migrations deles ficam
-  no `vendor/`, fora do alcance da leitura de migrations do Larastan.
-- Do contrato de usuário (`Twstec\Kit\Auth\Contracts\AuthUser`), use os
-  métodos, não as colunas: o e-mail é `getEmailForVerification()`. Coluna
-  lida de um objeto tipado pelo contrato (`$user->email`) reprova no nível 8.
+- **As colunas e os casts dos models do kit** ficam visíveis pela extensão de
+  cada pacote: todo pacote com tabelas traz um `extension.neon` que aponta o
+  Larastan para as migrations dele (no `vendor/`) e liga a leitura do método
+  `casts()` (`parseModelCastsMethod`). O `phpstan.modules.php` do starter
+  inclui a extensão de cada pacote **instalado** (a de um módulo ausente não
+  existe); não liste `vendor/twstec/kit-*/database/migrations` à mão nem
+  inclua a extensão de novo (o PHPStan recusa arquivo incluído duas vezes).
+  Com as extensões, o Larastan deixa de ler sozinho o `database/migrations`
+  do projeto — por isso o `phpstan.neon.dist` o lista em
+  `databaseMigrationsPath`. Projeto fora dos starters inclui as extensões
+  dos pacotes que usa:
+
+  ```neon
+  includes:
+      - vendor/twstec/kit-foundation/extension.neon
+      - vendor/twstec/kit-auth/extension.neon
+  parameters:
+      databaseMigrationsPath:
+          - database/migrations
+  ```
+- Os casts que as traits do `twstec/kit-auth` aplicam em tempo de execução
+  (`status`, `two_factor_enabled_at`, `transaction_password_set_at`) estão em
+  `@property` nas próprias traits; o contrato de usuário
+  (`Twstec\Kit\Auth\Contracts\AuthUser`) declara que só model Eloquent o
+  implementa (`@phpstan-require-extends`) e traz o e-mail tipado
+  (`$user->email`, `string`).
+- Membros de uma conta (`AccountDirectory::members()`): o papel e a data de
+  entrada saem com tipo por `roleOf($pessoa)` (`AccountRole`) e
+  `memberSince($pessoa)` — nada de ler o pivô na mão.
 - **Projeto criado sem algum módulo opcional:** as telas do módulo ausente
   continuam em `app/` (as rotas e o menu não as registram, e o
   `tws:add <módulo>` as reaproveita) e citam classes que não estão
@@ -119,9 +149,13 @@ docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
   base protegido por `Kit::has`), ignora só os erros que citam as classes do
   módulo, só naquele arquivo. Com todos os módulos, não tira nada. Arquivo
   novo que cite um módulo opcional entra no mapa — a simulação de instalação
-  do CI (React sem uploads, Livewire só com a base) roda o Larastan e
-  reprova se faltar. Por isso a análise roda no `scripts/verificar` e no CI
-  do projeto criado.
+  do CI (React sem uploads, Livewire só com a base) e as combinações de
+  módulos ("só o admin", "só a base") rodam o Larastan e reprovam se faltar.
+  Por isso a análise roda no `scripts/verificar` e no CI do projeto criado.
+- **A prova de que a análise enxerga o kit:** a simulação de instalação do CI
+  põe no projeto criado uma sonda com os tipos que o Larastan tem de deduzir
+  das extensões e um erro de nulidade proposital numa coluna do kit; a
+  análise tem de sair com 1 e acusar exatamente aquilo.
 
 ### Pacotes divididos: a pegadinha do `arch()` do Pest
 
@@ -319,6 +353,22 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
 
 Host, porta, usuário e senha vêm do `.env` (os mesmos do banco de dev); só o
 nome do banco é forçado pelo `phpunit.pgsql.xml`.
+
+**A suíte roda com o papel de MIGRAÇÃO** (o dono do banco de teste), não com o
+da aplicação: com `DB_MIGRATION_USERNAME` diferente do `DB_USERNAME` (o Docker
+de desenvolvimento), a `tests/TestCase.php` troca o usuário da conexão pelo de
+migração antes de recriar o esquema. A suíte precisa disso: o `migrate:fresh`
+recria o esquema, e há testes que criam tabelas de apoio e instalam ou tiram
+gatilhos de propósito (as proteções das contas, as contas demo, as trilhas, a
+concorrência da idempotência) — coisa que o papel da aplicação não pode fazer.
+A separação em si é provada por `tests/Feature/Database/DatabaseRolesTest.php`:
+ele cria no banco de teste um papel de aplicação de verdade, conecta com ele e
+confere que `UPDATE`/`DELETE`/`TRUNCATE` nas trilhas falham por privilégio,
+que o `db:check-roles` reprova o dono e aprova esse papel, e que o `migrate`
+roda com o papel de migração e acerta os privilégios no fim (pula se o papel
+da suíte não puder criar papéis). No CI, o papel de migração é o mesmo usuário
+do serviço PostgreSQL (`DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` no
+`env` do job). Ver [Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).
 
 **Uma suíte por vez no mesmo banco de teste.** Duas execuções simultâneas
 contra o mesmo `<banco>_test` se atropelam (o `migrate:fresh` de uma apaga as

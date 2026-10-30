@@ -51,6 +51,15 @@ deixa testes e arquivos de desenvolvimento fora do ZIP que o Composer baixa —
 o CI instala o starter a partir desses ZIPs a cada push
 (`.github/release/simulate-install.sh`).
 
+**Análise estática.** Todo pacote com tabelas traz um `extension.neon` na
+raiz: inclui as migrations dele no `databaseMigrationsPath` do Larastan
+(caminho relativo ao próprio arquivo) e liga o `parseModelCastsMethod`, para
+a análise do projeto enxergar as colunas e os casts dos models do kit. Os
+starters incluem a de cada pacote instalado pelo `phpstan.modules.php`; a
+trava `DevelopmentEnvironmentFilesTest` dos starters exige a extensão em
+todo pacote com `database/migrations`. Ver
+[docs/testes.md](../docs/testes.md), "Análise estática".
+
 ## Testes de cada pacote
 
 Cada pacote tem a própria suíte (Pest + Orchestra Testbench), que sobe uma

@@ -9,7 +9,8 @@
 # AÇÕES FIXADAS POR COMMIT: todo `uses:` dos workflows do kit aponta para o
 # SHA de 40 caracteres, com a tag no comentário (`# v7`) — o Dependabot
 # (github-actions) atualiza os dois. Um passo do job `tests` recusa uma ação
-# por tag ou branch.
+# por tag ou branch — e um checkout sem `persist-credentials: false` (a
+# credencial do GitHub não fica no disco do job).
 #
 # BANCO DOS TESTES — decisão:
 # - O job obrigatório (`tests`) roda a suíte contra PostgreSQL 18 de verdade
@@ -30,9 +31,12 @@
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 #
-# ANÁLISE ESTÁTICA: Larastan (PHPStan) nível 8 no app/ de cada starter, sem
-# baseline, como PASSO do job do PostgreSQL (não é check novo). Ver
-# docs/testes.md, "Análise estática".
+# ANÁLISE ESTÁTICA: Larastan (PHPStan) nível 8 no código de cada starter
+# (app/, bootstrap/, config/, database/, routes/), sem baseline, como PASSO do
+# job do PostgreSQL (não é check novo), e nas combinações de módulos e na
+# simulação da instalação publicada — esta com a sonda de que a análise
+# enxerga as colunas e os casts dos models do kit (extension.neon de cada
+# pacote). Ver docs/testes.md, "Análise estática".
 #
 # STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs. No do
 # PostgreSQL: Pint, Larastan, auditorias, build, a suíte contra o PostgreSQL (banco
@@ -60,10 +64,12 @@
 # NO PRÓPRIO CHECKOUT, uma depois da outra, com o instalador (não
 # interativo): sem uploads; só o admin (sem contas, uploads nem webhooks);
 # só a base (foundation + auth); sem o admin (contas, uploads e webhooks de
-# volta — o caminho do `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre
-# (os testes do módulo ausente pulam sozinhos). São PASSOS de um job que já é
-# check obrigatório — nenhum check novo, e uma combinação quebrada deixa o
-# check vermelho. (Um job novo com matriz seria mais rápido, mas não seria
+# volta — o caminho do `--with`). Em cada uma: o build do front e a suíte
+# com o `pest` de sempre (os testes do módulo ausente pulam sozinhos); na
+# "só o admin" e na "só a base", também o Larastan (o phpstan.modules.php
+# sem os módulos ausentes). São PASSOS de um job que já é check obrigatório
+# — nenhum check novo, e uma combinação quebrada deixa o check vermelho. (Um
+# job novo com matriz seria mais rápido, mas não seria
 # obrigatório sem mexer na proteção de branch.)
 #
 # COMANDO ÚNICO (starters/kit, `composer create-project twstec/kit`): a
@@ -129,21 +135,41 @@ jobs:
 
     # Variáveis reais do processo vencem o .env (o Laravel não sobrescreve o
     # que já está no ambiente); o nome do banco vem forçado pelo phpunit.pgsql.xml.
+    # O papel de migração é o mesmo usuário do serviço (dono do banco de
+    # teste): a suíte roda com ele; os testes da separação de papéis
+    # (tests/Feature/Database/DatabaseRolesTest.php) criam o papel de
+    # aplicação deles e conectam com ele.
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_USERNAME: tws
       DB_PASSWORD: tws_ci_password
+      DB_MIGRATION_USERNAME: tws
+      DB_MIGRATION_PASSWORD: tws_ci_password
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      # Tag e branch se movem; o SHA não (ver o cabeçalho).
-      - name: Ações dos workflows fixadas por commit
+      # Tag e branch se movem; o SHA não (ver o cabeçalho). E nenhum checkout
+      # guarda a credencial do GitHub no disco (`persist-credentials: false`
+      # no bloco `with:` de cada um).
+      - name: Ações dos workflows fixadas por commit · checkout sem credencial
         working-directory: .
         run: |
           soltas=$(grep -nE '^[[:space:]-]*uses:' .github/workflows/*.yml | grep -vE 'uses: [^@[:space:]]+@[0-9a-f]{40} # v' || true)
           if [ -n "$soltas" ]; then echo "ação sem SHA fixo:"; echo "$soltas"; exit 1; fi
+          com_credencial=$(awk '
+            function fecha() { if (passo != "" && !sem) print passo; passo = "" }
+            FNR == 1 { fecha() }
+            /^[[:space:]]*- / { fecha(); recuo = index($0, "-") }
+            passo != "" && /^[[:space:]]*[^[:space:]#]/ && index($0, $1) <= recuo { fecha() }
+            /uses: actions\/checkout@/ { passo = FILENAME ":" FNR; sem = 0 }
+            passo != "" && /^[[:space:]]+persist-credentials: false([[:space:]]|$)/ { sem = 1 }
+            END { fecha() }
+          ' .github/workflows/*.yml)
+          if [ -n "$com_credencial" ]; then echo "checkout sem persist-credentials: false:"; echo "$com_credencial"; exit 1; fi
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -329,7 +355,8 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
 
-      # ANÁLISE ESTÁTICA do código do aplicativo (app/) — Larastan nível 8,
+      # ANÁLISE ESTÁTICA do código do aplicativo (app/, bootstrap/, config/,
+      # database/, routes/) — Larastan nível 8,
       # sem baseline (phpstan.neon.dist do starter). O projeto criado pelo kit
       # nasce passando nela; erro novo reprova o push.
       - name: Análise estática (Larastan nível 8)
@@ -421,6 +448,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -614,10 +643,11 @@ jobs:
           QUEUE_CONNECTION: sync
         run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · build e testes
+      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · build, análise estática e testes
         working-directory: starters/react
         run: |
           npm run build
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci
 
       - name: Starter React · Só a base (foundation + auth) · instalador
@@ -630,12 +660,13 @@ jobs:
           QUEUE_CONNECTION: sync
         run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
-      - name: Starter React · Só a base (foundation + auth) · build e testes
+      - name: Starter React · Só a base (foundation + auth) · build, análise estática e testes
         working-directory: starters/react
         run: |
           npm run build
           # Sem o admin não há Filament: o tema do /admin sai do build.
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci
 
       - name: Starter React · Sem o admin (contas, uploads e webhooks de volta) · instalador
@@ -698,19 +729,21 @@ jobs:
       - name: Só o admin (sem contas, uploads nem webhooks) · instalador
         run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Só o admin (sem contas, uploads nem webhooks) · build e testes
+      - name: Só o admin (sem contas, uploads nem webhooks) · build, análise estática e testes
         run: |
           npm run build
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci --parallel
 
       - name: Só a base (foundation + auth) · instalador
         run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
-      - name: Só a base (foundation + auth) · build e testes
+      - name: Só a base (foundation + auth) · build, análise estática e testes
         run: |
           npm run build
           # Sem o admin não há Filament: o tema do /admin sai do build.
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci --parallel
 
       - name: Sem o admin (contas, uploads e webhooks de volta) · instalador
@@ -745,6 +778,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
@@ -796,6 +831,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 

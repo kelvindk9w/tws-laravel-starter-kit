@@ -93,9 +93,12 @@ projeto. Ao final, o instalador mostra o endereço do site.
 O projeto já nasce **seu**: o `composer.json` com o nome `app/<nome>` e a
 licença `proprietary` (troque à vontade), a licença MIT do kit guardada como
 aviso em `NOTICE-KIT-MIT.txt`, o banco de teste `<nome>_test`, um CI base em
-`.github/workflows/ci.yml` (roda à mão e uma vez por semana) e o
-`scripts/verificar`, que roda o mesmo conjunto do CI na sua máquina, pelo
-Docker. Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
+`.github/workflows/ci.yml` (roda à mão e uma vez por semana, com o E2E
+opcional no disparo manual), o `.github/dependabot.yml` (atualizações
+semanais agrupadas) e o `scripts/verificar`, que roda o mesmo conjunto do CI
+na sua máquina, pelo Docker — com, desligado por padrão, o modelo de
+verificação local que publica um selo no commit (`scripts/instalar-hooks`,
+`scripts/verificar --selo`, `scripts/promover`). Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
 
 ### 5. Suba o projeto
 
@@ -141,6 +144,7 @@ Rode na pasta do projeto (ou no terminal do VS Code, fora do container):
 | ver os logs | `docker compose logs -f` (ou `… logs -f app`) |
 | rodar os testes | `docker compose exec app php artisan test` |
 | conferir tudo o que o CI confere | `scripts/verificar` |
+| rodar o E2E (Playwright) | `scripts/e2e` |
 | um comando do Laravel | `docker compose exec app php artisan migrate` |
 | um pacote PHP | `docker compose exec app composer require vendor/pacote` |
 | um pacote do front | `docker compose exec vite npm install pacote` |
