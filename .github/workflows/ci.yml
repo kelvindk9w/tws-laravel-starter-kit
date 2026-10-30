@@ -154,7 +154,8 @@ jobs:
 
       # Tag e branch se movem; o SHA não (ver o cabeçalho). E nenhum checkout
       # guarda a credencial do GitHub no disco (`persist-credentials: false`
-      # no bloco `with:` de cada um).
+      # no bloco `with:` de cada um) — salvo o do split.yml, marcado com
+      # `persist-credentials: true # exceção:` e o motivo (o push do split).
       - name: Ações dos workflows fixadas por commit · checkout sem credencial
         working-directory: .
         run: |
@@ -167,6 +168,7 @@ jobs:
             passo != "" && /^[[:space:]]*[^[:space:]#]/ && index($0, $1) <= recuo { fecha() }
             /uses: actions\/checkout@/ { passo = FILENAME ":" FNR; sem = 0 }
             passo != "" && /^[[:space:]]+persist-credentials: false([[:space:]]|$)/ { sem = 1 }
+            passo != "" && FILENAME ~ /split\.yml$/ && /^[[:space:]]+persist-credentials: true # exceção: / { sem = 1 }
             END { fecha() }
           ' .github/workflows/*.yml)
           if [ -n "$com_credencial" ]; then echo "checkout sem persist-credentials: false:"; echo "$com_credencial"; exit 1; fi
