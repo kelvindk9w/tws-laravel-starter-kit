@@ -90,7 +90,12 @@ it('as senhas do banco e do Redis são geradas por projeto (nunca a mesma, nunca
     expect($a['DB_PASSWORD'])->not->toBe($a['REDIS_PASSWORD'])
         ->and($a['DB_PASSWORD'])->not->toBe($b['DB_PASSWORD'])
         ->and($a['DB_PASSWORD'])->not->toBe('tws_dev_password')
-        ->and(strlen($a['DB_PASSWORD']))->toBe(32);
+        ->and(strlen($a['DB_PASSWORD']))->toBe(32)
+        // O papel de migração (dono do banco) tem senha própria.
+        ->and(strlen($a['DB_MIGRATION_PASSWORD']))->toBe(32)
+        ->and($a['DB_MIGRATION_PASSWORD'])->not->toBe($a['DB_PASSWORD'])
+        ->and($a['DB_MIGRATION_PASSWORD'])->not->toBe($a['REDIS_PASSWORD'])
+        ->and($a['DB_MIGRATION_PASSWORD'])->not->toBe($b['DB_MIGRATION_PASSWORD']);
 });
 
 it('o banco só é publicado se pedido (o perfil db-port); o dono dos arquivos é o da máquina, nunca root', function (): void {

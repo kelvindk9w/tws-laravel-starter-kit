@@ -57,12 +57,16 @@ jobs:
           --health-retries 10
 
     # Variáveis do processo vencem o .env; o nome do banco vem forçado pelo
-    # phpunit.pgsql.xml.
+    # phpunit.pgsql.xml. O papel de migração é o mesmo usuário do serviço
+    # (dono do banco de teste): a suíte roda com ele, e os testes da
+    # separação de papéis criam o papel de aplicação deles.
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_USERNAME: ci
       DB_PASSWORD: ci
+      DB_MIGRATION_USERNAME: ci
+      DB_MIGRATION_PASSWORD: ci
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

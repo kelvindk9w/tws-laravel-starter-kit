@@ -38,12 +38,12 @@
 #
 # Variáveis DB_*, REDIS_PASSWORD, DEV_BIND e DEV_*_PORT usadas AQUI vêm do
 # ambiente do shell ou do .env da RAIZ, não do starters/livewire/.env. As
-# SENHAS são obrigatórias (sem padrão): o scripts/preparar-dev gera as duas
+# SENHAS são obrigatórias (sem padrão): o scripts/preparar-dev gera as três
 # no .env da raiz, e o Compose as entrega aos containers PHP dos dois
-# starters (DB_PASSWORD e REDIS_PASSWORD vencem as do .env de cada starter).
-# Os outros padrões (DB_DATABASE, DB_USERNAME) são os do .env.example do
-# starter; quem trocar um deles no .env do starter precisa pôr o mesmo valor
-# no .env da raiz.
+# starters (os dois papéis do banco e o REDIS_PASSWORD vencem os do .env de
+# cada starter — ver x-dev-secrets). O padrão de DB_DATABASE é o do
+# .env.example do starter; quem o trocar no .env do starter precisa pôr o
+# mesmo valor no .env da raiz.
 #
 # SEGURANÇA: toda porta é publicada só em 127.0.0.1 (DEV_BIND) — porta
 # publicada pelo Docker passa por cima do firewall da máquina. Para abrir para
@@ -51,8 +51,20 @@
 # =============================================================================
 
 # O que todo container PHP dos starters recebe do .env da raiz.
+#
+# DOIS PAPÉIS NO POSTGRESQL (ver docs/producao.md, "Papéis do PostgreSQL"):
+# no .env da RAIZ, DB_USERNAME/DB_PASSWORD são o superusuário do container
+# (com que o volume nasceu) — nos containers PHP ele vira o papel de
+# MIGRAÇÃO (DB_MIGRATION_*); a aplicação conecta com o papel da APLICAÇÃO,
+# DB_APP_USERNAME/DB_APP_PASSWORD da raiz (DB_USERNAME/DB_PASSWORD nos
+# containers), sem superusuário e sem posse. O primeiro `php artisan migrate`
+# de cada starter o cria e acerta os privilégios; conferir com
+# `docker compose exec app php artisan db:check-roles`.
 x-dev-secrets: &dev-secrets
-  DB_PASSWORD: ${DB_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
+  DB_USERNAME: ${DB_APP_USERNAME:-tws_app}
+  DB_PASSWORD: ${DB_APP_PASSWORD:?rode scripts/preparar-dev (acrescenta ao .env da raiz a senha do papel da aplicacao)}
+  DB_MIGRATION_USERNAME: ${DB_USERNAME:-tws}
+  DB_MIGRATION_PASSWORD: ${DB_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
   REDIS_PASSWORD: ${REDIS_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
 
 name: tws-laravel-starter-kit

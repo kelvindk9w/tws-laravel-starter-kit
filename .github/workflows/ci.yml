@@ -134,11 +134,17 @@ jobs:
 
     # Variáveis reais do processo vencem o .env (o Laravel não sobrescreve o
     # que já está no ambiente); o nome do banco vem forçado pelo phpunit.pgsql.xml.
+    # O papel de migração é o mesmo usuário do serviço (dono do banco de
+    # teste): a suíte roda com ele; os testes da separação de papéis
+    # (tests/Feature/Database/DatabaseRolesTest.php) criam o papel de
+    # aplicação deles e conectam com ele.
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       DB_USERNAME: tws
       DB_PASSWORD: tws_ci_password
+      DB_MIGRATION_USERNAME: tws
+      DB_MIGRATION_PASSWORD: tws_ci_password
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
