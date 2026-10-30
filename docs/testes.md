@@ -92,10 +92,12 @@ Arquivos: `tests/Unit/Architecture/ProjectGuardsTest.php` e
 
 O projeto nasce com o [Larastan](https://github.com/larastan/larastan)
 (PHPStan com as regras do Laravel) em `require-dev` e o `phpstan.neon.dist` na
-raiz: **nível 8** no código do aplicativo (`app/`), **sem baseline**.
+raiz: **nível 8** no código do aplicativo (`app/`, `bootstrap/`, `config/`,
+`database/` e `routes/`), **sem baseline**.
 
 ```bash
-docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
+docker compose exec app composer analyse
+# o mesmo que: docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
 ```
 
 - O código dos starters passa limpo, e o CI do kit roda essa análise nos dois
@@ -104,12 +106,35 @@ docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
   entrada de `ignoreErrors` é o aviso `trait.unused` das peças neutras dos
   módulos opcionais (`app/Models/Concerns/Fallbacks`), que só entram em uso sem
   o módulo — com `reportUnmatched: false`, porque sem o módulo o aviso some.
-- Os models dos pacotes (`Account`, `AccountMembership`, `ApiKey`, `Project`,
-  `RequestLog`) declaram as colunas em `@property`: as migrations deles ficam
-  no `vendor/`, fora do alcance da leitura de migrations do Larastan.
-- Do contrato de usuário (`Twstec\Kit\Auth\Contracts\AuthUser`), use os
-  métodos, não as colunas: o e-mail é `getEmailForVerification()`. Coluna
-  lida de um objeto tipado pelo contrato (`$user->email`) reprova no nível 8.
+- **As colunas e os casts dos models do kit** ficam visíveis pela extensão de
+  cada pacote: todo pacote com tabelas traz um `extension.neon` que aponta o
+  Larastan para as migrations dele (no `vendor/`) e liga a leitura do método
+  `casts()` (`parseModelCastsMethod`). O `phpstan.modules.php` do starter
+  inclui a extensão de cada pacote **instalado** (a de um módulo ausente não
+  existe); não liste `vendor/twstec/kit-*/database/migrations` à mão nem
+  inclua a extensão de novo (o PHPStan recusa arquivo incluído duas vezes).
+  Com as extensões, o Larastan deixa de ler sozinho o `database/migrations`
+  do projeto — por isso o `phpstan.neon.dist` o lista em
+  `databaseMigrationsPath`. Projeto fora dos starters inclui as extensões
+  dos pacotes que usa:
+
+  ```neon
+  includes:
+      - vendor/twstec/kit-foundation/extension.neon
+      - vendor/twstec/kit-auth/extension.neon
+  parameters:
+      databaseMigrationsPath:
+          - database/migrations
+  ```
+- Os casts que as traits do `twstec/kit-auth` aplicam em tempo de execução
+  (`status`, `two_factor_enabled_at`, `transaction_password_set_at`) estão em
+  `@property` nas próprias traits; o contrato de usuário
+  (`Twstec\Kit\Auth\Contracts\AuthUser`) declara que só model Eloquent o
+  implementa (`@phpstan-require-extends`) e traz o e-mail tipado
+  (`$user->email`, `string`).
+- Membros de uma conta (`AccountDirectory::members()`): o papel e a data de
+  entrada saem com tipo por `roleOf($pessoa)` (`AccountRole`) e
+  `memberSince($pessoa)` — nada de ler o pivô na mão.
 - **Projeto criado sem algum módulo opcional:** as telas do módulo ausente
   continuam em `app/` (as rotas e o menu não as registram, e o
   `tws:add <módulo>` as reaproveita) e citam classes que não estão
@@ -119,9 +144,13 @@ docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=2G
   base protegido por `Kit::has`), ignora só os erros que citam as classes do
   módulo, só naquele arquivo. Com todos os módulos, não tira nada. Arquivo
   novo que cite um módulo opcional entra no mapa — a simulação de instalação
-  do CI (React sem uploads, Livewire só com a base) roda o Larastan e
-  reprova se faltar. Por isso a análise roda no `scripts/verificar` e no CI
-  do projeto criado.
+  do CI (React sem uploads, Livewire só com a base) e as combinações de
+  módulos ("só o admin", "só a base") rodam o Larastan e reprovam se faltar.
+  Por isso a análise roda no `scripts/verificar` e no CI do projeto criado.
+- **A prova de que a análise enxerga o kit:** a simulação de instalação do CI
+  põe no projeto criado uma sonda com os tipos que o Larastan tem de deduzir
+  das extensões e um erro de nulidade proposital numa coluna do kit; a
+  análise tem de sair com 1 e acusar exatamente aquilo.
 
 ### Pacotes divididos: a pegadinha do `arch()` do Pest
 
