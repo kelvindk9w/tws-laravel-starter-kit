@@ -799,8 +799,7 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
 - **As ações dos workflows do kit fixadas por commit**, com a versão no
   comentário, e todo checkout com `persist-credentials: false` — um passo do
   job obrigatório recusa ação por tag ou branch e checkout que guarde a
-  credencial (a única exceção é a publicação, no `split.yml`, marcada no
-  arquivo com o motivo).
+  credencial.
 - **O comando único, simulado:** o mesmo, com `composer create-project
   twstec/kit` a partir dos ZIPs (os dois starters empacotados), sem terminal
   e com a escolha pelo ambiente — React sem uploads no job do PostgreSQL,

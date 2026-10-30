@@ -116,15 +116,9 @@ jobs:
             echo "tag inválida: $TAG"; exit 1
           fi
 
-      # EXCEÇÃO à regra do checkout sem credencial (trava no ci.yml): a ação
-      # de split empurra para o espelho com o SPLIT_TOKEN na URL, como nome de
-      # usuário, e o git pede uma senha; quem a fornece é a credencial que o
-      # checkout guarda. Sem ela o push falha ("could not read Password") —
-      # foi o que reprovou a 1ª publicação da 2.0.0-beta.17. O token guardado
-      # é o do próprio workflow, só leitura (permissions: contents: read).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          persist-credentials: true # exceção: o split empurra com ela
+          persist-credentials: false
           ref: refs/tags/${{ env.TAG }}
           fetch-depth: 0
 
@@ -160,7 +154,7 @@ jobs:
         run: |
           url="https://github.com/$SPLIT_OWNER/$REPOSITORY"
           if ! git ls-remote --exit-code --tags "$url" "refs/tags/$TAG" >/dev/null; then
-            echo "::error title=Espelho sem a versão::$url não recebeu a tag $TAG — confira se o espelho está no SPLIT_TOKEN (Contents: read and write) e rode de novo"
+            echo "::error title=Espelho sem a versão::$url não recebeu a tag $TAG — confira se o SPLIT_TOKEN não venceu e se tem o espelho (Contents: read and write); depois rode de novo"
             exit 1
           fi
           if ! git ls-remote --exit-code --heads "$url" main >/dev/null; then
