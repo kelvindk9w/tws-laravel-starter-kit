@@ -342,8 +342,10 @@ resolvido) = possível tentativa de acesso sem credencial válida.
 `AppendOnlyViolationException`. As únicas mutações são as transições controladas do model
 (`markFinished()`, `bindTenant()`/`bindTenantByCorrelationId()` — usado pelo middleware
 `resolve.tenant` para vincular o tenant ao log quando a secret key é resolvida).
-Em produção, complementar com
-`REVOKE UPDATE, DELETE` da role da aplicação no PostgreSQL.
+No PostgreSQL, o papel da aplicação nem
+tem `UPDATE` na tabela inteira nem `DELETE`: só o `UPDATE` das colunas do ciclo de vida
+(`status`, `http_status_response`, `error_message`, `duration_ms`, `tenant_uuid`) — ver
+[Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).
 
 `audit_events` é imutável em **três camadas**:
 
@@ -357,11 +359,16 @@ Em produção, complementar com
 A única remoção é a poda por idade (`AuditEvent::pruneOlderThan()`, usada pelo `audit:prune`): ela
 liga a flag local `tws.audit_prune` só dentro da transação de cada lote. `outbound_http_logs` segue
 as mesmas três camadas (gatilho `OutboundHttpLogTrigger`, flag `tws.outbound_http_prune`, poda
-`outbound-http:prune`). Em produção, complementar
-com separação de papéis no PostgreSQL — a aplicação conectando com uma role que **não é dona** do
-esquema (dono pode desligar gatilho e apagar tabela) e `REVOKE UPDATE ON audit_events` dessa role. O
-`DELETE` continua concedido, porque é a própria aplicação que poda; quem quiser tirá-lo também
-precisa rodar o `audit:prune` com uma role de manutenção própria.
+`outbound-http:prune`).
+
+**Quarta camada: os papéis do PostgreSQL.** O gatilho não segura quem é **dono** da tabela (desliga
+o gatilho, apaga a tabela) nem o superusuário. Com o papel de migração separado
+(`DB_MIGRATION_USERNAME`), a aplicação conecta com um papel que não é dono de nada e que, nas
+tabelas só-acréscimo — `audit_events`, `request_logs`, `outbound_http_logs` e as que o projeto
+declarar em `database_roles.append_only_tables` —, só tem `SELECT` e `INSERT`: `UPDATE`, `DELETE`,
+`TRUNCATE` e desligar o gatilho falham **por privilégio**, antes de o gatilho rodar. As podas rodam
+com o papel de migração. `php artisan db:check-roles` confere. Tudo em
+[Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).
 
 ## Health check
 

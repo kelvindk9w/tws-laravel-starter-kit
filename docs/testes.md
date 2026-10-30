@@ -320,6 +320,22 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml
 Host, porta, usuário e senha vêm do `.env` (os mesmos do banco de dev); só o
 nome do banco é forçado pelo `phpunit.pgsql.xml`.
 
+**A suíte roda com o papel de MIGRAÇÃO** (o dono do banco de teste), não com o
+da aplicação: com `DB_MIGRATION_USERNAME` diferente do `DB_USERNAME` (o Docker
+de desenvolvimento), a `tests/TestCase.php` troca o usuário da conexão pelo de
+migração antes de recriar o esquema. A suíte precisa disso: o `migrate:fresh`
+recria o esquema, e há testes que criam tabelas de apoio e instalam ou tiram
+gatilhos de propósito (as proteções das contas, as contas demo, as trilhas, a
+concorrência da idempotência) — coisa que o papel da aplicação não pode fazer.
+A separação em si é provada por `tests/Feature/Database/DatabaseRolesTest.php`:
+ele cria no banco de teste um papel de aplicação de verdade, conecta com ele e
+confere que `UPDATE`/`DELETE`/`TRUNCATE` nas trilhas falham por privilégio,
+que o `db:check-roles` reprova o dono e aprova esse papel, e que o `migrate`
+roda com o papel de migração e acerta os privilégios no fim (pula se o papel
+da suíte não puder criar papéis). No CI, o papel de migração é o mesmo usuário
+do serviço PostgreSQL (`DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` no
+`env` do job). Ver [Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).
+
 **Uma suíte por vez no mesmo banco de teste.** Duas execuções simultâneas
 contra o mesmo `<banco>_test` se atropelam (o `migrate:fresh` de uma apaga as
 tabelas da outra; o que um teste grava com commit aparece na contagem de outro)

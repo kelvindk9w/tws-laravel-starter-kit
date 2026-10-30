@@ -364,6 +364,7 @@ docker_path() {
     grep -qx "COMPOSE_PROJECT_NAME=$name" .env
     created_project
     grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
+    grep -Eq '^DB_MIGRATION_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
     grep -Eq '^APP_KEY=base64:.+' .env
     test -f public/build/manifest.json
@@ -385,6 +386,10 @@ docker_path() {
     done
     if [ "$ok" != 1 ]; then docker compose ps -a; docker compose logs --tail 80; echo "o site não respondeu em http://$name.localhost:$port"; exit 1; fi
     echo "site no ar: http://$name.localhost:$port/up → 200"
+    # Dois papéis no PostgreSQL: o app conecta com o papel da aplicação, que
+    # o migrate do init criou — sem superusuário, sem posse, só SELECT/INSERT
+    # nas trilhas só-acréscimo.
+    docker compose exec -T app php artisan db:check-roles
     test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
 
     # O Vite de desenvolvimento libera no CORS a origem do SITE — e só ela
@@ -425,7 +430,7 @@ image() {
     if grep -v '^[[:space:]]*#' docker-compose.prod.yml | grep -Eq 'additional_contexts|\.\./\.\./packages'; then
         echo 'docker-compose.prod.yml publicado cita o monorepo'; exit 1
     fi
-    PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao \
+    PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
         docker compose -f docker-compose.prod.yml config --quiet
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
 

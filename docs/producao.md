@@ -19,8 +19,10 @@ Para produção real:
 1. `cp .env.prod.example .env.prod` e defina `APP_KEY` — **obrigatória**, e a
    MESMA para `app`, `migrate`, `horizon` e `scheduler` (ver
    [A chave da aplicação em produção](#a-chave-da-aplicação-em-produção)).
-2. Senhas da stack: `PROD_POSTGRES_PASSWORD` e `PROD_REDIS_PASSWORD` **não têm
-   valor padrão** — sem elas o Compose se recusa a resolver o arquivo. Defina
+2. Senhas da stack: `PROD_POSTGRES_PASSWORD`, `PROD_DB_APP_PASSWORD` e
+   `PROD_REDIS_PASSWORD` **não têm valor padrão** — sem elas o Compose se
+   recusa a resolver o arquivo. As duas do banco são de **papéis diferentes**
+   (ver [Papéis do PostgreSQL](#papéis-do-postgresql-migração--aplicação)). Defina
    `PROD_*` no shell ou no `.env` ao lado do `docker-compose.prod.yml` (o Compose interpola `${PROD_*}` dali
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
 3. TLS real: monte seus certificados (`server.crt`/`server.key`) em
@@ -51,6 +53,159 @@ app (o php-fpm aceitando conexão na porta 9000) e o nginx (um endereço interno
 `127.0.0.1:8081/nginx-health`, que não é publicado) têm healthcheck; o app só
 sobe com o Redis e o PostgreSQL prontos e as migrations concluídas, e o nginx,
 o Horizon e o scheduler só sobem com o app pronto.
+
+## Papéis do PostgreSQL: migração × aplicação
+
+As trilhas só-acréscimo (`audit_events`, `request_logs`,
+`outbound_http_logs` e as que o projeto declarar) são protegidas por model,
+builder e gatilho no banco — mas o **dono** de uma tabela desliga o gatilho
+(`ALTER TABLE … DISABLE TRIGGER`) ou apaga a tabela, e o **superusuário**
+passa por cima de tudo. Por isso a aplicação conecta com um papel que não é
+nenhum dos dois:
+
+| Papel | Variáveis | Quem usa | O que pode |
+| --- | --- | --- | --- |
+| **migração** | `DB_MIGRATION_USERNAME` / `DB_MIGRATION_PASSWORD` | `migrate*`, `db:wipe`, `schema:dump` e as podas das trilhas (`audit:prune`, `outbound-http:prune`) | dono do esquema e das tabelas |
+| **aplicação** | `DB_USERNAME` / `DB_PASSWORD` (a conexão padrão) | web, fila, agendador | `SELECT`/`INSERT`/`UPDATE`/`DELETE` nas tabelas comuns; nas só-acréscimo, só `SELECT` e `INSERT` (e `UPDATE` nas colunas liberadas); nada de `CREATE` no esquema, `TRUNCATE` ou `TRIGGER` |
+
+**Como o kit aplica** (`twstec/kit-foundation`, `Twstec\Kit\Foundation\Database`):
+
+- Com `DB_MIGRATION_USERNAME` definido (e diferente do `DB_USERNAME`), os
+  comandos acima rodam com a conexão de migração — sem `--database`, sem
+  mudar nada no `config/database.php` (o pacote monta a conexão `migration` a
+  partir da padrão; se o `config/database.php` já tiver uma conexão
+  `migration`, vale a dele). O `php artisan migrate` de sempre continua
+  funcionando.
+- **Todo `migrate` termina acertando o papel da aplicação** (com ou sem
+  migration pendente): cria o papel se faltar e o dono puder (superusuário
+  ou `CREATEROLE`), com a senha do `DB_PASSWORD`; dá os privilégios em todas
+  as tabelas e sequências e os mesmos **privilégios padrão** para as tabelas
+  futuras do dono; deixa a tabela `migrations` só para leitura; e, em cada
+  tabela só-acréscimo, revoga tudo e devolve só `SELECT`, `INSERT` e o
+  `UPDATE` das colunas liberadas. Idempotente.
+- `php artisan db:check-roles` confere a conexão da aplicação (ou a de
+  `--connection=`) e sai com **1** se o papel for superusuário, puder criar
+  papéis, ignorar o Row-Level Security, for dono (ou membro do dono) do banco,
+  do esquema ou de uma tabela registrada, puder criar objetos no esquema, ou
+  tiver `UPDATE` (na tabela ou numa coluna não liberada), `DELETE`,
+  `TRUNCATE` ou `TRIGGER` numa tabela registrada — ou se faltar `SELECT`/
+  `INSERT` nela. **0** = papéis separados; **2** = não deu para conferir
+  (conexão que não é PostgreSQL, banco fora do ar). Serve para o deploy e
+  para o monitoramento.
+- Sem `DB_MIGRATION_USERNAME`, nada muda (tudo roda com a conexão padrão, como
+  antes) — e o `db:check-roles` aponta o problema.
+
+**No `docker-compose.prod.yml`** os dois papéis já vêm separados: o
+`PROD_POSTGRES_USER` (superusuário do container e dono do banco) só chega ao
+`migrate` e ao `scheduler` (as podas); o `app` e o `horizon` recebem só o
+papel da aplicação (`PROD_DB_APP_USERNAME`, padrão `tws_app`, e
+`PROD_DB_APP_PASSWORD`). O `migrate` roda `php artisan migrate --force &&
+php artisan db:check-roles`: se a separação não estiver de pé, ele falha e o
+`app` não sobe.
+
+**Tabelas só-acréscimo do projeto** entram em `config/database_roles.php`
+(publicado com `php artisan vendor:publish --tag=foundation-config`):
+
+```php
+'append_only_tables' => [
+    'ledger_entries',
+    'payment_events' => ['updatable_columns' => ['status']],
+],
+```
+
+As do kit não saem da lista. Depois de declarar, rode o `migrate` (ele acerta
+os privilégios mesmo sem migration pendente).
+
+### Banco gerenciado ou papéis criados à mão
+
+Quando o administrador do banco cria os papéis (RDS, Cloud SQL, Supabase,
+um PostgreSQL compartilhado), o SQL é este — `meuapp_owner` é o papel de
+migração, `meuapp_app` o da aplicação; troque os nomes e as senhas:
+
+```sql
+-- Como administrador do cluster:
+CREATE ROLE meuapp_owner LOGIN PASSWORD 'senha-do-dono';
+CREATE ROLE meuapp_app LOGIN PASSWORD 'senha-da-aplicacao'
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE DATABASE meuapp OWNER meuapp_owner;
+
+-- Conectado no banco meuapp (\c meuapp), como administrador ou meuapp_owner:
+REVOKE ALL ON DATABASE meuapp FROM PUBLIC;
+GRANT CONNECT, TEMPORARY ON DATABASE meuapp TO meuapp_app;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO meuapp_app;
+
+-- Como meuapp_owner (os privilégios padrão valem para o que ELE criar):
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO meuapp_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO meuapp_app;
+```
+
+Com isso, o `migrate` (com `DB_MIGRATION_USERNAME=meuapp_owner`) faz o resto a
+cada deploy. O que ele aplica, para conferir ou repetir à mão depois das
+migrations:
+
+```sql
+-- Como meuapp_owner:
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO meuapp_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO meuapp_app;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, TRIGGER ON migrations FROM meuapp_app;
+
+-- Tabelas só-acréscimo: só leitura e inserção…
+REVOKE ALL ON audit_events, outbound_http_logs, request_logs FROM meuapp_app;
+GRANT SELECT, INSERT ON audit_events, outbound_http_logs, request_logs TO meuapp_app;
+-- …e o ciclo de vida de request_logs (RequestLog::markFinished/bindTenant):
+GRANT UPDATE (status, http_status_response, error_message, duration_ms, tenant_uuid)
+    ON request_logs TO meuapp_app;
+-- (repita o REVOKE/GRANT para cada tabela de database_roles.append_only_tables)
+```
+
+Conferir, com as credenciais da aplicação:
+
+```bash
+php artisan db:check-roles          # 0 = separado; 1 = a lista do que falta
+```
+
+**As podas apagam com o papel de migração.** `audit:prune` e
+`outbound-http:prune` removem linhas das trilhas, onde o papel da aplicação
+não tem `DELETE`; por isso o processo que as roda (o `scheduler`) precisa de
+`DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD`. Quem não quiser a senha do
+dono no agendador pode criar um papel de manutenção (com `DELETE` só nas
+trilhas) e apontar o `DB_MIGRATION_*` do scheduler para ele — o `migrate`
+continua com o dono.
+
+### Atualizar um projeto que já existe
+
+O pacote chega pelo Composer, mas o Docker e os exemplos de ambiente são
+arquivos do projeto:
+
+1. **Desenvolvimento** (`compose.yaml` do projeto criado): no `.env`, o papel
+   que existe hoje (`DB_USERNAME`, superusuário do container) vira o de
+   migração e entra um papel novo para a aplicação:
+
+   ```dotenv
+   DB_MIGRATION_USERNAME=tws                 # o DB_USERNAME de antes
+   DB_MIGRATION_PASSWORD=<o DB_PASSWORD de antes>
+   DB_USERNAME=tws_app
+   DB_PASSWORD=<uma senha nova, ex.: openssl rand -hex 16>
+   ```
+
+   No `compose.yaml`, o `postgres` (`POSTGRES_USER`/`POSTGRES_PASSWORD`) e o
+   `db-init` (`PGUSER`/`PGPASSWORD`) passam a usar `DB_MIGRATION_USERNAME`/
+   `DB_MIGRATION_PASSWORD` (copie do `docker/dev/compose.yaml` do starter). Na
+   `tests/TestCase.php`, o `runAsMigrationRole()` (a suíte PostgreSQL roda com
+   o dono do banco de teste). No CI do projeto (`.github/workflows/ci.yml`),
+   `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` iguais ao usuário do
+   serviço. Depois: `docker compose up -d` (o `init` roda o `migrate`, que
+   cria o `tws_app`) e `docker compose exec app php artisan db:check-roles`.
+   Com o `compose.yaml` novo e o `.env` antigo, o Compose recusa subir e diz
+   qual variável falta.
+2. **Produção** (`docker-compose.prod.yml`): copie do starter o
+   `x-migration-env`, o `DB_USERNAME`/`DB_PASSWORD` do `x-app-env` e o
+   `command`/`environment` do `migrate` e do `scheduler`; defina
+   `PROD_DB_APP_PASSWORD`. No primeiro deploy, o `migrate` cria o `tws_app` e
+   os privilégios, e o `db:check-roles` confirma.
 
 ### Arquivos estáticos e o disco `public`
 
