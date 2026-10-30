@@ -6,6 +6,140 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+Papéis separados no PostgreSQL (a aplicação deixa de ser superusuário ou dona
+do esquema), extensão do Larastan em cada pacote, automação opcional do
+projeto criado (Dependabot, E2E no CI, verificação local com selo) e a
+explicação do job em closure "concluído sem executar".
+
+### Atenção ao atualizar
+
+- **Papéis do PostgreSQL (#28).** Sem `DB_MIGRATION_USERNAME` nada muda (e o
+  `php artisan db:check-roles` aponta o problema). Para separar, nos arquivos
+  de starter que não chegam pelo Composer:
+  - `.env` de desenvolvimento: `DB_MIGRATION_USERNAME=tws` e
+    `DB_MIGRATION_PASSWORD=<o DB_PASSWORD de antes>`; `DB_USERNAME=tws_app` e
+    `DB_PASSWORD=<senha nova>`;
+  - `compose.yaml`: o `postgres` (`POSTGRES_USER`/`POSTGRES_PASSWORD`) e o
+    `db-init` (`PGUSER`/`PGPASSWORD`) passam a usar `DB_MIGRATION_*` (copie de
+    `docker/dev/compose.yaml` do starter). Com o `compose.yaml` novo e o
+    `.env` antigo, o Compose recusa subir e diz o que falta;
+  - `tests/TestCase.php`: o `runAsMigrationRole()` (a suíte no PostgreSQL roda
+    com o dono do banco de teste);
+  - `.github/workflows/ci.yml`: `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD`
+    iguais ao usuário do serviço, e no job de E2E a senha sorteada;
+  - depois: `docker compose up -d` (o `init` roda o `migrate`, que cria o
+    `tws_app`) e `docker compose exec app php artisan db:check-roles`.
+- **Produção:** no `docker-compose.prod.yml`/`.env.prod.example`, copie o
+  `x-migration-env`, o `DB_USERNAME`/`DB_PASSWORD` do `x-app-env` e o
+  `command`/`environment` do `migrate` e do `scheduler`; defina
+  `PROD_DB_APP_PASSWORD` (agora obrigatória). O primeiro deploy cria o papel
+  da aplicação, e o `migrate` termina com o `db:check-roles` — com a separação
+  quebrada, a aplicação não sobe. O `scheduler` recebe a senha do dono por
+  causa das podas das trilhas (`docs/producao.md` mostra a alternativa de um
+  papel de manutenção só com `DELETE` nelas).
+- **Larastan (#31):** copie do starter o `phpstan.neon.dist` e o
+  `phpstan.modules.php` e acrescente o script `analyse` ao `composer.json`.
+  Com `phpstan.neon` próprio: inclua as extensões dos pacotes que usa, **liste
+  `database/migrations` no `databaseMigrationsPath`** (com as extensões o
+  Larastan deixa de lê-lo sozinho), tire a lista manual de
+  `vendor/twstec/kit-*/database/migrations` e o `parseModelCastsMethod`, e não
+  inclua a mesma extensão duas vezes (o PHPStan recusa). Os caminhos do
+  `databaseMigrationsPath` passam a valer em relação ao arquivo onde estão
+  escritos. Classe própria que implemente `AuthUser` sem estender model
+  Eloquent passa a ser acusada.
+- **Automação do projeto (#34), opcional:** copie do starter
+  `docker/dev/dependabot.yml` → `.github/dependabot.yml`; o `inputs.e2e` e o
+  job `e2e` de `docker/dev/ci.yml` para o seu `.github/workflows/ci.yml`;
+  `scripts/e2e`, `scripts/promover`, `scripts/instalar-hooks`,
+  `scripts/hooks/pre-push`, `scripts/lib/selo.sh` e o `scripts/verificar`
+  novo (com permissão de execução). O selo só vale depois do
+  `scripts/instalar-hooks`.
+- Monorepo: rode `scripts/preparar-dev` de novo (acrescenta o
+  `DB_APP_PASSWORD` ao `.env` da raiz), recrie os containers e rode o
+  `migrate` de cada starter.
+
+### Segurança
+
+- **A aplicação deixa de conectar ao PostgreSQL como superusuário ou dona do
+  esquema (#28).** No Docker de desenvolvimento (projeto criado e monorepo) e
+  no `docker-compose.prod.yml`, ela usa `tws_app` (sem superusuário, sem
+  posse, sem `CREATE` no esquema), e nas tabelas só-acréscimo
+  (`audit_events`, `request_logs`, `outbound_http_logs`) só tem `SELECT` e
+  `INSERT`: `UPDATE`, `DELETE`, `TRUNCATE` e desligar o gatilho falham por
+  privilégio, não só pelo gatilho. O dono do banco só chega ao `migrate` e ao
+  `scheduler`.
+- **CI do kit:** todo checkout com `persist-credentials: false`, com trava no
+  job obrigatório (#34).
+
+### Adicionado
+
+- `twstec/kit-foundation`: `DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` —
+  com eles, `migrate*`, `db:wipe`, `schema:dump`, `audit:prune` e
+  `outbound-http:prune` rodam com o papel de migração, e todo `migrate` cria
+  (se faltar) e acerta o papel da aplicação, inclusive os privilégios padrão
+  para tabelas futuras.
+- `config/database_roles.php` com `append_only_tables`: o projeto registra as
+  tabelas só-acréscimo dele (com `updatable_columns` opcional); as três do kit
+  não saem.
+- `php artisan db:check-roles`: código 1 se a conexão da aplicação for
+  superusuário, puder criar papéis ou ignorar RLS, for dona do banco, do
+  esquema ou de tabela registrada, puder criar no esquema ou tiver privilégio
+  proibido numa tabela registrada; 0 = papéis separados; 2 = não deu para
+  conferir.
+- **Extensão do Larastan em cada pacote com tabelas**
+  (`vendor/twstec/kit-*/extension.neon`, #31): a análise do projeto enxerga
+  as colunas e os casts dos models do kit sem listar as migrations dos pacotes
+  à mão; os starters incluem a de cada pacote instalado pelo
+  `phpstan.modules.php`. A simulação da instalação publicada prova com uma
+  sonda (erro de nulidade proposital numa coluna do kit reprova a análise).
+- `composer analyse` nos starters.
+- `AccountDirectory::roleOf()` e `memberSince()`: papel (`AccountRole`) e data
+  de entrada de quem veio de `members()`, com tipo.
+- Tipos para a análise estática: o contrato `AuthUser` traz `email`
+  (`string`) e só model Eloquent o implementa (`@phpstan-require-extends`); as
+  traits do `twstec/kit-auth` declaram os casts que aplicam.
+- **Projeto criado (#34):**
+  - Dependabot modelo em `.github/dependabot.yml` (o instalador o põe no
+    lugar, sem sobrescrever um existente): Composer, npm, GitHub Actions,
+    imagens e compose, semanal e agrupado; `twstec/*` num grupo próprio; a
+    versão major do PostgreSQL fica de fora (exige migração de dados).
+  - `scripts/e2e` e um job de E2E opcional no CI base, só no disparo manual,
+    com `.env` efêmero gerado no job e nenhum segredo do repositório.
+  - Modelo opcional, desligado por padrão, de verificação local com selo:
+    `scripts/verificar --selo [--e2e]` publica o commit status
+    `verificacao-local` no SHA exato (zero minutos de Actions),
+    `scripts/instalar-hooks` liga o `pre-push` que o exige e
+    `scripts/promover` leva o commit adiante só por fast-forward; branches e
+    contexto por `VERIFICACAO_*`.
+- A simulação da instalação publicada valida o Dependabot contra o schema
+  oficial, passa o CI base pelo actionlint e os scripts pelo ShellCheck, e
+  roda o `db:check-roles` no projeto criado.
+
+### Corrigido
+
+- **Análise estática dos starters ampliada para `bootstrap/`, `config/`,
+  `database/` e `routes/`** (nível 8, sem baseline): `config/filesystems.php`
+  e `config/horizon.php` passavam `env()` (`bool|string`) direto a
+  `rtrim()`/`Str::slug()`. Projeto sem algum módulo opcional também passa (o
+  mapa de módulos ganhou os arquivos mistos dessas pastas).
+- **Fila — job como closure "concluído sem executar".** Vem do
+  `laravel/serializable-closure`, não do kit: com duas closures na mesma linha
+  (`Accounts::actingAs($conta, fn () => dispatch(function () { ... }))`), ele
+  serializa a de fora; o worker só reenfileira a closure e marca o job como
+  `DONE`. Testes novos garantem que a closure enfileirada roda o corpo com o
+  contexto de conta (conta, modo sistema, sem conta, fila `sync`) e o
+  `correlation_id` de quem a enfileirou; `docs/tenancy.md` ("Jobs") traz a
+  regra: closure de job nunca na mesma linha de outra closure; prefira classe
+  de job.
+
+### Documentação
+
+- `docs/producao.md`, "Papéis do PostgreSQL": os `GRANT`/`REVOKE` exatos e os
+  privilégios padrão para banco gerenciado.
+- `docs/instalacao.md`: dependência PHP pelo Composer do container `app` (a
+  imagem `composer:2` não tem bcmath/gd/pcntl/intl); a automação opcional do
+  projeto e o ruleset do GitHub que a acompanha.
+
 ## [2.0.0-beta.16] — 2026-10-28
 
 Revisão de segurança antes da divulgação do kit como código aberto (login,
