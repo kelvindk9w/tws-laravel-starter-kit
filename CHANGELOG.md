@@ -83,7 +83,9 @@ explicação do job em closure "concluído sem executar".
   privilégio, não só pelo gatilho. O dono do banco só chega ao `migrate` e ao
   `scheduler`.
 - **CI do kit:** todo checkout com `persist-credentials: false`, com trava no
-  job obrigatório (#34).
+  job obrigatório (#34) — salvo o da publicação (`split.yml`), em que a ação
+  de split depende da credencial guardada para empurrar aos espelhos; a
+  exceção é marcada no arquivo e só ela passa pela trava.
 
 ### Adicionado
 
