@@ -59,9 +59,21 @@ explicação do job em closure "concluído sem executar".
 - Monorepo: rode `scripts/preparar-dev` de novo (acrescenta o
   `DB_APP_PASSWORD` ao `.env` da raiz), recrie os containers e rode o
   `migrate` de cada starter.
+- **Starter React — Vite+ 1.4 (só desenvolvimento e build).** No
+  `package.json`, `vite-plus` passa a `1.4.0` e o `vite` (em `dependencies` e
+  num `overrides` novo) aponta para `npm:@voidzero-dev/vite-plus-core@1.4.0`;
+  copie os dois do starter e rode `npm install`. Sem o apontamento, o
+  `vp build` recusa rodar e manda alinhar o alias.
 
 ### Segurança
 
+- **Ferramentas de front do starter React sem os alertas abertos:** o
+  Vite+ sobe de 0.3 para 1.4, o que leva o Vitest à 5.0.5 e o Tinypool à
+  2.2. Fecha dois alertas críticos de execução remota de código no Tinypool
+  (poluição de protótipo nas opções do worker), a injeção de código pelo
+  registro de mock do Vitest e os alertas do servidor de desenvolvimento do
+  Vite e do `launch-editor`. Afetava só o desenvolvimento e o build; nada vai
+  para a imagem de produção.
 - **A aplicação deixa de conectar ao PostgreSQL como superusuário ou dona do
   esquema (#28).** No Docker de desenvolvimento (projeto criado e monorepo) e
   no `docker-compose.prod.yml`, ela usa `tws_app` (sem superusuário, sem
