@@ -1,6 +1,6 @@
-# PUBLICAÇÃO — split do monorepo para os repositórios só-leitura (DESLIGADO).
+# PUBLICAÇÃO — split do monorepo para os repositórios só-leitura.
 #
-# A cada tag `v2.*`, copiaria cada pacote (packages/*), os starters
+# A cada tag `v2.*`, copia cada pacote (packages/*), os starters
 # (starters/livewire e starters/react) e o comando único (starters/kit →
 # twstec/kit) para o repositório só-leitura de cada um, com a mesma tag — 10
 # destinos. A DEMONSTRAÇÃO (packages/demo) NÃO é publicada: vive só no
@@ -11,15 +11,16 @@
 # `twstec/starter-react` / `laravel new --using=`; ou `composer require
 # twstec/kit-auth` num aplicativo que já existe).
 #
-# ESTÁ DESLIGADO até a fase F10b, que depende do dono: os repositórios vazios
-# criados na conta kelvindk9w (nomes na matriz), o segredo SPLIT_TOKEN (token
-# com escrita SÓ nesses repositórios) e o registro de cada um no Packagist,
-# com o webhook. O job só roda com a VARIÁVEL do repositório
-# KIT_SPLIT_ENABLED = true (Settings → Secrets and variables → Actions →
-# Variables), que não existe: a tag dispara o workflow e o job sai como
-# "skipped". Ligar = criar a variável; desligar de novo = apagá-la. (Um
+# LIGADO pela VARIÁVEL do repositório KIT_SPLIT_ENABLED = true (Settings →
+# Secrets and variables → Actions → Variables); sem ela, a tag dispara o
+# workflow e os jobs saem como "skipped". Desligar = apagar a variável. (Um
 # `if: false` literal faria o mesmo, mas o actionlint o recusa como condição
-# constante.)
+# constante.) Depende do segredo SPLIT_TOKEN: token fine-grained com
+# "Contents: Read and write" SÓ nos 10 repositórios da matriz. Ele VENCE (a
+# 1ª publicação da 2.0.0-beta.17 falhou por isso): ao renová-lo, grave pela
+# tela do GitHub ou por `gh secret set` num terminal interativo — sem
+# terminal, o `gh` grava o segredo vazio. Republicar uma tag que já existe:
+# Actions → este workflow → Run workflow, com a tag.
 #
 # Antes da cópia, o composer.json de cada pasta vira o da versão publicada
 # (.github/release/prepare-composer.php): sem os path repositories do
@@ -30,7 +31,7 @@
 # (`extra.twstec-kit.constraint`) e sem a suíte dele. É exatamente o
 # que a simulação da instalação publicada, no CI, instala e testa
 # (.github/release/simulate-install.sh — inclusive `STARTER=kit`).
-name: Publicação (split) — desligada
+name: Publicação (split)
 
 on:
   push:
