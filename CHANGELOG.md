@@ -6,6 +6,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.17] — 2026-10-30
+
 Papéis separados no PostgreSQL (a aplicação deixa de ser superusuário ou dona
 do esquema), extensão do Larastan em cada pacote, automação opcional do
 projeto criado (Dependabot, E2E no CI, verificação local com selo) e a
@@ -2250,7 +2252,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.16...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.17...desenvolvimento
+[2.0.0-beta.17]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.17
 [2.0.0-beta.16]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.16
 [2.0.0-beta.15]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.15
 [2.0.0-beta.14]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.14
