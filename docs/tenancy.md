@@ -163,6 +163,24 @@ Job enfileirado sem conta roda sem conta (e falha visível se tocar em dado de
 conta). `Accounts::actingAs($conta, fn () => dispatch(...))` enfileira dentro
 do contexto mesmo com o `PendingDispatch` devolvido pelo callback.
 
+Job como closure (`dispatch(function () { ... })`) leva e restaura o mesmo
+contexto, mas **nunca na mesma linha de outra closure**. O
+`laravel/serializable-closure` (do Laravel, não do kit) acha o código da
+closure pela linha em que ela começa e, com duas closures na mesma linha,
+serializa a primeira: em `Accounts::actingAs($conta, fn () => dispatch(function
+() { ... }))` vai para a fila a `fn` de fora. O worker a executa — o que só
+enfileira a closure de novo —, marca o job como `DONE` e o corpo nunca roda,
+sem erro nenhum. Abra o callback em bloco, com o `dispatch` na linha de baixo,
+ou (melhor) use uma classe de job:
+
+```php
+Accounts::actingAs($conta, function (): void {
+    dispatch(function (): void {
+        // corpo do job
+    });
+});
+```
+
 **Processos longos.** O fim de toda requisição HTTP desfaz o modo sistema da
 requisição e o cache da sessão; a API desfaz o contexto da chave; os quadros
 explícitos são sempre desempilhados por quem os empilhou.
