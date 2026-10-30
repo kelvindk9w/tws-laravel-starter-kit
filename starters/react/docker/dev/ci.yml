@@ -175,6 +175,7 @@ jobs:
           set_env DEV_GID "$(id -g)"
           set_env APP_KEY "base64:$(openssl rand -base64 32)"
           set_env DB_PASSWORD "$(openssl rand -hex 16)"
+          set_env DB_MIGRATION_PASSWORD "$(openssl rand -hex 16)"
           set_env REDIS_PASSWORD "$(openssl rand -hex 16)"
           set_env API_KEYS_HASH_PEPPER "$(openssl rand -hex 32)"
           set_env UPLOADS_ENCRYPTION_KEY "base64:$(openssl rand -base64 32)"
