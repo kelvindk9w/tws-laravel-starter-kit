@@ -30,9 +30,12 @@
 # esse diretório como contexto. Os nomes dos jobs e os valores da matriz de
 # imagens NÃO mudaram — são os checks obrigatórios da proteção de branch.
 #
-# ANÁLISE ESTÁTICA: Larastan (PHPStan) nível 8 no app/ de cada starter, sem
-# baseline, como PASSO do job do PostgreSQL (não é check novo). Ver
-# docs/testes.md, "Análise estática".
+# ANÁLISE ESTÁTICA: Larastan (PHPStan) nível 8 no código de cada starter
+# (app/, bootstrap/, config/, database/, routes/), sem baseline, como PASSO do
+# job do PostgreSQL (não é check novo), e nas combinações de módulos e na
+# simulação da instalação publicada — esta com a sonda de que a análise
+# enxerga as colunas e os casts dos models do kit (extension.neon de cada
+# pacote). Ver docs/testes.md, "Análise estática".
 #
 # STARTER REACT (starters/react): PASSOS dentro dos mesmos dois jobs. No do
 # PostgreSQL: Pint, Larastan, auditorias, build, a suíte contra o PostgreSQL (banco
@@ -60,10 +63,12 @@
 # NO PRÓPRIO CHECKOUT, uma depois da outra, com o instalador (não
 # interativo): sem uploads; só o admin (sem contas, uploads nem webhooks);
 # só a base (foundation + auth); sem o admin (contas, uploads e webhooks de
-# volta — o caminho do `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre
-# (os testes do módulo ausente pulam sozinhos). São PASSOS de um job que já é
-# check obrigatório — nenhum check novo, e uma combinação quebrada deixa o
-# check vermelho. (Um job novo com matriz seria mais rápido, mas não seria
+# volta — o caminho do `--with`). Em cada uma: o build do front e a suíte
+# com o `pest` de sempre (os testes do módulo ausente pulam sozinhos); na
+# "só o admin" e na "só a base", também o Larastan (o phpstan.modules.php
+# sem os módulos ausentes). São PASSOS de um job que já é check obrigatório
+# — nenhum check novo, e uma combinação quebrada deixa o check vermelho. (Um
+# job novo com matriz seria mais rápido, mas não seria
 # obrigatório sem mexer na proteção de branch.)
 #
 # COMANDO ÚNICO (starters/kit, `composer create-project twstec/kit`): a
@@ -329,7 +334,8 @@ jobs:
           cp .env.example .env
           php artisan key:generate --force
 
-      # ANÁLISE ESTÁTICA do código do aplicativo (app/) — Larastan nível 8,
+      # ANÁLISE ESTÁTICA do código do aplicativo (app/, bootstrap/, config/,
+      # database/, routes/) — Larastan nível 8,
       # sem baseline (phpstan.neon.dist do starter). O projeto criado pelo kit
       # nasce passando nela; erro novo reprova o push.
       - name: Análise estática (Larastan nível 8)
@@ -614,10 +620,11 @@ jobs:
           QUEUE_CONNECTION: sync
         run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · build e testes
+      - name: Starter React · Só o admin (sem contas, uploads nem webhooks) · build, análise estática e testes
         working-directory: starters/react
         run: |
           npm run build
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci
 
       - name: Starter React · Só a base (foundation + auth) · instalador
@@ -630,12 +637,13 @@ jobs:
           QUEUE_CONNECTION: sync
         run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
-      - name: Starter React · Só a base (foundation + auth) · build e testes
+      - name: Starter React · Só a base (foundation + auth) · build, análise estática e testes
         working-directory: starters/react
         run: |
           npm run build
           # Sem o admin não há Filament: o tema do /admin sai do build.
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci
 
       - name: Starter React · Sem o admin (contas, uploads e webhooks de volta) · instalador
@@ -698,19 +706,21 @@ jobs:
       - name: Só o admin (sem contas, uploads nem webhooks) · instalador
         run: php artisan tws:install --no-interaction --without=accounts,uploads,webhooks
 
-      - name: Só o admin (sem contas, uploads nem webhooks) · build e testes
+      - name: Só o admin (sem contas, uploads nem webhooks) · build, análise estática e testes
         run: |
           npm run build
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci --parallel
 
       - name: Só a base (foundation + auth) · instalador
         run: php artisan tws:install --no-interaction --without=admin,accounts,uploads,webhooks
 
-      - name: Só a base (foundation + auth) · build e testes
+      - name: Só a base (foundation + auth) · build, análise estática e testes
         run: |
           npm run build
           # Sem o admin não há Filament: o tema do /admin sai do build.
           if grep -q 'filament.css' public/build/manifest.json; then echo 'build sem o admin com o tema do /admin'; exit 1; fi
+          ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
           ./vendor/bin/pest --ci --parallel
 
       - name: Sem o admin (contas, uploads e webhooks de volta) · instalador

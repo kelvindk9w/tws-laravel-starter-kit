@@ -14,6 +14,12 @@ use Twstec\Kit\Auth\Enums\UserStatus;
  * A instância nova já nasce `active` (o mesmo default da coluna): sem isso, o
  * status ficaria null até o primeiro refresh depois do INSERT, e a conta
  * recém-criada pareceria inativa.
+ *
+ * Coluna com o cast desta trait (para a análise estática — Larastan/PHPStan
+ * — do model que a usa: o cast entra em tempo de execução e o analisador não
+ * o vê):
+ *
+ * @property UserStatus $status
  */
 trait HasAccountStatus
 {

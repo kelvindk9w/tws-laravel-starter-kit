@@ -30,7 +30,8 @@
 #   não existe ou que ele mesmo criou (tem o arquivo-marca
 #   .simulacao-twstec-kit), nunca a raiz, a pasta pessoal ou o monorepo.
 #   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
-#           test (pest) | image (docker: imagens de produção e conferências) |
+#           test (larastan, sonda da análise e pest) | analyse (só a sonda
+#           da análise — ver analysis_probe) | image (docker: imagens de produção e conferências) |
 #           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
 #           abaixo; depois de copy e package)
 #   VERSION (padrão 2.0.0-beta.1)
@@ -269,6 +270,11 @@ package() {
         for proibido in tests phpunit.xml; do
             if [ -e "vendor/twstec/kit-$pkg/$proibido" ]; then echo "no pacote publicado kit-$pkg: $proibido"; exit 1; fi
         done
+        # Pacote com tabelas publica a extensão do Larastan (as colunas e os
+        # casts dos models dele para a análise do projeto).
+        if [ -d "vendor/twstec/kit-$pkg/database/migrations" ] && [ ! -f "vendor/twstec/kit-$pkg/extension.neon" ]; then
+            echo "pacote publicado kit-$pkg sem o extension.neon"; exit 1
+        fi
     done
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
     # A ORIGEM de cada pacote instalado (dist) é o ZIP, nunca um caminho do
@@ -322,9 +328,84 @@ run_tests() {
     cd "$WORK/app"
     # A análise estática do projeto criado — inclusive sem módulos opcionais
     # (KIT_WITHOUT): o phpstan.modules.php do starter tira da análise as telas
-    # do módulo ausente.
-    ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G
+    # do módulo ausente. Pelo script do projeto (`composer analyse`).
+    composer analyse -- --no-progress
+    analysis_probe
     ./vendor/bin/pest --ci
+}
+
+# A ANÁLISE ENXERGA O KIT: um arquivo de sonda no app/ do projeto criado, com
+# os tipos que o Larastan tem de deduzir das extensões dos pacotes (colunas
+# das migrations do vendor/, casts do casts() e das traits, e-mail no
+# contrato) e um erro de nulidade proposital numa coluna do kit — a análise
+# tem de sair com 1 e dizer exatamente isto. Sem as extensões, as colunas do
+# kit somem ("Access to an undefined property") e a sonda reprova. A sonda
+# sai do projeto no fim.
+analysis_probe() {
+    cd "$WORK/app"
+    probe=app/KitAnalysisProbe.php
+    cat > "$probe" <<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use App\Models\User;
+use Twstec\Kit\Auth\Contracts\AuthUser;
+
+final class KitAnalysisProbe
+{
+    public function types(User $user, AuthUser $person): void
+    {
+        \PHPStan\dumpType($user->locale);
+        \PHPStan\dumpType($user->status);
+        \PHPStan\dumpType($user->email_verified_at);
+        \PHPStan\dumpType($person->email);
+    }
+
+    public function nullable(User $user): string
+    {
+        return $user->two_factor_enabled_at->format('c');
+    }
+}
+PHP
+    expected='14:Dumped type: string|null
+15:Dumped type: Twstec\Kit\Auth\Enums\UserStatus
+16:Dumped type: Carbon\Carbon|null
+17:Dumped type: string
+22:Cannot call method format() on Illuminate\Support\Carbon|null.'
+    case " $CHOSEN " in
+        *" uploads "*)
+            cat > app/KitAnalysisUploadsProbe.php <<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace App;
+
+use Twstec\Kit\Uploads\Models\Upload;
+
+function kitAnalysisUploadsProbe(Upload $upload): void
+{
+    \PHPStan\dumpType($upload->size);
+}
+PHP
+            expected="$expected
+11:Dumped type: int<0, max>" ;;
+    esac
+
+    if ./vendor/bin/phpstan analyse --no-progress --memory-limit=2G --error-format=raw app/KitAnalysis*.php > "$WORK/sonda.txt" 2>&1; then
+        cat "$WORK/sonda.txt"; echo 'a análise não acusou o erro de nulidade proposital da sonda'; exit 1
+    fi
+    found=$(grep -E '/app/KitAnalysis[A-Za-z]*\.php:' "$WORK/sonda.txt" | sed -E 's#^.*/app/KitAnalysis[A-Za-z]*\.php:##' | sort)
+    if [ "$found" != "$(printf '%s\n' "$expected" | sort)" ]; then
+        cat "$WORK/sonda.txt"
+        printf 'a análise não enxerga as colunas e os casts do kit como devia.\nesperado:\n%s\nobtido:\n%s\n' "$expected" "$found"
+        exit 1
+    fi
+    rm -f app/KitAnalysis*.php "$WORK/sonda.txt"
+    echo "a análise enxerga as colunas e os casts do kit (sonda:$CHOSEN): ok"
 }
 
 # Imagens de PRODUÇÃO do projeto criado (app e nginx), com o Dockerfile e o
@@ -465,6 +546,7 @@ case "$STEP" in
     package) package ;;
     build) build ;;
     test) run_tests ;;
+    analyse) analysis_probe ;;
     image) image ;;
     docker) docker_path ;;
     all) copy; package; build; run_tests; image ;;

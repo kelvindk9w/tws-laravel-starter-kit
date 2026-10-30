@@ -75,8 +75,11 @@ it('a análise estática roda no CI base e no scripts/verificar, com o mapa dos 
     $verificar = (string) file_get_contents(base_path('scripts/verificar'));
     $phpstan = (string) file_get_contents(base_path('phpstan.neon.dist'));
 
+    $scripts = json_decode((string) file_get_contents(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR)['scripts'];
+
     expect($ci)->toContain('./vendor/bin/phpstan analyse')
         ->and($verificar)->toContain('./vendor/bin/phpstan analyse')
+        ->and($scripts['analyse'] ?? null)->toBe(['phpstan analyse --memory-limit=2G'])
         ->and($phpstan)->toMatch('/^includes:(\n\s+- .+)*\n\s+- phpstan\.modules\.php$/m');
 
     // Com todos os módulos instalados (a suíte do kit), o mapa não exclui
@@ -94,4 +97,35 @@ it('a análise estática roda no CI base e no scripts/verificar, com o mapa dos 
         expect($modules['parameters']['excludePaths']['analyse'])->toBe([])
             ->and($modules['parameters']['ignoreErrors'])->toBe([]);
     }
+});
+
+it('a análise estática enxerga as colunas e os casts dos models do kit pelas extensões dos pacotes', function (): void {
+    // Cada pacote do kit com tabelas traz o extension.neon que aponta o
+    // Larastan para as migrations DELE (no vendor/) e liga a leitura do
+    // casts(); o phpstan.modules.php inclui a de cada pacote instalado — sem
+    // ela, o projeto teria de listar vendor/twstec/kit-*/database/migrations
+    // à mão. A prova de ponta a ponta (a análise acusando um erro de
+    // nulidade numa coluna do kit) está na simulação de instalação do CI.
+    $packages = glob(base_path('vendor/twstec/kit-*/database/migrations'), GLOB_ONLYDIR) ?: [];
+    $modules = require base_path('phpstan.modules.php');
+    $phpstan = (string) file_get_contents(base_path('phpstan.neon.dist'));
+
+    expect($packages)->not->toBeEmpty();
+
+    foreach ($packages as $migrations) {
+        $extension = dirname($migrations, 2).'/extension.neon';
+
+        expect(is_file($extension))->toBeTrue("sem extension.neon: {$extension}");
+
+        $neon = (string) file_get_contents($extension);
+
+        expect($neon)->toMatch("/^expandRelativePaths:\n\s+- '\[parameters\]\[databaseMigrationsPath\]\[\]'$/m")
+            ->and($neon)->toMatch('/^\s+databaseMigrationsPath:\n\s+- database\/migrations$/m')
+            ->and($neon)->toMatch('/^\s+parseModelCastsMethod: true$/m')
+            ->and($modules['includes'])->toContain($extension);
+    }
+
+    // Com as extensões, o Larastan não lê mais sozinho as migrations do
+    // projeto: elas ficam listadas no phpstan.neon.dist.
+    expect($phpstan)->toMatch('/^\s+databaseMigrationsPath:\n\s+- database\/migrations$/m');
 });
