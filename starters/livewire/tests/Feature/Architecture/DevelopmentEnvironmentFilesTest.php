@@ -14,10 +14,17 @@ declare(strict_types=1);
 //   (o instalador grava o mesmo nome no phpunit.pgsql.xml);
 // - o desenvolvimento usa 30 nas rotas sensíveis (a suíte E2E), e a produção
 //   continua com 5;
-// - o CI base: gatilho manual e semanal, só leitura, ações fixadas por commit.
+// - o CI base: gatilho manual e semanal, só leitura, ações fixadas por commit,
+//   e o job de E2E só no disparo manual, com .env efêmero e sem segredo;
+// - o Dependabot modelo: os cinco ecossistemas nos caminhos do projeto e os
+//   pacotes do kit (twstec/*) num grupo próprio;
+// - a verificação local com selo (opcional): os scripts existem, são
+//   executáveis e o pre-push só vale depois do scripts/instalar-hooks.
 //
-// No repositório do kit, o compose e o CI ficam em docker/dev/; no projeto
-// criado, em compose.yaml e .github/workflows/ci.yml.
+// No repositório do kit, o compose, o CI e o Dependabot ficam em docker/dev/;
+// no projeto criado, em compose.yaml, .github/workflows/ci.yml e
+// .github/dependabot.yml (a validação contra o schema oficial e o actionlint
+// rodam na simulação da instalação publicada, no CI do kit).
 // =============================================================================
 
 function developmentFile(string $project, string $kit): string
@@ -54,7 +61,7 @@ it('rotas sensíveis: 30 no desenvolvimento (o .env.example), 5 na produção', 
 it('o CI base: manual e semanal, só leitura, ações fixadas por commit', function (): void {
     $ci = developmentFile('.github/workflows/ci.yml', 'docker/dev/ci.yml');
 
-    expect($ci)->toContain("on:\n  workflow_dispatch:\n  schedule:")
+    expect($ci)->toMatch("/^on:\n  workflow_dispatch:\n(    .+\n)*  schedule:\n/m")
         ->toContain("permissions:\n  contents: read")
         ->toContain('persist-credentials: false')
         ->not->toMatch('/^\s*(push|pull_request):/m');
@@ -68,6 +75,84 @@ it('o CI base: manual e semanal, só leitura, ações fixadas por commit', funct
     }
 
     expect(is_executable(base_path('scripts/verificar')))->toBeTrue();
+});
+
+it('o E2E do CI base: só no disparo manual, com .env efêmero e nenhum segredo do repositório', function (): void {
+    $ci = developmentFile('.github/workflows/ci.yml', 'docker/dev/ci.yml');
+
+    expect($ci)->toContain("    inputs:\n      e2e:\n")
+        ->toContain("type: boolean\n        default: false")
+        ->toContain("if: github.event_name == 'workflow_dispatch' && inputs.e2e")
+        ->toContain('cp .env.example .env')
+        ->toContain('openssl rand')
+        ->toContain('run: scripts/e2e')
+        ->not->toContain('secrets.')
+        ->and(substr_count($ci, 'actions/checkout@'))->toBe(substr_count($ci, 'persist-credentials: false'));
+
+    // O .env efêmero grava as chaves que o compose.yaml exige.
+    $compose = developmentFile('compose.yaml', 'docker/dev/compose.yaml');
+    preg_match_all('/\$\{([A-Z_]+):\?/', $compose, $required);
+
+    foreach (array_unique($required[1]) as $variable) {
+        expect(preg_match("/^{$variable}=\S/m", (string) file_get_contents(base_path('.env.example'))) === 1 || str_contains($ci, "set_env {$variable} "))
+            ->toBeTrue("{$variable}: o compose.yaml exige e o .env efêmero do E2E não grava");
+    }
+});
+
+it('o Dependabot modelo: os cinco ecossistemas nos caminhos do projeto, twstec/* num grupo próprio', function (): void {
+    $dependabot = developmentFile('.github/dependabot.yml', 'docker/dev/dependabot.yml');
+
+    expect($dependabot)->toContain("version: 2\n")
+        ->toContain("twstec:\n        patterns: ['twstec/*']")
+        ->not->toMatch('/starters\/|packages\//');
+
+    preg_match_all('/package-ecosystem: (\S+)/', $dependabot, $ecosystems);
+
+    expect($ecosystems[1])->toBe(['composer', 'npm', 'github-actions', 'docker', 'docker-compose']);
+
+    // Cada diretório apontado existe no projeto (a raiz e as pastas dos
+    // Dockerfiles).
+    preg_match_all('/director(?:y|ies): (.+)/', $dependabot, $directories);
+
+    foreach ($directories[1] as $list) {
+        preg_match_all("#/[\w/.-]*#", $list, $paths);
+
+        foreach ($paths[0] as $path) {
+            expect(is_dir(base_path(ltrim($path, '/'))))->toBeTrue("{$path} não existe no projeto");
+        }
+    }
+
+    expect(is_file(base_path('docker/php/Dockerfile')))->toBeTrue()
+        ->and(is_file(base_path('docker/nginx/Dockerfile')))->toBeTrue();
+});
+
+it('a verificação local com selo: scripts executáveis, sh válido e o pre-push só depois do instalar-hooks', function (): void {
+    $scripts = ['scripts/verificar', 'scripts/e2e', 'scripts/promover', 'scripts/instalar-hooks', 'scripts/hooks/pre-push'];
+
+    foreach ($scripts as $script) {
+        expect(is_executable(base_path($script)))->toBeTrue("{$script} não é executável");
+
+        exec('sh -n '.escapeshellarg(base_path($script)).' 2>&1', $output, $code);
+        expect($code)->toBe(0, "{$script}: ".implode("\n", $output));
+    }
+
+    exec('sh -n '.escapeshellarg(base_path('scripts/lib/selo.sh')).' 2>&1', $output, $code);
+    expect($code)->toBe(0);
+
+    $verificar = (string) file_get_contents(base_path('scripts/verificar'));
+    $instalar = (string) file_get_contents(base_path('scripts/instalar-hooks'));
+    $promover = (string) file_get_contents(base_path('scripts/promover'));
+
+    // Desligado por padrão: sem --selo, nada é publicado; o hook só vale
+    // pelo core.hooksPath que o instalar-hooks grava.
+    expect($verificar)->toContain('SELO=0')
+        ->toContain('--selo) SELO=1')
+        ->toContain('--e2e) E2E=1')
+        ->and($instalar)->toContain('git config --local core.hooksPath scripts/hooks')
+        ->and($promover)->toContain('git merge-base --is-ancestor')
+        ->not->toMatch('/push[^\n]*(--force|\s-f\s)/')
+        ->not->toContain('--no-verify')
+        ->and((string) file_get_contents(base_path('scripts/lib/selo.sh')))->not->toContain('--no-verify');
 });
 
 it('a análise estática roda no CI base e no scripts/verificar, com o mapa dos módulos opcionais', function (): void {
