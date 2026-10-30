@@ -9,7 +9,8 @@
 # AÇÕES FIXADAS POR COMMIT: todo `uses:` dos workflows do kit aponta para o
 # SHA de 40 caracteres, com a tag no comentário (`# v7`) — o Dependabot
 # (github-actions) atualiza os dois. Um passo do job `tests` recusa uma ação
-# por tag ou branch.
+# por tag ou branch — e um checkout sem `persist-credentials: false` (a
+# credencial do GitHub não fica no disco do job).
 #
 # BANCO DOS TESTES — decisão:
 # - O job obrigatório (`tests`) roda a suíte contra PostgreSQL 18 de verdade
@@ -148,13 +149,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-      # Tag e branch se movem; o SHA não (ver o cabeçalho).
-      - name: Ações dos workflows fixadas por commit
+      # Tag e branch se movem; o SHA não (ver o cabeçalho). E nenhum checkout
+      # guarda a credencial do GitHub no disco (`persist-credentials: false`
+      # no bloco `with:` de cada um).
+      - name: Ações dos workflows fixadas por commit · checkout sem credencial
         working-directory: .
         run: |
           soltas=$(grep -nE '^[[:space:]-]*uses:' .github/workflows/*.yml | grep -vE 'uses: [^@[:space:]]+@[0-9a-f]{40} # v' || true)
           if [ -n "$soltas" ]; then echo "ação sem SHA fixo:"; echo "$soltas"; exit 1; fi
+          com_credencial=$(awk '
+            function fecha() { if (passo != "" && !sem) print passo; passo = "" }
+            FNR == 1 { fecha() }
+            /^[[:space:]]*- / { fecha(); recuo = index($0, "-") }
+            passo != "" && /^[[:space:]]*[^[:space:]#]/ && index($0, $1) <= recuo { fecha() }
+            /uses: actions\/checkout@/ { passo = FILENAME ":" FNR; sem = 0 }
+            passo != "" && /^[[:space:]]+persist-credentials: false([[:space:]]|$)/ { sem = 1 }
+            END { fecha() }
+          ' .github/workflows/*.yml)
+          if [ -n "$com_credencial" ]; then echo "checkout sem persist-credentials: false:"; echo "$com_credencial"; exit 1; fi
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -433,6 +448,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: PHP 8.4
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
@@ -761,6 +778,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
@@ -812,6 +831,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 

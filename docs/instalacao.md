@@ -218,7 +218,20 @@ pelos comandos por starter — nasce com:
   `/var/www/html`.
 - **`.github/workflows/ci.yml`** e **`scripts/verificar`**: o CI base e a
   mesma verificação na máquina (ver [O CI e o `scripts/verificar` do projeto
-  criado](#o-ci-e-o-scriptsverificar-do-projeto-criado)).
+  criado](#o-ci-e-o-scriptsverificar-do-projeto-criado)), com o E2E opcional
+  (`scripts/e2e`) e, desligado por padrão, o modelo de verificação local com
+  selo no commit (`scripts/promover`, `scripts/instalar-hooks`).
+- **`.github/dependabot.yml`**: atualizações semanais agrupadas (ver
+  [O Dependabot do projeto criado](#o-dependabot-do-projeto-criado)).
+
+**Instalar ou atualizar dependência PHP: pelo Composer do container `app`**
+(`docker compose exec app composer require vendor/pacote`, ou `composer
+update …`; no Dev Container, `composer` direto). Ele tem as extensões que os
+pacotes exigem (`bcmath`, `gd`, `intl`, `pcntl`…) e a mesma versão do PHP do
+projeto. A imagem `composer:2` avulsa **não serve**: não tem essas extensões,
+e o Composer recusa a instalação (ou, com `--ignore-platform-req`, instala
+sem conferir o que o projeto precisa). Pacote do front: `docker compose exec
+vite npm install pacote`.
 
 **O Vite de desenvolvimento e o CORS.** A página vem do site (nginx, porta
 `808N`) e os scripts do front, do Vite (porta `803N`) — outra origem. O
@@ -242,7 +255,9 @@ IPv6 está desligado.
 No monorepo, os dois ficam em `starters/<starter>/docker/dev/` (um
 `compose.yaml` na raiz do starter mudaria o `docker compose` de quem roda o
 monorepo dali); a publicação (`prepare-composer.php`) os põe no lugar, e o
-instalador põe o CI base (`docker/dev/ci.yml`) em `.github/workflows/`. O
+instalador põe o CI base (`docker/dev/ci.yml`) em `.github/workflows/` e o
+Dependabot modelo (`docker/dev/dependabot.yml`) em `.github/` — no starter,
+um `.github/` valeria no repositório espelho dele. O
 ambiente de desenvolvimento do monorepo (o `docker-compose.yml` da raiz,
 Livewire na 8180 e React em 127.0.0.1:8181, com as configurações do nginx de
 dev em `docker/nginx/` da raiz) não muda. **Nada disso do monorepo chega ao
@@ -338,6 +353,7 @@ o starter trazia:
 | `composer.json` | `name` = `<vendor>/<nome>` (`TWS_KIT_VENDOR`, padrão `app`), `license` = `proprietary` (`TWS_KIT_LICENSE`: um identificador SPDX como `MIT` ou `Apache-2.0`), sem a descrição, a página, o suporte, as palavras-chave e a versão do starter; o `content-hash` do `composer.lock` acompanha |
 | `LICENSE` → `NOTICE-KIT-MIT.txt` | a licença MIT do kit vira o aviso que a MIT exige manter, com um cabeçalho dizendo que ela não é a licença do projeto — o projeto escolhe a dele (o `license` do `composer.json` e, se quiser, um `LICENSE` próprio) |
 | `.github/workflows/ci.yml` | o CI base (sem sobrescrever um que exista) |
+| `.github/dependabot.yml` | o Dependabot modelo (sem sobrescrever um que exista) |
 
 Vendor ou licença inválidos param a instalação antes de qualquer mudança,
 como o nome e o número. `TWS_KIT_VENDOR` e `TWS_KIT_LICENSE` valem nos dois
@@ -361,6 +377,85 @@ O projeto nasce com o mesmo conjunto de verificação em dois lugares:
   `push: { branches: [main] }` e `pull_request:`. Permissão só de leitura
   (`contents: read`), ações de terceiros **fixadas pelo commit** (com a versão
   no comentário) e o checkout sem guardar a credencial.
+
+**E2E no CI (opcional, disparo manual).** Em Actions → CI → Run workflow,
+marque **"Rodar também o E2E"**: o job `e2e` sobe o Docker de
+desenvolvimento do projeto (`compose.yaml`) numa máquina limpa e roda o
+`scripts/e2e`. O `.env` é **efêmero**, gerado no próprio job: o nome e a
+porta do site saem da `APP_URL` do `.env.example`
+(`http://<nome>.localhost:<porta>`, que o instalador grava), as outras portas
+seguem a do site, o dono dos arquivos é o usuário do job, e as senhas
+(banco, Redis) e chaves (`APP_KEY`, pepper das chaves de API, chave dos
+uploads confidenciais) são aleatórias e somem com a máquina — **nenhum
+segredo do repositório**. No disparo semanal, o job não roda.
+
+**`scripts/e2e`**, na máquina, faz o mesmo: sobe o projeto, espera o site e
+o Vite, respeita o intervalo de 60 s entre duas rodadas (o limite de borda),
+cria as pessoas fixas do E2E, roda o Playwright na imagem oficial da versão
+do `package-lock.json` e confere que nada sobrou (nenhuma pessoa `e2e-…` no
+banco nem mensagem no Mailpit). `scripts/verificar --e2e` o roda depois dos
+outros passos. Precisa do Docker e do `curl`.
+
+### O Dependabot do projeto criado
+
+O `.github/dependabot.yml` abre, uma vez por semana, pull requests agrupados
+contra a branch padrão: Composer e npm (raiz), as ações do GitHub Actions
+(fixadas por commit: troca o SHA e o comentário da versão juntos), as imagens
+base dos Dockerfiles (`docker/php`, `docker/nginx`) e as dos arquivos compose
+(`compose.yaml` e `docker-compose.prod.yml`; a versão major do PostgreSQL
+fica de fora — trocar exige migrar os dados). Os pacotes do kit (`twstec/*`)
+vêm num **grupo próprio**: andam juntos e pedem a leitura do CHANGELOG antes
+do merge (correção em arquivo do projeto não chega pelo Composer). Como o CI
+base não roda em pull request, baixe a branch do PR e rode
+`scripts/verificar` antes do merge (ou acrescente o gatilho no CI). Para
+outra branch de destino, `target-branch` em cada entrada.
+
+### Verificação local com selo no commit (opcional, desligada por padrão)
+
+Para projeto privado com poucos minutos de Actions: a verificação roda na
+máquina e **publica no GitHub um commit status no SHA exato** — o selo
+`verificacao-local` — sem gastar minuto nenhum; o `pre-push` exige o selo, e
+a promoção entre branches é só por fast-forward de commit com selo. Nada
+disso roda até alguém ligar. Precisa de git, Docker e do
+[GitHub CLI](https://cli.github.com/) com login (`gh auth login`).
+
+```bash
+scripts/instalar-hooks              # uma vez por clone: liga o pre-push
+scripts/verificar --selo            # no commit pronto (árvore limpa)
+git push                            # o pre-push confere o selo desse commit
+scripts/promover sandbox            # desenvolvimento → sandbox (fast-forward)
+scripts/verificar --selo --e2e      # no commit que vai para a última branch
+scripts/promover producao           # sandbox → producao (exige selo com E2E)
+```
+
+- **`scripts/verificar --selo`** recusa árvore suja (o selo vale para o
+  commit exato), roda tudo e, se passar e o HEAD continuar o mesmo e a árvore
+  limpa, publica o status `success` (com a duração e se o E2E rodou). Commit
+  que ainda não está no GitHub sobe por um instante para a referência técnica
+  `refs/verificacao/<sha>` (não é branch), recebe o status e a referência é
+  apagada. Falha não publica nada: a ausência do selo já barra.
+- **`scripts/hooks/pre-push`** (ligado por `scripts/instalar-hooks`, que
+  aponta o `core.hooksPath` para `scripts/hooks`; `--desligar` volta atrás):
+  recusa enviar branch ou tag cuja ponta não tenha o selo `success`. Sem o
+  `gh` ou sem rede, recusa com a instrução.
+- **`scripts/promover <destino>`** leva a ponta da branch anterior da cadeia
+  (no GitHub, depois de um fetch — ou `--sha`) para o destino, com
+  `git push origin <sha>:refs/heads/<destino>`, nunca force-push. Recusa
+  árvore suja, destino que não seria fast-forward, commit sem selo e, na
+  última branch, selo sem o E2E. Pergunta antes de enviar (`--sim` não
+  pergunta).
+- **Configuração** (variável de ambiente ou linha do `.env`; nenhuma
+  obrigatória): `VERIFICACAO_BRANCHES` (a cadeia, padrão `desenvolvimento
+  sandbox producao`), `VERIFICACAO_E2E_BRANCHES` (as que exigem o E2E, padrão
+  a última), `VERIFICACAO_CONTEXTO` (padrão `verificacao-local`),
+  `VERIFICACAO_PUBLICADORES` (logins aceitos como autor do selo na promoção;
+  vazio, qualquer um com escrita no repositório) e `VERIFICACAO_REPO`
+  (`dono/repositório`, padrão o do remoto `origin`). Detalhes no cabeçalho de
+  `scripts/lib/selo.sh`.
+- **No servidor:** o `git push --no-verify` pula o hook (é do git). Para
+  valer de verdade, crie no GitHub um **ruleset** nas branches protegidas com
+  "Require status checks to pass" exigindo `verificacao-local`, e bloqueie
+  force-push e exclusão — aí só entra commit com o selo.
 
 **A imagem de produção não muda:** o estágio `workspace` é à parte (o `prod`
 parte do `base`), e o `.dockerignore` deixa o `compose.yaml`, o
@@ -694,7 +789,17 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   `packages` do Dockerfile, que no uso real fica vazio (os pacotes vêm do
   Packagist). Pega starter que só funciona dentro do monorepo. Script:
   `.github/release/simulate-install.sh` — uma vez com o Livewire e uma com o
-  React (`STARTER=react`).
+  React (`STARTER=react`). A automação do projeto criado também é conferida:
+  o `.github/dependabot.yml` existe, tem os pacotes do kit num grupo próprio
+  e é válido contra o schema oficial (o do SchemaStore, pelo
+  `check-jsonschema`); o `.github/workflows/ci.yml`, com o job de E2E, passa
+  limpo no `actionlint`; e os scripts da verificação local (`scripts/e2e`,
+  `scripts/promover`, `scripts/instalar-hooks`, o `pre-push`) existem, são
+  executáveis e passam limpos no ShellCheck.
+- **As ações dos workflows do kit fixadas por commit**, com a versão no
+  comentário, e todo checkout com `persist-credentials: false` — um passo do
+  job obrigatório recusa ação por tag ou branch e checkout que guarde a
+  credencial.
 - **O comando único, simulado:** o mesmo, com `composer create-project
   twstec/kit` a partir dos ZIPs (os dois starters empacotados), sem terminal
   e com a escolha pelo ambiente — React sem uploads no job do PostgreSQL,

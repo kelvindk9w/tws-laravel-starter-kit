@@ -158,7 +158,8 @@ copy() {
 # do projeto, depois do instalador): a identidade no composer.json, a licença
 # do kit como aviso, o banco de teste com o nome do projeto nos dois lugares,
 # o .env.example e o compose de produção com os valores dele, o limite de dev
-# das rotas sensíveis, o CI base e o script de verificação — e nenhum arquivo
+# das rotas sensíveis, o CI base, o Dependabot e os scripts de verificação
+# (ver automation_files) — e nenhum arquivo
 # ou comentário do monorepo nos arquivos de desenvolvimento publicados.
 created_project() {
     name=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
@@ -190,6 +191,7 @@ created_project() {
     test -f .github/workflows/ci.yml
     test -x scripts/verificar
     test ! -e docker/dev/ci.yml
+    automation_files
 
     # Nada que só existe no monorepo.
     for monorepo_file in docker/nginx/dev.conf tests/Feature/Localization/SharedTextsWithLivewireTest.php tests/e2e/smoke.spec.js tests/e2e/landing.spec.js; do
@@ -198,12 +200,42 @@ created_project() {
     if grep -Eq '^FROM .* AS dev$' docker/nginx/Dockerfile; then echo 'alvo dev do nginx (só do monorepo) no projeto'; exit 1; fi
     citacoes=$(grep -n -i -E 'monorepo|starters/|react-(app|queue|nginx|scheduler|db-init)' \
         compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
-        docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* scripts/verificar .github/workflows/ci.yml \
+        docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* .github/workflows/ci.yml .github/dependabot.yml \
+        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh \
         $(find tests/e2e -type f ! -path '*/.auth/*') 2>/dev/null || true)
     citacoes="$citacoes$(grep -v '^[[:space:]]*#.*só no monorepo' docker-compose.prod.yml | grep -n -i -E 'monorepo|starters/' || true)"
     if [ -n "$citacoes" ]; then echo "arquivos de desenvolvimento do projeto citam o monorepo:"; echo "$citacoes"; exit 1; fi
 
     echo "projeto criado com a identidade dele: app/$name, banco de teste ${database}_test"
+}
+
+# A AUTOMAÇÃO DO PROJETO CRIADO (rode na pasta do projeto): o Dependabot
+# modelo em .github/dependabot.yml, válido contra o schema oficial (o do
+# SchemaStore, embutido no check-jsonschema) e com os pacotes do kit num
+# grupo próprio; o CI base com o job de E2E limpo no actionlint (que passa os
+# `run:` pelo shellcheck); e os scripts da verificação local com selo
+# (opcional) executáveis e limpos no shellcheck. As ferramentas rodam em
+# container, com as imagens fixadas por digest (a imagem do actionlint traz
+# também o ShellCheck).
+ACTIONLINT_IMAGE=rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+PYTHON_IMAGE=python:3.13-alpine@sha256:7984cf56ceaddebe4fefeb75d64000b9f45d8b77b11a09b24524da6cdc3af0c8
+CHECK_JSONSCHEMA_VERSION=0.39.0
+automation_files() {
+    test -f .github/dependabot.yml
+    test ! -e docker/dev/dependabot.yml
+    grep -q "patterns: \['twstec/\*'\]" .github/dependabot.yml
+    for script in scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push; do
+        if [ ! -x "$script" ]; then echo "script da automação ausente ou sem permissão de execução: $script"; exit 1; fi
+    done
+    test -f scripts/lib/selo.sh
+
+    docker run --rm -v "$(pwd)/.github:/w:ro" "$PYTHON_IMAGE" sh -ec \
+        "pip install --quiet --disable-pip-version-check --root-user-action=ignore check-jsonschema==$CHECK_JSONSCHEMA_VERSION
+         check-jsonschema --builtin-schema vendor.dependabot /w/dependabot.yml"
+    docker run --rm -v "$(pwd):/w:ro" -w /w "$ACTIONLINT_IMAGE" -no-color .github/workflows/ci.yml
+    docker run --rm -v "$(pwd):/w:ro" -w /w --entrypoint shellcheck "$ACTIONLINT_IMAGE" -x -s sh \
+        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh
+    echo "automação do projeto: Dependabot válido, CI limpo no actionlint, scripts limpos no shellcheck"
 }
 
 package() {

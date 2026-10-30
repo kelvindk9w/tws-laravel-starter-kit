@@ -23,7 +23,12 @@ nome no `phpunit.pgsql.xml`, e o serviço `db-init` do `compose.yaml` cria o
 mesmo (`${DB_DATABASE}_test`) na subida. A `tests/TestCase.php` recusa
 qualquer banco que não termine em `_test`.
 
-**E2E (Playwright), sem Node na máquina:**
+**E2E (Playwright), sem Node na máquina:** `scripts/e2e` faz tudo — sobe o
+projeto, espera o site e o Vite, respeita os 60 s entre rodadas, cria as
+pessoas fixas, roda o Playwright na imagem da versão do `package-lock.json` e
+confere que nada sobrou (`scripts/verificar --e2e` o roda depois dos outros
+passos; o CI base, no disparo manual com "Rodar também o E2E"). À mão, passo
+a passo:
 
 ```bash
 # As pessoas fixas do E2E (e2e@, login-e2e@, admin-e2e@ e — no React —
