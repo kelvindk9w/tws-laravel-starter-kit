@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-30, com a versão **2.0.0-beta.17** publicada.
+> Atualizado em 2026-10-31, com a versão **2.0.0-beta.18** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -89,7 +89,10 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    proteções das trilhas (#28), que a análise estática precisava listar à mão
    as tabelas do kit (#31) e que o projeto criado não trazia Dependabot, E2E
    no CI nem verificação local (#34, em parte) — resolvidos na
-   2.0.0-beta.17.
+   2.0.0-beta.17. O projeto criado ainda nascia com nome, textos, marca e
+   ícone do kit e com seletor de idioma mesmo com um idioma só (#29, #30), e
+   o filtro de ataques gravava na trilha o texto de terceiros vindo em
+   webhook recebido (#63) — resolvidos na 2.0.0-beta.18.
    Falta usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta

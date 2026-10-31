@@ -6,6 +6,13 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.18] — 2026-10-31
+
+O projeto criado nasce com a identidade dele (nome, textos, marca e ícone da
+aba vindos da configuração, sem nada do kit; sem seletor quando há um idioma
+só) e o webhook recebido com corpo assinado fica fora do filtro de ataques e
+da trilha de requisições.
+
 ### Atenção ao atualizar
 
 - **Marca e ícone da aba (#30).** Sem `PLATFORM_LOGO_URL`, a marca passa a
@@ -2382,7 +2389,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.17...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.18...desenvolvimento
+[2.0.0-beta.18]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.18
 [2.0.0-beta.17]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.17
 [2.0.0-beta.16]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.16
 [2.0.0-beta.15]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.15
