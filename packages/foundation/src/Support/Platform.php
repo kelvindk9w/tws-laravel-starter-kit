@@ -58,4 +58,14 @@ final readonly class Platform
             currency: (string) $config['currency'],
         );
     }
+
+    /**
+     * Há escolha de idioma? Com um idioma só, nenhuma tela mostra seletor
+     * (site, entrada, painel, perfil, /admin, galeria de e-mails) — um
+     * seletor com uma opção só é ruído.
+     */
+    public function offersLocaleChoice(): bool
+    {
+        return count($this->availableLocales) > 1;
+    }
 }

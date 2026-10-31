@@ -19,9 +19,10 @@ Para produção real:
 1. `cp .env.prod.example .env.prod` e defina `APP_KEY` — **obrigatória**, e a
    MESMA para `app`, `migrate`, `horizon` e `scheduler` (ver
    [A chave da aplicação em produção](#a-chave-da-aplicação-em-produção)).
-2. Senhas da stack: `PROD_POSTGRES_PASSWORD`, `PROD_DB_APP_PASSWORD` e
-   `PROD_REDIS_PASSWORD` **não têm valor padrão** — sem elas o Compose se
-   recusa a resolver o arquivo. As duas do banco são de **papéis diferentes**
+2. O nome do produto e as senhas da stack: `PROD_PLATFORM_NAME` (vira o
+   `APP_NAME` e o `PLATFORM_NAME` de todos os containers), `PROD_POSTGRES_PASSWORD`,
+   `PROD_DB_APP_PASSWORD` e `PROD_REDIS_PASSWORD` **não têm valor padrão** —
+   sem elas o Compose se recusa a resolver o arquivo. As duas do banco são de **papéis diferentes**
    (ver [Papéis do PostgreSQL](#papéis-do-postgresql-migração--aplicação)). Defina
    `PROD_*` no shell ou no `.env` ao lado do `docker-compose.prod.yml` (o Compose interpola `${PROD_*}` dali
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
@@ -339,7 +340,7 @@ silenciosa de dado é pior que serviço que não sobe, então hoje:
 | --- | --- |
 | `docker/php/entrypoint-prod.sh` | Chave **ausente** → aborta com código **78** (`EX_CONFIG`) e imprime como gerar e onde colocar. Nunca escreve chave em arquivo. |
 | `Twstec\Kit\Foundation\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`) nos processos que **servem tráfego ou processam trabalho**; nos comandos de instalação e manutenção, avisa em voz alta (log + stderr) e deixa passar. |
-| `docker-compose.prod.yml` | `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
+| `docker-compose.prod.yml` | `PROD_PLATFORM_NAME`, `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
 
 Fora de produção o entrypoint continua conveniente: gera uma chave efêmera,
 **só no ambiente do processo** (nunca em arquivo), e avisa em voz alta que ela

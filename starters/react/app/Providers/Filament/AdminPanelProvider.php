@@ -44,8 +44,10 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->plugin(AdminPlugin::make())
             // Branding 100% via platform(): nome, logo e cor primária vêm do
-            // .env — nada hardcoded.
-            ->brandName(platform()->name)
+            // .env — nada hardcoded. O nome é lido a cada página (closure),
+            // não uma vez no boot: configuração trocada depois (testes,
+            // configuração vinda do banco) aparece no painel.
+            ->brandName(fn (): string => platform()->name)
             // Marca: o .env sempre vence; sem ele, o kit tem uma
             // marca monocromática própria em vez de um quadrado preto.
             ->brandLogo(fn () => filled(platform()->logoUrl)
@@ -76,10 +78,12 @@ class AdminPanelProvider extends PanelProvider
             // Seletor de idioma na topbar (mesmo formato compacto do resto
             // do kit: bandeira + sigla). O locale é resolvido pelo SetLocale
             // da pilha do painel (preferência da conta → cookie → padrão da
-            // plataforma).
+            // plataforma). Com um idioma só, nada (sem seletor de uma opção).
             ->renderHook(
                 PanelsRenderHook::TOPBAR_END,
-                fn (): string => view('filament.topbar-locale-switcher')->render(),
+                fn (): string => platform()->offersLocaleChoice()
+                    ? view('filament.topbar-locale-switcher')->render()
+                    : '',
             );
     }
 }

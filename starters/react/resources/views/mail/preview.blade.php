@@ -66,12 +66,14 @@
 
         <div style="min-width: 0">
             <div class="card bar">
+                @if (platform()->offersLocaleChoice())
                 <div>
                     <span class="muted">{{ __('mail.preview.language') }}</span>
                     @foreach (platform()->availableLocales as $locale)
                         <a class="pill" href="{{ route('mail.preview', ['slug' => $current, 'lang' => $locale, 'scheme' => $scheme]) }}" aria-current="{{ $locale === $previewLocale ? 'true' : 'false' }}">{{ __('mail.preview.locales.'.$locale) }}</a>
                     @endforeach
                 </div>
+                @endif
                 <div>
                     <span class="muted">{{ __('mail.preview.scheme') }}</span>
                     @foreach ($schemes as $option)
@@ -96,7 +98,7 @@
                 <pre>{{ $email['text'] }}</pre>
             </details>
 
-            <p class="muted">{{ __('mail.preview.mailpit_hint') }}</p>
+            <p class="muted">{{ filled(config('mail.preview.mailpit_url')) ? __('mail.preview.mailpit_hint', ['url' => (string) config('mail.preview.mailpit_url')]) : __('mail.preview.mailpit_hint_generic') }}</p>
         </div>
     </div>
 </main>
