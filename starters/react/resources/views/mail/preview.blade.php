@@ -19,6 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title>{{ __('mail.preview.title') }} · {{ platform()->name }}</title>
+    {{ \Twstec\Kit\Foundation\Support\BrandMark::faviconLinks() }}
     <style>
         :root { color-scheme: light dark; --bg: #fafafa; --card: #ffffff; --text: #171717; --muted: #737373; --line: #e5e5e5; --accent: #171717; --accent-text: #fafafa; }
         @media (prefers-color-scheme: dark) {

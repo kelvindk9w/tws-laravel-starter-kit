@@ -20,8 +20,15 @@ return [
     // PRODUTO, não a do kit.
     'version' => env('PLATFORM_VERSION') ?: '0.1.0',
 
-    // URL do logotipo oficial (nunca caminho hardcoded em views).
+    // URL do logotipo oficial (nunca caminho hardcoded em views). Vazio = a
+    // marca de reserva: a inicial do nome, na cor da marca (BrandMark).
     'logo_url' => env('PLATFORM_LOGO_URL'),
+
+    // Ícone da aba (favicon) em qualquer formato (.ico, .png...) e a variante
+    // SVG. Vazios = o logotipo; sem logotipo, a inicial do nome gerada em SVG
+    // (sem arquivo nenhum em public/).
+    'favicon_url' => env('PLATFORM_FAVICON_URL'),
+    'favicon_svg_url' => env('PLATFORM_FAVICON_SVG_URL'),
 
     // Override OPCIONAL da cor primária da marca (hex). Vazio = identidade
     // monocromática dos tokens (theme.css: preto no claro, branco no escuro —

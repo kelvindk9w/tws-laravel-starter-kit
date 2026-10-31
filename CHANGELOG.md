@@ -8,6 +8,24 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Atenção ao atualizar
 
+- **Marca e ícone da aba (#30).** Sem `PLATFORM_LOGO_URL`, a marca passa a
+  ser a **inicial do `PLATFORM_NAME`** (antes, o "T" do kit), e o ícone da aba
+  sai de `PLATFORM_FAVICON_URL`/`PLATFORM_FAVICON_SVG_URL` (novas), do
+  logotipo ou da inicial gerada — não mais de `public/favicon.*`. O
+  `BrandMark` do pacote já vem assim (o `/admin` muda sozinho). Nos arquivos
+  de starter: copie o `config/platform.php` (as duas chaves novas), as
+  linhas novas do `.env.example` e do `docker-compose.prod.yml`
+  (`PROD_PLATFORM_FAVICON_URL`, `PROD_PLATFORM_FAVICON_SVG_URL`), o
+  `->favicon(...)` do `AdminPanelProvider` e o
+  `BrandMark::faviconLinks()` dos `<head>` (Livewire:
+  `components/layouts/site.blade.php`, `components/brand.blade.php` e
+  `errors/429.blade.php`; React: `app.blade.php`, `errors/429.blade.php`,
+  `mail/preview.blade.php`, `HandleInertiaRequests` — a prop `app.initial` —,
+  `types/shared.ts`, `components/app-logo-icon.tsx`). Quem usava o favicon
+  do kit pode apagar `public/favicon.ico`, `public/favicon.svg` e
+  `public/img/brand-mark.svg`; quem tem favicon próprio em `public/` aponta
+  `PLATFORM_FAVICON_URL` para ele.
+
 - **Identidade do projeto (#29).** Os padrões de `config/platform.php` deixam
   de ser os do kit: sem `PLATFORM_NAME`, o nome é o `APP_NAME`; sem
   `PLATFORM_COMPANY_NAME`, o nome da plataforma; sem `PLATFORM_OFFICIAL_URL`,
@@ -40,8 +58,23 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   recrie os containers; sem isso, o ambiente de desenvolvimento fica só em
   português.
 
+### Adicionado
+
+- **Marca e ícone da aba configuráveis (#30):** `PLATFORM_FAVICON_URL` e
+  `PLATFORM_FAVICON_SVG_URL`; sem eles, o logotipo; sem logotipo, a inicial
+  do nome em SVG gerado (cor da marca ou neutro), sem arquivo nenhum.
+  `platform()->initial()`, `platform()->favicons()` e
+  `BrandMark::faviconLinks()` para todo `<head>` (site, entrada, painel,
+  galeria, página 429 e `/admin`). Identidade visual documentada num lugar só:
+  `docs/identidade.md`.
+
 ### Corrigido
 
+- **Sem marca do kit no projeto criado (#30):** a marca de reserva do site,
+  do painel e do `/admin` era o "T" do kit e o favicon era o do kit; agora é
+  a inicial do nome configurado, e o projeto não recebe
+  `public/favicon.*` nem `public/img/brand-mark.svg` (a simulação da
+  instalação publicada reprova).
 - **O projeto criado nasce com a identidade dele (#29).** O instalador grava
   no `.env` e no `.env.example` o `APP_NAME` e o `PLATFORM_NAME` com o nome do
   projeto, `PLATFORM_VERSION=0.1.0` e vazios o repositório e a empresa do
