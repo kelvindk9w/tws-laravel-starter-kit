@@ -116,7 +116,13 @@ que nenhuma chave fica para trás). Resolução do locale (middleware `SetLocale
    landing, do showcase e do painel → rota `GET /locale/{locale}`);
 3. **Fallback** → `PLATFORM_LOCALE` (padrão do kit: pt-BR).
 
-Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php).
+Whitelist em `PLATFORM_AVAILABLE_LOCALES` (config/platform.php); vazia, só o
+`PLATFORM_LOCALE`. Com **um idioma só**, nenhum seletor aparece — site, telas
+de entrada, painel, campo do Perfil, topbar do `/admin` e galeria de e-mails
+perguntam por `platform()->offersLocaleChoice()` (no React, pela quantidade
+de `app.locales`) — e `/locale/<outro>` responde 404. A suíte do starter
+declara os idiomas dela no `phpunit.xml` (os três do kit), independente do
+`.env` de quem roda.
 
 O seletor (`<x-locale-switcher>`) é um **dropdown do kit**: bandeira em **SVG
 inline** + sigla no gatilho, nome do idioma por extenso e ✓ no ativo na lista,
@@ -336,7 +342,9 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   (invertido pela classe `.dark`), com `--color-brand-foreground` para o texto
   sobre a primária. Azul sobrevive só como cor de **status** (badge/alert
   `info`). O super admin Filament usa a paleta `Zinc` por padrão.
-- **`.env` → `config/platform.php`** — nome (`PLATFORM_NAME`), logo
+- **`.env` → `config/platform.php`** — nome (`PLATFORM_NAME`; vazio = o
+  `APP_NAME`, nunca um nome do kit — o instalador grava os dois com o nome do
+  projeto criado), logo
   (`PLATFORM_LOGO_URL`) e override OPCIONAL da primária
   (`PLATFORM_PRIMARY_COLOR` — vazio = neutro; quando definido, é injetado em
   runtime como `--brand` no `<head>`, sem rebuild, valendo para os 2 temas).

@@ -6,6 +6,61 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Atenção ao atualizar
+
+- **Identidade do projeto (#29).** Os padrões de `config/platform.php` deixam
+  de ser os do kit: sem `PLATFORM_NAME`, o nome é o `APP_NAME`; sem
+  `PLATFORM_COMPANY_NAME`, o nome da plataforma; sem `PLATFORM_OFFICIAL_URL`,
+  a `APP_URL`; sem `PLATFORM_VERSION`, `0.1.0`; e **sem
+  `PLATFORM_AVAILABLE_LOCALES`, só o `PLATFORM_LOCALE`** (antes, os três
+  idiomas do kit). Projeto que usa os três sem declarar: acrescente
+  `PLATFORM_AVAILABLE_LOCALES=pt_BR,en,es` ao `.env` (e ao `.env.prod` /
+  `docker-compose.prod.yml`). O `config/platform.php` do pacote já vem
+  assim; o do projeto é arquivo de starter: copie o do starter.
+- **Produção:** `PROD_PLATFORM_NAME` passa a ser **obrigatória** no
+  `docker-compose.prod.yml` (vira o `APP_NAME` e o `PLATFORM_NAME` de todos
+  os containers; antes o padrão `TWS Starter Kit` vencia em silêncio o
+  `.env.prod`, e o `APP_NAME` ficava `laravel` no cache, no Redis, no Horizon
+  e no backup). A cor padrão passa a ser nenhuma, como na config. Copie do
+  starter o bloco `APP_NAME`/`PLATFORM_NAME`/`PLATFORM_PRIMARY_COLOR` do
+  `x-app-env` e defina `PROD_PLATFORM_NAME` no shell ou no `.env` ao lado.
+- Os outros arquivos de starter, para copiar se quiser o comportamento novo:
+  `app/Providers/Filament/AdminPanelProvider.php` (nome do `/admin` lido a
+  cada página e topbar sem seletor com um idioma só), `config/mail.php`
+  (`mail.preview.mailpit_url`), `lang/*/landing.php` e `lang/*/mail.php`
+  (textos neutros e a chave nova `mail.preview.mailpit_hint_generic`),
+  `resources/views/mail/preview.blade.php`, `routes/console.php` (sem o
+  `inspire`), `phpunit.xml`/`phpunit.pgsql.xml` (os idiomas da suíte) e,
+  no Livewire, `resources/views/components/locale-switcher.blade.php` e
+  `resources/views/livewire/profile.blade.php`; no React,
+  `resources/js/app.tsx`, `resources/js/components/locale-switcher.tsx` e
+  `resources/js/pages/settings/profile.tsx`.
+- Monorepo: no `.env` de cada starter, descomente
+  `PLATFORM_AVAILABLE_LOCALES=pt_BR,en,es` (o `.env.example` já vem assim) e
+  recrie os containers; sem isso, o ambiente de desenvolvimento fica só em
+  português.
+
+### Corrigido
+
+- **O projeto criado nasce com a identidade dele (#29).** O instalador grava
+  no `.env` e no `.env.example` o `APP_NAME` e o `PLATFORM_NAME` com o nome do
+  projeto, `PLATFORM_VERSION=0.1.0` e vazios o repositório e a empresa do
+  kit, e dá o nome do projeto ao Dev Container. Página inicial, telas de
+  entrada, painel, perfil, `/admin`, galeria e e-mails (nos três idiomas)
+  não mostram mais a marca nem os textos do kit; a galeria cita o Mailpit do
+  próprio projeto (o host da `APP_URL` na `DEV_MAIL_PORT`, ou
+  `MAIL_PREVIEW_MAILPIT_URL`), não o endereço do monorepo; a aba da página
+  inicial do React mostra só o nome (era "Nome — Nome"); o `/admin` lê o nome
+  a cada página (antes, uma vez no boot).
+- **Projeto de um idioma só (#29):** nenhum seletor de idioma (site, entrada,
+  painel, campo do perfil, topbar do `/admin`, galeria), e a suíte do starter
+  passa com qualquer `PLATFORM_AVAILABLE_LOCALES` no `.env` — os idiomas dos
+  testes estão no `phpunit.xml`. Novo `platform()->offersLocaleChoice()`.
+- A simulação da instalação publicada reprova a marca do kit no `.env` e no
+  `.env.example` do projeto criado e nas telas no ar, e confere que o compose
+  de produção recusa subir sem o nome e sai com `APP_NAME` igual ao
+  `PLATFORM_NAME`.
+
 ## [2.0.0-beta.17] — 2026-10-30
 
 Papéis separados no PostgreSQL (a aplicação deixa de ser superusuário ou dona

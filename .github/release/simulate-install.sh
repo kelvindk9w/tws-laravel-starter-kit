@@ -188,6 +188,20 @@ created_project() {
     if grep -q 'PROD_POSTGRES_DB:-tws_starter' docker-compose.prod.yml; then echo 'docker-compose.prod.yml com o banco do starter'; exit 1; fi
     grep -qx 'RATE_LIMIT_SENSITIVE=30' .env
 
+    # A identidade do projeto, não a do kit, no .env e no .env.example (o
+    # nome do projeto no APP_NAME e no PLATFORM_NAME, a versão do produto,
+    # sem o repositório do kit) e no Dev Container.
+    for arquivo in .env .env.example; do
+        grep -qx "APP_NAME=$name" "$arquivo"
+        grep -qx "PLATFORM_NAME=$name" "$arquivo"
+        grep -qx 'PLATFORM_VERSION=0.1.0' "$arquivo"
+        grep -qx 'PLATFORM_REPO_URL=' "$arquivo"
+        if grep -Eiq 'starter kit|tws starter|tws-laravel-starter-kit' "$arquivo"; then
+            echo "$arquivo do projeto com a identidade do kit:"; grep -Ein 'starter kit|tws starter|tws-laravel-starter-kit' "$arquivo"; exit 1
+        fi
+    done
+    grep -q "\"name\": \"$name\"" .devcontainer/devcontainer.json
+
     test -f .github/workflows/ci.yml
     test -x scripts/verificar
     test ! -e docker/dev/ci.yml
@@ -504,6 +518,12 @@ docker_path() {
     # nas trilhas só-acréscimo.
     docker compose exec -T app php artisan db:check-roles
     test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
+    # As telas no ar são do projeto: o nome dele na aba, nada da marca do kit.
+    for tela in / /login /register; do
+        pagina=$(curl -s "http://$name.localhost:$port$tela")
+        if ! printf '%s' "$pagina" | grep -q "<title>[^<]*$name"; then echo "tela $tela sem o nome do projeto no título"; exit 1; fi
+        if printf '%s' "$pagina" | grep -Eiq 'starter kit|tws starter'; then echo "tela $tela com a marca do kit"; exit 1; fi
+    done
 
     # O Vite de desenvolvimento libera no CORS a origem do SITE — e só ela
     # (sem isso, o navegador bloqueia os scripts e a tela fica em branco).
@@ -543,8 +563,19 @@ image() {
     if grep -v '^[[:space:]]*#' docker-compose.prod.yml | grep -Eq 'additional_contexts|\.\./\.\./packages'; then
         echo 'docker-compose.prod.yml publicado cita o monorepo'; exit 1
     fi
-    PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
-        docker compose -f docker-compose.prod.yml config --quiet
+    # O nome do produto é obrigatório (sem padrão do kit), e APP_NAME e
+    # PLATFORM_NAME saem iguais dele.
+    if PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
+        docker compose -f docker-compose.prod.yml --env-file /dev/null config --quiet 2>/dev/null; then
+        echo 'docker-compose.prod.yml resolve sem PROD_PLATFORM_NAME'; exit 1
+    fi
+    resolvido=$(PROD_PLATFORM_NAME='Produto Simulado' PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
+        docker compose -f docker-compose.prod.yml --env-file /dev/null config)
+    if [ "$(printf '%s\n' "$resolvido" | grep -c 'APP_NAME: Produto Simulado')" = 0 ] \
+        || [ "$(printf '%s\n' "$resolvido" | grep -c 'APP_NAME: Produto Simulado')" != "$(printf '%s\n' "$resolvido" | grep -c 'PLATFORM_NAME: Produto Simulado')" ]; then
+        echo 'docker-compose.prod.yml: APP_NAME e PLATFORM_NAME não saem do PROD_PLATFORM_NAME'; exit 1
+    fi
+    if printf '%s\n' "$resolvido" | grep -Eq 'Starter Kit|TWS Starter'; then echo 'docker-compose.prod.yml resolvido com o nome do kit'; exit 1; fi
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
 
     # O contexto opcional `packages` = os ZIPs (o repositório `artifact`
