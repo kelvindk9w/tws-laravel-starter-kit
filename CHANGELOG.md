@@ -63,7 +63,16 @@ explicação do job em closure "concluído sem executar".
   `package.json`, `vite-plus` passa a `1.4.0` e o `vite` (em `dependencies` e
   num `overrides` novo) aponta para `npm:@voidzero-dev/vite-plus-core@1.4.0`;
   copie os dois do starter e rode `npm install`. Sem o apontamento, o
-  `vp build` recusa rodar e manda alinhar o alias.
+  `vp build` recusa rodar e manda alinhar o alias. Depois do `npm install`,
+  reinicie o container de desenvolvimento do Vite (`docker compose restart
+  vite`): o processo antigo continua de pé, o `/@vite/client` responde 404 e
+  as telas param de carregar (no E2E, o login falha sem erro claro).
+- **Teste que abre processo PHP separado** (corrida de concorrência com
+  `artisan` ou `php` em subprocesso): depois da separação de papéis, o
+  subprocesso lê o `.env` e entra com o papel da aplicação, que não cria
+  tabela nem acessa o banco de teste (`permission denied for schema
+  public`). Passe a ele `DB_USERNAME`/`DB_PASSWORD` de
+  `config('database.connections.pgsql.*')`, que já são os da suíte.
 
 ### Segurança
 
