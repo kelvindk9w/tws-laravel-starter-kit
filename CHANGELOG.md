@@ -57,6 +57,27 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `PLATFORM_AVAILABLE_LOCALES=pt_BR,en,es` (o `.env.example` já vem assim) e
   recrie os containers; sem isso, o ambiente de desenvolvimento fica só em
   português.
+- **Webhook recebido com corpo assinado (#63), opcional:** para usar
+  `SECURITY_VALIDATION_SIGNED_BODY_PATHS`, copie do starter a chave
+  `signed_body_paths` do bloco `validation` do `config/security.php` (sem
+  ela, nada muda) e liste os caminhos dos seus receptores de webhook.
+
+### Segurança
+
+- **Corpo assinado de webhook recebido fora do filtro de ataques e da trilha
+  (#63).** Num webhook recebido (ex.: WhatsApp Cloud API), uma mensagem de
+  cliente com texto parecido com código ia **inteira e em claro** para
+  `request_logs` (dado pessoal fora do armazenamento cifrado da aplicação) e,
+  no modo `block`, era recusada com 422 — o provedor reenviava e acabava
+  descartando a mensagem. Com o caminho em
+  `SECURITY_VALIDATION_SIGNED_BODY_PATHS`, o corpo não é inspecionado nem
+  recusado em nenhum modo, e a trilha grava só o tamanho e o formato — nem a
+  linha comum, nem a evidência de tentativa copiam o corpo. Query, cabeçalhos
+  inspecionados, caminho e o teto de inspeção (413) continuam valendo. Só
+  caminho literal ou prefixo literal com `/*` no fim; curinga largo é
+  recusado (o corpo continua inspecionado) e avisado no log a cada boot em
+  produção. O `twstec/kit-webhooks` só envia webhooks e não registra nada na
+  lista. Ver `docs/seguranca.md`, *Webhook recebido com corpo assinado*.
 
 ### Adicionado
 
