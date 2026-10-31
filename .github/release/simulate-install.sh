@@ -201,6 +201,11 @@ created_project() {
         fi
     done
     grep -q "\"name\": \"$name\"" .devcontainer/devcontainer.json
+    # Nenhum arquivo de marca do kit: o ícone da aba e a marca de reserva são
+    # gerados da configuração (a inicial do nome).
+    for marca in public/img/brand-mark.svg public/favicon.ico public/favicon.svg; do
+        if [ -e "$marca" ]; then echo "arquivo de marca do kit no projeto: $marca"; exit 1; fi
+    done
 
     test -f .github/workflows/ci.yml
     test -x scripts/verificar

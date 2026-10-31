@@ -48,12 +48,14 @@ class AdminPanelProvider extends PanelProvider
             // não uma vez no boot: configuração trocada depois (testes,
             // configuração vinda do banco) aparece no painel.
             ->brandName(fn (): string => platform()->name)
-            // Marca: o .env sempre vence; sem ele, o kit tem uma
-            // marca monocromática própria em vez de um quadrado preto.
+            // Marca: o logotipo do .env; sem ele, a inicial do nome
+            // (BrandMark) — nunca a marca do kit.
             ->brandLogo(fn () => filled(platform()->logoUrl)
                 ? (string) platform()->logoUrl
                 : BrandMark::inlineSvg())
             ->brandLogoHeight('1.75rem')
+            // Ícone da aba: o mesmo das outras telas (platform()->favicons()).
+            ->favicon(fn (): string => platform()->favicons()[0]['href'])
             // Tipografia unificada (crítica de design #6): a MESMA voz do
             // painel do usuário e da landing. Self-hosted via
             // @fontsource-variable no tema Vite — nada de CDN de fonte

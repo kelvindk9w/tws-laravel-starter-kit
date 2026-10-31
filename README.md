@@ -244,6 +244,7 @@ E2E (Playwright) e o banco de teste do PostgreSQL: [Testes](docs/testes.md).
 | --- | --- |
 | Instalação e módulos opcionais: o instalador, as combinações, pacotes avulsos, publicação | [docs/instalacao.md](docs/instalacao.md) |
 | Convenções do código (nada hardcoded, dinheiro inteiro, identificadores, i18n) | [docs/convencoes.md](docs/convencoes.md) |
+| Identidade do projeto: nome, marca de reserva, ícone da aba, cor, idiomas | [docs/identidade.md](docs/identidade.md) |
 | Segurança: cadeia de middlewares, filtro de ataques, rate limit, nginx, proxies, CSP | [docs/seguranca.md](docs/seguranca.md) |
 | Logs e LGPD: redaction, onde ver os logs, append-only, health check | [docs/logs-lgpd.md](docs/logs-lgpd.md) |
 | Autenticação, ação sensível e política de senha | [docs/autenticacao.md](docs/autenticacao.md) |

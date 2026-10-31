@@ -348,7 +348,9 @@ Rebranding de um projeto novo = **1 arquivo + .env**:
   (`PLATFORM_LOGO_URL`) e override OPCIONAL da primária
   (`PLATFORM_PRIMARY_COLOR` — vazio = neutro; quando definido, é injetado em
   runtime como `--brand` no `<head>`, sem rebuild, valendo para os 2 temas).
-  Acesso tipado via `platform()`.
+  Acesso tipado via `platform()`. Sem logo, a marca é a inicial do nome; o
+  ícone da aba vem de `PLATFORM_FAVICON_URL`/`PLATFORM_FAVICON_SVG_URL` — tudo
+  em [Identidade do projeto](identidade.md).
 
 O showcase `/ui` abre com a seção **Tema** mostrando os tokens vivos e como
 editá-los.

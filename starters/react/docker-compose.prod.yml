@@ -64,6 +64,8 @@ x-app-env: &app-env
     APP_NAME: ${PROD_PLATFORM_NAME:?defina PROD_PLATFORM_NAME (o nome do produto, sem valor padrao - ver .env.prod.example)}
     PLATFORM_NAME: ${PROD_PLATFORM_NAME:?defina PROD_PLATFORM_NAME (o nome do produto, sem valor padrao - ver .env.prod.example)}
     PLATFORM_LOGO_URL: ${PROD_PLATFORM_LOGO_URL:-}
+    PLATFORM_FAVICON_URL: ${PROD_PLATFORM_FAVICON_URL:-}
+    PLATFORM_FAVICON_SVG_URL: ${PROD_PLATFORM_FAVICON_SVG_URL:-}
     PLATFORM_PRIMARY_COLOR: ${PROD_PLATFORM_PRIMARY_COLOR:-}
     # Quem pode dizer QUEM É O CLIENTE (ver Twstec\Kit\Foundation\Http\TrustedProxies).
     #
