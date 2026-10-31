@@ -45,7 +45,10 @@ não os declara. A ordem é conferida por teste na suíte do pacote.
      de query e corpo, mais 8 bytes por item; arquivo enviado conta só pelos metadados) é limitado.
      Acima do teto a requisição é **recusada com 413** e gravada como **BLOQUEADA** (`attack_type` =
      `payload_too_large`, payload só com o tamanho). O excedente não é aceito sem inspeção —
-     inspecionar só o começo deixaria o ataque escondido no fim do corpo.
+     inspecionar só o começo deixaria o ataque escondido no fim do corpo;
+   - **webhook recebido com corpo assinado** (`SECURITY_VALIDATION_SIGNED_BODY_PATHS`): o
+     conteúdo do corpo não é inspecionado nem gravado na trilha (só tamanho e formato); query,
+     cabeçalhos, caminho e o teto continuam valendo — ver *Webhook recebido com corpo assinado*.
 3. **RequestLogging** (`packages/foundation/src/Logging/Middleware/RequestLogging.php`):
    - **No recebimento**: gera/propaga o `correlation_id` (UUID v7, **sempre gerado pelo
      servidor**; o `X-Correlation-Id` de entrada vai saneado para a coluna separada
@@ -207,6 +210,42 @@ têm a **própria** camada de defesa (`FormSubmissionGuard`, mesmo detector), qu
 modo: a tentativa vira submissão com selo e trecho neutralizado na vitrine de submissões, o texto
 cru fica só no detalhe como evidência e nada é enviado. Nas rotas delegadas à vitrine, a linha da
 trilha também sai marcada e neutralizada.
+
+### Webhook recebido com corpo assinado (`SECURITY_VALIDATION_SIGNED_BODY_PATHS`)
+
+Num webhook **recebido** de um provedor (WhatsApp Cloud API, gateway de pagamento), o corpo é
+autenticado por assinatura (HMAC) **na aplicação** e traz texto escrito por terceiros — a mensagem
+de um cliente final, dado pessoal. Sem tratamento, basta a pessoa escrever algo que pareça código
+(`<script>`, `' OR 1=1`) para a mensagem ir em texto claro para a trilha (`request_logs`, fora do
+armazenamento cifrado e da retenção que a aplicação escolheu) e, no modo `block`, o provedor
+receber 422, reenviar por alguns dias e **descartar a mensagem**.
+
+Liste esses caminhos, na sintaxe de `Request::is()`:
+
+```bash
+SECURITY_VALIDATION_SIGNED_BODY_PATHS=webhooks/whatsapp,webhooks/pagamentos/*
+```
+
+Nesses caminhos, em qualquer modo:
+
+- o **conteúdo do corpo não é inspecionado** nem recusado;
+- a trilha **nunca grava o corpo** — nem na linha comum, nem na evidência de tentativa: só
+  `_corpo_assinado` com `tamanho_bytes` e `formato` (`json`, `form`...);
+- **query, cabeçalhos inspecionados e caminho continuam inspecionados** — uma tentativa ali é
+  marcada (observe) ou recusada (block) como em qualquer rota, e a evidência continua sem o corpo;
+- o **teto de inspeção continua contando o corpo** (413 acima dele).
+
+**Só para rota que recusa corpo sem assinatura válida** — a responsabilidade de autenticar é da
+rota; sem isso, a lista vira um caminho sem filtro para qualquer anônimo. Para não virar desvio
+genérico, só vale **caminho literal** (`webhooks/whatsapp`) ou **prefixo literal terminado em
+`/*`** (`webhooks/meta/*`). Curinga no começo ou no meio (`*/whatsapp`, `webhooks/*/x`), curinga
+parcial (`webhooks*`) e o curinga sozinho (`*`) são **recusados**: o corpo nesses caminhos
+continua inspecionado e gravado (lado estreito), e em produção a recusa é avisada no log a cada
+boot (`SECURITY_VALIDATION_SIGNED_BODY_PATHS tem entradas RECUSADAS…`). Ver
+`Twstec\Kit\Foundation\Security\SignedBodyPaths`.
+
+O `twstec/kit-webhooks` só **envia** webhooks (não tem rota de recebimento), então não registra
+nada nesta lista: quem lista é o projeto, rota a rota, ao criar o seu receptor.
 
 ## Limite de requisições (rate limit) e contenção da trilha
 

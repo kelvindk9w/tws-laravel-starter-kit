@@ -15,6 +15,11 @@
   não escapa por ser chave);
 - strings gigantes são truncadas (logs não são storage de payload).
 
+**Webhook recebido com corpo assinado:** nos caminhos de `SECURITY_VALIDATION_SIGNED_BODY_PATHS`,
+a trilha não grava o corpo, nem redigido — só `_corpo_assinado` com o tamanho e o formato. A
+mensagem de terceiros fica só onde a aplicação a guarda (cifrada, com a retenção dela). Ver
+`docs/seguranca.md`, *Webhook recebido com corpo assinado*.
+
 **Cartão em texto livre (PCI DSS).** Antes, o cartão só era mascarado quando vinha num campo
 com nome conhecido (`card_number`); digitado num `message`, ia em claro para `request_logs`.
 Agora qualquer sequência de **13 a 19 dígitos**, corrida ou com **um** espaço/hífen entre os
