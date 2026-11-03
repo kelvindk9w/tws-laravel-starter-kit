@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-03, com a versão **2.0.0-beta.18** publicada.
+> Atualizado em 2026-11-03, com a versão **2.0.0-beta.19** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -99,7 +99,10 @@ próximo recurso.
    2.0.0-beta.17. O projeto criado ainda nascia com nome, textos, marca e
    ícone do kit e com seletor de idioma mesmo com um idioma só (#29, #30), e
    o filtro de ataques gravava na trilha o texto de terceiros vindo em
-   webhook recebido (#63) — resolvidos na 2.0.0-beta.18.
+   webhook recebido (#63) — resolvidos na 2.0.0-beta.18. Projeto de um
+   idioma só não podia apagar os outros sem quebrar a suíte — resolvido na
+   2.0.0-beta.19, junto com a primeira etapa da pasta de personalização
+   (#72).
    Falta usar por algumas semanas; é o critério principal para sair do beta.
 2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
@@ -127,7 +130,8 @@ próximo recurso.
    personalização; atualizar troca só o padrão. Em três etapas: textos e
    configurações; telas; e `php artisan tws:upgrade --check`, que lista o que
    ficou diferente nos arquivos que precisam continuar no projeto (Docker,
-   CI, `.env`). Vem antes da estável porque muda a estrutura do projeto
+   CI, `.env`). A primeira etapa (textos, e-mails e configurações) saiu na
+   2.0.0-beta.19. Vem antes da estável porque muda a estrutura do projeto
    criado — depois dela, exigiria uma 3.0.
 9. **Endurecimento achado no uso** (issues abertas com o rótulo
    `antes-da-2.0.0`): papel de manutenção para as podas, sem a senha do dono

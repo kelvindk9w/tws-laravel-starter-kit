@@ -6,6 +6,14 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.19] — 2026-11-03
+
+Textos, e-mails e configuração do kit passam a morar nos pacotes: o projeto
+criado não recebe cópia e sobrescreve só o que muda (`php artisan
+kit:overrides` mostra o que está sobrescrito e o que é só cópia do padrão).
+Projeto de um idioma só pode apagar os outros sem quebrar a suíte, o README
+abre com um "Comece aqui" curto e o escopo fica congelado até a 2.0.0.
+
 ### Atenção ao atualizar
 
 - **Textos, e-mails e configuração do kit não precisam mais de cópia no
@@ -2512,7 +2520,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.18...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.19...desenvolvimento
+[2.0.0-beta.19]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.19
 [2.0.0-beta.18]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.18
 [2.0.0-beta.17]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.17
 [2.0.0-beta.16]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.16
