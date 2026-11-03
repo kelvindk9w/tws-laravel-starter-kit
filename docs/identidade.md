@@ -56,3 +56,11 @@ gerada. Página nova com `<head>` próprio: use
 
 Ver [Interface → idioma](interface.md): com um idioma só em
 `PLATFORM_AVAILABLE_LOCALES`, nenhuma tela mostra seletor.
+
+Projeto de um idioma só pode também **apagar as pastas** dos outros
+(`lang/en`, `lang/es`, `lang/es.json`): a paridade de chaves compara só os
+idiomas que existem em `lang/`, a suíte usa só esses e o teste que troca para
+um idioma ausente pula, com o motivo. Toda chave nova passa a ser escrita só
+nos idiomas que o projeto tem. Para voltar a ter um idioma, recrie a pasta
+completa (a paridade aponta o que faltar) e ponha-o em
+`PLATFORM_AVAILABLE_LOCALES`.

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\EnforcedCsrfToken;
+use Tests\Support\ProjectLocales;
 use Tests\TestCase;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
@@ -60,4 +61,18 @@ function enforceCsrf(): void
         PreventRequestForgery::class,
         EnforcedCsrfToken::class,
     );
+}
+
+/*
+ * O teste precisa destes idiomas: sem a pasta em lang/ (projeto que apagou
+ * en/es), ele PULA, com o motivo — a suíte segue os idiomas que o projeto
+ * tem (Tests\Support\ProjectLocales).
+ */
+function requireLocales(string ...$locales): void
+{
+    $missing = array_values(array_filter($locales, fn (string $locale): bool => ! ProjectLocales::has($locale, lang_path())));
+
+    if ($missing !== []) {
+        test()->markTestSkipped(sprintf('Idioma %s não existe em lang/ deste projeto.', implode(', ', $missing)));
+    }
 }

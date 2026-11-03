@@ -22,8 +22,10 @@
    INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
 6. **i18n:** locale padrão `pt_BR`; TODA string de UI via `__()`.
    O kit já sai com `lang/pt_BR`, `lang/en` e `lang/es` completos (teste de
-   paridade de chaves); novo idioma = nova pasta em `lang/` + entrada em
-   `PLATFORM_AVAILABLE_LOCALES`.
+   paridade de chaves entre os idiomas que existem em `lang/`); novo idioma =
+   nova pasta em `lang/` + entrada em `PLATFORM_AVAILABLE_LOCALES`; projeto de
+   um idioma só pode apagar as pastas dos outros
+   ([Identidade → Idiomas](identidade.md#idiomas)).
 7. **Segredos:** somente em `.env` (gitignored), nunca no código nem na imagem.
 8. **Testes:** Pest 4 + Playwright, validando **conteúdo** das
    respostas, não apenas status HTTP. A suíte PHP roda contra PostgreSQL 18

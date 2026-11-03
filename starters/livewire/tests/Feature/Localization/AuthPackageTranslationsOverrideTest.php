@@ -50,6 +50,8 @@ afterEach(function (): void {
 });
 
 it('(a) mensagem que só o pacote tem: texto do pacote', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWithAuth([]);
 
     expect(__('auth.account_inactive', [], $locale))->toBe(authPackageLangFile("{$locale}/auth.php")['account_inactive'])
@@ -58,6 +60,8 @@ it('(a) mensagem que só o pacote tem: texto do pacote', function (string $local
 })->with(['pt_BR', 'en', 'es']);
 
 it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWithAuth([
         "{$locale}/auth.php" => [
             'failed' => "Credenciais do meu produto ({$locale})",
@@ -72,6 +76,8 @@ it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo', function (st
 })->with(['pt_BR', 'en', 'es']);
 
 it('(c) auth.php e mail.php repartidos: tela do aplicativo, mensagem do pacote, no mesmo grupo', function (string $locale): void {
+    requireLocales($locale);
+
     $appAuth = require lang_path("{$locale}/auth.php");
     $appMail = require lang_path("{$locale}/mail.php");
 
