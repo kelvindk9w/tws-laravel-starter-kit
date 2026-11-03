@@ -6,6 +6,22 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Documentação
+
+- **README com "Comece aqui".** O começo do README é só para quem usa o kit:
+  os dois caminhos (só com o Docker ou com PHP e Composer) em poucos
+  comandos, o que o instalador pergunta e onde ver como atualizar, sem o
+  histórico de versões no meio. Tudo sobre desenvolver o kit (organização do
+  monorepo, ambiente, credenciais da demo, comandos, estrutura e branches)
+  foi para o [CONTRIBUTING.md](CONTRIBUTING.md#desenvolver-o-kit-o-monorepo).
+- **Escopo congelado até a 2.0.0 estável** ([roteiro](docs/roadmap.md)): só
+  entram a lista fechada (critérios do roteiro e issues com o rótulo
+  `antes-da-2.0.0` — pasta de personalização #72, banco e Redis no instalador
+  #73, #65, #27, #33, #34, #39, #40) e defeitos achados no uso. Depois da
+  2.0.0: cobrança e planos (#74), webhooks de entrada (#75), login de app pelo
+  navegador (#76) e o `tws:upgrade` que aplica sozinho. Fora do escopo:
+  MySQL e hospedagem compartilhada.
+
 ## [2.0.0-beta.18] — 2026-10-31
 
 O projeto criado nasce com a identidade dele (nome, textos, marca e ícone da
