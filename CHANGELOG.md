@@ -6,6 +6,41 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Atenção ao atualizar
+
+- **Suíte de um projeto de um idioma só (testes dos starters).** Para poder
+  apagar `lang/en` e `lang/es` sem quebrar a suíte, copie do starter:
+  `tests/Support/ProjectLocales.php` (novo), o `requireLocales()` do fim de
+  `tests/Pest.php` e o `limitLocalesToProject()` de `tests/TestCase.php`
+  (chamado no fim do `setUp()`). Depois, no teste que troca para `en`/`es`,
+  chame `requireLocales('en', 'es')` (ou `requireLocales($locale)` no
+  dataset de idiomas) na primeira linha — os do starter já fazem isso: React
+  `tests/Feature/Localization/LanguageFilesTest.php`,
+  `FrontTranslationsTest.php`, `tests/Feature/Identity/ProjectIdentityTest.php`,
+  `tests/Feature/Panel/ProfileTest.php` e
+  `tests/Feature/Security/AccountStatusTest.php`; Livewire
+  `tests/Feature/Localization/` (`LocaleTest.php`, `ProjectLocalesTest.php`
+  novo, que recebe a paridade, e os `*PackageTranslationsOverrideTest.php`),
+  `tests/Feature/Admin/` (`AdminLocaleTest.php`, `AdminUserMenuTest.php`,
+  `AuditEventResourceTest.php`, `MarkEmailVerifiedTest.php`),
+  `tests/Feature/Auth/` (`AccountStatusEnforcementTest.php`,
+  `EmailVerificationTest.php`, `PasswordPolicyTest.php`,
+  `PasswordResetTest.php`, `TwoFactorLoginTest.php`), `tests/Feature/Mail/`
+  (`MailLocaleTest.php`, `MailPreviewTest.php`) e
+  `tests/Feature/Security/EdgeRateLimitTest.php`. Quem mantém os três idiomas
+  não precisa fazer nada: com as três pastas, a suíte roda como antes.
+
+### Corrigido
+
+- **Projeto de um idioma só pode apagar `lang/en` e `lang/es`.** A paridade de
+  traduções exigia os três idiomas (lia `lang/en` e `lang/es` fixos e falhava
+  sem eles), e toda chave nova obrigava a escrever en e es. Agora ela compara
+  só os idiomas que o projeto tem em `lang/` com o idioma padrão — o que
+  existe precisa estar completo (arquivo e chaves, sem faltar nem sobrar). A
+  suíte passa a usar só os idiomas com pasta (o `PLATFORM_AVAILABLE_LOCALES`
+  forçado no `phpunit.xml` é limitado a eles), e o teste que troca para um
+  idioma ausente pula, com o motivo. Com as três pastas, nada muda.
+
 ## [2.0.0-beta.18] — 2026-10-31
 
 O projeto criado nasce com a identidade dele (nome, textos, marca e ícone da

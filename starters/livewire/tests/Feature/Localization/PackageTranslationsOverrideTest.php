@@ -51,6 +51,8 @@ afterEach(function (): void {
 });
 
 it('(a) chave que só o pacote tem: texto do pacote', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWith([]);
 
     expect(__('security.blocked', [], $locale))->toBe(foundationPackageLang("{$locale}/security.php")['blocked'])
@@ -58,6 +60,8 @@ it('(a) chave que só o pacote tem: texto do pacote', function (string $locale):
 })->with(['pt_BR', 'en', 'es']);
 
 it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWith([
         "{$locale}/mail.php" => ['footer' => ['transactional' => "Rodapé do meu produto ({$locale})"]],
         "{$locale}/security.php" => ['blocked' => "Recusado pelo meu produto ({$locale})"],
@@ -68,6 +72,8 @@ it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo', function (st
 })->with(['pt_BR', 'en', 'es']);
 
 it('(c) mail.php repartido: chaves do aplicativo e do pacote no mesmo grupo', function (string $locale): void {
+    requireLocales($locale);
+
     $appMail = require lang_path("{$locale}/mail.php");
 
     starterLangWith(["{$locale}/mail.php" => ['footer' => ['cnpj' => "CNPJ do meu produto ({$locale})"]]]);
