@@ -39,6 +39,13 @@ function frontTranslationKeys(): array
         $keys = array_filter($keys, fn (string $key): bool => ! str_starts_with($key, 'webhooks.'));
     }
 
+    // Os textos das telas de conta, projetos, chaves de API e convites são do
+    // pacote twstec/kit-accounts (opcional): sem ele, as telas não existem
+    // e as chaves não contam.
+    if (! Kit::has('accounts')) {
+        $keys = array_filter($keys, fn (string $key): bool => ! preg_match('/^panel\.(account|projects|api_keys|invitation)\./', $key));
+    }
+
     // Nomes de rota (`panel.profile`) têm a mesma forma de uma chave: ficam
     // de fora.
     return array_values(array_diff(array_unique($keys), FrontRoutes::NAMES));
