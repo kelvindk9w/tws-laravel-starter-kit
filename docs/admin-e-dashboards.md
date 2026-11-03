@@ -267,12 +267,13 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 - **Configurações** (`/admin/settings`): parâmetros operacionais editáveis
   pela UI (meses de inatividade p/ expirar chaves, dias de aviso prévio,
   limites de upload, rate limits) gravados na tabela `settings` — sem
-  editar .env. Somente a whitelist de `config/settings.php` é gravável;
+  editar .env. Somente a whitelist de `config('settings.overrides')` é
+  gravável (o padrão do pacote e o que cada módulo instalado acrescenta);
   campo vazio = volta ao valor do .env. Os overrides são aplicados no boot
   (`SettingsServiceProvider`, cacheados) e lidos pelo helper `setting()`.
   Os campos são **agrupados por assunto** (chaves de API / uploads / rate
   limits) com largura proporcional ao número esperado — `group` e `span`
-  vêm do próprio `config/settings.php`, nada hardcoded na tela.
+  vêm da própria `config('settings.overrides')`, nada hardcoded na tela.
 - **Barreira de origem** (o /admin não fica exposto à internet inteira — obrigatória em produção,
   e agora VERIFICADA em runtime): `ADMIN_ALLOWED_IPS` no .env, aceitando IP
   exato, faixa CIDR IPv4 e IPv6 com ou sem prefixo, separados por vírgula
@@ -614,8 +615,9 @@ DASHBOARD_LATEST_RECORDS=6                  # linhas das tabelas "últimos N"
 
 Quem lê essa config é o `Twstec\Kit\Admin\Dashboards\DashboardRegistry`, e é
 ele que o `AdminPlugin` do pacote consulta para registrar as páginas. A
-config vem do pacote e a cópia do aplicativo (`config/dashboards.php` do
-starter) vence; uma config publicada antes da 2.0, com os nomes antigos das
+config vem do pacote, sem cópia no aplicativo; um `config/dashboards.php` do
+aplicativo vence nas chaves de primeiro nível que escrever (ver
+[personalizacao.md](personalizacao.md)); uma config publicada antes da 2.0, com os nomes antigos das
 páginas (`App\Filament\Dashboards\…`), continua funcionando.
 Nenhuma lista de dashboards existe hardcodada em código.
 
@@ -645,7 +647,10 @@ final class FinanceDashboard extends BaseDashboard
    Rota, ícone, grupo de navegação, ordem no menu, título, subtítulo, grade de
    12 colunas e o seletor de período vêm da base.
 
-3. **A config** — a entrada nova em `config/dashboards.php`:
+3. **A config** — a entrada nova em `variants`, num `config/dashboards.php`
+   do aplicativo. A chave `variants` do aplicativo vence a do pacote
+   inteira: traga junto as variantes do kit que quiser manter
+   (ver [personalizacao.md](personalizacao.md)):
 
 ```php
 'finance' => [

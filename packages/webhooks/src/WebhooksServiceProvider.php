@@ -7,6 +7,7 @@ namespace Twstec\Kit\Webhooks;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Twstec\Kit\Foundation\Customization\PackageConfig;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 use Twstec\Kit\Webhooks\Console\DispatchPendingDeliveries;
 use Twstec\Kit\Webhooks\Console\PruneWebhookEvents;
@@ -37,7 +38,7 @@ final class WebhooksServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom($this->path('config/webhooks.php'), 'webhooks');
+        PackageConfig::merge($this->app, $this->path('config/webhooks.php'), 'webhooks');
 
         PackageTranslations::register($this->app, $this->path('lang'));
 

@@ -1,7 +1,7 @@
 # Convenções do projeto
 
 1. **Nada hardcoded:** nome da plataforma, logo, URLs, CNPJ, e-mail
-   de suporte etc. vêm de `config/platform.php` ← `.env` (`PLATFORM_*`).
+   de suporte etc. vêm de `config('platform')` ← `.env` (`PLATFORM_*`).
    Acesso tipado via helper global `platform()` (ex.: `platform()->name`).
    Nunca texto institucional/URL fixa em código ou views.
 2. **Dinheiro é inteiro** (float erra centavo): centavos em `bigint` no banco, cast

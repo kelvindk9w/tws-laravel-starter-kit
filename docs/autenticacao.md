@@ -660,7 +660,11 @@ e os dois aliases, e o pacote grava um aviso no log a cada boot.
 **Textos:** as mensagens do domínio (recusas, avisos, política de senha,
 assuntos dos e-mails) vêm do pacote, e o `lang/` do aplicativo vence na mesma
 chave — para trocar `auth.failed`, basta pô-la no `lang/pt_BR/auth.php` do
-aplicativo. Os textos das telas são do front.
+aplicativo, só com essa chave (ver [personalizacao.md](personalizacao.md)).
+O corpo dos e-mails da autenticação também vem do pacote
+(`mail.messages.<slug>`); um arquivo de mesmo nome em
+`resources/views/mail/messages/` do aplicativo vence. Os textos das telas são
+do front.
 
 **Nomes antigos:** `App\Core\Auth\…` continua resolvendo para
 `Twstec\Kit\Auth\…` até a 3.0 (payload de fila e extensões antigas); o model e o

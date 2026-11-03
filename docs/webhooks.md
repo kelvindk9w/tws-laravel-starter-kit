@@ -386,8 +386,10 @@ conta, geridos por quem é dela).
 
 ## Configuração
 
-`config/webhooks.php` (publique com `php artisan vendor:publish
---tag=webhooks-config`). Variáveis no `.env.example` dos starters:
+O padrão vem do pacote (`config('webhooks')`); para mudar um bloco, o
+aplicativo cria `config/webhooks.php` só com as chaves de primeiro nível que
+muda (ver [personalizacao.md](personalizacao.md)). Variáveis no
+`.env.example` dos starters:
 
 | Variável | Padrão | |
 |---|---|---|

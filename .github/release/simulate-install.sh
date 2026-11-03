@@ -343,6 +343,23 @@ package() {
     php artisan route:list --json | grep -q '"name":"home"'
     if php artisan route:list --json | grep -q '"name":"landing'; then echo 'projeto publicado com as rotas da demo'; exit 1; fi
 
+    # Textos, e-mails e configurações do kit vêm dos pacotes: o projeto criado
+    # não recebe cópia (docs/personalizacao.md), e o `kit:overrides` não tem
+    # nada a apontar.
+    for copia in config/platform.php config/security.php config/audit.php config/settings.php \
+        config/api_keys.php config/uploads.php config/dashboards.php resources/views/mail/messages \
+        lang/pt_BR.json lang/es.json; do
+        if [ -e "$copia" ]; then echo "cópia de arquivo do kit no projeto: $copia"; exit 1; fi
+    done
+    for idioma in pt_BR en es; do
+        for grupo in auth panel passwords validation pagination; do
+            if [ -e "lang/$idioma/$grupo.php" ]; then echo "cópia de tradução do kit no projeto: lang/$idioma/$grupo.php"; exit 1; fi
+        done
+    done
+    # (Sem arquivo a apontar, o comando só dá o aviso INFO, em qualquer idioma.)
+    overrides=$(php artisan kit:overrides)
+    if ! printf '%s' "$overrides" | grep -q 'INFO'; then echo "kit:overrides apontou cópias no projeto criado:"; printf '%s\n' "$overrides"; exit 1; fi
+
     # O instalador rodou no post-create-project-cmd: chave da aplicação, com o
     # pacote de contas o pepper dedicado das chaves de API (sem ele, não há
     # chave de API nem pepper) e, com o de uploads, a chave dos confidenciais.

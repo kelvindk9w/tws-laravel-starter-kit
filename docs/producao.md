@@ -104,8 +104,9 @@ papel da aplicação (`PROD_DB_APP_USERNAME`, padrão `tws_app`, e
 php artisan db:check-roles`: se a separação não estiver de pé, ele falha e o
 `app` não sobe.
 
-**Tabelas só-acréscimo do projeto** entram em `config/database_roles.php`
-(publicado com `php artisan vendor:publish --tag=foundation-config`):
+**Tabelas só-acréscimo do projeto** entram em `config/database_roles.php` do
+aplicativo, só com a chave `append_only_tables` (ver
+[personalizacao.md](personalizacao.md)):
 
 ```php
 'append_only_tables' => [

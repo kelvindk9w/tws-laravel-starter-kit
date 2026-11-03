@@ -3,9 +3,10 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Webhooks de saída — configuração padrão do pacote twstec/kit-webhooks. A
-// aplicação pode publicar a própria cópia (`vendor:publish
-// --tag=webhooks-config`); as chaves de primeiro nível dela prevalecem.
+// Webhooks de saída — configuração padrão do pacote twstec/kit-webhooks. O
+// aplicativo só tem config/webhooks.php se mudar algo, com as chaves que muda
+// de primeiro nível que muda — cada uma vence a do pacote inteira; para um
+// valor solto, prefira a variável do .env (ver docs/personalizacao.md).
 //
 // Política: o segredo de assinatura é gerado pelo servidor, mostrado na
 // criação (depois, só pela revelação — ação sensível, registrada na trilha) e

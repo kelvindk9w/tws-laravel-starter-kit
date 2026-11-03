@@ -54,8 +54,8 @@ já tem o `twstec/kit-accounts`) ou `php artisan tws:install --with=webhooks`.
 Depois:
 
 1. Declare os eventos que o aplicativo emite (`WEBHOOKS_EVENTS` ou
-   `config/webhooks.php`, publicado com `php artisan vendor:publish
-   --tag=webhooks-config`).
+   `config/webhooks.php` do aplicativo só com a chave `events` — ver
+   [personalização](../../docs/personalizacao.md)).
 2. Dispare com `Webhooks::dispatch(...)` dentro da transação da mudança.
 3. Mantenha a fila e o agendador rodando.
 4. Dê às contas uma tela sobre as Actions (os starters do kit trazem as

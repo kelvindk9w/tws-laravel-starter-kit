@@ -242,7 +242,7 @@ roda. O serviço `vite` recebe a URL do site (`VITE_DEV_APP_URL`) e o
 própria origem do Vite ou um site qualquer continuam sem o cabeçalho de
 liberação. A CSP do projeto, em `APP_ENV=local` e com o `public/hot` presente,
 aceita a origem do Vite (e o WebSocket do HMR) — só em desenvolvimento, nunca
-`unsafe-eval` (`App\Support\ViteDevServerCsp`, nos dois starters).
+`unsafe-eval` (`Twstec\Kit\Foundation\Security\ViteDevServerCsp`, no pacote foundation).
 
 **IPv6 e `*.localhost`.** As portas saem só em `127.0.0.1`. Em alguns sistemas
 — e dentro de containers, como o do Playwright — `<nome>.localhost` resolve
@@ -721,9 +721,7 @@ aplicativo tem e os que faltam, e instala os escolhidos:
   pacote (senão um `composer install --no-dev` os levaria embora) —, com a
   restrição de versão do kit que está no `composer.json` (a do instalador,
   num aplicativo que só tem ele);
-- `optimize:clear`, a configuração publicada de cada módulo
-  (`vendor:publish --tag=<módulo>-config`, sem sobrescrever o que existe), a
-  `APP_KEY` se faltar, o pepper dedicado das chaves de API com contas, a
+- `optimize:clear`, a `APP_KEY` se faltar, o pepper dedicado das chaves de API com contas, a
   chave dos uploads confidenciais (`UPLOADS_ENCRYPTION_KEY`) com uploads, e
   `migrate` (`--graceful` deixa as migrations para depois se o banco não
   responder);

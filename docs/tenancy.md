@@ -258,8 +258,9 @@ final class RegistrosGuardadosImpedemExclusao implements DeletionCheck
 }
 ```
 
-Registre na configuração do aplicativo (`config/accounts.php`, chave de
-primeiro nível `deletion` — publique com `vendor:publish --tag=accounts-config`):
+Registre na configuração do aplicativo (`config/accounts.php` só com a chave
+de primeiro nível `deletion`, que vence a do pacote inteira — ver
+[personalizacao.md](personalizacao.md)):
 
 ```php
 'deletion' => [

@@ -538,9 +538,10 @@ onde pôr chave estrangeira recria a tabela, a migration guarda e devolve
 
 ## Configuração (Cloudflare R2 — S3-compatível)
 
-A configuração padrão vem do pacote (`config('uploads')`); a cópia do starter
-em `config/uploads.php` prevalece chave a chave de primeiro nível
-(`vendor:publish --tag=uploads-config` publica a do pacote). O R2 usa o
+A configuração padrão vem do pacote (`config('uploads')`), sem cópia no
+aplicativo; um `config/uploads.php` do aplicativo com as chaves de primeiro
+nível que muda vence cada uma inteira (ver
+[personalizacao.md](personalizacao.md)). O R2 usa o
 driver `s3` nativo (Flysystem) com `endpoint` customizado. Em produção:
 
 ```dotenv
