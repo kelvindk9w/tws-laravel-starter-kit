@@ -18,8 +18,12 @@ use Twstec\Kit\Auth\Http\Middleware\EnsureSessionIsCurrent;
 use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use Twstec\Kit\Auth\Http\Responses as Defaults;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
+use Twstec\Kit\Auth\Models\VerificationCode;
 use Twstec\Kit\Auth\Support\AdministratorFlag;
 use Twstec\Kit\Auth\Support\TwoFactorRequirement;
+use Twstec\Kit\Foundation\Customization\PackageConfig;
+use Twstec\Kit\Foundation\Customization\PackageViews;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 
 /**
@@ -117,7 +121,12 @@ final class AuthServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->mergeConfigFrom($this->path('config/auth.php'), 'auth');
+        PackageConfig::merge($this->app, $this->path('config/auth.php'), 'auth');
+
+        // Credenciais temporárias do fluxo de confirmação ficam fora da trilha
+        // de auditoria: o que se audita é o RESULTADO do fluxo (ex.:
+        // `user.two_factor_enabled`), não o código que o autorizou.
+        PackageConfig::contribute($this->app, 'audit.ignored_models', [VerificationCode::class, SensitiveActionToken::class]);
 
         foreach (self::RESPONSES as $contract => $default) {
             $this->app->bindIf($contract, $default);
@@ -126,6 +135,10 @@ final class AuthServiceProvider extends ServiceProvider
         $this->app->bindIf(IdentifiesAdministrators::class, AdministratorFlag::class);
 
         PackageTranslations::register($this->app, $this->path('lang'));
+
+        // Corpos dos e-mails do pacote (`mail.messages.<slug>`): um arquivo de
+        // mesmo nome em resources/views do aplicativo prevalece.
+        PackageViews::register($this->app, $this->path('resources/views'));
     }
 
     public function boot(): void

@@ -219,8 +219,11 @@ starters/livewire/       # o aplicativo:
     php/*.ini            # configs PHP dev/prod + opcache
     nginx/Dockerfile     # nginx dev (HTTP) e prod (HTTPS + headers OWASP)
   docker-compose.prod.yml  # PRODUÇÃO autocontida (rodar de starters/livewire)
-  config/platform.php      # config centralizada da plataforma (nada hardcoded)
-  lang/{pt_BR,en,es}/      # traduções (pt-BR é o idioma padrão)
+  config/                  # só a config do Laravel e o que o app muda do kit
+                           # (o padrão do kit mora nos pacotes — ver
+                           # docs/personalizacao.md)
+  lang/{pt_BR,en,es}/      # só os textos do app (pt-BR é o idioma padrão); os
+                           # do kit vêm dos pacotes
   app/
     Models/User.php  # o model de usuário (do app; compõe as traits dos pacotes)
     Livewire/   # painel do usuário

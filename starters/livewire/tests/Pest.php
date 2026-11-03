@@ -5,6 +5,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\ProjectLocales;
 use Tests\TestCase;
 use Twstec\Kit\Accounts\Account\CurrentAccount;
+use Twstec\Kit\Foundation\Customization\PackageConfig;
 use Twstec\Kit\Foundation\Kit;
 
 // Configuração do Pest 4.
@@ -116,4 +117,20 @@ function requireLocales(string ...$locales): void
     if ($missing !== []) {
         test()->markTestSkipped(sprintf('Idioma %s não existe em lang/ deste projeto.', implode(', ', $missing)));
     }
+}
+
+/*
+ * O arquivo com o padrão do kit para a configuração `$key` (o config/ de um
+ * pacote twstec/kit-*). O projeto não tem cópia: só tem config/<arquivo>.php
+ * se mudar algo (Twstec\Kit\Foundation\Customization\PackageConfig).
+ */
+function kitConfigFile(string $key): string
+{
+    $file = PackageConfig::defaults()[$key] ?? null;
+
+    if ($file === null) {
+        throw new LogicException("Nenhum pacote do kit traz o padrão de config('{$key}').");
+    }
+
+    return $file;
 }

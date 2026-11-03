@@ -74,11 +74,10 @@ it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo', function (st
 it('(c) mail.php repartido: chaves do aplicativo e do pacote no mesmo grupo', function (string $locale): void {
     requireLocales($locale);
 
-    $appMail = require lang_path("{$locale}/mail.php");
-
     starterLangWith(["{$locale}/mail.php" => ['footer' => ['cnpj' => "CNPJ do meu produto ({$locale})"]]]);
 
     expect(__('mail.footer.cnpj', [], $locale))->toBe("CNPJ do meu produto ({$locale})")
         ->and(__('mail.footer.transactional', [], $locale))->toBe(foundationPackageLang("{$locale}/mail.php")['footer']['transactional'])
-        ->and(__('mail.password_reset.heading', [], $locale))->toBe($appMail['password_reset']['heading']);
+        ->and(__('mail.password_reset.heading', [], $locale))->toBe((require base_path("vendor/twstec/kit-auth/lang/{$locale}/mail.php"))['password_reset']['heading'])
+        ->and(__('mail.preview.title', [], $locale))->toBe((require lang_path("{$locale}/mail.php"))['preview']['title']);
 })->with(['pt_BR', 'en', 'es']);

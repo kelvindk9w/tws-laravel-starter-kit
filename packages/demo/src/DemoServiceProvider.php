@@ -29,6 +29,7 @@ use Twstec\Kit\Demo\Filament\Widgets\Overview\LatestSubmissions;
 use Twstec\Kit\Demo\Livewire\ContactForm;
 use Twstec\Kit\Demo\Support\DemoMailPreviewGate;
 use Twstec\Kit\Demo\Support\DemoSurface;
+use Twstec\Kit\Foundation\Customization\PackageConfig;
 use Twstec\Kit\Foundation\Localization\PackageTranslations;
 use Twstec\Kit\Foundation\Mail\Contracts\MailPreviewGate;
 
@@ -75,8 +76,8 @@ final class DemoServiceProvider extends ServiceProvider
         // sempre (`ui.demo`, `ui.showcase_enabled`, `ui.demo_login`,
         // `ui.demo_admin`): as chaves lidas continuam as mesmas, e numa mesma
         // chave o config/ do aplicativo vence.
-        $this->mergeConfigFrom($this->path('config/landing.php'), 'landing');
-        $this->mergeConfigFrom($this->path('config/ui.php'), 'ui');
+        PackageConfig::merge($this->app, $this->path('config/landing.php'), 'landing');
+        PackageConfig::merge($this->app, $this->path('config/ui.php'), 'ui');
 
         // Pontos de extensão do produto, com as respostas da demo.
         $this->app->singleton(AccountProtection::class, DemoAccountProtection::class);
@@ -102,29 +103,38 @@ final class DemoServiceProvider extends ServiceProvider
 
         // Dashboards: a variante "Conteúdo & Operação" e as últimas
         // submissões na Visão geral, antes dos últimos uploads.
-        $this->setConfigIfMissing('dashboards.variants.content', [
+        //
+        // Tudo o que a demo acrescenta à configuração de outro pacote passa
+        // pelo PackageConfig::contribute: entra depois de todos os register()
+        // — escrever direto aqui, antes de o pacote dono juntar o padrão dele,
+        // faria a chave parecer escrita pelo aplicativo e esconderia o padrão
+        // inteiro (security.headers sem a CSP, por exemplo). Como sempre foi,
+        // os itens da demo entram também na chave que o aplicativo escreveu
+        // (projetos antigos têm cópias completas dessas configurações):
+        // instalar a demo é pedir os itens dela.
+        PackageConfig::contribute($this->app, 'dashboards.variants', ['content' => [
             'page' => ContentDashboard::class,
             'icon' => 'heroicon-o-rectangle-stack',
             'sort' => 3,
-        ]);
+        ]], intoApplicationKeys: true);
         // E a liga: sem DASHBOARD_ENABLED declarado, o padrão do produto
         // (`overview,growth`) ganha a variante da demo no fim. Declarado, vale
         // o que o operador escreveu — tirar `content` da lista tira a variante.
         if (Env::get('DASHBOARD_ENABLED') === null) {
-            $this->appendConfigOnce('dashboards.enabled', 'content');
+            PackageConfig::contribute($this->app, 'dashboards.enabled', ['content'], intoApplicationKeys: true);
         }
-        $this->appendConfigOnce('dashboards.widgets.overview', [
+        PackageConfig::contribute($this->app, 'dashboards.widgets.overview', [[
             'widget' => LatestSubmissions::class,
             'before' => LatestUploads::class,
-        ]);
+        ]], intoApplicationKeys: true);
 
         // As telas da demo no /admin abrem o escopo de auditoria como as do
         // produto (AdminAudit::covers).
-        $this->appendConfigOnce('audit.admin_extension_namespaces', 'Twstec\\Kit\\Demo\\Filament\\');
+        PackageConfig::contribute($this->app, 'audit.admin_extension_namespaces', ['Twstec\\Kit\\Demo\\Filament\\'], intoApplicationKeys: true);
 
         // A landing alternativa (/v2) tem CSP própria: só o host de dados do
         // GitHub a mais no connect-src (security.headers.*landing_alt*).
-        $this->appendConfigOnce('security.headers.surfaces.landing_alt', 'v2');
+        PackageConfig::contribute($this->app, 'security.headers.surfaces.landing_alt', ['v2'], intoApplicationKeys: true);
 
         $this->loadMigrationsFrom($this->path('database/migrations'));
 
@@ -193,30 +203,6 @@ final class DemoServiceProvider extends ServiceProvider
         $links->add(SiteLinks::FOOTER, 10, static fn (): array => ['label' => __('landing.footer.showcase'), 'href' => route('ui.showcase')]);
         $links->add(SiteLinks::FOOTER, 20, static fn (): array => ['label' => __('landing.footer.demo'), 'href' => route('login')]);
         $links->add(SiteLinks::FOOTER, 30, static fn (): array => ['label' => __('landing.footer.contact'), 'href' => url('/#contato')]);
-    }
-
-    /**
-     * Grava a chave só se ela ainda não existir (o config em cache já a traz).
-     */
-    private function setConfigIfMissing(string $key, mixed $value): void
-    {
-        if (! $this->app['config']->has($key)) {
-            $this->app['config']->set($key, $value);
-        }
-    }
-
-    /**
-     * Acrescenta o valor à lista da chave uma vez só (o config em cache já o
-     * traz, e o register roda de novo a cada boot).
-     */
-    private function appendConfigOnce(string $key, mixed $value): void
-    {
-        $list = (array) $this->app['config']->get($key, []);
-
-        if (! in_array($value, $list, true)) {
-            $list[] = $value;
-            $this->app['config']->set($key, $list);
-        }
     }
 
     private function path(string $relative): string

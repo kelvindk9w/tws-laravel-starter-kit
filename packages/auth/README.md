@@ -148,7 +148,9 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   (`password_rules`, `login`, `password_confirmation`, `transaction_password`, `verification`,
   `email_verification`, `sensitive_action`, `two_factor`, `registration`,
   `web_protections`).
-  As chaves de primeiro nível do `config/auth.php` do aplicativo prevalecem.
+  As chaves de primeiro nível do `config/auth.php` do aplicativo prevalecem,
+  cada uma inteira; o do aplicativo traz as chaves do Laravel e só as do kit
+  que mudar ([personalização](../../docs/personalizacao.md)).
 - **Migrations** com os **mesmos nomes de arquivo** que tinham no aplicativo
   na 1.x: um banco que já as rodou não vê nada pendente.
 - **Traduções** (pt-BR, en, es) das mensagens do domínio (`auth.*`) e dos

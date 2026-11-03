@@ -7,11 +7,13 @@ use Tests\Support\ProjectLocales;
 
 // Os idiomas que o projeto TEM em lang/ têm as mesmas chaves do idioma
 // padrão. Projeto que apagou en/es (um idioma só) não precisa deles; o que
-// existe precisa estar completo. (A comparação com os textos do starter
+// existe precisa estar completo. Os textos do KIT (autenticação, painel,
+// e-mails, validação…) moram nos pacotes, com a paridade conferida lá; aqui
+// ficam só os arquivos do projeto. (A comparação com os textos do starter
 // Livewire, que só existe no repositório do kit, fica em
 // SharedTextsWithLivewireTest.php — fora do pacote publicado.)
 
-const REACT_LANG_FILES = ['auth', 'landing', 'mail', 'pagination', 'panel', 'passwords', 'ui', 'validation'];
+const REACT_LANG_FILES = ['landing', 'mail', 'ui'];
 
 /**
  * Pasta de idiomas temporária: `$files` é 'pt_BR/ui.php' => conteúdo.

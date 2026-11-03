@@ -11,6 +11,8 @@ use Twstec\Kit\Auth\Http\Middleware\EnsureEmailIsVerified;
 use Twstec\Kit\Auth\Http\Middleware\EnsureSessionIsCurrent;
 use Twstec\Kit\Auth\Http\Middleware\EnsureTwoFactorIsConfigured;
 use Twstec\Kit\Auth\Http\Middleware\RequiresSensitiveActionToken;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
+use Twstec\Kit\Auth\Models\VerificationCode;
 use Twstec\Kit\Auth\Providers\AuthServiceProvider;
 use Twstec\Kit\Auth\Tests\TestCase;
 
@@ -85,4 +87,9 @@ it('um alias `verified` próprio do aplicativo prevalece sobre o do pacote', fun
     (new AuthServiceProvider(app()))->boot();
 
     expect($kernel->getMiddlewareAliases()['verified'])->toBe('App\\Middleware\\Proprio');
+});
+
+it('tira da trilha de auditoria as credenciais temporárias do fluxo de confirmação, sem cópia no aplicativo', function (): void {
+    expect(config('audit.ignored_models'))->toContain(VerificationCode::class)
+        ->toContain(SensitiveActionToken::class);
 });

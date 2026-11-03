@@ -6,10 +6,11 @@ declare(strict_types=1);
 // Configuração padrão do twstec/kit-auth — as chaves do KIT dentro de
 // config('auth'), ao lado das do framework (guards, providers, passwords).
 //
-// O pacote junta este arquivo ao config/auth.php da aplicação
-// (mergeConfigFrom): cada chave de primeiro nível que a aplicação declarar
-// prevalece inteira; as que ela não declarar vêm daqui. O starter mantém a
-// cópia completa no config/auth.php dele.
+// O pacote junta este arquivo ao config/auth.php da aplicação pelas chaves
+// de primeiro nível (Foundation\Customization\PackageConfig): o
+// config/auth.php do aplicativo traz as chaves do framework e só as do kit
+// que ele mudar — cada uma vence a do pacote inteira (ver
+// docs/personalizacao.md).
 //
 // PROTEÇÕES QUE O PACOTE LIGA SOZINHO (ver AuthServiceProvider):
 //   - status da conta a cada requisição web (EnsureAccountIsActive no grupo

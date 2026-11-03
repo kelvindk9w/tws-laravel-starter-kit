@@ -16,12 +16,16 @@ mensagens da mesma plataforma chegavam com três caras diferentes.
 | `packages/foundation/src/Mail/KitMailMessage.php` | O mesmo, para **notificações** (`MailMessage`) |
 | `packages/foundation/src/Mail/MailTheme.php` | Os tokens do `theme.css` traduzidos para hex — o único ponto de tradução |
 | `packages/foundation/lang/{pt_BR,en,es}/mail.php` | As strings comuns a todos os e-mails (o rodapé) |
-| `starters/livewire/resources/views/mail/messages/*.blade.php` | O corpo de cada e-mail (só conteúdo, zero HTML de layout) |
-| `starters/livewire/lang/{pt_BR,en,es}/mail.php` | As strings de cada e-mail (nada de texto fixo no template) |
+| `packages/{auth,accounts}/resources/views/mail/messages/*.blade.php` | O corpo de cada e-mail do kit (só conteúdo, zero HTML de layout), no pacote dono do e-mail |
+| `packages/{auth,accounts,demo}/lang/{pt_BR,en,es}/mail.php` | As strings de cada e-mail do kit (nada de texto fixo no template) |
+| `resources/views/mail/messages/` e `lang/*/mail.php` do aplicativo | Só os e-mails do próprio projeto e o que ele muda dos do kit |
 
 O esqueleto, os componentes e o texto puro vêm do pacote `twstec/kit-foundation`
 e continuam com os mesmos nomes (`<x-email::…>`, `mail.text.auto`). Um arquivo de
 mesmo nome em `resources/views/mail/` do aplicativo prevalece sobre o do pacote.
+O mesmo vale para o corpo e as strings de cada e-mail do kit: o projeto criado
+não recebe cópias, e para mudar um e-mail basta pôr no aplicativo só aquele
+arquivo ou só aquelas chaves (ver [personalizacao.md](personalizacao.md)).
 
 **As regras que o layout materializa** (não são gosto, são compatibilidade):
 tabela em vez de flex/grid (o Outlook do Windows renderiza com o motor do

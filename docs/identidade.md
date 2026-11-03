@@ -1,7 +1,8 @@
 # Identidade do projeto
 
 Tudo o que diz **quem é o produto** — nome, marca, ícone da aba, cor, empresa,
-idiomas — vem de `config/platform.php`, que lê o `.env` (`PLATFORM_*`). Nada
+idiomas — vem de `config('platform')` (padrão no `kit-foundation`), que lê o
+`.env` (`PLATFORM_*`). Nada
 fica escrito no código, nas telas ou nos e-mails, e nada do kit aparece num
 projeto criado: os padrões caem nos valores do próprio projeto. Acesso tipado
 por `platform()` (`Twstec\Kit\Foundation\Support\Platform`).

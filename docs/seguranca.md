@@ -528,7 +528,8 @@ o do tema no `<head>` (coberto pelo `'unsafe-inline'` que a base já tem).
 Exceção restrita ao desenvolvimento: com o servidor do Vite no ar
 (`npm run dev`), em `APP_ENV=local` e só enquanto o `public/hot` existe, a
 origem dele entra em `script-src`, `style-src`, `font-src` e `img-src`, e ela
-mais o WebSocket do HMR em `connect-src` (`App\Support\ViteDevServerCsp`, no
-`config/security.php` do starter). Nunca `'unsafe-eval'`; fora de `local`, ou
+mais o WebSocket do HMR em `connect-src`
+(`Twstec\Kit\Foundation\Security\ViteDevServerCsp`, no padrão do
+`config/security.php` do pacote foundation). Nunca `'unsafe-eval'`; fora de `local`, ou
 com conteúdo estranho no `public/hot`, a CSP não muda. O `/admin` do React é o
 mesmo Filament, com a mesma exceção documentada acima.

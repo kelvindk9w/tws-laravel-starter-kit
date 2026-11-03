@@ -8,6 +8,38 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Atenção ao atualizar
 
+- **Textos, e-mails e configuração do kit não precisam mais de cópia no
+  projeto** ([personalização](docs/personalizacao.md)). Nada quebra: as
+  cópias que o projeto já tem continuam vencendo o pacote, exatamente como
+  antes. Mas cópia parada impede as correções do kit de chegar. Para
+  voltar a recebê-las:
+  1. rode `php artisan kit:overrides`;
+  2. apague os arquivos marcados "igual ao padrão do kit — pode apagar";
+  3. nos personalizados, deixe só as chaves que você mudou (na
+     configuração, a chave de primeiro nível inteira);
+  4. rode a suíte.
+
+  Atenção a três casos:
+  - Projeto cujo `config/security.php` chama `App\Support\ViteDevServerCsp`:
+    a classe saiu dos starters e foi para
+    `Twstec\Kit\Foundation\Security\ViteDevServerCsp`. Apague o
+    `config/security.php` (se for cópia) ou troque o nome da classe. Pode
+    apagar `app/Support/ViteDevServerCsp.php` e o teste dele.
+  - Se o projeto tem `config/audit.php` com `ignored_models`,
+    `config/settings.php` com `overrides` ou `config/api_keys.php` com
+    `scopes_catalog`, a lista é dele, inteira: os módulos não acrescentam
+    nada ali (como já acontecia com as cópias). Apagando a chave, os itens
+    dos módulos voltam a entrar sozinhos.
+  - O `twstec/kit-admin` não traz mais `lang/*/auth.php` e `panel.php`
+    próprios: esses textos são do `twstec/kit-auth` (e do
+    `twstec/kit-accounts`), que o admin já exige.
+
+  Os testes do starter que liam `config/<arquivo>.php` direto
+  (`ProductionDockerFilesTest`, `DevelopmentEnvironmentFilesTest`,
+  `AuditTrailTest`, `ApiKeyPepperConfigTest`) passam a ler o padrão do pacote
+  pelo `kitConfigFile()` do `tests/Pest.php` — copie a função do starter se
+  apagar as cópias.
+
 - **Suíte de um projeto de um idioma só (testes dos starters).** Para poder
   apagar `lang/en` e `lang/es` sem quebrar a suíte, copie do starter:
   `tests/Support/ProjectLocales.php` (novo), o `requireLocales()` do fim de
@@ -29,6 +61,46 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (`MailLocaleTest.php`, `MailPreviewTest.php`) e
   `tests/Feature/Security/EdgeRateLimitTest.php`. Quem mantém os três idiomas
   não precisa fazer nada: com as três pastas, a suíte roda como antes.
+
+### Adicionado
+
+- **`php artisan kit:overrides`** (`twstec/kit-foundation`): lista os
+  arquivos do aplicativo que sobrescrevem textos, e-mails e configurações do
+  kit e diz, de cada um, se é só cópia do padrão (pode apagar), quais chaves
+  personaliza e quais são do próprio projeto. Não altera nada.
+- **`PackageConfig`, `PackageViews`** (`Twstec\Kit\Foundation\Customization`):
+  a configuração e as views de e-mail dos pacotes com a regra "o aplicativo
+  vence", e `PackageConfig::contribute()` para um módulo acrescentar itens à
+  configuração de outro sem cópia no aplicativo.
+
+### Mudado
+
+- **O padrão mora no pacote; o projeto sobrescreve só o que muda** (#72,
+  etapa 1). O projeto criado não recebe mais cópias:
+  - **textos:** `auth`, `panel`, `passwords`, `mail` (os do kit),
+    `validation`, `pagination` e os JSON saíram dos starters para os
+    pacotes (`kit-auth`, `kit-accounts`, `kit-foundation`, `kit-demo`). O
+    `lang/<idioma>/<grupo>.php` do aplicativo, só com as chaves que mudam,
+    vence chave a chave;
+  - **e-mails:** o corpo de cada e-mail do kit (`mail.messages.<slug>`)
+    saiu do starter para o pacote dono dele (`kit-auth`, `kit-accounts`); o
+    arquivo de mesmo nome em `resources/views/mail/messages/` vence;
+  - **configuração:** `platform`, `security`, `audit`, `settings`,
+    `dashboards`, `uploads` e `api_keys` saíram dos starters, e o
+    `config/auth.php` ficou só com as chaves do Laravel. O
+    `config/<arquivo>.php` do aplicativo vence nas chaves de primeiro nível
+    que escrever, cada uma inteira (a regra do `mergeConfigFrom`; a junção
+    profunda devolveria em silêncio o que o projeto tirou de uma lista de
+    permissões). O que um módulo acrescenta a outro — os models da
+    autenticação que a auditoria ignora, a expiração das chaves e os limites
+    de upload nas configurações do /admin, o escopo `uploads` nas chaves de
+    API — o próprio módulo acrescenta.
+- **`tws:add` não publica mais a configuração dos módulos** (`vendor:publish
+  --tag=<módulo>-config`): criaria justamente a cópia que impede as
+  atualizações de chegar.
+- **`ViteDevServerCsp`** saiu dos dois starters (`App\Support`) para o
+  `twstec/kit-foundation` (`Twstec\Kit\Foundation\Security`), usada pelo
+  `config/security.php` do pacote.
 
 ### Corrigido
 

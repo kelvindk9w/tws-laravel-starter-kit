@@ -95,6 +95,7 @@ As regras que o código segue estão em [Convenções](docs/convencoes.md).
 | Webhooks de saída: assinatura, SSRF, novas tentativas, log e reenvio | [docs/webhooks.md](docs/webhooks.md) |
 | Painel do usuário, super admin e dashboards | [docs/admin-e-dashboards.md](docs/admin-e-dashboards.md) |
 | E-mails transacionais | [docs/emails.md](docs/emails.md) |
+| Personalização: mudar textos, e-mails e configuração do kit sem copiar arquivos (`kit:overrides`) | [docs/personalizacao.md](docs/personalizacao.md) |
 | Demonstração (pacote `twstec/kit-demo`), modo demo e contas demo | [docs/demo.md](docs/demo.md) |
 | Interface: landing, showcase `/ui`, i18n, tema, formulários, identidade visual | [docs/interface.md](docs/interface.md) |
 | Produção e deploy | [docs/producao.md](docs/producao.md) |
