@@ -50,6 +50,8 @@ afterEach(function (): void {
 });
 
 it('(a) mensagem que só o pacote tem: texto do pacote', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWithAccounts([]);
 
     expect(__('api_keys.auth.invalid', [], $locale))->toBe(accountsPackageLangFile("{$locale}/api_keys.php")['auth']['invalid'])
@@ -58,6 +60,8 @@ it('(a) mensagem que só o pacote tem: texto do pacote', function (string $local
 })->with(['pt_BR', 'en', 'es']);
 
 it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo — inclusive na resposta da API', function (string $locale): void {
+    requireLocales($locale);
+
     starterLangWithAccounts([
         "{$locale}/api_keys.php" => [
             'auth' => ['invalid' => "Chave recusada pelo meu produto ({$locale})"],
@@ -78,6 +82,8 @@ it('(b) a mesma chave no lang/ do aplicativo: texto do aplicativo — inclusive 
 })->with(['pt_BR', 'en', 'es']);
 
 it('(c) mail.php repartido: assunto do pacote, corpo do aplicativo e rodapé do foundation no mesmo grupo', function (string $locale): void {
+    requireLocales($locale);
+
     $appMail = require lang_path("{$locale}/mail.php");
 
     starterLangWithAccounts(["{$locale}/api_keys.php" => ['keys' => ['revoked' => "Revogada no meu produto ({$locale})"]]]);

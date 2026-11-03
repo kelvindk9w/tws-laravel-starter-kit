@@ -11,7 +11,7 @@ use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // i18n do front: as páginas React usam os arquivos de tradução do Laravel,
 // enviados pelo servidor. Nenhum texto no TypeScript — e toda chave usada
-// existe nos três idiomas.
+// existe em cada idioma do projeto (os que têm pasta em lang/).
 
 /**
  * As chaves de tradução citadas no código do front (literais).
@@ -48,7 +48,9 @@ it('o front cita chaves de tradução (a varredura funciona)', function () {
     expect(count(frontTranslationKeys()))->toBeGreaterThan(80);
 });
 
-it('toda chave usada no front existe nos três idiomas', function (string $locale) {
+it('toda chave usada no front existe em cada idioma do projeto', function (string $locale) {
+    requireLocales($locale);
+
     $missing = collect(frontTranslationKeys())
         ->reject(fn (string $key): bool => is_string(trans($key, [], $locale)) && trans($key, [], $locale) !== $key)
         ->values()->all();
@@ -72,6 +74,8 @@ it('as traduções chegam uma vez por idioma, com a chave do idioma', function (
 });
 
 it('a troca de idioma traz a página e as traduções no idioma novo', function () {
+    requireLocales('en');
+
     $this->get('/locale/en')->assertRedirect()->assertCookie(SetLocale::COOKIE, 'en');
 
     $this->withCookie(SetLocale::COOKIE, 'en')->get('/login')->assertInertia(fn (Assert $page) => $page
