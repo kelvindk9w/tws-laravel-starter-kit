@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-10-31, com a versão **2.0.0-beta.18** publicada.
+> Atualizado em 2026-11-03, com a versão **2.0.0-beta.18** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -36,6 +36,13 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
 `composer audit` e `npm audit`.
 
 ## O que falta para a 2.0.0 estável
+
+**Escopo congelado** (decisão de 2026-11-03): até a 2.0.0 estável entra só o
+que está nesta lista — os critérios abaixo e as issues com o rótulo
+[`antes-da-2.0.0`](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues?q=label%3Aantes-da-2.0.0)
+— e os defeitos que o uso real achar. Ideia nova vai para
+[Depois da 2.0.0](#depois-da-200-backlog). Fechar a estável vale mais que o
+próximo recurso.
 
 1. **Uso real em um projeto novo** — **em andamento.** O primeiro projeto de
    verdade (starter React pelo caminho só com o Docker, com contas, uploads e
@@ -100,10 +107,12 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    verdade.
 3. **`laravel new --using=twstec/kit`.** Preparado, mas ainda não testado
    contra o instalador oficial do Laravel.
-4. **Escolha do banco no menu.** Hoje o projeto criado fora do Docker aponta
-   para o PostgreSQL do Docker e, se ele não responder, deixa as migrations
-   para depois (com a instrução exata). O menu deveria oferecer SQLite ou
-   PostgreSQL já na criação.
+4. **Banco e Redis no instalador (#73).** Hoje todo projeto nasce com
+   PostgreSQL, Redis e Horizon, e o criado fora do Docker aponta para o
+   PostgreSQL do Docker. O menu passa a perguntar o banco — PostgreSQL
+   (recomendado) ou SQLite ("modo protótipo", sem as travas por privilégio do
+   banco) — e se usa Redis; sem ele, sessão, fila e cache vão para o banco e
+   o Horizon não é instalado.
 5. **Atualizações pendentes do Dependabot** (Pest 5 nos pacotes, ações de
    build do Docker e do split, grupo de frontend do starter Livewire):
    aplicar e validar juntas.
@@ -111,6 +120,22 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
    está no CHANGELOG da 2.0.0-beta.1).
 7. **Documentação por pacote** conferida contra a versão final (os READMEs
    de cada espelho já existem).
+8. **Pasta de personalização (#72).** Atualizar um projeto ainda pede copiar
+   à mão os arquivos de starter que a versão mudou (a 2.0.0-beta.18 listou
+   uns 26). O padrão (textos, e-mails, configurações, telas) passa a morar
+   nos pacotes, e o projeto sobrescreve só o que muda, numa pasta de
+   personalização; atualizar troca só o padrão. Em três etapas: textos e
+   configurações; telas; e `php artisan tws:upgrade --check`, que lista o que
+   ficou diferente nos arquivos que precisam continuar no projeto (Docker,
+   CI, `.env`). Vem antes da estável porque muda a estrutura do projeto
+   criado — depois dela, exigiria uma 3.0.
+9. **Endurecimento achado no uso** (issues abertas com o rótulo
+   `antes-da-2.0.0`): papel de manutenção para as podas, sem a senha do dono
+   no agendador (#65); configurações no banco com mais tipos e prefixo de
+   chave de API configurável (#27); varredura de segredos no projeto criado
+   (#33); automação do projeto criado — Dependabot, E2E no CI e verificação
+   local com status no commit (#34, o que falta); trava de isolamento do E2E
+   (#39); ajustes da idempotência (#40).
 
 ## Limitações conhecidas (documentadas)
 
@@ -160,6 +185,19 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
 
 ## Depois da 2.0.0 (backlog)
 
+Planejado, mas fora da 2.0.0 (rótulo
+[`depois-da-2.0.0`](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues?q=label%3Adepois-da-2.0.0)).
+Os módulos novos entram como pacotes à parte, puxados por um projeto real:
+
+- **Cobrança e planos (#74):** assinatura no Mercado Pago ou no Asaas,
+  planos, direitos por plano ("pode X?") e webhook de cobrança.
+- **Webhooks de entrada (#75):** verificador genérico de assinatura (HMAC),
+  carimbo de tempo e deduplicação por evento, sobre a lista de corpo
+  assinado da 2.0.0-beta.18 (#63). Pode vir antes, se um projeto precisar.
+- **Login de app pelo navegador (#76):** desktop, mobile e CLI entram pelo
+  login web, com o segundo fator, e recebem um token (device flow).
+- **`tws:upgrade` que aplica sozinho** o que não foi personalizado (a 2.0.0
+  traz só a conferência, `--check`, da #72).
 - **CSP com nonce**, eliminando o `unsafe-inline` que ainda existe em
   estilos/scripts.
 - **Autenticação avançada:** app autenticador (TOTP), chaves de acesso
@@ -180,6 +218,11 @@ com build da imagem de produção, prova do caminho Docker, CodeQL,
   dump criptografado que já existe.
 - **Instalação sem Docker e sem PHP** (binário ou script oficial), se o uso
   real mostrar demanda.
+
+**Fora do escopo:** MySQL e hospedagem compartilhada. As travas por
+privilégio do banco (papéis separados, tabelas só-acréscimo) dependem do
+PostgreSQL, e o caminho de desenvolvimento e de produção é o Docker; o SQLite
+da #73 é só para protótipo.
 
 Sugestões e defeitos: abra uma issue no
 [monorepo](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues);
