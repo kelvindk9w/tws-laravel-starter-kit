@@ -365,7 +365,9 @@ A separação em si é provada por `tests/Feature/Database/DatabaseRolesTest.php
 ele cria no banco de teste um papel de aplicação de verdade, conecta com ele e
 confere que `UPDATE`/`DELETE`/`TRUNCATE` nas trilhas falham por privilégio,
 que o `db:check-roles` reprova o dono e aprova esse papel, e que o `migrate`
-roda com o papel de migração e acerta os privilégios no fim (pula se o papel
+roda com o papel de migração e acerta os privilégios no fim. Um segundo papel
+de prova faz o de manutenção: as podas rodam com ele num processo sem a senha
+do dono, e qualquer coisa fora delas falha por privilégio (pula se o papel
 da suíte não puder criar papéis). No CI, o papel de migração é o mesmo usuário
 do serviço PostgreSQL (`DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD` no
 `env` do job). Ver [Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).

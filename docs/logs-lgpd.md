@@ -372,7 +372,9 @@ o gatilho, apaga a tabela) nem o superusuário. Com o papel de migração separa
 tabelas só-acréscimo — `audit_events`, `request_logs`, `outbound_http_logs` e as que o projeto
 declarar em `database_roles.append_only_tables` —, só tem `SELECT` e `INSERT`: `UPDATE`, `DELETE`,
 `TRUNCATE` e desligar o gatilho falham **por privilégio**, antes de o gatilho rodar. As podas rodam
-com o papel de migração. `php artisan db:check-roles` confere. Tudo em
+com o papel de manutenção (`DB_MAINTENANCE_USERNAME`), que só lê e apaga nas trilhas com poda — o
+agendador não tem a senha do dono; sem ele, com o papel de migração. `php artisan db:check-roles`
+confere. Tudo em
 [Papéis do PostgreSQL](producao.md#papéis-do-postgresql-migração--aplicação).
 
 ## Health check

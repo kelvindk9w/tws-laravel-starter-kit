@@ -6,6 +6,24 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Segurança
+
+- **O scheduler sem a senha do dono do banco (#65).** Papel novo,
+  opcional, de MANUTENÇÃO (`DB_MAINTENANCE_USERNAME`/`DB_MAINTENANCE_PASSWORD`):
+  com ele definido, as podas (`audit:prune`, `outbound-http:prune`) rodam com
+  ele em vez do papel de migração. Todo `migrate` o cria (se o dono puder) e
+  acerta os privilégios dele de forma exata — `SELECT` e `DELETE` só nas
+  trilhas com poda, `INSERT` em `audit_events` para o rastro da poda, nada em
+  nenhuma outra tabela (nem nas do domínio, nem em `request_logs`), sem
+  `UPDATE`, `TRUNCATE`, `TRIGGER`, posse ou `CREATE`. O `db:check-roles`
+  confere também esse papel, pelo nome, e reprova privilégio a mais, a menos
+  ou papel que falta. No `docker-compose.prod.yml` dos dois starters, só o
+  `migrate` recebe a senha do dono; o `scheduler` recebe a de manutenção
+  (`PROD_DB_MAINTENANCE_PASSWORD`, obrigatória, sem padrão). Podas do projeto:
+  `database_roles.maintenance_commands` e `database_roles.maintenance_tables`.
+  Só PostgreSQL; com SQLite nada muda. Ver "Papéis do PostgreSQL" em
+  `docs/producao.md`.
+
 ### Adicionado
 
 - **Banco de dados e Redis na criação do projeto (#73).** O comando único,
@@ -30,6 +48,17 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Atenção ao atualizar
 
+- **Papel de manutenção (#65), produção:** sem mudar nada, tudo continua
+  como antes (as podas com o papel de migração). Para tirar a senha do dono
+  do scheduler: no `docker-compose.prod.yml`, copie do starter o
+  `x-maintenance-env` e o `environment` do `migrate`
+  (`[*app-env, *migration-env, *maintenance-env]`) e do `scheduler`
+  (`[*app-env, *maintenance-env]`); no `.env.prod.example`, a seção "BANCO —
+  TRÊS PAPÉIS"; defina `PROD_DB_MAINTENANCE_PASSWORD` e faça o deploy (o
+  `migrate` cria o `tws_maintenance`). Banco gerenciado: crie o papel antes,
+  com o SQL de `docs/producao.md`. O `php artisan tws:upgrade --check` aponta
+  os dois arquivos. Os testes `tests/Feature/Database/DatabaseRolesTest.php`
+  dos starters ganharam os casos do papel de manutenção.
 - Arquivos de starter que mudaram (o `php artisan tws:upgrade --check`
   lista): `tests/Pest.php`, os testes de arquitetura do Docker
   (`ProductionDockerFilesTest`, `DevelopmentEnvironmentFilesTest`),

@@ -144,8 +144,8 @@ final class StackFiles
             ->save();
 
         $this->rewrite('.env.prod.example', [
-            "PROD_POSTGRES_PASSWORD, PROD_DB_APP_PASSWORD e\n# PROD_REDIS_PASSWORD são OBRIGATÓRIAS" => "PROD_POSTGRES_PASSWORD e PROD_DB_APP_PASSWORD\n# são OBRIGATÓRIAS",
-            'PROD_DB_APP_PASSWORD=uvw PROD_REDIS_PASSWORD=abc \\' => 'PROD_DB_APP_PASSWORD=uvw \\',
+            "PROD_DB_APP_PASSWORD,\n# PROD_DB_MAINTENANCE_PASSWORD e\n# PROD_REDIS_PASSWORD são OBRIGATÓRIAS" => "PROD_DB_APP_PASSWORD e\n# PROD_DB_MAINTENANCE_PASSWORD são OBRIGATÓRIAS",
+            "PROD_DB_MAINTENANCE_PASSWORD=rst \\\n#   PROD_REDIS_PASSWORD=abc \\" => 'PROD_DB_MAINTENANCE_PASSWORD=rst \\',
             "# Horizon: processos do supervisor de filas (serviço `horizon`).\n#\n" => '',
             "# Horizon: processos do supervisor de filas (serviço `horizon`).\n" => '',
             "# job concluído no Redis (minutos), job falho no Redis (minutos) e a tabela\n# failed_jobs (horas, podada diariamente pelo scheduler)." => '# a tabela failed_jobs (horas, podada diariamente pelo scheduler).',

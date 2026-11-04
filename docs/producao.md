@@ -21,8 +21,9 @@ Para produção real:
    [A chave da aplicação em produção](#a-chave-da-aplicação-em-produção)).
 2. O nome do produto e as senhas da stack: `PROD_PLATFORM_NAME` (vira o
    `APP_NAME` e o `PLATFORM_NAME` de todos os containers), `PROD_POSTGRES_PASSWORD`,
-   `PROD_DB_APP_PASSWORD` e `PROD_REDIS_PASSWORD` **não têm valor padrão** —
-   sem elas o Compose se recusa a resolver o arquivo. As duas do banco são de **papéis diferentes**
+   `PROD_DB_APP_PASSWORD`, `PROD_DB_MAINTENANCE_PASSWORD` e `PROD_REDIS_PASSWORD`
+   **não têm valor padrão** — sem elas o Compose se recusa a resolver o
+   arquivo. As três do banco são de **papéis diferentes**
    (ver [Papéis do PostgreSQL](#papéis-do-postgresql-migração--aplicação)). Defina
    `PROD_*` no shell ou no `.env` ao lado do `docker-compose.prod.yml` (o Compose interpola `${PROD_*}` dali
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
@@ -66,8 +67,9 @@ nenhum dos dois:
 
 | Papel | Variáveis | Quem usa | O que pode |
 | --- | --- | --- | --- |
-| **migração** | `DB_MIGRATION_USERNAME` / `DB_MIGRATION_PASSWORD` | `migrate*`, `db:wipe`, `schema:dump` e as podas das trilhas (`audit:prune`, `outbound-http:prune`) | dono do esquema e das tabelas |
+| **migração** | `DB_MIGRATION_USERNAME` / `DB_MIGRATION_PASSWORD` | `migrate*`, `db:wipe`, `schema:dump` (e as podas, quando não há papel de manutenção) | dono do esquema e das tabelas |
 | **aplicação** | `DB_USERNAME` / `DB_PASSWORD` (a conexão padrão) | web, fila, agendador | `SELECT`/`INSERT`/`UPDATE`/`DELETE` nas tabelas comuns; nas só-acréscimo, só `SELECT` e `INSERT` (e `UPDATE` nas colunas liberadas); nada de `CREATE` no esquema, `TRUNCATE` ou `TRIGGER` |
+| **manutenção** (opcional; obrigatório no `docker-compose.prod.yml`) | `DB_MAINTENANCE_USERNAME` / `DB_MAINTENANCE_PASSWORD` | as podas das trilhas (`audit:prune`, `outbound-http:prune`), no agendador | `SELECT` e `DELETE` só nas trilhas com poda (e `INSERT` em `audit_events`, onde a poda grava o rastro); nenhuma outra tabela |
 
 **Como o kit aplica** (`twstec/kit-foundation`, `Twstec\Kit\Foundation\Database`):
 
@@ -95,14 +97,31 @@ nenhum dos dois:
   para o monitoramento.
 - Sem `DB_MIGRATION_USERNAME`, nada muda (tudo roda com a conexão padrão, como
   antes) — e o `db:check-roles` aponta o problema.
+- **Papel de manutenção.** Com `DB_MAINTENANCE_USERNAME` definido (diferente
+  dos outros dois), as podas (`database_roles.maintenance_commands`) rodam
+  com a conexão `maintenance` — montada como a de migração — em vez do dono:
+  o processo que as agenda não precisa da senha do dono. Todo `migrate` (com
+  o papel de migração e o de manutenção definidos) cria o papel se faltar e
+  acerta os privilégios dele **de forma exata**: revoga tudo no esquema e
+  devolve só `SELECT` e `DELETE` nas trilhas com poda (`INSERT` em
+  `audit_events` e o uso da sequência dela, para o rastro da poda), sem
+  privilégio padrão para tabelas futuras. Uma poda do projeto entra em
+  `maintenance_commands` e a tabela dela em `maintenance_tables`. Com o papel
+  definido, o `db:check-roles` também o confere — pelo nome, sem a senha
+  dele — e sai com **1** se ele não existir, tiver atributo especial, for
+  dono de algo, puder criar no esquema, tiver qualquer privilégio fora da
+  lista (inclusive `UPDATE` de coluna, em qualquer tabela) ou faltar um da
+  lista. Sem o papel, as podas continuam com o de migração, como antes.
 
-**No `docker-compose.prod.yml`** os dois papéis já vêm separados: o
+**No `docker-compose.prod.yml`** os três papéis já vêm separados: o
 `PROD_POSTGRES_USER` (superusuário do container e dono do banco) só chega ao
-`migrate` e ao `scheduler` (as podas); o `app` e o `horizon` recebem só o
-papel da aplicação (`PROD_DB_APP_USERNAME`, padrão `tws_app`, e
+`migrate`; o `scheduler` recebe o papel da aplicação e o de manutenção
+(`PROD_DB_MAINTENANCE_USERNAME`, padrão `tws_maintenance`, e
+`PROD_DB_MAINTENANCE_PASSWORD`), para as podas; o `app` e o `horizon`
+recebem só o papel da aplicação (`PROD_DB_APP_USERNAME`, padrão `tws_app`, e
 `PROD_DB_APP_PASSWORD`). O `migrate` roda `php artisan migrate --force &&
-php artisan db:check-roles`: se a separação não estiver de pé, ele falha e o
-`app` não sobe.
+php artisan db:check-roles`: se a separação não estiver de pé — inclusive um
+papel de manutenção com privilégio a mais —, ele falha e o `app` não sobe.
 
 **Tabelas só-acréscimo do projeto** entram em `config/database_roles.php` do
 aplicativo, só com a chave `append_only_tables` (ver
@@ -129,13 +148,16 @@ migração, `meuapp_app` o da aplicação; troque os nomes e as senhas:
 CREATE ROLE meuapp_owner LOGIN PASSWORD 'senha-do-dono';
 CREATE ROLE meuapp_app LOGIN PASSWORD 'senha-da-aplicacao'
     NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE meuapp_maintenance LOGIN PASSWORD 'senha-da-manutencao'
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE DATABASE meuapp OWNER meuapp_owner;
 
 -- Conectado no banco meuapp (\c meuapp), como administrador ou meuapp_owner:
 REVOKE ALL ON DATABASE meuapp FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE meuapp TO meuapp_app;
+GRANT CONNECT ON DATABASE meuapp TO meuapp_maintenance;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO meuapp_app;
+GRANT USAGE ON SCHEMA public TO meuapp_app, meuapp_maintenance;
 
 -- Como meuapp_owner (os privilégios padrão valem para o que ELE criar):
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
@@ -161,6 +183,16 @@ GRANT SELECT, INSERT ON audit_events, outbound_http_logs, request_logs TO meuapp
 GRANT UPDATE (status, http_status_response, error_message, duration_ms, tenant_uuid)
     ON request_logs TO meuapp_app;
 -- (repita o REVOKE/GRANT para cada tabela de database_roles.append_only_tables)
+
+-- Papel de manutenção (com DB_MAINTENANCE_USERNAME=meuapp_maintenance): nada
+-- no esquema, exceto ler e apagar nas trilhas com poda…
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM meuapp_maintenance;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM meuapp_maintenance;
+GRANT SELECT, DELETE ON audit_events, outbound_http_logs TO meuapp_maintenance;
+-- …e gravar o rastro da poda na auditoria.
+GRANT INSERT ON audit_events TO meuapp_maintenance;
+GRANT USAGE ON SEQUENCE audit_events_id_seq TO meuapp_maintenance;
+-- (e SELECT, DELETE em cada tabela de database_roles.maintenance_tables)
 ```
 
 Conferir, com as credenciais da aplicação:
@@ -169,13 +201,14 @@ Conferir, com as credenciais da aplicação:
 php artisan db:check-roles          # 0 = separado; 1 = a lista do que falta
 ```
 
-**As podas apagam com o papel de migração.** `audit:prune` e
+**As podas apagam com o papel de manutenção.** `audit:prune` e
 `outbound-http:prune` removem linhas das trilhas, onde o papel da aplicação
-não tem `DELETE`; por isso o processo que as roda (o `scheduler`) precisa de
-`DB_MIGRATION_USERNAME`/`DB_MIGRATION_PASSWORD`. Quem não quiser a senha do
-dono no agendador pode criar um papel de manutenção (com `DELETE` só nas
-trilhas) e apontar o `DB_MIGRATION_*` do scheduler para ele — o `migrate`
-continua com o dono.
+não tem `DELETE`. O processo que as roda (o `scheduler`) fica de pé o tempo
+todo e roda código da aplicação: com a senha do dono, um agendador
+comprometido apagaria tabelas, desligaria gatilhos e se daria privilégio.
+Com o papel de manutenção, o pior que ele faz é podar as trilhas antes da
+hora. Sem `DB_MAINTENANCE_USERNAME`, as podas voltam a exigir o papel de
+migração no processo que as roda (o comportamento até a 2.0.0-beta.20).
 
 ### Atualizar um projeto que já existe
 
@@ -204,10 +237,20 @@ arquivos do projeto:
    Com o `compose.yaml` novo e o `.env` antigo, o Compose recusa subir e diz
    qual variável falta.
 2. **Produção** (`docker-compose.prod.yml`): copie do starter o
-   `x-migration-env`, o `DB_USERNAME`/`DB_PASSWORD` do `x-app-env` e o
-   `command`/`environment` do `migrate` e do `scheduler`; defina
-   `PROD_DB_APP_PASSWORD`. No primeiro deploy, o `migrate` cria o `tws_app` e
-   os privilégios, e o `db:check-roles` confirma.
+   `x-migration-env`, o `x-maintenance-env`, o `DB_USERNAME`/`DB_PASSWORD` do
+   `x-app-env` e o `command`/`environment` do `migrate` e do `scheduler`;
+   defina `PROD_DB_APP_PASSWORD` e `PROD_DB_MAINTENANCE_PASSWORD`. No
+   primeiro deploy, o `migrate` cria o `tws_app`, o `tws_maintenance` e os
+   privilégios, e o `db:check-roles` confirma. O `php artisan tws:upgrade
+   --check` aponta o `docker-compose.prod.yml` e o `.env.prod.example`
+   diferentes do starter.
+3. **Papel de manutenção num projeto que já separava dois papéis**: no
+   `docker-compose.prod.yml`, o `x-maintenance-env` novo, o `migrate` com
+   `<<: [*app-env, *migration-env, *maintenance-env]` e o `scheduler` com
+   `<<: [*app-env, *maintenance-env]` (sem o `*migration-env`); defina
+   `PROD_DB_MAINTENANCE_PASSWORD` (`openssl rand -hex 24`) e faça o deploy. O
+   `migrate` cria o papel; a partir daí o `scheduler` não tem mais a senha do
+   dono. Banco gerenciado: crie o papel antes, com o SQL acima.
 
 ### Arquivos estáticos e o disco `public`
 
