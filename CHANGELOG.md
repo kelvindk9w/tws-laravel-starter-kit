@@ -59,6 +59,21 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `scripts/segredos` e pelo `scripts/verificar`. Ver "Segredos no
   repositório" em `docs/seguranca.md`: segredo commitado é segredo vazado —
   rotacione.
+- **Configurações do `/admin` com tipo (#27).** Além de `int`, a whitelist
+  `settings.overrides` aceita `bool` (escolha Ligado/Desligado, com vazio =
+  vale o .env), `enum` (uma das `options`) e `string` (texto curto até
+  `max_length`, padrão 255, sem caractere de controle, com `pattern`
+  opcional). A tela monta o campo de cada tipo e valida; o
+  `SettingsManager::set()` recusa também por código o valor fora do tipo —
+  inclusive o `int` fora de `min`/`max`, que antes só a tela barrava —, sem
+  gravar nem registrar. Valor gravado que a declaração deixou de aceitar é
+  ignorado na leitura (vale o .env); gravação antiga de `int` como texto
+  numérico continua lida. Ver "Configurações" em `docs/admin-e-dashboards.md`.
+- **Prefixo do produto nas chaves de API (#27).** `API_KEY_PREFIX=acme` faz
+  as chaves novas nascerem `acme_pk_live_…`/`acme_sk_live_…`. Só minúsculas
+  e números, até 16 caracteres; fora disso o aplicativo não sobe, com a
+  mensagem do que corrigir. Vazio (o padrão) mantém o formato de sempre, e as
+  chaves já emitidas continuam valendo depois de uma troca. Ver `docs/api.md`.
 
 ### Atenção ao atualizar
 
@@ -89,6 +104,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   no serviço; valor fictício de teste do próprio projeto entra no
   `.gitleaks.toml` pelo valor exato. Quem já usa os hooks roda
   `scripts/instalar-hooks` de novo para ligar o `pre-commit`.
+- **Configurações com tipo e prefixo das chaves (#27).** Nada muda sem
+  configurar: as chaves continuam `pk_…`/`sk_…` e as configurações `int`
+  continuam como estavam. Quem grava configuração por código
+  (`SettingsManager::set()`) passa a receber exceção para valor fora do
+  tipo ou dos limites declarados — antes um `int` fora de `min`/`max` era gravado. E um
+  valor já gravado fora dos limites atuais passa a ser ignorado (vale o
+  .env): confira em `/admin/settings` se algum campo voltou ao padrão depois
+  de atualizar. O `.env.example` dos starters ganhou a linha
+  `API_KEY_PREFIX=` (o `php artisan tws:upgrade --check` lista); copiar é
+  opcional.
 
 ## [2.0.0-beta.20] — 2026-11-04
 

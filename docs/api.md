@@ -25,6 +25,15 @@ Authorization: Bearer sk_test_xQ7...
 O prefixo de ambiente (`live`/`test`) vem de `API_KEYS_ENVIRONMENT`
 (`config/api_keys.php`).
 
+**Prefixo do produto (opcional).** `API_KEY_PREFIX=acme` faz as chaves novas
+nascerem como `acme_pk_live_...` / `acme_sk_live_...` — útil para o cliente
+reconhecer de qual produto é a chave e para varredores de segredo acharem um
+vazamento pelo prefixo. Só letras minúsculas e números, até 16 caracteres;
+fora disso o aplicativo **não sobe** (mensagem dizendo o que corrigir), em
+vez de emitir chaves fora do padrão. Vazio (o padrão) mantém o formato de
+sempre. Trocar o prefixo vale só para as chaves novas: a autenticação procura
+a chave pública inteira, então as emitidas antes continuam funcionando.
+
 **A chave autentica a CONTA** (2.0 — ver [Contas](tenancy.md)). A chave é da
 conta, não de quem a criou: continua valendo quando essa pessoa sai da conta
 ou é excluída. Respostas, códigos e envelopes são os mesmos da 1.x; o

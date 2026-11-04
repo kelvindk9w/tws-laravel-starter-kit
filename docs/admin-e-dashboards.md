@@ -275,6 +275,33 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   Os campos são **agrupados por assunto** (chaves de API / uploads / rate
   limits) com largura proporcional ao número esperado — `group` e `span`
   vêm da própria `config('settings.overrides')`, nada hardcoded na tela.
+  Cada chave declara um **tipo**, e a tela monta o campo dele:
+  - `int` — número inteiro entre `min` e `max`;
+  - `bool` — escolha Ligado/Desligado (com "vazio" = vale o .env; por isso
+    não é um interruptor, que não tem o terceiro estado);
+  - `enum` — uma das `options` (o rótulo vem de
+    `admin.settings.option_<campo>_<valor>` quando a tradução existe);
+  - `string` — texto curto de até `max_length` caracteres (padrão 255), sem
+    quebra de linha nem outro caractere de controle, e casando com `pattern`
+    (expressão regular) quando declarado.
+
+  A tela valida, mas a barreira é o `SettingsManager::set()`: valor fora do
+  tipo é recusado também por código (comando, tinker), sem gravar nem
+  registrar. Valor gravado que a declaração deixou de aceitar (a opção saiu
+  de `options`, o limite mudou) é ignorado na leitura — vale o .env.
+  Exemplo, no `overrides` de um `config/settings.php` do aplicativo
+  (escrita ali, a lista é do aplicativo inteira: inclua as chaves dos
+  módulos que quiser manter — ver [Personalização](personalizacao.md#o-que-um-módulo-acrescenta-a-outro)):
+
+  ```php
+  'billing.invoice_footer' => ['type' => 'string', 'max_length' => 120, 'group' => 'other'],
+  'billing.send_receipts' => ['type' => 'bool', 'group' => 'other'],
+  'billing.receipt_channel' => ['type' => 'enum', 'options' => ['email', 'sms'], 'group' => 'other'],
+  ```
+
+  O rótulo do campo é a tradução `admin.settings.key_<chave com _ no lugar
+  do ponto>` (ex.: `admin.settings.key_billing_send_receipts`), no
+  `lang/` do aplicativo.
 - **Barreira de origem** (o /admin não fica exposto à internet inteira — obrigatória em produção,
   e agora VERIFICADA em runtime): `ADMIN_ALLOWED_IPS` no .env, aceitando IP
   exato, faixa CIDR IPv4 e IPv6 com ou sem prefixo, separados por vírgula
