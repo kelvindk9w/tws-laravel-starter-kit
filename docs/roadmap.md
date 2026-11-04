@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-04, com a versão **2.0.0-beta.20** publicada.
+> Atualizado em 2026-11-05, com a versão **2.0.0-beta.21** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -110,8 +110,7 @@ próximo recurso.
    verdade.
 3. **`laravel new --using=twstec/kit`.** Preparado, mas ainda não testado
    contra o instalador oficial do Laravel.
-4. **Banco e Redis no instalador (#73) — resolvido (próxima versão; ver
-   "Não publicado" no CHANGELOG).** Todo projeto nascia com PostgreSQL, Redis
+4. **Banco e Redis no instalador (#73) — resolvido na 2.0.0-beta.21.** Todo projeto nascia com PostgreSQL, Redis
    e Horizon. O menu (e o `tws:install`, por `--database`/`--no-redis` ou
    `TWS_KIT_DATABASE`/`TWS_KIT_REDIS`) passa a perguntar o banco — PostgreSQL
    (recomendado) ou SQLite ("modo protótipo", sem as travas por privilégio do
@@ -136,7 +135,7 @@ próximo recurso.
    2.0.0-beta.19; a segunda (telas) e a terceira (`tws:upgrade --check`), na 2.0.0-beta.20. Vem antes da estável porque muda a estrutura do projeto
    criado — depois dela, exigiria uma 3.0.
 9. **Endurecimento achado no uso (rótulo `antes-da-2.0.0`) — resolvido
-   (próxima versão; ver "Não publicado" no CHANGELOG).**
+   na 2.0.0-beta.21.**
    - Papel de manutenção para as podas, sem a senha do dono no agendador
      (#65).
    - Configurações no banco com os tipos liga/desliga, lista de opções e

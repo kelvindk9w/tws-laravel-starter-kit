@@ -6,6 +6,65 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.21] — 2026-11-05
+
+Fecha a lista do que entra na 2.0.0: o instalador pergunta o banco
+(PostgreSQL ou SQLite) e se usa Redis (#73); em produção as podas rodam com
+um papel de manutenção, sem a senha do dono do banco no agendador (#65); o
+projeto criado procura segredos no histórico e antes de cada commit (#33);
+configurações do `/admin` com liga/desliga, opções e texto, e prefixo das
+chaves de API configurável (#27); trava do E2E com endereço explícito e
+Mailpit identificado pelo projeto (#39); ajudante de teste e nota de impasse
+da idempotência (#40); E2E do projeto criado provado no Actions (#34).
+
+### Atenção ao atualizar
+
+- **Trava do E2E (#39), projeto com o Docker de desenvolvimento:** sem o
+  rótulo, o E2E passa a recusar rodar. Copie do starter o `environment:
+  MP_LABEL: '${COMPOSE_PROJECT_NAME}'` do serviço `mailpit` (para o
+  `compose.yaml`; recrie o container com `docker compose up -d`) e
+  `tests/e2e/support/project-env`, `tests/e2e/global-setup` e
+  `tests/e2e/global-teardown` — o `php artisan tws:upgrade --check` aponta os
+  quatro.
+
+- **Papel de manutenção (#65), produção:** sem mudar nada, tudo continua
+  como antes (as podas com o papel de migração). Para tirar a senha do dono
+  do scheduler: no `docker-compose.prod.yml`, copie do starter o
+  `x-maintenance-env` e o `environment` do `migrate`
+  (`[*app-env, *migration-env, *maintenance-env]`) e do `scheduler`
+  (`[*app-env, *maintenance-env]`); no `.env.prod.example`, a seção "BANCO —
+  TRÊS PAPÉIS"; defina `PROD_DB_MAINTENANCE_PASSWORD` e faça o deploy (o
+  `migrate` cria o `tws_maintenance`). Banco gerenciado: crie o papel antes,
+  com o SQL de `docs/producao.md`. O `php artisan tws:upgrade --check` aponta
+  os dois arquivos. Os testes `tests/Feature/Database/DatabaseRolesTest.php`
+  dos starters ganharam os casos do papel de manutenção.
+- Arquivos de starter que mudaram (o `php artisan tws:upgrade --check`
+  lista): `tests/Pest.php`, os testes de arquitetura do Docker
+  (`ProductionDockerFilesTest`, `DevelopmentEnvironmentFilesTest`),
+  `scripts/verificar`, `.github/workflows/ci.yml` e, no Livewire, os testes
+  que usam o Horizon. Num projeto com PostgreSQL e Redis, só ganham os
+  desvios para projeto sem Redis ou com SQLite: atualizar é opcional.
+- **Varredura de segredos (#33), opcional.** Arquivos de starter novos ou
+  mudados (o `php artisan tws:upgrade --check` lista): `.gitleaks.toml`,
+  `scripts/segredos`, `scripts/hooks/pre-commit`, `scripts/instalar-hooks`,
+  `scripts/verificar`, `.github/workflows/ci.yml` e o
+  `DevelopmentEnvironmentFilesTest`. Copie-os do starter (os scripts com
+  permissão de execução) e rode `scripts/segredos` antes de qualquer outra
+  coisa: um achado num commit antigo é um segredo que já vazou — rotacione-o
+  no serviço; valor fictício de teste do próprio projeto entra no
+  `.gitleaks.toml` pelo valor exato. Quem já usa os hooks roda
+  `scripts/instalar-hooks` de novo para ligar o `pre-commit`.
+- **Configurações com tipo e prefixo das chaves (#27).** Nada muda sem
+  configurar: as chaves continuam `pk_…`/`sk_…` e as configurações `int`
+  continuam como estavam. Quem grava configuração por código
+  (`SettingsManager::set()`) passa a receber exceção para valor fora do
+  tipo ou dos limites declarados — antes um `int` fora de `min`/`max` era gravado. E um
+  valor já gravado fora dos limites atuais passa a ser ignorado (vale o
+  .env): confira em `/admin/settings` se algum campo voltou ao padrão depois
+  de atualizar. O `.env.example` dos starters ganhou a linha
+  `API_KEY_PREFIX=` (o `php artisan tws:upgrade --check` lista); copiar é
+  opcional.
+
 ### Segurança
 
 - **O scheduler sem a senha do dono do banco (#65).** Papel novo,
@@ -97,54 +156,6 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   servidor — a transação é desfeita, a chave liberada e a resposta é `500`; o
   cliente repete com a mesma chave. Um teste prova o comportamento
   ([API](docs/api.md#modo-transacional-idempotenttransactional)).
-
-### Atenção ao atualizar
-
-- **Trava do E2E (#39), projeto com o Docker de desenvolvimento:** sem o
-  rótulo, o E2E passa a recusar rodar. Copie do starter o `environment:
-  MP_LABEL: '${COMPOSE_PROJECT_NAME}'` do serviço `mailpit` (para o
-  `compose.yaml`; recrie o container com `docker compose up -d`) e
-  `tests/e2e/support/project-env`, `tests/e2e/global-setup` e
-  `tests/e2e/global-teardown` — o `php artisan tws:upgrade --check` aponta os
-  quatro.
-
-- **Papel de manutenção (#65), produção:** sem mudar nada, tudo continua
-  como antes (as podas com o papel de migração). Para tirar a senha do dono
-  do scheduler: no `docker-compose.prod.yml`, copie do starter o
-  `x-maintenance-env` e o `environment` do `migrate`
-  (`[*app-env, *migration-env, *maintenance-env]`) e do `scheduler`
-  (`[*app-env, *maintenance-env]`); no `.env.prod.example`, a seção "BANCO —
-  TRÊS PAPÉIS"; defina `PROD_DB_MAINTENANCE_PASSWORD` e faça o deploy (o
-  `migrate` cria o `tws_maintenance`). Banco gerenciado: crie o papel antes,
-  com o SQL de `docs/producao.md`. O `php artisan tws:upgrade --check` aponta
-  os dois arquivos. Os testes `tests/Feature/Database/DatabaseRolesTest.php`
-  dos starters ganharam os casos do papel de manutenção.
-- Arquivos de starter que mudaram (o `php artisan tws:upgrade --check`
-  lista): `tests/Pest.php`, os testes de arquitetura do Docker
-  (`ProductionDockerFilesTest`, `DevelopmentEnvironmentFilesTest`),
-  `scripts/verificar`, `.github/workflows/ci.yml` e, no Livewire, os testes
-  que usam o Horizon. Num projeto com PostgreSQL e Redis, só ganham os
-  desvios para projeto sem Redis ou com SQLite: atualizar é opcional.
-- **Varredura de segredos (#33), opcional.** Arquivos de starter novos ou
-  mudados (o `php artisan tws:upgrade --check` lista): `.gitleaks.toml`,
-  `scripts/segredos`, `scripts/hooks/pre-commit`, `scripts/instalar-hooks`,
-  `scripts/verificar`, `.github/workflows/ci.yml` e o
-  `DevelopmentEnvironmentFilesTest`. Copie-os do starter (os scripts com
-  permissão de execução) e rode `scripts/segredos` antes de qualquer outra
-  coisa: um achado num commit antigo é um segredo que já vazou — rotacione-o
-  no serviço; valor fictício de teste do próprio projeto entra no
-  `.gitleaks.toml` pelo valor exato. Quem já usa os hooks roda
-  `scripts/instalar-hooks` de novo para ligar o `pre-commit`.
-- **Configurações com tipo e prefixo das chaves (#27).** Nada muda sem
-  configurar: as chaves continuam `pk_…`/`sk_…` e as configurações `int`
-  continuam como estavam. Quem grava configuração por código
-  (`SettingsManager::set()`) passa a receber exceção para valor fora do
-  tipo ou dos limites declarados — antes um `int` fora de `min`/`max` era gravado. E um
-  valor já gravado fora dos limites atuais passa a ser ignorado (vale o
-  .env): confira em `/admin/settings` se algum campo voltou ao padrão depois
-  de atualizar. O `.env.example` dos starters ganhou a linha
-  `API_KEY_PREFIX=` (o `php artisan tws:upgrade --check` lista); copiar é
-  opcional.
 
 ## [2.0.0-beta.20] — 2026-11-04
 
@@ -2766,7 +2777,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.20...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.21...desenvolvimento
+[2.0.0-beta.21]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.21
 [2.0.0-beta.20]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.20
 [2.0.0-beta.19]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.19
 [2.0.0-beta.18]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.18
