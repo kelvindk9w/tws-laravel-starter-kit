@@ -6,56 +6,19 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
-### Atenção ao atualizar
-
-- **Conferência dos arquivos de starter (#72, etapa 3), opcional.** Nada muda
-  sem rodar o comando. Projeto criado antes não tem a base
-  (`.tws/manifest.json`): `php artisan tws:upgrade --check` lista então o que
-  **difere** do starter publicado da versão instalada; confira, atualize o que
-  for do kit e grave a base com `php artisan tws:upgrade --record` (versione o
-  `.tws/manifest.json`). Daí em diante, só aparece o que o kit mudar.
-
-### Adicionado
-
-- **`php artisan tws:upgrade --check` (twstec/kit-installer, #72 etapa 3):**
-  confere os arquivos de starter que ficam no projeto (Docker, CI, `.env*`,
-  scripts, Vite, TypeScript, testes, rotas, providers) contra o starter
-  publicado da versão do kit instalada — baixado pelo Composer
-  (`create-project --no-install --no-scripts --no-plugins`, guardado em
-  `storage/framework/cache/tws-starters/`) ou de uma pasta (`--from`) — e
-  lista o que ficou diferente, **sem aplicar nada**: "desatualizado — pode
-  substituir" (o kit mudou e você não mexeu), "personalizado — comparar à
-  mão", "novo no kit", "o kit deixou de trazer" e, sem a base, "difere".
-  Ficam fora o que é gerado, os lockfiles, o `.env`, o README e o
-  `composer.json` (do projeto desde a criação).
-  `--diff` mostra a diferença (git), `--record` grava a base nova. Saída 0
-  (nada a conferir), 1 (há o que conferir) ou 2 (sem referência). O
-  `tws:install` grava a base na criação, em `.tws/manifest.json`: o hash de
-  cada arquivo do starter como chegou e do projeto como ficou depois de
-  adaptado — o que o instalador adaptou (nome, banco, identidade) não aparece
-  como diferença, e o que o kit não mudou fica calado mesmo personalizado.
-  Ver [personalização](docs/personalizacao.md).
-
-### Segurança
-
-- **Symfony com as correções publicadas em 2026-11-04** nos `composer.lock`
-  dos starters: `symfony/http-foundation`, `symfony/http-kernel`,
-  `symfony/routing` e `symfony/html-sanitizer` 8.1.11 (cabeçalhos
-  encaminhados que mudavam host e esquema das URLs geradas, placeholder de
-  host casando o começo do caminho no roteador compilado, e as falhas do
-  sanitizador de HTML). Projeto criado: `composer update symfony/*
-  --with-dependencies` (o `composer audit` aponta).
-
 ## [2.0.0-beta.20] — 2026-11-04
 
 As telas do kit (entrada, cadastro, segundo fator, perfil, contas, chaves de
 API, webhooks, configurações, layouts e componentes) passam a morar nos
 pacotes, nos dois starters: o projeto criado traz só a página inicial e o
 dashboard, e sobrescreve uma tela pondo a própria versão no mesmo caminho.
-`php artisan kit:overrides` lista também as telas.
+`php artisan kit:overrides` lista também as telas. Para os arquivos que
+continuam no projeto (Docker, CI, `.env`, scripts), `php artisan tws:upgrade
+--check` compara com o starter da versão instalada e separa o desatualizado do
+personalizado. Fecha a pasta de personalização (#72) e traz as correções de
+segurança da Symfony de 2026-11-04.
 
 ### Atenção ao atualizar
-
 - **Telas React do kit no pacote (#72, etapa 2), só starter React.** Nada
   quebra: as cópias de `resources/js` que o projeto já tem continuam valendo
   como antes. Para voltar a receber as correções das telas, copie do starter
@@ -88,9 +51,43 @@ dashboard, e sobrescreve uma tela pondo a própria versão no mesmo caminho.
 
   Os testes do starter que liam views passaram a usar `viewFile()`,
   `viewDirectories()` e `kitViewsPath()` (`tests/Pest.php`).
+- **Conferência dos arquivos de starter (#72, etapa 3), opcional.** Nada muda
+  sem rodar o comando. Projeto criado antes não tem a base
+  (`.tws/manifest.json`): `php artisan tws:upgrade --check` lista então o que
+  **difere** do starter publicado da versão instalada; confira, atualize o que
+  for do kit e grave a base com `php artisan tws:upgrade --record` (versione o
+  `.tws/manifest.json`). Daí em diante, só aparece o que o kit mudar.
+
+### Segurança
+- **Symfony com as correções publicadas em 2026-11-04** nos `composer.lock`
+  dos starters: `symfony/http-foundation`, `symfony/http-kernel`,
+  `symfony/routing` e `symfony/html-sanitizer` 8.1.11 (cabeçalhos
+  encaminhados que mudavam host e esquema das URLs geradas, placeholder de
+  host casando o começo do caminho no roteador compilado, e as falhas do
+  sanitizador de HTML). Projeto criado: `composer update symfony/*
+  --with-dependencies` (o `composer audit` aponta).
+
+### Adicionado
+- **`php artisan tws:upgrade --check` (twstec/kit-installer, #72 etapa 3):**
+  confere os arquivos de starter que ficam no projeto (Docker, CI, `.env*`,
+  scripts, Vite, TypeScript, testes, rotas, providers) contra o starter
+  publicado da versão do kit instalada — baixado pelo Composer
+  (`create-project --no-install --no-scripts --no-plugins`, guardado em
+  `storage/framework/cache/tws-starters/`) ou de uma pasta (`--from`) — e
+  lista o que ficou diferente, **sem aplicar nada**: "desatualizado — pode
+  substituir" (o kit mudou e você não mexeu), "personalizado — comparar à
+  mão", "novo no kit", "o kit deixou de trazer" e, sem a base, "difere".
+  Ficam fora o que é gerado, os lockfiles, o `.env`, o README e o
+  `composer.json` (do projeto desde a criação).
+  `--diff` mostra a diferença (git), `--record` grava a base nova. Saída 0
+  (nada a conferir), 1 (há o que conferir) ou 2 (sem referência). O
+  `tws:install` grava a base na criação, em `.tws/manifest.json`: o hash de
+  cada arquivo do starter como chegou e do projeto como ficou depois de
+  adaptado — o que o instalador adaptou (nome, banco, identidade) não aparece
+  como diferença, e o que o kit não mudou fica calado mesmo personalizado.
+  Ver [personalização](docs/personalizacao.md).
 
 ### Mudado
-
 - **As telas React do kit moram no `twstec/kit-foundation`** (`resources/react`,
   a mesma árvore de `resources/js`): páginas de entrada, cadastro, segundo
   fator, recuperação de senha, perfil, senha de transação, notificações,

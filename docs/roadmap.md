@@ -131,7 +131,7 @@ próximo recurso.
    configurações; telas; e `php artisan tws:upgrade --check`, que lista o que
    ficou diferente nos arquivos que precisam continuar no projeto (Docker,
    CI, `.env`). A primeira etapa (textos, e-mails e configurações) saiu na
-   2.0.0-beta.19; a segunda (telas), na 2.0.0-beta.20. Vem antes da estável porque muda a estrutura do projeto
+   2.0.0-beta.19; a segunda (telas) e a terceira (`tws:upgrade --check`), na 2.0.0-beta.20. Vem antes da estável porque muda a estrutura do projeto
    criado — depois dela, exigiria uma 3.0.
 9. **Endurecimento achado no uso** (issues abertas com o rótulo
    `antes-da-2.0.0`): papel de manutenção para as podas, sem a senha do dono
