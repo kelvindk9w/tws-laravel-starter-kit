@@ -110,7 +110,7 @@ run_with_docker env TWS_KIT_CHOICE_FILE="$choice_file" php kit-setup/create.php
 # escolha, nunca o arquivo como roteiro). O código de saída é o do instalador.
 while IFS='=' read -r variable value; do
     case "$variable" in
-        TWS_KIT_STACK|TWS_KIT_WITH|TWS_KIT_WITHOUT|TWS_KIT_NAME|TWS_KIT_SLOT|TWS_KIT_EXPOSE_DB) export "$variable=$value" ;;
+        TWS_KIT_STACK|TWS_KIT_WITH|TWS_KIT_WITHOUT|TWS_KIT_NAME|TWS_KIT_SLOT|TWS_KIT_EXPOSE_DB|TWS_KIT_DATABASE|TWS_KIT_REDIS) export "$variable=$value" ;;
         *) echo "escolha inválida no arquivo do instalador: $variable"; exit 1 ;;
     esac
 done < "$choice_file"
@@ -119,9 +119,11 @@ run_as_owner run composer run-script post-create-project-cmd
 
 # A reserva do nome e do número (o instalador do starter, sem o Docker, não
 # a faz): o volume do banco do projeto, com os rótulos do Compose e do número.
+# Projeto com SQLite (sem o volume do PostgreSQL no compose.yaml): nada a
+# reservar — um volume que o compose não declara sobraria no `down -v`.
 name=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env 2>/dev/null | tr -d '"' | head -n 1)
 slot=$(sed -n 's/^DEV_SLOT=//p' .env 2>/dev/null | tr -d '"' | head -n 1)
-if [ -n "$docker_groups" ] && [ -n "$name" ] && [ -n "$slot" ]; then
+if [ -n "$docker_groups" ] && [ -n "$name" ] && [ -n "$slot" ] && grep -q '^ *postgres_data:' compose.yaml 2>/dev/null; then
     run_with_docker docker volume create \
         --label "com.docker.compose.project=$name" \
         --label com.docker.compose.volume=postgres_data \

@@ -48,9 +48,25 @@ return [
         'webhooks' => 'Webhooks de saída assinados (twstec/kit-webhooks)',
     ],
 
+    'database_choice' => [
+        'label' => 'Qual banco de dados?',
+        'hint' => 'O PostgreSQL traz as travas do próprio banco (papéis separados, tabelas só-acréscimo). O SQLite é um arquivo, para protótipo.',
+        'pgsql' => 'PostgreSQL (recomendado)',
+        'sqlite' => 'SQLite — modo protótipo (sem as travas do banco; a produção continua no PostgreSQL)',
+    ],
+
+    'redis_choice' => [
+        'label' => 'Usar o Redis?',
+        'hint' => 'Sem ele, sessão, cache e fila ficam no banco, e o worker queue:work faz o papel do Horizon.',
+        'yes' => 'Sim — sessão, cache e fila no Redis, com o Horizon (recomendado)',
+        'no' => 'Não — tudo no banco de dados, sem o Horizon',
+        'summary_yes' => 'sim (sessão, cache e fila no Redis)',
+        'summary_no' => 'não (sessão, cache e fila no banco)',
+    ],
+
     'plan' => [
-        'summary' => "Projeto: :name — :site (e-mails: :mail)\nInterface: :stack\nMódulos opcionais: :modules",
-        'from_environment' => 'Escolha (sem perguntas): projeto :name, número :slot; :stack; módulos opcionais: :modules.',
+        'summary' => "Projeto: :name — :site (e-mails: :mail)\nInterface: :stack\nMódulos opcionais: :modules\nBanco: :database\nRedis: :redis",
+        'from_environment' => 'Escolha (sem perguntas): projeto :name, número :slot; :stack; módulos opcionais: :modules; banco: :database; Redis: :redis.',
     ],
 
     'errors' => [
@@ -73,6 +89,8 @@ return [
         'expose_invalid' => 'Valor inválido em TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar o banco) ou 0.',
         'vendor_invalid' => 'Vendor inválido em TWS_KIT_VENDOR: :vendor. Use letras minúsculas, números e hífen (o nome do pacote no composer.json do projeto fica <vendor>/<nome do projeto>).',
         'license_invalid' => 'Licença inválida em TWS_KIT_LICENSE: :license. Use um identificador SPDX (MIT, Apache-2.0…) ou proprietary.',
+        'database_invalid' => 'Banco desconhecido em TWS_KIT_DATABASE: :value. Use pgsql ou sqlite.',
+        'redis_invalid' => 'Valor inválido em TWS_KIT_REDIS: :value. Use 1 (com Redis) ou 0.',
     ],
 
     'steps' => [
@@ -111,6 +129,7 @@ return [
         'unreachable' => 'O banco do .env (DB_CONNECTION=:connection, DB_HOST=:host) não respondeu: as migrations ficaram para depois.',
         'how' => 'Ajuste as variáveis DB_* do .env — o docker-compose.yml de desenvolvimento do kit usa o PostgreSQL; para SQLite, DB_CONNECTION=sqlite e apague a linha DB_DATABASE (o arquivo database/database.sqlite já existe) — e rode:',
         'docker' => 'O banco do projeto roda no Docker: o primeiro `docker compose up -d` cria o banco e roda as migrations sozinho.',
+        'docker_sqlite' => 'O banco do projeto é o arquivo database/database.sqlite (modo protótipo): o primeiro `docker compose up -d` roda as migrations nele sozinho.',
     ],
 
     'done' => [
@@ -122,7 +141,10 @@ return [
         'site' => 'Site: :url',
         'mail' => 'E-mails enviados (Mailpit): :url',
         'database_exposed' => 'Banco: publicado na porta :port desta máquina (127.0.0.1), com a senha do .env.',
-        'database_internal' => 'Banco e Redis: só dentro do Docker (para publicar o banco na porta :port, COMPOSE_PROFILES=db-port no .env).',
+        'database_internal' => 'Banco: só dentro do Docker (para publicar o banco na porta :port, COMPOSE_PROFILES=db-port no .env).',
+        'database_sqlite' => 'Banco: SQLite, no arquivo database/database.sqlite (modo protótipo — sem as travas por privilégio do PostgreSQL).',
+        'redis' => 'Redis: só dentro do Docker (sessão, cache e fila).',
+        'no_redis' => 'Sem Redis: sessão, cache e fila no banco; o worker da fila é o queue:work.',
         'open' => 'Depois, abra :url no navegador (a primeira subida demora alguns minutos: constrói as imagens).',
     ],
 
