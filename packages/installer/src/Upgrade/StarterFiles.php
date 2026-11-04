@@ -18,7 +18,8 @@ use Twstec\Kit\Installer\Support\CreatedProject;
  *
  * Fora da conta:
  * - o que é gerado ou baixado (vendor, node_modules, storage, cache do
- *   bootstrap, build do front, relatórios de teste) e os lockfiles — quem os
+ *   bootstrap, build do front, os assets que os pacotes publicam em public/ —
+ *   Livewire, Filament —, relatórios de teste) e os lockfiles — quem os
  *   atualiza é o Composer e o npm, não a cópia à mão;
  * - o composer.json: é do projeto desde a criação (nome, licença, os módulos
  *   escolhidos — o comando único o reescreve ANTES do instalador, então nem a
@@ -41,7 +42,8 @@ final class StarterFiles
      * @var list<string>
      */
     public const EXCLUDED_DIRECTORIES = [
-        '.git', '.tws', 'vendor', 'node_modules', 'storage', 'bootstrap/cache', 'public/build',
+        '.git', '.tws', 'vendor', 'node_modules', 'storage', 'bootstrap/cache', 'public/build', 'public/vendor',
+        'public/js/filament', 'public/css/filament', 'public/fonts/filament',
         'test-results', 'playwright-report', 'blob-report', '.phpunit.cache', 'tests/e2e/.auth',
     ];
 

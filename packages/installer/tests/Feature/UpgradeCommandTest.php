@@ -49,6 +49,10 @@ beforeEach(function (): void {
     // O composer.json é do projeto desde a criação (nome, licença, módulos).
     ($this->put)($this->project, 'composer.json', "{\"name\": \"app/loja\"}\n");
     ($this->put)($this->reference, 'vendor/x/y.php', "<?php\n");
+    // Assets que os pacotes publicam em public/ (livewire:publish,
+    // filament:assets) são gerados no projeto, não vêm do starter.
+    ($this->put)($this->project, 'public/vendor/livewire/livewire.js', "// gerado\n");
+    ($this->put)($this->project, 'public/js/filament/app.js', "// gerado\n");
 });
 
 afterEach(function (): void {
@@ -187,6 +191,19 @@ it('com manifesto: arquivo que o projeto já não tinha na base (módulo de fora
     [$code, $output] = upgrade(['--check' => true]);
     expect($code)->toBe(0)
         ->and($output)->not->toContain('UploadTest.php');
+});
+
+it('assets publicados em public/ (Livewire, Filament) ficam fora da conta, com ou sem base', function (): void {
+    [$code, $output] = upgrade();
+
+    expect($code)->toBe(0)
+        ->and($output)->not->toContain('public/');
+
+    // A base gravada na criação também não os conhece.
+    Manifest::created('2.0.0-beta.19', 'react', $this->project, Manifest::snapshot($this->project))->write($this->project);
+
+    expect(Manifest::read($this->project)?->files)->toHaveKey('compose.yaml')
+        ->and(Manifest::read($this->project)?->files)->not->toHaveKey('public/vendor/livewire/livewire.js');
 });
 
 it('o CI base do starter (docker/dev/ci.yml) é comparado com o .github/workflows/ci.yml do projeto', function (): void {
