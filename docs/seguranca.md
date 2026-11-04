@@ -533,3 +533,34 @@ mais o WebSocket do HMR em `connect-src`
 `config/security.php` do pacote foundation). Nunca `'unsafe-eval'`; fora de `local`, ou
 com conteúdo estranho no `public/hot`, a CSP não muda. O `/admin` do React é o
 mesmo Filament, com a mesma exceção documentada acima.
+
+## Segredos no repositório (gitleaks)
+
+Repositório privado de conta pessoal não tem o secret scanning nem a push
+protection do GitHub. O projeto criado traz a própria varredura: o
+**`scripts/segredos`** roda o [gitleaks](https://github.com/gitleaks/gitleaks)
+em container (imagem oficial fixada pela versão e pelo digest — nada a
+instalar) e confere o **histórico do git inteiro** e o que **ainda não foi
+commitado** (staged e modificado). O achado sai com o valor oculto. Roda:
+
+- no **`scripts/verificar`**, como primeiro passo, e no **CI base** (o
+  checkout traz todos os commits);
+- no **hook `pre-commit`**, só no staged (`scripts/segredos --staged`),
+  depois de `scripts/instalar-hooks` — que liga também o `pre-push` do selo
+  (ver [Verificação local com selo](instalacao.md#verificação-local-com-selo-no-commit-opcional-desligada-por-padrão)).
+
+**Valores fictícios dos testes.** As senhas, chaves de idempotência e
+credenciais de mentira dos testes do kit parecem segredo para o gitleaks; o
+`.gitleaks.toml` os libera pelo **valor exato** (com âncoras `^…$`), com o
+motivo, partindo das regras padrão (`useDefault = true`). Nunca libere por
+pasta (`paths`), arquivo ou regra inteira: um segredo de verdade colado num
+teste tem de continuar barrado. Valor fictício novo nos testes do projeto:
+acrescente-o no mesmo formato (um teste da suíte recusa o que não for valor
+exato).
+
+**Segredo commitado é segredo vazado.** Apagar o arquivo, fazer outro commit
+ou reescrever o histórico não desfaz a exposição: quem clonou, o CI, um
+fork ou um cache já têm o valor. Primeiro **rotacione** (gere outro no
+serviço e revogue o antigo); depois limpe o repositório, se quiser. O
+`git commit --no-verify` pula o `pre-commit`, mas o `scripts/verificar` e o
+CI varrem o histórico e falham do mesmo jeito.

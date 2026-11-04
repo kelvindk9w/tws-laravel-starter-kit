@@ -235,6 +235,7 @@ created_project() {
     test -x scripts/verificar
     test ! -e docker/dev/ci.yml
     automation_files
+    secret_scan
 
     # Nada que só existe no monorepo.
     for monorepo_file in docker/nginx/dev.conf tests/Feature/Localization/SharedTextsWithLivewireTest.php tests/e2e/smoke.spec.js tests/e2e/landing.spec.js; do
@@ -245,6 +246,7 @@ created_project() {
         compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
         docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* .github/workflows/ci.yml .github/dependabot.yml \
         scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh \
+        scripts/segredos scripts/hooks/pre-commit .gitleaks.toml \
         $(find tests/e2e -type f ! -path '*/.auth/*') 2>/dev/null || true)
     citacoes="$citacoes$(grep -v '^[[:space:]]*#.*só no monorepo' docker-compose.prod.yml | grep -n -i -E 'monorepo|starters/' || true)"
     if [ -n "$citacoes" ]; then echo "arquivos de desenvolvimento do projeto citam o monorepo:"; echo "$citacoes"; exit 1; fi
@@ -338,7 +340,7 @@ automation_files() {
     test -f .github/dependabot.yml
     test ! -e docker/dev/dependabot.yml
     grep -q "patterns: \['twstec/\*'\]" .github/dependabot.yml
-    for script in scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push; do
+    for script in scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/segredos scripts/hooks/pre-commit; do
         if [ ! -x "$script" ]; then echo "script da automação ausente ou sem permissão de execução: $script"; exit 1; fi
     done
     test -f scripts/lib/selo.sh
@@ -348,8 +350,46 @@ automation_files() {
          check-jsonschema --builtin-schema vendor.dependabot /w/dependabot.yml"
     docker run --rm -v "$(pwd):/w:ro" -w /w "$ACTIONLINT_IMAGE" -no-color .github/workflows/ci.yml
     docker run --rm -v "$(pwd):/w:ro" -w /w --entrypoint shellcheck "$ACTIONLINT_IMAGE" -x -s sh \
-        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh
+        scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh \
+        scripts/segredos scripts/hooks/pre-commit
     echo "automação do projeto: Dependabot válido, CI limpo no actionlint, scripts limpos no shellcheck"
+}
+
+# A VARREDURA DE SEGREDOS do projeto criado (rode na pasta do projeto). Numa
+# CÓPIA do projeto (sem vendor e node_modules), que vira um repositório git
+# com um commit de tudo o que o .gitignore deixa versionar:
+# - o scripts/segredos (gitleaks no histórico e no que não foi commitado)
+#   passa sem achado — os valores fictícios dos testes do kit liberados pelo
+#   .gitleaks.toml;
+# - uma chave falsa no estilo AWS, gerada aqui na hora (nenhuma no
+#   repositório do kit): o hook pre-commit (ligado pelo instalar-hooks)
+#   recusa o commit; commitada mesmo assim (--no-verify), o scripts/segredos
+#   e o scripts/verificar falham na etapa de segredos.
+secret_scan() {
+    copia=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/segredos.XXXXXXXX")
+    tar --exclude=./vendor --exclude=./node_modules -cf - . | tar -xf - -C "$copia"
+    (
+        cd "$copia"
+        export GIT_AUTHOR_NAME=simulacao GIT_AUTHOR_EMAIL=simulacao@example.invalid
+        export GIT_COMMITTER_NAME=simulacao GIT_COMMITTER_EMAIL=simulacao@example.invalid
+        git init -q
+        git add -A
+        git commit -q -m 'projeto criado'
+        scripts/segredos
+
+        scripts/instalar-hooks >/dev/null
+        chave="AKIA$(LC_ALL=C tr -dc 'A-Z2-7' </dev/urandom | head -c 16)"
+        printf '<?php\n\nreturn [\n    %s => %s,\n];\n' "'aws_access_key_id'" "'$chave'" > config/vazamento.php
+        git add config/vazamento.php
+        if git commit -q -m 'segredo falso'; then echo 'o pre-commit aceitou um commit com chave no estilo AWS'; exit 1; fi
+        git commit -q --no-verify -m 'segredo falso'
+        if scripts/segredos >/dev/null 2>&1; then echo 'o scripts/segredos passou com uma chave no estilo AWS no histórico'; exit 1; fi
+        if saida=$(scripts/verificar 2>&1); then echo 'o scripts/verificar passou com uma chave no estilo AWS no histórico'; exit 1; fi
+        if ! printf '%s\n' "$saida" | grep -q '^==> Segredos (gitleaks)$'; then echo 'o scripts/verificar falhou fora da etapa de segredos:'; printf '%s\n' "$saida" | tail -n 20; exit 1; fi
+        if printf '%s\n' "$saida" | grep -q '^==> Estilo (Pint)$'; then echo 'o scripts/verificar seguiu depois da etapa de segredos'; exit 1; fi
+    )
+    rm -rf "$copia"
+    echo "segredos do projeto: gitleaks sem achado; a chave falsa recusada pelo pre-commit, pelo scripts/segredos e pelo scripts/verificar"
 }
 
 package() {

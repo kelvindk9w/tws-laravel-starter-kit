@@ -10,7 +10,7 @@ Na raiz do projeto, com ele no ar (`docker compose up -d`). Nada disso exige
 PHP ou Node na máquina.
 
 ```bash
-# Tudo o que o CI confere, de uma vez (Pint, Larastan, auditorias, build, Pest PostgreSQL):
+# Tudo o que o CI confere, de uma vez (segredos, Pint, Larastan, auditorias, build, Pest PostgreSQL):
 scripts/verificar
 
 # Ou cada camada:
