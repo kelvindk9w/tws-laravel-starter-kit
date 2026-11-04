@@ -601,6 +601,19 @@ jobs:
           npm run check
           npm run build
 
+      # As telas do kit moram no twstec/kit-foundation (resources/react) e o
+      # lint do starter não lê o vendor/. Aqui elas passam pelas MESMAS regras,
+      # copiadas por um instante para resources/js (a árvore é a mesma; nada do
+      # aplicativo é sobrescrito) e apagadas em seguida. Os tipos já foram
+      # conferidos acima (o tsconfig inclui a pasta do pacote).
+      - name: Starter React · lint e formatação das telas do kit
+        working-directory: starters/react
+        run: |
+          cp -r --update=none ../../packages/foundation/resources/react/. resources/js/
+          npm run check
+          git clean -fdq resources/js
+          test -z "$(git status --porcelain resources/js)"
+
       - name: Starter React · testes (Pest · SQLite)
         working-directory: starters/react
         run: |

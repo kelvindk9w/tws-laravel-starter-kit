@@ -1,7 +1,7 @@
-# Personalização: textos, e-mails e configuração
+# Personalização: textos, e-mails, configuração e telas
 
-O padrão dos textos, do corpo dos e-mails e da configuração do kit **mora nos
-pacotes** `twstec/kit-*`. O projeto criado não recebe cópias: só tem o
+O padrão dos textos, do corpo dos e-mails, da configuração e das telas do kit
+**mora nos pacotes** `twstec/kit-*`. O projeto criado não recebe cópias: só tem o
 arquivo se quiser mudar algo, e nesse arquivo escreve **só o que muda**.
 
 Por quê: cópia parada no aplicativo vence o pacote para sempre. Com cópias, a
@@ -9,7 +9,7 @@ correção de um texto, de um e-mail ou de um valor padrão não chegava pelo
 `composer update` — cada atualização pedia para copiar arquivos à mão. Sem
 cópias, o que você não mudou acompanha o kit sozinho.
 
-A regra geral é a mesma nos três casos: **o aplicativo vence**.
+A regra geral é a mesma em todos os casos: **o aplicativo vence**.
 
 ## Textos (traduções)
 
@@ -105,6 +105,47 @@ dashboards, o widget dela, o escopo de auditoria das telas dela e a superfície
 de CSP da landing alternativa entram mesmo numa chave que o aplicativo
 escreveu, como sempre entraram (instalar a demo é pedir as telas dela).
 
+## Telas React
+
+No starter React, as páginas, os layouts, os componentes (inclusive os do
+shadcn/ui em `components/ui`), os hooks, os tipos e o `lib/` das telas do kit
+— entrada, cadastro, segundo fator, recuperação de senha, perfil, senha de
+transação, notificações, conta e membros, convites, chaves de API, projetos e
+webhooks — moram no `twstec/kit-foundation`, em `resources/react`, com a
+**mesma árvore** de `resources/js`. O projeto criado tem só o que é dele:
+`resources/js/app.tsx`, a página inicial (`pages/welcome.tsx`) e o dashboard
+(`pages/dashboard.tsx`).
+
+Para mudar uma tela ou um componente do kit, copie **só aquele arquivo** de
+`vendor/twstec/kit-foundation/resources/react/` para o **mesmo caminho** em
+`resources/js/`:
+
+```bash
+mkdir -p resources/js/pages/auth
+cp vendor/twstec/kit-foundation/resources/react/pages/auth/login.tsx resources/js/pages/auth/
+```
+
+A cópia vale no lugar da do kit — também para as telas do kit que a importam
+(copiar `components/ui/button.tsx` muda o botão de todas as telas). O que
+você não copiou continua vindo do pacote e das atualizações dele. Uma tela
+nova do produto é só criar o arquivo em `resources/js/pages`.
+
+Quem aplica a regra:
+
+- **`@/…` no Vite:** o plugin `vendor/twstec/kit-foundation/vite/react.js`
+  (no `vite.config.ts`) procura primeiro em `resources/js` e, sem o arquivo,
+  no pacote; ele também acrescenta a pasta das telas às fontes do Tailwind;
+- **páginas do Inertia:** o `resolvePage` (`lib/pages.ts`, usado no
+  `app.tsx`), na mesma ordem; no servidor, o documento raiz pede ao manifesto
+  do Vite a página que vale (`ReactScreens::pageEntry`) e o
+  `config/inertia.php` conhece as duas pastas (para os testes);
+- **tipos:** o `tsconfig.json` tem os dois lugares no `paths` do `@/*`, nessa
+  ordem, e inclui a pasta do pacote na checagem — uma tela do kit que importa
+  um componente que você mudou é conferida contra a sua versão.
+
+Uma tela copiada deixa de receber as correções do kit: confira o arquivo do
+pacote a cada atualização (o `kit:overrides` lista as suas cópias).
+
 ## O que o projeto sobrescreve: `kit:overrides`
 
 ```bash
@@ -112,7 +153,7 @@ php artisan kit:overrides
 ```
 
 Compara cada arquivo do aplicativo que tem padrão no kit (traduções, views de
-e-mail e configuração) com esse padrão, sem alterar nada:
+e-mail, configuração e telas) com esse padrão, sem alterar nada:
 
 - **igual ao padrão do kit — pode apagar**: o arquivo é só cópia; apagado,
   nada muda e as atualizações passam a chegar;
@@ -120,7 +161,8 @@ e-mail e configuração) com esse padrão, sem alterar nada:
   as de primeiro nível); as chaves **iguais ao padrão podem sair** do arquivo;
 - **chaves que o kit não tem**: são do próprio projeto e ficam. Arquivo só
   com chaves do projeto nem aparece;
-- **view personalizada**: confira o arquivo do pacote a cada atualização.
+- **view ou tela personalizada**: confira o arquivo do pacote a cada
+  atualização.
 
 Projeto criado depois desta mudança, sem nada personalizado, ouve que nenhum
 arquivo sobrescreve o kit.
@@ -131,3 +173,13 @@ Continua funcionando igual: as cópias completas vencem o pacote como sempre.
 Para voltar a receber as correções, rode `php artisan kit:overrides`, apague
 os arquivos marcados como iguais ao padrão e, nos personalizados, deixe só as
 chaves que você mudou. Rode a suíte de testes depois.
+
+**Telas React:** antes de apagar qualquer cópia de `resources/js`, o projeto
+precisa saber achar as telas no pacote — copie do starter React da versão
+nova o `vite.config.ts` (o `kitReact()`), o `tsconfig.json` (o `paths` e o
+`include` com a pasta do pacote, e o `preserveSymlinks`), o `app.tsx` (o
+`resolve: resolvePage`), o `resources/views/app.blade.php` (a entrada da
+página pelo `ReactScreens::pageEntry`), o `config/inertia.php` (a pasta de
+páginas do pacote) e, no `compose.yaml` de desenvolvimento, o `depends_on` do
+serviço `vite`. Depois apague o que o `kit:overrides` marcar como igual ao
+padrão e rode `npm run types:check`, `npm run build` e a suíte.
