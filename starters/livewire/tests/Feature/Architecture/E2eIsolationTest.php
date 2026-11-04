@@ -78,7 +78,7 @@ it('recusa o site e o Mailpit de outro projeto, com endereço explícito ou não
         ->and($out['siteOther'])->toContain('não é este projeto')
         ->and($out['siteOtherAddress'])->toContain('APP_URL')
         ->and($out['explicitSiteOwn'])->toBeNull()
-        ->and($out['explicitSiteOther'])->toContain('não é este projeto', 'com E2E_BASE_URL, o cookie de sessão continua conferido')
+        ->and($out['explicitSiteOther'])->toContain('não é este projeto') // com E2E_BASE_URL, o cookie de sessão continua conferido
         ->and($out['mailpitOwn'])->toBeNull()
         ->and($out['mailpitOther'])->toContain('não é deste projeto')->toContain('"outro"')
         ->and($out['mailpitUnlabeled'])->toContain('não é deste projeto')
