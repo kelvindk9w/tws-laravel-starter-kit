@@ -6,6 +6,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Segurança
+
+- **Symfony com as correções publicadas em 2026-11-04** nos `composer.lock`
+  dos starters: `symfony/http-foundation`, `symfony/http-kernel`,
+  `symfony/routing` e `symfony/html-sanitizer` 8.1.11 (cabeçalhos
+  encaminhados que mudavam host e esquema das URLs geradas, placeholder de
+  host casando o começo do caminho no roteador compilado, e as falhas do
+  sanitizador de HTML). Projeto criado: `composer update symfony/*
+  --with-dependencies` (o `composer audit` aponta).
+
 ## [2.0.0-beta.20] — 2026-11-04
 
 As telas do kit (entrada, cadastro, segundo fator, perfil, contas, chaves de
