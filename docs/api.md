@@ -565,9 +565,58 @@ Condições para usar:
   `DB::transaction` interna, na mesma conexão, vira um ponto de salvamento e
   funciona.
 
+**Impasse do banco (deadlock) não é tentado de novo no servidor.** A
+transação do modo transacional é a do middleware, e a rota roda dentro dela.
+O Laravel só repete uma transação de nível 1 (`DB::transaction($fn,
+$tentativas)`); uma `DB::transaction` com tentativas DENTRO da rota vira ponto
+de salvamento, e o impasse sobe sem nova tentativa. Num impasse (ou falha de
+serialização), a transação inteira é desfeita, a chave é liberada e a resposta
+é `500`, uma única execução. Como tratar:
+
+- **o cliente repete com a mesma chave** — é seguro, porque nada foi
+  confirmado; a repetição executa uma vez. É o caminho padrão, e o motivo de a
+  chave ser liberada;
+- **diminua os impasses na rota:** trave as linhas sempre na mesma ordem
+  (`lockForUpdate()` antes de alterar) e mantenha a transação curta;
+- se a rota **precisa** repetir no servidor, ela não usa `transactional`: no
+  modo comum, a própria rota abre `DB::transaction($fn, 3)` (nível 1, com
+  tentativas) — e perde a conclusão da chave na mesma transação (ver a
+  retomada, acima).
+
+No canal `request_log`, o impasse aparece como `api.idempotency.persist_failed`
+com `rolled_back: true` e a classe da exceção.
+
 As rotas da API v1 do kit continuam no modo comum, com a retomada desligada
 (o padrão): `POST /uploads` grava arquivo no disco, e a criação de chave
 consome o token de ação sensível e pode avisar por e-mail.
+
+### Trava de arquitetura: o modo de cada rota
+
+Para garantir que nenhuma rota de escrita de uma área escape do modo exigido,
+o projeto escreve um teste com `RouteIdempotency`
+(`Twstec\Kit\Foundation\Idempotency\RouteIdempotency`):
+
+```php
+use Twstec\Kit\Foundation\Idempotency\RouteIdempotency;
+
+it('toda escrita de pagamentos exige idempotent:required,transactional', function (): void {
+    expect(RouteIdempotency::missing('api/v1/pagamentos', transactional: true, except: [
+        // 'POST api/v1/pagamentos/webhook', // motivo da exceção, ao lado
+    ]))->toBe([]);
+});
+```
+
+- `missing($prefixo, required: true, transactional: false, except: [])` lista
+  as rotas de escrita sob o prefixo (o caminho é ele ou começa por ele
+  seguido de `/`) que não cumprem o pedido, com o que falta: `POST
+  api/v1/pagamentos/lote: falta transactional`. Escrita = os métodos de
+  `IDEMPOTENCY_METHODS` (padrão `POST` e `PATCH`; `PUT` e `DELETE` não passam
+  pelo middleware);
+- `of($rota)` devolve as opções da rota (`required`, `withhold`,
+  `transactional`, `keep`) ou `null`;
+- vale o alias, a string de `HandleIdempotencyKey::using()` e o middleware
+  vindo de um grupo; rota que o tira com `withoutMiddleware` conta como sem
+  ele; parâmetro inválido na rota é erro, como no próprio middleware.
 
 ### A corrida
 

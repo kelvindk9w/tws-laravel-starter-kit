@@ -75,6 +75,20 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   mensagem do que corrigir. Vazio (o padrão) mantém o formato de sempre, e as
   chaves já emitidas continuam valendo depois de uma troca. Ver `docs/api.md`.
 
+- **Trava de arquitetura do modo de idempotência das rotas (#40).**
+  `RouteIdempotency::missing('api/v1/pagamentos', transactional: true)` lista
+  as rotas de escrita sob o prefixo que não declaram o modo pedido, com o que
+  falta; `RouteIdempotency::of($rota)` devolve as opções da rota. Lê alias,
+  `HandleIdempotencyKey::using()`, grupo e `withoutMiddleware`
+  ([API](docs/api.md#trava-de-arquitetura-o-modo-de-cada-rota)).
+
+### Documentação
+
+- **Impasse do banco no modo transacional (#40):** não há nova tentativa no
+  servidor — a transação é desfeita, a chave liberada e a resposta é `500`; o
+  cliente repete com a mesma chave. Um teste prova o comportamento
+  ([API](docs/api.md#modo-transacional-idempotenttransactional)).
+
 ### Atenção ao atualizar
 
 - **Papel de manutenção (#65), produção:** sem mudar nada, tudo continua
