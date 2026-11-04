@@ -14,27 +14,6 @@ use Twstec\Kit\Foundation\Customization\ReactScreens;
 // resources/js vale no lugar do pacote. O projeto criado não recebe cópias.
 // =============================================================================
 
-/**
- * Cria um arquivo no aplicativo só durante o teste.
- */
-function applicationFrontFile(string $relative, string $contents): string
-{
-    $file = resource_path('js/'.$relative);
-    File::ensureDirectoryExists(dirname($file));
-    File::put($file, $contents);
-
-    test()->beforeApplicationDestroyed(function () use ($file): void {
-        File::delete($file);
-
-        // Remove as pastas que o teste criou (nunca resources/js/pages).
-        for ($dir = dirname($file); $dir !== resource_path('js/pages') && $dir !== resource_path('js') && File::isEmptyDirectory($dir); $dir = dirname($dir)) {
-            File::deleteDirectory($dir);
-        }
-    });
-
-    return $file;
-}
-
 it('o aplicativo não traz cópia das telas do kit: só o que é dele', function (): void {
     $application = collect(File::allFiles(resource_path('js')))
         ->map(fn (SplFileInfo $file): string => str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname()))
@@ -65,10 +44,20 @@ it('sem a tela no aplicativo, vale a do kit: a página existe e o build a carreg
 });
 
 it('com a tela no aplicativo, vale a dele', function (): void {
-    applicationFrontFile('pages/auth/login.tsx', "export default function Login() {\n    return null;\n}\n");
+    // Um aplicativo só deste teste (os testes rodam em paralelo e leem o
+    // mesmo resources/js).
+    $base = storage_path('framework/testing/app-'.bin2hex(random_bytes(4)));
+    File::ensureDirectoryExists($base.'/resources/js/pages/auth');
+    File::put($base.'/resources/js/pages/auth/login.tsx', "export default function Login() {\n    return null;\n}\n");
+    $original = base_path();
+    app()->setBasePath($base);
+    $this->beforeApplicationDestroyed(function () use ($base, $original): void {
+        app()->setBasePath($original);
+        File::deleteDirectory($base);
+    });
 
     expect(ReactScreens::pageEntry('auth/login'))->toBe('resources/js/pages/auth/login.tsx')
-        ->and(frontFile('pages/auth/login.tsx'))->toBe(resource_path('js/pages/auth/login.tsx'));
+        ->and(ReactScreens::pageEntry('auth/register'))->toBe(ReactScreens::PATH.'/pages/auth/register.tsx');
 });
 
 it('o Vite procura cada `@/…` primeiro no aplicativo e depois no kit', function (): void {
