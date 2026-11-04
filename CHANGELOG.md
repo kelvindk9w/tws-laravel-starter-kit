@@ -6,6 +6,14 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.20] — 2026-11-04
+
+As telas do kit (entrada, cadastro, segundo fator, perfil, contas, chaves de
+API, webhooks, configurações, layouts e componentes) passam a morar nos
+pacotes, nos dois starters: o projeto criado traz só a página inicial e o
+dashboard, e sobrescreve uma tela pondo a própria versão no mesmo caminho.
+`php artisan kit:overrides` lista também as telas.
+
 ### Atenção ao atualizar
 
 - **Telas React do kit no pacote (#72, etapa 2), só starter React.** Nada
@@ -2581,7 +2589,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.19...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.20...desenvolvimento
+[2.0.0-beta.20]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.20
 [2.0.0-beta.19]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.19
 [2.0.0-beta.18]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.18
 [2.0.0-beta.17]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.17
