@@ -264,7 +264,7 @@ created_project() {
 # serviços); o worker de produção é o `queue:work`.
 stack_checks() {
     services=$(docker compose -f compose.yaml --env-file .env config --services)
-    production=$(PROD_PLATFORM_NAME=sim PROD_POSTGRES_PASSWORD=sim PROD_REDIS_PASSWORD=sim PROD_DB_APP_PASSWORD=sim \
+    production=$(PROD_PLATFORM_NAME=sim PROD_POSTGRES_PASSWORD=sim PROD_REDIS_PASSWORD=sim PROD_DB_APP_PASSWORD=sim PROD_DB_MAINTENANCE_PASSWORD=sim \
         docker compose -f docker-compose.prod.yml --env-file /dev/null config --services)
     printf '%s\n' "$production" | grep -qx postgres
 
@@ -722,17 +722,35 @@ image() {
     fi
     # O nome do produto é obrigatório (sem padrão do kit), e APP_NAME e
     # PLATFORM_NAME saem iguais dele.
-    if PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
+    if PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao PROD_DB_MAINTENANCE_PASSWORD=simulacao \
         docker compose -f docker-compose.prod.yml --env-file /dev/null config --quiet 2>/dev/null; then
         echo 'docker-compose.prod.yml resolve sem PROD_PLATFORM_NAME'; exit 1
     fi
-    resolvido=$(PROD_PLATFORM_NAME='Produto Simulado' PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao \
+    resolvido=$(PROD_PLATFORM_NAME='Produto Simulado' PROD_POSTGRES_PASSWORD=simulacao PROD_REDIS_PASSWORD=simulacao PROD_DB_APP_PASSWORD=simulacao PROD_DB_MAINTENANCE_PASSWORD=simulacao \
         docker compose -f docker-compose.prod.yml --env-file /dev/null config)
     if [ "$(printf '%s\n' "$resolvido" | grep -c 'APP_NAME: Produto Simulado')" = 0 ] \
         || [ "$(printf '%s\n' "$resolvido" | grep -c 'APP_NAME: Produto Simulado')" != "$(printf '%s\n' "$resolvido" | grep -c 'PLATFORM_NAME: Produto Simulado')" ]; then
         echo 'docker-compose.prod.yml: APP_NAME e PLATFORM_NAME não saem do PROD_PLATFORM_NAME'; exit 1
     fi
     if printf '%s\n' "$resolvido" | grep -Eq 'Starter Kit|TWS Starter'; then echo 'docker-compose.prod.yml resolvido com o nome do kit'; exit 1; fi
+    # A senha do dono só no migrate (#65): o scheduler poda com o papel de
+    # manutenção, e nenhum outro serviço recebe DB_MIGRATION_* nem
+    # DB_MAINTENANCE_*.
+    for servico in $(PROD_PLATFORM_NAME=sim PROD_POSTGRES_PASSWORD=sim PROD_REDIS_PASSWORD=sim PROD_DB_APP_PASSWORD=sim PROD_DB_MAINTENANCE_PASSWORD=sim \
+        docker compose -f docker-compose.prod.yml --env-file /dev/null config --services); do
+        ambiente=$(PROD_PLATFORM_NAME=sim PROD_POSTGRES_PASSWORD=sim PROD_REDIS_PASSWORD=sim PROD_DB_APP_PASSWORD=sim PROD_DB_MAINTENANCE_PASSWORD=sim \
+            docker compose -f docker-compose.prod.yml --env-file /dev/null config --format json "$servico" \
+            | python3 -c 'import json,sys; s=json.load(sys.stdin)["services"][sys.argv[1]]; print(" ".join(sorted((s.get("environment") or {}).keys())))' "$servico")
+        case "$servico" in
+            migrate) esperado='DB_MAINTENANCE_PASSWORD DB_MIGRATION_PASSWORD' ;;
+            scheduler) esperado='DB_MAINTENANCE_PASSWORD' ;;
+            *) esperado='' ;;
+        esac
+        achado=$(printf '%s\n' $ambiente | grep -E '^DB_(MIGRATION|MAINTENANCE)_PASSWORD$' | tr '\n' ' ' | sed 's/ $//')
+        if [ "$achado" != "$esperado" ]; then
+            echo "docker-compose.prod.yml: o serviço $servico recebe [$achado] (esperado: [$esperado])"; exit 1
+        fi
+    done
     if grep -q '"type": *"path"' composer.json; then echo 'composer.json do projeto com path repository'; exit 1; fi
 
     # O contexto opcional `packages` = os ZIPs (o repositório `artifact`

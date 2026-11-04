@@ -203,7 +203,9 @@ it('sem Redis: sessão, cache e fila no banco, nenhuma variável, serviço ou ar
         ->and($production['x-app-env'])->not->toHaveKeys(['REDIS_HOST', 'REDIS_PASSWORD', 'REDIS_PORT'])
         ->and([$production['x-app-env']['CACHE_STORE'], $production['x-app-env']['SESSION_DRIVER'], $production['x-app-env']['QUEUE_CONNECTION']])->toBe(['database', 'database', 'database'])
         ->and((string) file_get_contents($root.'/docker-compose.prod.yml'))->not->toContain('PROD_REDIS_PASSWORD')
-        ->and((string) file_get_contents($root.'/.env.prod.example'))->not->toContain('PROD_REDIS_PASSWORD');
+        ->and((string) file_get_contents($root.'/.env.prod.example'))->not->toContain('PROD_REDIS_PASSWORD')
+        ->toContain("PROD_DB_APP_PASSWORD e\n# PROD_DB_MAINTENANCE_PASSWORD são OBRIGATÓRIAS")
+        ->toContain("PROD_DB_MAINTENANCE_PASSWORD=rst \\\n#     docker compose");
 
     foreach (StackFiles::HORIZON_FILES as $file) {
         expect(file_exists($root.'/'.$file))->toBeFalse($file);
@@ -212,6 +214,28 @@ it('sem Redis: sessão, cache e fila no banco, nenhuma variável, serviço ou ar
     expect((string) file_get_contents($root.'/bootstrap/providers.php'))->not->toContain('Horizon')
         ->toContain('AppServiceProvider::class');
 })->with('starters');
+
+it('produção, com ou sem Redis: só o migrate tem a senha do dono; o scheduler poda com o papel de manutenção (#65)', function (string $starter, bool $redis): void {
+    $root = starterProject($starter);
+
+    (new StackFiles($root))->apply(new ProjectStack(ProjectStack::POSTGRES, redis: $redis));
+
+    $services = composeYaml($root.'/docker-compose.prod.yml')['services'];
+
+    expect($services['scheduler']['environment'])->toHaveKeys(['DB_USERNAME', 'DB_PASSWORD', 'DB_MAINTENANCE_USERNAME', 'DB_MAINTENANCE_PASSWORD'])
+        ->not->toHaveKey('DB_MIGRATION_USERNAME')
+        ->not->toHaveKey('DB_MIGRATION_PASSWORD')
+        ->and($services['migrate']['environment'])->toHaveKeys(['DB_MIGRATION_USERNAME', 'DB_MIGRATION_PASSWORD', 'DB_MAINTENANCE_USERNAME', 'DB_MAINTENANCE_PASSWORD']);
+
+    foreach ($services as $name => $service) {
+        if (! in_array($name, ['migrate', 'scheduler'], true)) {
+            expect((array) ($service['environment'] ?? []))->not->toHaveKey('DB_MIGRATION_PASSWORD', $name)
+                ->not->toHaveKey('DB_MAINTENANCE_PASSWORD', $name);
+        }
+    }
+
+    expect((string) file_get_contents($root.'/.env.prod.example'))->toContain('PROD_DB_MAINTENANCE_PASSWORD');
+})->with('starters')->with(['com Redis' => [true], 'sem Redis' => [false]]);
 
 it('SQLite e sem Redis juntos: o compose de desenvolvimento fica só com os serviços do aplicativo', function (string $starter): void {
     $root = starterProject($starter);
