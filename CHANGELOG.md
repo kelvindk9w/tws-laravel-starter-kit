@@ -24,6 +24,15 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Só PostgreSQL; com SQLite nada muda. Ver "Papéis do PostgreSQL" em
   `docs/producao.md`.
 
+- **Trava de isolamento do E2E também com endereço explícito, e o Mailpit
+  conferido pelo rótulo (#39).** Com `E2E_BASE_URL`/`E2E_MAILPIT_URL`, a
+  conferência era pulada; e o Mailpit era reconhecido só pela porta — com
+  vários projetos na máquina, o E2E podia apagar mensagens da caixa de outro.
+  Agora o site é sempre conferido pelo cookie de sessão, e o Mailpit pelo
+  rótulo (`MP_LABEL` = `COMPOSE_PROJECT_NAME`, no `compose.yaml`), antes de
+  criar ou apagar qualquer coisa; Mailpit fora do ar ou sem rótulo é recusa
+  ([testes](docs/testes.md)).
+
 ### Adicionado
 
 - **Banco de dados e Redis na criação do projeto (#73).** O comando único,
@@ -75,6 +84,14 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   ([API](docs/api.md#modo-transacional-idempotenttransactional)).
 
 ### Atenção ao atualizar
+
+- **Trava do E2E (#39), projeto com o Docker de desenvolvimento:** sem o
+  rótulo, o E2E passa a recusar rodar. Copie do starter o `environment:
+  MP_LABEL: '${COMPOSE_PROJECT_NAME}'` do serviço `mailpit` (para o
+  `compose.yaml`; recrie o container com `docker compose up -d`) e
+  `tests/e2e/support/project-env`, `tests/e2e/global-setup` e
+  `tests/e2e/global-teardown` — o `php artisan tws:upgrade --check` aponta os
+  quatro.
 
 - **Papel de manutenção (#65), produção:** sem mudar nada, tudo continua
   como antes (as podas com o papel de migração). Para tirar a senha do dono
