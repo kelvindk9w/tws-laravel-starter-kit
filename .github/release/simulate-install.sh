@@ -378,7 +378,13 @@ secret_scan() {
         scripts/segredos
 
         scripts/instalar-hooks >/dev/null
-        chave="AKIA$(LC_ALL=C tr -dc 'A-Z2-7' </dev/urandom | head -c 16)"
+        # Sem cortar o pipe no meio (o `head` fechando cedo derruba o `tr`
+        # com SIGPIPE, e o pipefail o trata como falha).
+        aleatorio=''
+        while [ ${#aleatorio} -lt 16 ]; do
+            aleatorio="$aleatorio$(dd if=/dev/urandom bs=256 count=1 2>/dev/null | LC_ALL=C tr -dc 'A-Z2-7')"
+        done
+        chave="AKIA$(printf '%.16s' "$aleatorio")"
         printf '<?php\n\nreturn [\n    %s => %s,\n];\n' "'aws_access_key_id'" "'$chave'" > config/vazamento.php
         git add config/vazamento.php
         if git commit -q -m 'segredo falso'; then echo 'o pre-commit aceitou um commit com chave no estilo AWS'; exit 1; fi
