@@ -746,7 +746,7 @@ image() {
             scheduler) esperado='DB_MAINTENANCE_PASSWORD' ;;
             *) esperado='' ;;
         esac
-        achado=$(printf '%s\n' $ambiente | grep -E '^DB_(MIGRATION|MAINTENANCE)_PASSWORD$' | tr '\n' ' ' | sed 's/ $//')
+        achado=$(printf '%s\n' $ambiente | { grep -E '^DB_(MIGRATION|MAINTENANCE)_PASSWORD$' || true; } | tr '\n' ' ' | sed 's/ $//')
         if [ "$achado" != "$esperado" ]; then
             echo "docker-compose.prod.yml: o serviço $servico recebe [$achado] (esperado: [$esperado])"; exit 1
         fi
