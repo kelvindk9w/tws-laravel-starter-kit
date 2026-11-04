@@ -7,8 +7,8 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
-use Twstec\Kit\Foundation\Customization\PackageConfig;
 use Twstec\Kit\Foundation\Customization\LivewireScreens;
+use Twstec\Kit\Foundation\Customization\PackageConfig;
 use Twstec\Kit\Foundation\Customization\PackageViews;
 use Twstec\Kit\Foundation\Customization\ReactScreens;
 
