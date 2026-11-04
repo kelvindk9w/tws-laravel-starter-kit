@@ -46,10 +46,14 @@ docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
   (`tests/e2e/support/project-env`). Sem a variável e sem o valor no `.env`, o
   E2E para com a instrução. Antes de qualquer teste, o global-setup confere que
   o site que responde é **este** projeto (o cookie de sessão tem o nome do
-  `SESSION_COOKIE` do `.env`) e que o Mailpit é o dele — senão a suíte para sem
-  criar nem apagar nada (o teardown do React também não varre). O E2E cria e
-  apaga pessoas e mensagens: apontado para outro ambiente da máquina, ele
-  mexeria no banco e no Mailpit de outro projeto.
+  `SESSION_COOKIE` do `.env`) e que o Mailpit é o dele — pelo **rótulo** da
+  caixa (`MP_LABEL`, que o `compose.yaml` grava com o `COMPOSE_PROJECT_NAME`;
+  a porta sozinha não prova de qual projeto ela é). As duas conferências valem
+  **também com `E2E_BASE_URL`/`E2E_MAILPIT_URL`** e falham fechadas: Mailpit
+  fora do ar ou sem rótulo é recusa. Recusou, a suíte para sem criar nem
+  apagar nada, e o teardown também não apaga. O E2E cria e apaga pessoas e
+  mensagens: apontado para outro ambiente da máquina, ele mexeria no banco e
+  no Mailpit de outro projeto.
 - **IPv6:** dentro do container do Playwright, `<nome>.localhost` pode
   resolver para `::1`, e as portas só saem em IPv4; o navegador tenta o IPv4
   sozinho, e as chamadas do Node (Mailpit, Vite) usam `127.0.0.1`.
