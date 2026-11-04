@@ -365,12 +365,15 @@ pergunta — as duas se trocam depois no `composer.json`, sem efeito colateral.
 O projeto nasce com o mesmo conjunto de verificação em dois lugares:
 
 - **`scripts/verificar`**, na máquina, pelo Docker de desenvolvimento (sem
-  PHP nem Node instalados): Pint, Larastan (nível 8, sem baseline),
+  PHP nem Node instalados): a varredura de segredos (gitleaks — ver
+  [Segredos no repositório](seguranca.md#segredos-no-repositório-gitleaks)),
+  Pint, Larastan (nível 8, sem baseline),
   `composer audit`, `npm audit` (dependências de produção, alta ou
   crítica), o build do front e o Pest contra o PostgreSQL (`<banco>_test`). Para no primeiro passo que falhar. No Windows,
   no terminal do WSL ou no Git Bash.
 - **`.github/workflows/ci.yml`**, no GitHub Actions: os mesmos passos, com o
-  PostgreSQL 18 como serviço do job. Roda **à mão** (Actions → CI → Run
+  PostgreSQL 18 como serviço do job (o checkout traz o histórico inteiro,
+  que o gitleaks varre). Roda **à mão** (Actions → CI → Run
   workflow) e **uma vez por semana** (pega dependência com falha de segurança
   nova mesmo sem commit) — não a cada push, porque repositório privado tem
   cota de minutos. Para rodar a cada push e pull request, acrescente em `on:`
@@ -420,7 +423,7 @@ disso roda até alguém ligar. Precisa de git, Docker e do
 [GitHub CLI](https://cli.github.com/) com login (`gh auth login`).
 
 ```bash
-scripts/instalar-hooks              # uma vez por clone: liga o pre-push
+scripts/instalar-hooks              # uma vez por clone: liga o pre-commit e o pre-push
 scripts/verificar --selo            # no commit pronto (árvore limpa)
 git push                            # o pre-push confere o selo desse commit
 scripts/promover sandbox            # desenvolvimento → sandbox (fast-forward)
@@ -438,6 +441,9 @@ scripts/promover producao           # sandbox → producao (exige selo com E2E)
   aponta o `core.hooksPath` para `scripts/hooks`; `--desligar` volta atrás):
   recusa enviar branch ou tag cuja ponta não tenha o selo `success`. Sem o
   `gh` ou sem rede, recusa com a instrução.
+- **`scripts/hooks/pre-commit`** (ligado junto): recusa o commit com
+  possível segredo no que está staged (`scripts/segredos --staged`, o
+  gitleaks em container). Sem o Docker, recusa com a instrução.
 - **`scripts/promover <destino>`** leva a ponta da branch anterior da cadeia
   (no GitHub, depois de um fetch — ou `--sha`) para o destino, com
   `git push origin <sha>:refs/heads/<destino>`, nunca force-push. Recusa
@@ -874,8 +880,13 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   e é válido contra o schema oficial (o do SchemaStore, pelo
   `check-jsonschema`); o `.github/workflows/ci.yml`, com o job de E2E, passa
   limpo no `actionlint`; e os scripts da verificação local (`scripts/e2e`,
-  `scripts/promover`, `scripts/instalar-hooks`, o `pre-push`) existem, são
-  executáveis e passam limpos no ShellCheck.
+  `scripts/promover`, `scripts/instalar-hooks`, o `pre-push`, o
+  `scripts/segredos` e o `pre-commit`) existem, são executáveis e passam
+  limpos no ShellCheck. E a varredura de segredos: numa cópia do projeto
+  criado, com um commit de tudo, o gitleaks (histórico e o que não foi
+  commitado) não acha nada; uma chave falsa no estilo AWS, gerada na hora, é
+  recusada pelo `pre-commit` e, commitada com `--no-verify`, derruba o
+  `scripts/segredos` e o `scripts/verificar` na etapa de segredos.
 - **As ações dos workflows do kit fixadas por commit**, com a versão no
   comentário, e todo checkout com `persist-credentials: false` — um passo do
   job obrigatório recusa ação por tag ou branch e checkout que guarde a

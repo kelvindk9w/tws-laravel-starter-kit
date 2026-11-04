@@ -45,6 +45,20 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
     do `tws:upgrade` é gravado depois das adaptações. MySQL e hospedagem
     compartilhada continuam fora. Ver "Banco de dados e Redis" em
     `docs/instalacao.md`.
+- **Varredura de segredos no projeto criado (#33).** O `scripts/segredos`
+  roda o gitleaks em container (imagem oficial fixada por digest) no
+  histórico do git inteiro e no que ainda não foi commitado; é o primeiro
+  passo do `scripts/verificar` e do CI base (o checkout passa a trazer todos
+  os commits). O `scripts/instalar-hooks` liga também um `pre-commit` que
+  recusa commit com possível segredo no staged. O `.gitleaks.toml` libera os
+  valores fictícios dos testes do kit (senhas, chaves de idempotência,
+  credenciais de mentira) pelo valor exato, com o motivo — nunca por pasta
+  ou regra —, e um teste recusa liberação que não seja valor exato. A
+  simulação da instalação publicada confere zero achados no projeto criado
+  e que uma chave falsa no estilo AWS é recusada pelo `pre-commit`, pelo
+  `scripts/segredos` e pelo `scripts/verificar`. Ver "Segredos no
+  repositório" em `docs/seguranca.md`: segredo commitado é segredo vazado —
+  rotacione.
 
 ### Atenção ao atualizar
 
@@ -65,6 +79,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `scripts/verificar`, `.github/workflows/ci.yml` e, no Livewire, os testes
   que usam o Horizon. Num projeto com PostgreSQL e Redis, só ganham os
   desvios para projeto sem Redis ou com SQLite: atualizar é opcional.
+- **Varredura de segredos (#33), opcional.** Arquivos de starter novos ou
+  mudados (o `php artisan tws:upgrade --check` lista): `.gitleaks.toml`,
+  `scripts/segredos`, `scripts/hooks/pre-commit`, `scripts/instalar-hooks`,
+  `scripts/verificar`, `.github/workflows/ci.yml` e o
+  `DevelopmentEnvironmentFilesTest`. Copie-os do starter (os scripts com
+  permissão de execução) e rode `scripts/segredos` antes de qualquer outra
+  coisa: um achado num commit antigo é um segredo que já vazou — rotacione-o
+  no serviço; valor fictício de teste do próprio projeto entra no
+  `.gitleaks.toml` pelo valor exato. Quem já usa os hooks roda
+  `scripts/instalar-hooks` de novo para ligar o `pre-commit`.
 
 ## [2.0.0-beta.20] — 2026-11-04
 
