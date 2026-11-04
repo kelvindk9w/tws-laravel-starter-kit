@@ -299,6 +299,14 @@ package() {
     # O projeto nasce do starter escolhido (a interface dele) e com a
     # identidade DELE no composer.json (ver created_project).
     if [ "$STACK" = react ]; then test -f resources/js/app.tsx; else test ! -e resources/js/app.tsx; test -f resources/js/app.js; fi
+    # As telas Livewire do kit vêm do pacote (twstec/kit-foundation,
+    # resources/livewire), não como cópia no projeto (issue #72).
+    if [ "$STACK" != react ]; then
+        test -f vendor/twstec/kit-foundation/resources/livewire/auth/login.blade.php
+        for copia in auth layouts components livewire/profile.blade.php; do
+            if [ -e "resources/views/$copia" ]; then echo "cópia das telas do kit no projeto: resources/views/$copia"; exit 1; fi
+        done
+    fi
     test -f vendor/twstec/kit-installer/composer.json
     created_project
     if [ -e kit-setup ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi

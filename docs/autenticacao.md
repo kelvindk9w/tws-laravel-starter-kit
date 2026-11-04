@@ -113,8 +113,10 @@ Os envios sensíveis têm limite em duas camadas:
 
 Os controllers só fazem HTTP. Os que **recebem os formulários** são do pacote
 (`Twstec\Kit\Auth\Http\Controllers`); as **telas** (GET) são do starter
-(`App\Http\Controllers\Auth\AuthPageController` + views em
-`resources/views/auth`). A regra de cada fluxo mora numa **Action**
+(`App\Http\Controllers\Auth\AuthPageController` + as views `auth.*`, que
+são telas do kit no `twstec/kit-foundation` — o aplicativo sobrescreve
+copiando para `resources/views/auth`, ver
+[personalizacao.md](personalizacao.md)). A regra de cada fluxo mora numa **Action**
 (`Twstec\Kit\Auth\Actions`), chamável de qualquer front, e o que volta ao
 navegador sai de um **contrato de resposta** (`Twstec\Kit\Auth\Contracts\Responses`)
 com implementação padrão registrada no container pelo

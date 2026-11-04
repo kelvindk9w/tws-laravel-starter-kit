@@ -28,6 +28,14 @@ it('o aplicativo não traz cópia das telas do kit: só o que é dele', function
     }
 });
 
+it('as telas Livewire do kit não entram num aplicativo React', function (): void {
+    // O twstec/kit-foundation traz também as views do starter Livewire
+    // (resources/livewire); só o starter Livewire as liga.
+    expect(view()->exists('auth.login'))->toBeFalse()
+        ->and(view()->exists('components.button'))->toBeFalse()
+        ->and(config('view.paths'))->toBe([resource_path('views')]);
+});
+
 it('sem a tela no aplicativo, vale a do kit: a página existe e o build a carrega', function (): void {
     $this->get('/login')->assertOk()->assertInertia(fn (Assert $page) => $page->component('auth/login'));
 

@@ -146,6 +146,41 @@ Quem aplica a regra:
 Uma tela copiada deixa de receber as correções do kit: confira o arquivo do
 pacote a cada atualização (o `kit:overrides` lista as suas cópias).
 
+## Telas Livewire
+
+No starter Livewire, as views das telas do kit — entrada, cadastro, segundo
+fator, recuperação de senha, senha de transação, convite, perfil,
+notificações, conta e membros, chaves de API, projetos, webhooks, a página
+429, a galeria de e-mails, o seletor de idioma do `/admin`, os layouts
+(`layouts/app`, `layouts/auth`, `components/layouts/site`), os componentes do
+design system (`<x-button>`, `<x-input>`, `<x-modal>`…) e as parciais —
+moram no `twstec/kit-foundation`, em `resources/livewire`, com os **mesmos
+nomes de view** de sempre (`auth.login`, `livewire.profile`,
+`components.button`). O projeto criado tem só o que é dele:
+`resources/views/home.blade.php` (a página inicial) e
+`resources/views/livewire/dashboard.blade.php` (o dashboard).
+
+Para mudar uma tela ou um componente do kit, copie **só aquele arquivo** de
+`vendor/twstec/kit-foundation/resources/livewire/` para o **mesmo caminho** em
+`resources/views/`:
+
+```bash
+mkdir -p resources/views/components
+cp vendor/twstec/kit-foundation/resources/livewire/components/button.blade.php resources/views/components/
+```
+
+A cópia vale no lugar da do kit, também dentro das telas do kit (o
+`<x-button>` copiado muda o botão de todas as telas). Quem liga as telas é o
+`AppServiceProvider` do starter (`LivewireScreens::register`): a pasta do
+pacote entra por último na busca das views, no `view.paths` (para as páginas
+de erro) e no namespace `layouts::` (o layout das páginas Livewire). O
+Tailwind lê a pasta pelo `@source` do `resources/css/app.css` (e do
+`filament.css`, para o seletor do `/admin`).
+
+As classes dos componentes Livewire (`app/Livewire`), os controllers das
+telas e os apoios (`App\Livewire\Support\…`) continuam no aplicativo — as
+views do kit os usam pelos nomes de sempre.
+
 ## O que o projeto sobrescreve: `kit:overrides`
 
 ```bash
@@ -183,3 +218,9 @@ página pelo `ReactScreens::pageEntry`), o `config/inertia.php` (a pasta de
 páginas do pacote) e, no `compose.yaml` de desenvolvimento, o `depends_on` do
 serviço `vite`. Depois apague o que o `kit:overrides` marcar como igual ao
 padrão e rode `npm run types:check`, `npm run build` e a suíte.
+
+**Telas Livewire:** antes de apagar as cópias de `resources/views`, copie do
+starter Livewire da versão nova a linha `LivewireScreens::register($this->app)`
+do `AppServiceProvider` e os `@source` das telas do kit em
+`resources/css/app.css` e `resources/css/filament.css`. Depois apague o que o
+`kit:overrides` marcar como igual ao padrão e rode `npm run build` e a suíte.
