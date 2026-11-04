@@ -383,6 +383,12 @@ package() {
         grep -q '"type": "project"' composer.json
         test -d vendor/inertiajs/inertia-laravel
         test -f resources/js/app.tsx
+        # As telas do kit vêm do pacote (twstec/kit-foundation,
+        # resources/react), não como cópia no projeto (issue #72).
+        test -f vendor/twstec/kit-foundation/resources/react/pages/auth/login.tsx
+        for copia in pages/auth components layouts lib hooks; do
+            if [ -e "resources/js/$copia" ]; then echo "cópia das telas do kit no projeto: resources/js/$copia"; exit 1; fi
+        done
     fi
 }
 

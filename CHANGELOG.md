@@ -6,6 +6,44 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Atenção ao atualizar
+
+- **Telas React do kit no pacote (#72, etapa 2), só starter React.** Nada
+  quebra: as cópias de `resources/js` que o projeto já tem continuam valendo
+  como antes. Para voltar a receber as correções das telas, copie do starter
+  React da versão nova, nesta ordem:
+  1. `vite.config.ts` (o `kitReact()` de
+     `vendor/twstec/kit-foundation/vite/react.js`), `tsconfig.json` (o `paths`
+     do `@/*` com os dois lugares, o `include` com a pasta do pacote e o
+     `preserveSymlinks`), `resources/js/app.tsx` (o `resolve: resolvePage`),
+     `resources/views/app.blade.php` (a página pelo
+     `ReactScreens::pageEntry`), `config/inertia.php` (a pasta de páginas do
+     pacote) e o `depends_on` do serviço `vite` no `compose.yaml`;
+  2. rode `php artisan kit:overrides` e apague o que estiver marcado "igual
+     ao padrão do kit — pode apagar" em `resources/js`;
+  3. rode `npm run types:check`, `npm run build` e a suíte.
+
+  Os testes do starter que liam arquivos do front passaram a usar
+  `frontFile()`/`frontSourceFiles()` (`tests/Pest.php`): copie os helpers e
+  os testes de `tests/Feature/Customization/KitScreensTest.php` se quiser as
+  mesmas travas.
+
+### Mudado
+
+- **As telas React do kit moram no `twstec/kit-foundation`** (`resources/react`,
+  a mesma árvore de `resources/js`): páginas de entrada, cadastro, segundo
+  fator, recuperação de senha, perfil, senha de transação, notificações,
+  conta e membros, convites, chaves de API, projetos e webhooks, os layouts,
+  os componentes (shadcn/ui inclusive), os hooks, os tipos e o `lib/`. O
+  projeto criado tem só o que é dele (`app.tsx`, a página inicial e o
+  dashboard) e muda uma tela do kit copiando só aquele arquivo para o mesmo
+  caminho em `resources/js` — o do aplicativo vence, também para as telas do
+  kit que o importam ([personalização](docs/personalizacao.md#telas-react)).
+- `php artisan kit:overrides` também compara as telas React do aplicativo com
+  as do kit (cópia igual pode sair; personalizada é apontada).
+- O serviço `vite` do Docker de desenvolvimento do starter React espera o
+  `init` (num clone novo, é ele que instala o `vendor/` de onde vêm as telas).
+
 ## [2.0.0-beta.19] — 2026-11-03
 
 Textos, e-mails e configuração do kit passam a morar nos pacotes: o projeto
