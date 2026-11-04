@@ -620,6 +620,88 @@ Módulo desconhecido, módulo obrigatório em `--without`, o mesmo módulo nas
 duas listas, uploads sem contas e tirar um módulo com a demo ficando são
 recusados **antes** de mexer em qualquer coisa.
 
+### Banco de dados e Redis (só na criação)
+
+Na criação do projeto (o comando único, o `composer create-project` de um
+starter ou o instalador em container), o instalador pergunta mais duas
+coisas — o padrão é o de sempre, PostgreSQL com Redis:
+
+| Pergunta | Opções | Opção / variável |
+| --- | --- | --- |
+| Banco de dados | **PostgreSQL** (recomendado) ou **SQLite** (modo protótipo) | `--database=pgsql\|sqlite` / `TWS_KIT_DATABASE` |
+| Redis | **Sim** (sessão, cache e fila no Redis, com o Horizon) ou **não** | `--redis` / `--no-redis` / `TWS_KIT_REDIS=1\|0` |
+
+```bash
+# Comando único, sem perguntas: Livewire, SQLite, sem Redis
+TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 composer create-project twstec/kit meu-app
+
+# Instalador em container (só com o Docker)
+TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 docker compose run --rm -T instalar
+```
+
+A opção vence a variável; valor desconhecido (MySQL, por exemplo) é recusado
+antes de qualquer mudança. Num projeto que **já existe**, a escolha é
+ignorada, com aviso: o instalador só adapta os arquivos do projeto uma vez,
+na criação, antes de gravar o manifesto (`.tws/manifest.json`) — a
+conferência do `tws:upgrade` compara a partir do projeto já adaptado. MySQL e
+hospedagem compartilhada ficam fora ([roteiro](roadmap.md)).
+
+#### Banco de dados
+
+**PostgreSQL** é o recomendado: as travas por privilégio do próprio banco —
+o papel da aplicação separado do de migração, sem superusuário nem posse, e
+as tabelas só-acréscimo (trilhas de auditoria) garantidas pelo banco —, e o
+`php artisan db:check-roles` confere tudo isso.
+
+**SQLite** é o modo protótipo: um arquivo (`database/database.sqlite`, fora
+do git), sem serviço de banco no Docker de desenvolvimento. O que muda no
+projeto criado:
+
+- `.env` e `.env.example`: `DB_CONNECTION=sqlite`, com o aviso do modo
+  protótipo; sem host, porta, nome, papéis e senhas do PostgreSQL e sem a
+  porta publicada do banco (`DEV_DB_PORT`, o perfil `db-port`);
+- `compose.yaml`: sem os serviços `postgres`, `db-init` e `db-port` nem o
+  volume do banco; o `init` roda as migrations no arquivo;
+- `scripts/verificar` roda a suíte no SQLite em memória (`phpunit.xml`) em
+  vez do PostgreSQL.
+
+**Avisos.** No SQLite, as travas por privilégio **não existem** (não há
+papéis nem permissões por tabela; as travas da própria aplicação
+continuam), e o `db:check-roles` não se aplica. A **produção** pelo
+`docker-compose.prod.yml` continua no PostgreSQL (o `.env.prod.example` e o
+compose de produção não mudam), e o CI do projeto (`.github/workflows/ci.yml`)
+continua rodando a suíte no PostgreSQL — é o banco que vai ao ar.
+
+Para passar um projeto SQLite ao PostgreSQL depois: copie do starter da
+mesma versão (o `docker/dev/compose.yaml` e o `.env.example` dele) os
+serviços `postgres` e `db-init`, o volume `postgres_data` e a seção "Banco de
+dados", gere as senhas (`DB_PASSWORD`, `DB_MIGRATION_PASSWORD`) e rode
+`docker compose up -d`.
+
+#### Sem Redis
+
+Com **não**, o projeto nasce sem Redis e sem o Horizon:
+
+- `.env` e `.env.example`: `SESSION_DRIVER`, `CACHE_STORE` e
+  `QUEUE_CONNECTION` = `database` (as tabelas `sessions`, `cache` e `jobs` já
+  vêm nas migrations); nenhuma variável `REDIS_*` nem `HORIZON_*`;
+- `composer.json`: sem `laravel/horizon` (o instalador roda o
+  `composer remove`); saem também `app/Providers/HorizonServiceProvider.php`
+  (e o registro em `bootstrap/providers.php`), `config/horizon.php` e o teste
+  do dashboard. Não existe o `/horizon`;
+- `compose.yaml`: sem o serviço `redis` (a fila de desenvolvimento já é o
+  `queue:work`);
+- `docker-compose.prod.yml`: sem o `redis`; o serviço `horizon` vira o
+  worker `queue` (`php artisan queue:work`, reciclado de hora em hora), e o
+  `.env.prod.example` perde a `PROD_REDIS_PASSWORD` e as variáveis do
+  Horizon.
+
+Os testes do starter que são do Horizon pulam, com o motivo, quando ele não
+está instalado. Para pôr o Redis de volta depois: `composer require
+laravel/horizon`, e copie do starter da mesma versão o provider, a
+configuração, o registro do provider, o serviço `redis` dos dois composes e
+as variáveis `REDIS_*` / `HORIZON_*`.
+
 ### O que ele aplica, nesta ordem
 
 1. Com a demo saindo: `php artisan demo:uninstall --drop-tables` (tira do banco

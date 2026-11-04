@@ -29,13 +29,17 @@ cd meu-projeto
 docker compose up -d
 ```
 
-Os dois caminhos fazem três perguntas, todas com a resposta sugerida (Enter
-aceita): **o nome e o número do projeto** (o endereço vira
+Os dois caminhos fazem as mesmas perguntas, todas com a resposta sugerida
+(Enter aceita): **o nome e o número do projeto** (o endereço vira
 `http://<nome>.localhost:<porta>`, e o número separa as portas de vários
-projetos na mesma máquina), **a interface** (Livewire ou React) e **os
-módulos opcionais** (contas e API, uploads, painel `/admin`, webhooks). Sai o
-projeto pronto, com o Docker de desenvolvimento (site, PostgreSQL, Redis,
-Mailpit, fila, agendador e Vite com recarga ao vivo).
+projetos na mesma máquina), **a interface** (Livewire ou React), **os
+módulos opcionais** (contas e API, uploads, painel `/admin`, webhooks), **o
+banco de dados** (PostgreSQL, o recomendado, ou SQLite, o modo protótipo —
+sem as travas por privilégio do banco) e **se usa o Redis** (sem ele,
+sessão, cache e fila ficam no banco, sem o Horizon). Sai o projeto pronto,
+com o Docker de desenvolvimento (site, banco, Redis se escolhido, Mailpit,
+fila, agendador e Vite com recarga ao vivo) — ver
+[Banco de dados e Redis](docs/instalacao.md#banco-de-dados-e-redis-só-na-criação).
 
 - **Aplicativo Laravel que já existe:** instale o `twstec/kit-foundation` e o
   `twstec/kit-installer` pelo Composer e rode `php artisan tws:add`, que
