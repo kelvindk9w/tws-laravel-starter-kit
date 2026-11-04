@@ -135,13 +135,19 @@ próximo recurso.
    CI, `.env`). A primeira etapa (textos, e-mails e configurações) saiu na
    2.0.0-beta.19; a segunda (telas) e a terceira (`tws:upgrade --check`), na 2.0.0-beta.20. Vem antes da estável porque muda a estrutura do projeto
    criado — depois dela, exigiria uma 3.0.
-9. **Endurecimento achado no uso** (issues abertas com o rótulo
-   `antes-da-2.0.0`): papel de manutenção para as podas, sem a senha do dono
-   no agendador (#65); configurações no banco com mais tipos e prefixo de
-   chave de API configurável (#27); varredura de segredos no projeto criado
-   (#33); automação do projeto criado — Dependabot, E2E no CI e verificação
-   local com status no commit (#34, o que falta); trava de isolamento do E2E
-   (#39); ajustes da idempotência (#40).
+9. **Endurecimento achado no uso (rótulo `antes-da-2.0.0`) — resolvido
+   (próxima versão; ver "Não publicado" no CHANGELOG).**
+   - Papel de manutenção para as podas, sem a senha do dono no agendador
+     (#65).
+   - Configurações no banco com os tipos liga/desliga, lista de opções e
+     texto, e prefixo do produto nas chaves de API (#27).
+   - Varredura de segredos no projeto criado (#33).
+   - Automação do projeto criado (#34): o que faltava era provar o E2E no
+     CI, e um projeto criado rodou o job de E2E verde no Actions.
+   - Trava de isolamento do E2E com endereço explícito e Mailpit identificado
+     pelo rótulo do projeto (#39).
+   - Ajustes da idempotência (#40): a trava de arquitetura do modo de cada
+     rota e o impasse do banco no modo transacional.
 
 ## Limitações conhecidas (documentadas)
 
