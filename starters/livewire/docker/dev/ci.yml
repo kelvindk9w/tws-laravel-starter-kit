@@ -170,13 +170,19 @@ jobs:
           set_env DEV_SITE_PORT "$port"
           set_env DEV_MAIL_PORT "$((port - 60))"
           set_env DEV_VITE_PORT "$((port - 50))"
-          set_env DEV_DB_PORT "$((port - 40))"
           set_env DEV_UID "$(id -u)"
           set_env DEV_GID "$(id -g)"
           set_env APP_KEY "base64:$(openssl rand -base64 32)"
-          set_env DB_PASSWORD "$(openssl rand -hex 16)"
-          set_env DB_MIGRATION_PASSWORD "$(openssl rand -hex 16)"
-          set_env REDIS_PASSWORD "$(openssl rand -hex 16)"
+          # Banco e Redis só no projeto que os tem (criado com SQLite ou sem
+          # Redis, o .env.example não traz essas variáveis).
+          if grep -q '^DB_PASSWORD=' .env; then
+            set_env DEV_DB_PORT "$((port - 40))"
+            set_env DB_PASSWORD "$(openssl rand -hex 16)"
+            set_env DB_MIGRATION_PASSWORD "$(openssl rand -hex 16)"
+          fi
+          if grep -q '^REDIS_PASSWORD=' .env; then
+            set_env REDIS_PASSWORD "$(openssl rand -hex 16)"
+          fi
           set_env API_KEYS_HASH_PEPPER "$(openssl rand -hex 32)"
           set_env UPLOADS_ENCRYPTION_KEY "base64:$(openssl rand -base64 32)"
           set_env RATE_LIMIT_SENSITIVE 30

@@ -11,7 +11,8 @@
 #   4. auditoria de dependências Node (npm audit, só as de produção, alta+)
 #   5. build do front
 #   6. a suíte Pest contra o PostgreSQL (o banco <banco>_test do
-#      phpunit.pgsql.xml, que o serviço db-init cria)
+#      phpunit.pgsql.xml, que o serviço db-init cria); no projeto criado com
+#      SQLite (sem o serviço postgres no compose), no SQLite do phpunit.xml
 #
 # Uso, na raiz do projeto:   scripts/verificar
 # (No Windows, no terminal do WSL ou no Git Bash; ou rode os mesmos comandos
@@ -79,10 +80,17 @@ docker compose run --rm --no-deps -T vite sh -ec '[ -d node_modules ] || npm ci 
 passo 'Build do front'
 docker compose run --rm --no-deps -T vite npm run build
 
-passo 'Testes (Pest · PostgreSQL)'
-docker compose up -d --wait postgres
-docker compose run --rm -T db-init
-docker compose run --rm --no-deps -T app ./vendor/bin/pest --ci -c phpunit.pgsql.xml
+if docker compose config --services | grep -qx postgres; then
+    passo 'Testes (Pest · PostgreSQL)'
+    docker compose up -d --wait postgres
+    docker compose run --rm -T db-init
+    docker compose run --rm --no-deps -T app ./vendor/bin/pest --ci -c phpunit.pgsql.xml
+else
+    # Projeto criado com SQLite (modo protótipo): sem o serviço do banco, a
+    # suíte roda no SQLite em memória do phpunit.xml.
+    passo 'Testes (Pest · SQLite)'
+    docker compose run --rm --no-deps -T app ./vendor/bin/pest --ci
+fi
 
 if [ "$E2E" = 1 ]; then
     passo 'E2E (scripts/e2e)'

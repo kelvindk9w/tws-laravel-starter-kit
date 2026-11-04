@@ -42,6 +42,10 @@ it('o Vite de desenvolvimento libera no CORS só a origem do site', function ():
 });
 
 it('o banco da suíte PostgreSQL do db-init é <DB_DATABASE>_test', function (): void {
+    if (! developmentPostgres()) {
+        test()->markTestSkipped('Projeto criado com SQLite: sem o PostgreSQL nem o db-init no compose.');
+    }
+
     $compose = developmentFile('compose.yaml', 'docker/dev/compose.yaml');
 
     expect($compose)->toContain("datname = '\${DB_DATABASE}_test'")
