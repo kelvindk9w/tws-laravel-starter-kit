@@ -48,9 +48,25 @@ return [
         'webhooks' => 'Webhooks salientes firmados (twstec/kit-webhooks)',
     ],
 
+    'database_choice' => [
+        'label' => '¿Qué base de datos?',
+        'hint' => 'PostgreSQL trae las protecciones de la propia base (roles separados, tablas de solo inserción). SQLite es un archivo, para prototipos.',
+        'pgsql' => 'PostgreSQL (recomendado)',
+        'sqlite' => 'SQLite — modo prototipo (sin las protecciones de la base; producción sigue en PostgreSQL)',
+    ],
+
+    'redis_choice' => [
+        'label' => '¿Usar Redis?',
+        'hint' => 'Sin él, sesión, caché y cola quedan en la base de datos, y el worker queue:work reemplaza a Horizon.',
+        'yes' => 'Sí — sesión, caché y cola en Redis, con Horizon (recomendado)',
+        'no' => 'No — todo en la base de datos, sin Horizon',
+        'summary_yes' => 'sí (sesión, caché y cola en Redis)',
+        'summary_no' => 'no (sesión, caché y cola en la base de datos)',
+    ],
+
     'plan' => [
-        'summary' => "Proyecto: :name — :site (correos: :mail)\nInterfaz: :stack\nMódulos opcionales: :modules",
-        'from_environment' => 'Elección (sin preguntas): proyecto :name, número :slot; :stack; módulos opcionales: :modules.',
+        'summary' => "Proyecto: :name — :site (correos: :mail)\nInterfaz: :stack\nMódulos opcionales: :modules\nBase de datos: :database\nRedis: :redis",
+        'from_environment' => 'Elección (sin preguntas): proyecto :name, número :slot; :stack; módulos opcionales: :modules; base de datos: :database; Redis: :redis.',
     ],
 
     'errors' => [
@@ -73,6 +89,8 @@ return [
         'expose_invalid' => 'Valor inválido en TWS_KIT_EXPOSE_DB: :value. Use 1 (publicar la base de datos) o 0.',
         'vendor_invalid' => 'Vendor inválido en TWS_KIT_VENDOR: :vendor. Use letras minúsculas, números y guion (el nombre del paquete en el composer.json del proyecto queda <vendor>/<nombre del proyecto>).',
         'license_invalid' => 'Licencia inválida en TWS_KIT_LICENSE: :license. Use un identificador SPDX (MIT, Apache-2.0…) o proprietary.',
+        'database_invalid' => 'Base de datos desconocida en TWS_KIT_DATABASE: :value. Use pgsql o sqlite.',
+        'redis_invalid' => 'Valor inválido en TWS_KIT_REDIS: :value. Use 1 (con Redis) o 0.',
     ],
 
     'steps' => [
@@ -111,6 +129,7 @@ return [
         'unreachable' => 'La base de datos del .env (DB_CONNECTION=:connection, DB_HOST=:host) no respondió: las migraciones quedaron para después.',
         'how' => 'Ajuste las variables DB_* del .env — el docker-compose.yml de desarrollo del kit usa PostgreSQL; para SQLite, DB_CONNECTION=sqlite y borre la línea DB_DATABASE (el archivo database/database.sqlite ya existe) — y ejecute:',
         'docker' => 'La base de datos del proyecto corre en Docker: el primer `docker compose up -d` crea la base y ejecuta las migraciones solo.',
+        'docker_sqlite' => 'La base de datos del proyecto es el archivo database/database.sqlite (modo prototipo): el primer `docker compose up -d` ejecuta las migraciones en él solo.',
     ],
 
     'done' => [
@@ -122,7 +141,10 @@ return [
         'site' => 'Sitio: :url',
         'mail' => 'Correos enviados (Mailpit): :url',
         'database_exposed' => 'Base de datos: publicada en el puerto :port de esta máquina (127.0.0.1), con la contraseña del .env.',
-        'database_internal' => 'Base de datos y Redis: solo dentro de Docker (para publicar la base en el puerto :port, COMPOSE_PROFILES=db-port en el .env).',
+        'database_internal' => 'Base de datos: solo dentro de Docker (para publicar la base en el puerto :port, COMPOSE_PROFILES=db-port en el .env).',
+        'database_sqlite' => 'Base de datos: SQLite, en el archivo database/database.sqlite (modo prototipo — sin las protecciones por privilegio de PostgreSQL).',
+        'redis' => 'Redis: solo dentro de Docker (sesión, caché y cola).',
+        'no_redis' => 'Sin Redis: sesión, caché y cola en la base de datos; el worker de la cola es queue:work.',
         'open' => 'Después, abra :url en el navegador (la primera subida tarda unos minutos: construye las imágenes).',
     ],
 

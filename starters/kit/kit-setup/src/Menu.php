@@ -28,8 +28,8 @@ use function Laravel\Prompts\text;
 
 /**
  * O menu (Laravel Prompts): o nome e o número do projeto (o Docker de
- * desenvolvimento), a interface, os módulos opcionais e a confirmação do
- * plano. Toda pergunta já vem com a resposta sugerida: Enter aceita.
+ * desenvolvimento), a interface, os módulos opcionais, o banco (PostgreSQL ou
+ * SQLite, o modo protótipo), o Redis e a confirmação do plano. Toda pergunta já vem com a resposta sugerida: Enter aceita.
  *
  * O NOME sugerido é o da pasta (o do ZIP do twstec/kit vira "meu-projeto"),
  * sem colidir com projeto Docker que já existe; o que a pessoa digita vira
@@ -129,7 +129,27 @@ final class Menu
             validate: fn (array $values): ?string => $this->validate($values),
         );
 
-        $choice = new Choice($stack, Modules::ordered(array_map('strval', $modules)), $name, $slot);
+        $database = (string) select(
+            label: $this->t->get('database_choice.label'),
+            options: [
+                Choice::POSTGRES => $this->t->get('database_choice.pgsql'),
+                Choice::SQLITE => $this->t->get('database_choice.sqlite'),
+            ],
+            default: Choice::POSTGRES,
+            hint: $this->t->get('database_choice.hint'),
+        );
+
+        $redis = (string) select(
+            label: $this->t->get('redis_choice.label'),
+            options: [
+                'yes' => $this->t->get('redis_choice.yes'),
+                'no' => $this->t->get('redis_choice.no'),
+            ],
+            default: 'yes',
+            hint: $this->t->get('redis_choice.hint'),
+        );
+
+        $choice = new Choice($stack, Modules::ordered(array_map('strval', $modules)), $name, $slot, false, $database, $redis === 'yes');
         $ports = DevEnvironment::ports($slot);
 
         note($this->t->get('plan.summary', [
@@ -138,6 +158,8 @@ final class Menu
             'mail' => DevEnvironment::url($name, $ports['mail']),
             'stack' => $this->t->get("stack.{$choice->stack}"),
             'modules' => $choice->modules === [] ? $this->t->get('modules.none') : $this->t->modules($choice->modules),
+            'database' => $this->t->get("database_choice.{$choice->database}"),
+            'redis' => $this->t->get($choice->redis ? 'redis_choice.summary_yes' : 'redis_choice.summary_no'),
         ]));
 
         if (! confirm($this->t->get('confirm'), true)) {

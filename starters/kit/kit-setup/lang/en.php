@@ -48,9 +48,25 @@ return [
         'webhooks' => 'Signed outgoing webhooks (twstec/kit-webhooks)',
     ],
 
+    'database_choice' => [
+        'label' => 'Which database?',
+        'hint' => 'PostgreSQL brings the safeguards of the database itself (separate roles, append-only tables). SQLite is a file, for prototypes.',
+        'pgsql' => 'PostgreSQL (recommended)',
+        'sqlite' => 'SQLite — prototype mode (without the database safeguards; production stays on PostgreSQL)',
+    ],
+
+    'redis_choice' => [
+        'label' => 'Use Redis?',
+        'hint' => 'Without it, session, cache and queue live in the database, and the queue:work worker replaces Horizon.',
+        'yes' => 'Yes — session, cache and queue in Redis, with Horizon (recommended)',
+        'no' => 'No — everything in the database, without Horizon',
+        'summary_yes' => 'yes (session, cache and queue in Redis)',
+        'summary_no' => 'no (session, cache and queue in the database)',
+    ],
+
     'plan' => [
-        'summary' => "Project: :name — :site (e-mails: :mail)\nInterface: :stack\nOptional modules: :modules",
-        'from_environment' => 'Choice (no questions): project :name, number :slot; :stack; optional modules: :modules.',
+        'summary' => "Project: :name — :site (e-mails: :mail)\nInterface: :stack\nOptional modules: :modules\nDatabase: :database\nRedis: :redis",
+        'from_environment' => 'Choice (no questions): project :name, number :slot; :stack; optional modules: :modules; database: :database; Redis: :redis.',
     ],
 
     'errors' => [
@@ -73,6 +89,8 @@ return [
         'expose_invalid' => 'Invalid value in TWS_KIT_EXPOSE_DB: :value. Use 1 (publish the database) or 0.',
         'vendor_invalid' => 'Invalid vendor in TWS_KIT_VENDOR: :vendor. Use lowercase letters, digits and hyphens (the package name in the project\'s composer.json becomes <vendor>/<project name>).',
         'license_invalid' => 'Invalid license in TWS_KIT_LICENSE: :license. Use an SPDX identifier (MIT, Apache-2.0…) or proprietary.',
+        'database_invalid' => 'Unknown database in TWS_KIT_DATABASE: :value. Use pgsql or sqlite.',
+        'redis_invalid' => 'Invalid value in TWS_KIT_REDIS: :value. Use 1 (with Redis) or 0.',
     ],
 
     'steps' => [
@@ -111,6 +129,7 @@ return [
         'unreachable' => 'The .env database (DB_CONNECTION=:connection, DB_HOST=:host) did not respond: the migrations were left for later.',
         'how' => 'Adjust the DB_* variables in .env — the kit development docker-compose.yml uses PostgreSQL; for SQLite, DB_CONNECTION=sqlite and delete the DB_DATABASE line (the database/database.sqlite file already exists) — and run:',
         'docker' => 'The project database runs in Docker: the first `docker compose up -d` creates the database and runs the migrations by itself.',
+        'docker_sqlite' => 'The project database is the database/database.sqlite file (prototype mode): the first `docker compose up -d` runs the migrations on it by itself.',
     ],
 
     'done' => [
@@ -122,7 +141,10 @@ return [
         'site' => 'Site: :url',
         'mail' => 'Sent e-mails (Mailpit): :url',
         'database_exposed' => 'Database: published on port :port of this machine (127.0.0.1), with the .env password.',
-        'database_internal' => 'Database and Redis: only inside Docker (to publish the database on port :port, COMPOSE_PROFILES=db-port in .env).',
+        'database_internal' => 'Database: only inside Docker (to publish the database on port :port, COMPOSE_PROFILES=db-port in .env).',
+        'database_sqlite' => 'Database: SQLite, in the database/database.sqlite file (prototype mode — without the PostgreSQL privilege safeguards).',
+        'redis' => 'Redis: only inside Docker (session, cache and queue).',
+        'no_redis' => 'No Redis: session, cache and queue in the database; the queue worker is queue:work.',
         'open' => 'Then open :url in the browser (the first start takes a few minutes: it builds the images).',
     ],
 

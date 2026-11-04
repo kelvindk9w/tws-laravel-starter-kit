@@ -44,6 +44,12 @@
 #     KIT_WITHOUT (padrão vazio): opcionais de fora   → TWS_KIT_WITHOUT
 #   e as conferências passam a exigir que os módulos DESMARCADOS não estejam
 #   no projeto (composer.json, vendor, registro do Composer, imagem).
+#   O banco e o Redis (qualquer STARTER — o instalador pergunta na criação):
+#     KIT_DATABASE (padrão pgsql): pgsql | sqlite   → TWS_KIT_DATABASE
+#     KIT_REDIS (padrão 1): 1 | 0                    → TWS_KIT_REDIS
+#   e as conferências passam a exigir o projeto adaptado (ver stack_checks):
+#   SQLite sem o serviço do banco no Docker de desenvolvimento; sem Redis,
+#   nenhum resquício de Redis nem do Horizon.
 #
 # A ETAPA docker (STARTER=kit): o caminho de quem só tem o Docker. O ZIP do
 # twstec/kit (o mesmo que o GitHub serve no "Download ZIP" do espelho:
@@ -71,6 +77,16 @@ VERSION=${VERSION:-2.0.0-beta.1}
 STARTER=${STARTER:-livewire}
 KIT_STACK=${KIT_STACK:-livewire}
 KIT_WITHOUT=${KIT_WITHOUT:-}
+KIT_DATABASE=${KIT_DATABASE:-pgsql}
+KIT_REDIS=${KIT_REDIS:-1}
+case "$KIT_DATABASE" in
+    pgsql|sqlite) ;;
+    *) echo "banco desconhecido: $KIT_DATABASE (pgsql | sqlite)"; exit 2 ;;
+esac
+case "$KIT_REDIS" in
+    0|1) ;;
+    *) echo "KIT_REDIS inválido: $KIT_REDIS (1 | 0)"; exit 2 ;;
+esac
 case "$STARTER" in
     livewire|react) STACK=$STARTER; KIT_WITHOUT= ;;
     kit)
@@ -163,8 +179,14 @@ copy() {
 # ou comentário do monorepo nos arquivos de desenvolvimento publicados.
 created_project() {
     name=$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' .env)
-    database=$(sed -n 's/^DB_DATABASE=//p' .env)
     test -n "$name"
+    # O nome do banco: o do .env com PostgreSQL; com SQLite (sem DB_DATABASE
+    # no .env), o que o instalador gravou no phpunit.pgsql.xml e na produção.
+    if [ "$KIT_DATABASE" = pgsql ]; then
+        database=$(sed -n 's/^DB_DATABASE=//p' .env)
+    else
+        database=$(sed -n 's/.*<env name="DB_DATABASE" value="\([^"]*\)_test".*/\1/p' phpunit.pgsql.xml | head -n 1)
+    fi
     test -n "$database"
 
     grep -q "\"name\": \"app/$name\"" composer.json
@@ -181,9 +203,11 @@ created_project() {
     # A demonstração não é publicada: os testes dela não rodam (nem "pulam").
     grep -q '<group>demo</group>' phpunit.xml
     grep -q '<group>demo</group>' phpunit.pgsql.xml
-    grep -q 'datname = '"'"'${DB_DATABASE}_test'"'"'' compose.yaml
+    if [ "$KIT_DATABASE" = pgsql ]; then
+        grep -q 'datname = '"'"'${DB_DATABASE}_test'"'"'' compose.yaml
+        grep -qx "DB_DATABASE=$database" .env.example
+    fi
     grep -qx "APP_URL=$(sed -n 's/^APP_URL=//p' .env)" .env.example
-    grep -qx "DB_DATABASE=$database" .env.example
     grep -q "PROD_POSTGRES_DB:-$database}" docker-compose.prod.yml
     if grep -q 'PROD_POSTGRES_DB:-tws_starter' docker-compose.prod.yml; then echo 'docker-compose.prod.yml com o banco do starter'; exit 1; fi
     grep -qx 'RATE_LIMIT_SENSITIVE=30' .env
@@ -225,7 +249,78 @@ created_project() {
     citacoes="$citacoes$(grep -v '^[[:space:]]*#.*só no monorepo' docker-compose.prod.yml | grep -n -i -E 'monorepo|starters/' || true)"
     if [ -n "$citacoes" ]; then echo "arquivos de desenvolvimento do projeto citam o monorepo:"; echo "$citacoes"; exit 1; fi
 
+    stack_checks
+
     echo "projeto criado com a identidade dele: app/$name, banco de teste ${database}_test"
+}
+
+# O BANCO E O REDIS ESCOLHIDOS (rode na pasta do projeto, depois do
+# instalador). PostgreSQL: o serviço do banco e o db-init no compose.yaml.
+# SQLite (modo protótipo): DB_CONNECTION=sqlite e o arquivo do banco, sem
+# variável de PostgreSQL e sem os serviços do banco no Docker de
+# desenvolvimento — a produção continua no PostgreSQL. Com Redis: o serviço
+# e o Horizon. Sem Redis: sessão, cache e fila no banco, e NENHUM resquício
+# de Redis nem do Horizon (composer.json, vendor, arquivos, variáveis,
+# serviços); o worker de produção é o `queue:work`.
+stack_checks() {
+    services=$(docker compose -f compose.yaml --env-file .env config --services)
+    production=$(PROD_PLATFORM_NAME=sim PROD_POSTGRES_PASSWORD=sim PROD_REDIS_PASSWORD=sim PROD_DB_APP_PASSWORD=sim \
+        docker compose -f docker-compose.prod.yml --env-file /dev/null config --services)
+    printf '%s\n' "$production" | grep -qx postgres
+
+    if [ "$KIT_DATABASE" = pgsql ]; then
+        grep -qx 'DB_CONNECTION=pgsql' .env
+        printf '%s\n' "$services" | grep -qx postgres
+        printf '%s\n' "$services" | grep -qx db-init
+    else
+        for arquivo in .env .env.example; do
+            grep -qx 'DB_CONNECTION=sqlite' "$arquivo"
+            if grep -Eq '^#? *(DB_HOST|DB_PORT|DB_DATABASE|DB_USERNAME|DB_PASSWORD|DB_MIGRATION_[A-Z]+|DEV_DB_PORT)=' "$arquivo"; then
+                echo "$arquivo com variável do PostgreSQL no projeto SQLite"; exit 1
+            fi
+        done
+        grep -q 'MODO PROTÓTIPO' .env.example
+        test -f database/database.sqlite
+        for servico in postgres db-init db-port; do
+            if printf '%s\n' "$services" | grep -qx "$servico"; then echo "serviço $servico no compose.yaml do projeto SQLite"; exit 1; fi
+        done
+        if grep -q 'postgres_data' compose.yaml; then echo 'volume do PostgreSQL no compose.yaml do projeto SQLite'; exit 1; fi
+    fi
+
+    if [ "$KIT_REDIS" = 1 ]; then
+        printf '%s\n' "$services" | grep -qx redis
+        printf '%s\n' "$production" | grep -qx horizon
+        grep -q '"laravel/horizon"' composer.json
+        grep -qx 'QUEUE_CONNECTION=redis' .env
+    else
+        for arquivo in .env .env.example; do
+            for chave in SESSION_DRIVER CACHE_STORE QUEUE_CONNECTION; do
+                grep -qx "$chave=database" "$arquivo"
+            done
+        done
+        if grep -Eq '^#? *(PROD_)?(REDIS|HORIZON)_[A-Z_]*=' .env .env.example .env.prod.example; then
+            echo 'variável de Redis ou do Horizon no projeto sem Redis:'; grep -En '^#? *(PROD_)?(REDIS|HORIZON)_[A-Z_]*=' .env .env.example .env.prod.example; exit 1
+        fi
+        for compose in compose.yaml docker-compose.prod.yml; do
+            if grep -v '^[[:space:]]*#' "$compose" | grep -Eqi 'redis|horizon'; then
+                echo "$compose cita Redis ou o Horizon no projeto sem Redis:"; grep -v '^[[:space:]]*#' "$compose" | grep -Ein 'redis|horizon'; exit 1
+            fi
+        done
+        for servico in redis horizon; do
+            if printf '%s\n%s\n' "$services" "$production" | grep -qx "$servico"; then echo "serviço $servico no projeto sem Redis"; exit 1; fi
+        done
+        printf '%s\n' "$production" | grep -qx queue
+        grep -q 'php artisan queue:work' docker-compose.prod.yml
+        if grep -q 'laravel/horizon' composer.json; then echo 'laravel/horizon no composer.json do projeto sem Redis'; exit 1; fi
+        if [ -e vendor/laravel/horizon ]; then echo 'Horizon instalado no projeto sem Redis'; exit 1; fi
+        if grep -Eq '"name": *"laravel/horizon"' vendor/composer/installed.json; then echo 'Horizon no registro do Composer do projeto sem Redis'; exit 1; fi
+        for arquivo in app/Providers/HorizonServiceProvider.php config/horizon.php tests/Feature/Horizon/HorizonAccessTest.php; do
+            if [ -e "$arquivo" ]; then echo "arquivo do Horizon no projeto sem Redis: $arquivo"; exit 1; fi
+        done
+        if grep -q 'Horizon' bootstrap/providers.php; then echo 'Horizon registrado em bootstrap/providers.php'; exit 1; fi
+        if php artisan route:list --json | grep -q '"uri":"horizon'; then echo 'rotas do Horizon no projeto sem Redis'; exit 1; fi
+    fi
+    echo "banco e Redis do projeto: $KIT_DATABASE, Redis $KIT_REDIS"
 }
 
 # A AUTOMAÇÃO DO PROJETO CRIADO (rode na pasta do projeto): o Dependabot
@@ -282,11 +377,13 @@ package() {
     # --add-repository o grava no composer.json dele).
     if [ "$STARTER" = kit ]; then
         (cd "$WORK/src" && TWS_KIT_STACK="$KIT_STACK" TWS_KIT_WITHOUT="$KIT_WITHOUT" \
+            TWS_KIT_DATABASE="$KIT_DATABASE" TWS_KIT_REDIS="$KIT_REDIS" \
             composer create-project "twstec/kit:$VERSION" "$WORK/app" \
             --repository='{"type":"artifact","url":"../packages"}' --add-repository \
             --no-interaction --no-progress)
     else
-        (cd "$WORK/src" && composer create-project "twstec/starter-$STARTER:$VERSION" "$WORK/app" \
+        (cd "$WORK/src" && TWS_KIT_DATABASE="$KIT_DATABASE" TWS_KIT_REDIS="$KIT_REDIS" \
+            composer create-project "twstec/starter-$STARTER:$VERSION" "$WORK/app" \
             --repository='{"type":"artifact","url":"../packages"}' --add-repository \
             --no-interaction --no-progress)
     fi
@@ -526,6 +623,7 @@ docker_path() {
     docker compose run --rm -T instalar composer config repositories.zips '{"type":"artifact","url":"../packages"}'
 
     TWS_KIT_STACK="$KIT_STACK" TWS_KIT_WITHOUT="$KIT_WITHOUT" TWS_KIT_NAME="$name" TWS_KIT_SLOT="${DOCKER_SLOT:-}" \
+        TWS_KIT_DATABASE="$KIT_DATABASE" TWS_KIT_REDIS="$KIT_REDIS" \
         docker compose run --rm -T -v "$WORK/packages:/packages:ro" instalar
 
     # O projeto é o do starter, com o Docker de desenvolvimento, e nada do
@@ -535,9 +633,13 @@ docker_path() {
     if [ -e kit-setup ] || [ -e docker/instalar ] || ls -d .tws-kit-starter-* >/dev/null 2>&1; then echo 'sobrou arquivo do twstec/kit no projeto'; exit 1; fi
     grep -qx "COMPOSE_PROJECT_NAME=$name" .env
     created_project
-    grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
-    grep -Eq '^DB_MIGRATION_PASSWORD=[0-9a-f]{32}$' .env
-    grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
+    if [ "$KIT_DATABASE" = pgsql ]; then
+        grep -Eq '^DB_PASSWORD=[0-9a-f]{32}$' .env
+        grep -Eq '^DB_MIGRATION_PASSWORD=[0-9a-f]{32}$' .env
+    fi
+    if [ "$KIT_REDIS" = 1 ]; then
+        grep -Eq '^REDIS_PASSWORD=[0-9a-f]{32}$' .env
+    fi
     grep -Eq '^APP_KEY=base64:.+' .env
     test -f public/build/manifest.json
     for modulo in $LEFT_OUT; do
@@ -560,8 +662,18 @@ docker_path() {
     echo "site no ar: http://$name.localhost:$port/up → 200"
     # Dois papéis no PostgreSQL: o app conecta com o papel da aplicação, que
     # o migrate do init criou — sem superusuário, sem posse, só SELECT/INSERT
-    # nas trilhas só-acréscimo.
-    docker compose exec -T app php artisan db:check-roles
+    # nas trilhas só-acréscimo. Com SQLite (modo protótipo) não há papéis: o
+    # banco é o arquivo, que o migrate do init preencheu.
+    if [ "$KIT_DATABASE" = pgsql ]; then
+        docker compose exec -T app php artisan db:check-roles
+    else
+        test -s database/database.sqlite
+        docker compose exec -T app php artisan migrate:status --no-interaction >/dev/null
+    fi
+    # Os serviços no ar são os da escolha (sem Redis: nem redis nem horizon).
+    no_ar=$(docker compose ps --format '{{.Service}}')
+    if [ "$KIT_DATABASE" = sqlite ] && printf '%s\n' "$no_ar" | grep -qx postgres; then echo 'PostgreSQL no ar no projeto SQLite'; exit 1; fi
+    if [ "$KIT_REDIS" = 0 ] && printf '%s\n' "$no_ar" | grep -qx redis; then echo 'Redis no ar no projeto sem Redis'; exit 1; fi
     test "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "http://localhost:$port/login")" = "308 http://$name.localhost:$port/login"
     # As telas no ar são do projeto: o nome dele na aba, nada da marca do kit.
     for tela in / /login /register; do
@@ -596,7 +708,7 @@ docker_path() {
     if [ "${KEEP_DOCKER:-0}" != 1 ]; then
         docker compose down -v --rmi local
     fi
-    echo "caminho só com o Docker ($KIT_STACK;$CHOSEN): ok"
+    echo "caminho só com o Docker ($KIT_STACK;$CHOSEN; $KIT_DATABASE, Redis $KIT_REDIS): ok"
 }
 
 image() {

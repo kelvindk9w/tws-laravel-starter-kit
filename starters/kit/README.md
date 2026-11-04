@@ -71,7 +71,7 @@ docker compose run --rm instalar
 ```
 
 Na primeira vez, ele demora alguns minutos (prepara as ferramentas; nas
-próximas, é rápido). Depois faz cinco perguntas. **Todas já vêm com uma
+próximas, é rápido). Depois faz sete perguntas. **Todas já vêm com uma
 resposta sugerida — Enter aceita:**
 
 1. **Nome do projeto** — letras minúsculas, números e hífen (`loja-da-maria`).
@@ -85,7 +85,14 @@ resposta sugerida — Enter aceita:**
 3. **A interface** — Livewire ou React.
 4. **Os módulos** — contas com membros e API, uploads e foto de perfil, painel
    `/admin`, webhooks de saída. Espaço marca e desmarca.
-5. **A confirmação.**
+5. **O banco de dados** — PostgreSQL (o recomendado: o próprio banco protege
+   as trilhas de auditoria e separa quem migra de quem usa) ou SQLite (o
+   "modo protótipo": um arquivo, sem o serviço do banco, mas **sem** essas
+   proteções do banco; a produção continua no PostgreSQL). Na dúvida, Enter.
+6. **O Redis** — sim (o recomendado: sessão, cache e fila no Redis, com o
+   painel das filas, o Horizon) ou não (tudo no próprio banco, um serviço a
+   menos; a fila roda no `queue:work`).
+7. **A confirmação.**
 
 O projeto é montado **nesta mesma pasta**: os arquivos do kit dão lugar aos do
 projeto. Ao final, o instalador mostra o endereço do site.
@@ -107,8 +114,10 @@ docker compose up -d
 ```
 
 Na primeira vez, demora alguns minutos (constrói as imagens e cria o banco).
-Sobem: o site (nginx + PHP), o banco (PostgreSQL), o Redis, o Mailpit (os
-e-mails), a fila, o agendador e o Vite (a recarga ao vivo do front).
+Sobem: o site (nginx + PHP), o banco (PostgreSQL; com SQLite, nenhum serviço
+de banco — ele é o arquivo `database/database.sqlite`), o Redis (se você
+escolheu usar), o Mailpit (os e-mails), a fila, o agendador e o Vite (a
+recarga ao vivo do front).
 
 ### 6. Abra no navegador
 
@@ -264,7 +273,10 @@ Docker pela linha de comando `docker`, se houver):
    webhooks de saída (`twstec/kit-webhooks`). A base (`twstec/kit-foundation`)
    e a autenticação (`twstec/kit-auth`) vêm sempre. Uploads e webhooks
    precisam de contas: o menu não aceita um deles sem contas.
-4. **A confirmação** do plano.
+4. **O banco de dados** — PostgreSQL (recomendado) ou SQLite (modo
+   protótipo) — e **o Redis** — sim ou não (ver acima e
+   [Banco de dados e Redis](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#banco-de-dados-e-redis-só-na-criação)).
+5. **A confirmação** do plano.
 
 O resultado é o projeto do starter escolhido **só com os pacotes marcados**
 (os desmarcados não chegam a ser instalados), com a `APP_KEY` e, com contas,
@@ -295,6 +307,8 @@ macOS e no Windows:
 | `TWS_KIT_STACK` | `livewire` ou `react` | `livewire` |
 | `TWS_KIT_WITHOUT` | módulos opcionais que ficam de fora, separados por vírgula (`accounts`, `uploads`, `admin`, `webhooks`) | nenhum |
 | `TWS_KIT_WITH` | módulos opcionais que entram (o padrão já é todos) | todos |
+| `TWS_KIT_DATABASE` | `pgsql` (PostgreSQL) ou `sqlite` (modo protótipo, sem as travas por privilégio do banco; a produção continua no PostgreSQL) | `pgsql` |
+| `TWS_KIT_REDIS` | `1` com Redis (e o Horizon); `0` sem — sessão, cache e fila no banco, o worker `queue:work` | `1` |
 | `TWS_KIT_LOCALE` | idioma do menu: `pt_BR`, `en` ou `es` | o do sistema, se for um dos três; senão `pt_BR` |
 | `TWS_KIT_VENDOR` | o vendor do nome do pacote no `composer.json` do projeto (`<vendor>/<nome>`): letras minúsculas, números e hífen | `app` |
 | `TWS_KIT_LICENSE` | a licença do projeto no `composer.json`: um identificador SPDX (`MIT`, `Apache-2.0`…) ou `proprietary` | `proprietary` |
@@ -315,7 +329,8 @@ Qualquer uma dessas variáveis (mesmo vazia) desliga o menu — menos
 trocam depois no `composer.json`). Sem terminal
 (`composer create-project -n`, CI) e sem variável nenhuma, vale o padrão
 seguro: o nome da pasta, o primeiro número livre, Livewire com todos os
-módulos. Uma escolha inválida (interface ou módulo desconhecido,
+módulos, PostgreSQL e Redis. Uma escolha inválida (interface, módulo ou banco
+desconhecido,
 `foundation`/`auth` de fora, uploads sem contas, nome de um projeto Docker que
 já existe, número com alguma porta ocupada) é recusada **antes** de baixar
 qualquer coisa, com o motivo e a sugestão.

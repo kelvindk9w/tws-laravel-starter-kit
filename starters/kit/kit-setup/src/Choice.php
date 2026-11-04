@@ -9,7 +9,7 @@ use Twstec\Kit\Setup\Dev\Host;
 
 /**
  * A escolha: o nome e o número do projeto (o Docker de desenvolvimento), a
- * interface (o starter) e os módulos opcionais.
+ * interface (o starter), os módulos opcionais, o banco e o Redis.
  *
  * NÃO INTERATIVA pelo ambiente (Composer não repassa opções próprias ao
  * script do create-project, e variável de ambiente funciona igual no
@@ -21,6 +21,10 @@ use Twstec\Kit\Setup\Dev\Host;
  *   TWS_KIT_STACK=react            livewire | react (padrão: o do composer.json)
  *   TWS_KIT_WITHOUT=uploads,admin  opcionais que ficam de fora
  *   TWS_KIT_WITH=accounts          opcionais que entram (o padrão já é todos)
+ *   TWS_KIT_DATABASE=sqlite        pgsql | sqlite (padrão: pgsql — SQLite é o
+ *                                  modo protótipo, sem as travas do banco)
+ *   TWS_KIT_REDIS=0                1 | 0 (padrão: 1 — sem Redis, sessão,
+ *                                  cache e fila no banco, sem o Horizon)
  *
  * As mesmas regras do instalador do starter (tws:install): módulo
  * desconhecido, obrigatório em TWS_KIT_WITHOUT, o mesmo nas duas listas e
@@ -35,7 +39,36 @@ final class Choice
      *
      * @var list<string>
      */
-    public const VARIABLES = ['TWS_KIT_NAME', 'TWS_KIT_SLOT', 'TWS_KIT_EXPOSE_DB', 'TWS_KIT_STACK', 'TWS_KIT_WITH', 'TWS_KIT_WITHOUT'];
+    public const VARIABLES = ['TWS_KIT_NAME', 'TWS_KIT_SLOT', 'TWS_KIT_EXPOSE_DB', 'TWS_KIT_STACK', 'TWS_KIT_WITH', 'TWS_KIT_WITHOUT', 'TWS_KIT_DATABASE', 'TWS_KIT_REDIS'];
+
+    /**
+     * Sim e não nas variáveis de escolha.
+     *
+     * @var list<string>
+     */
+    private const YES = ['1', 'true', 'yes', 'sim'];
+
+    /**
+     * @var list<string>
+     */
+    private const NO = ['0', 'false', 'no', 'nao', 'não'];
+
+    public const POSTGRES = 'pgsql';
+
+    public const SQLITE = 'sqlite';
+
+    /**
+     * Os bancos (e os sinônimos aceitos em TWS_KIT_DATABASE) — os mesmos do
+     * instalador do starter (Twstec\Kit\Installer\Support\ProjectStack).
+     *
+     * @var array<string, string>
+     */
+    public const DATABASES = [
+        'pgsql' => self::POSTGRES,
+        'postgres' => self::POSTGRES,
+        'postgresql' => self::POSTGRES,
+        'sqlite' => self::SQLITE,
+    ];
 
     /**
      * @param  list<string>  $modules  os opcionais escolhidos
@@ -48,6 +81,8 @@ final class Choice
         public readonly ?string $name = null,
         public readonly ?int $slot = null,
         public readonly bool $exposeDatabase = false,
+        public readonly string $database = self::POSTGRES,
+        public readonly bool $redis = true,
     ) {}
 
     /**
@@ -93,6 +128,8 @@ final class Choice
             'TWS_KIT_NAME' => $this->name,
             'TWS_KIT_SLOT' => $this->slot === null ? null : (string) $this->slot,
             'TWS_KIT_EXPOSE_DB' => $this->exposeDatabase ? '1' : '0',
+            'TWS_KIT_DATABASE' => $this->database,
+            'TWS_KIT_REDIS' => $this->redis ? '1' : '0',
         ], static fn (?string $value): bool => $value !== null);
     }
 
@@ -190,11 +227,31 @@ final class Choice
 
         $expose = strtolower(trim((string) ($env['TWS_KIT_EXPOSE_DB'] ?? '')));
 
-        if (! in_array($expose, ['', '0', '1', 'true', 'false', 'yes', 'no', 'sim', 'nao', 'não'], true)) {
+        if (! in_array($expose, ['', ...self::YES, ...self::NO], true)) {
             return [null, $t->get('errors.expose_invalid', ['value' => $expose])];
         }
 
-        return [new self($stack, $modules, $name, $slot, in_array($expose, ['1', 'true', 'yes', 'sim'], true)), null];
+        $database = strtolower(trim((string) ($env['TWS_KIT_DATABASE'] ?? '')));
+
+        if ($database !== '' && ! array_key_exists($database, self::DATABASES)) {
+            return [null, $t->get('errors.database_invalid', ['value' => $database])];
+        }
+
+        $redis = strtolower(trim((string) ($env['TWS_KIT_REDIS'] ?? '')));
+
+        if (! in_array($redis, ['', ...self::YES, ...self::NO], true)) {
+            return [null, $t->get('errors.redis_invalid', ['value' => $redis])];
+        }
+
+        return [new self(
+            $stack,
+            $modules,
+            $name,
+            $slot,
+            in_array($expose, self::YES, true),
+            $database === '' ? self::POSTGRES : self::DATABASES[$database],
+            ! in_array($redis, self::NO, true),
+        ), null];
     }
 
     /**

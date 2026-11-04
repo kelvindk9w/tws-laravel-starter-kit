@@ -108,6 +108,9 @@ it('React sem uploads pelo ambiente: o starter React, sem o pacote desmarcado, e
     expect($installer[2])->toBe([
         'TWS_KIT_WITH' => 'accounts,admin,webhooks',
         'TWS_KIT_WITHOUT' => 'uploads',
+        // O banco e o Redis: o padrão (PostgreSQL, com Redis).
+        'TWS_KIT_DATABASE' => 'pgsql',
+        'TWS_KIT_REDIS' => '1',
         'APP_LOCALE' => 'en',
         'TWS_KIT_FROM_KIT' => '1',
         // O Docker de desenvolvimento: o nome da pasta e o primeiro número
@@ -354,6 +357,23 @@ it('starter com o Docker de desenvolvimento (compose.yaml): o resumo dá o ender
     expect(array_filter($this->runner->calls, fn (array $call): bool => $call[0] === 'php'))->toBe([]);
 });
 
+it('SQLite sem Redis pelo ambiente: o instalador recebe a escolha, e o resumo fala do arquivo do banco e da fila no banco', function (): void {
+    $this->runner->withCompose = true;
+
+    expect(($this->create)(['TWS_KIT_DATABASE' => 'SQLite', 'TWS_KIT_REDIS' => 'nao', 'TWS_KIT_SLOT' => '4']))->toBe(0);
+
+    $installer = array_values(array_filter($this->runner->calls, fn (array $call): bool => ($call[1][1] ?? '') === 'post-create-project-cmd'))[0];
+
+    expect($installer[2])->toMatchArray(['TWS_KIT_DATABASE' => 'sqlite', 'TWS_KIT_REDIS' => '0'])
+        ->and(($this->output)())->toContain('database: SQLite — prototype mode')
+        ->toContain('Redis: no (session, cache and queue in the database)')
+        ->toContain('The project database is the database/database.sqlite file (prototype mode)')
+        ->toContain('Database: SQLite, in the database/database.sqlite file')
+        ->toContain('No Redis: session, cache and queue in the database; the queue worker is queue:work.')
+        ->not->toContain('COMPOSE_PROFILES=db-port')
+        ->not->toContain('Redis: only inside Docker');
+});
+
 it('no container do instalador: fala "desta pasta" e dos comandos do Docker (sem cd)', function (): void {
     $this->runner->withCompose = true;
 
@@ -465,6 +485,8 @@ it('só a escolha (TWS_KIT_CHOICE_FILE): grava as variáveis de escolha e não b
                 'TWS_KIT_NAME=meu-app',
                 'TWS_KIT_SLOT=1',
                 'TWS_KIT_EXPOSE_DB=1',
+                'TWS_KIT_DATABASE=pgsql',
+                'TWS_KIT_REDIS=1',
             ])."\n");
 
         // O passo seguinte (sem o Docker) lê a mesma escolha do ambiente.

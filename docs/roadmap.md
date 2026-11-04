@@ -110,12 +110,14 @@ próximo recurso.
    verdade.
 3. **`laravel new --using=twstec/kit`.** Preparado, mas ainda não testado
    contra o instalador oficial do Laravel.
-4. **Banco e Redis no instalador (#73).** Hoje todo projeto nasce com
-   PostgreSQL, Redis e Horizon, e o criado fora do Docker aponta para o
-   PostgreSQL do Docker. O menu passa a perguntar o banco — PostgreSQL
+4. **Banco e Redis no instalador (#73) — resolvido (próxima versão; ver
+   "Não publicado" no CHANGELOG).** Todo projeto nascia com PostgreSQL, Redis
+   e Horizon. O menu (e o `tws:install`, por `--database`/`--no-redis` ou
+   `TWS_KIT_DATABASE`/`TWS_KIT_REDIS`) passa a perguntar o banco — PostgreSQL
    (recomendado) ou SQLite ("modo protótipo", sem as travas por privilégio do
-   banco) — e se usa Redis; sem ele, sessão, fila e cache vão para o banco e
-   o Horizon não é instalado.
+   banco; a produção continua no PostgreSQL) — e se usa Redis; sem ele,
+   sessão, fila e cache vão para o banco e o Horizon não é instalado
+   ([Banco de dados e Redis](instalacao.md#banco-de-dados-e-redis-só-na-criação)).
 5. **Atualizações pendentes do Dependabot** (Pest 5 nos pacotes, ações de
    build do Docker e do split, grupo de frontend do starter Livewire):
    aplicar e validar juntas.

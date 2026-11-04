@@ -6,6 +6,37 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Banco de dados e Redis na criação do projeto (#73).** O comando único,
+  o instalador em container e o `tws:install` (na criação) perguntam o banco
+  — PostgreSQL (o padrão, recomendado) ou SQLite ("modo protótipo") — e se o
+  projeto usa Redis (o padrão) ou não. Sem perguntas: `--database=sqlite`,
+  `--no-redis`, ou `TWS_KIT_DATABASE=sqlite` e `TWS_KIT_REDIS=0`.
+  - **SQLite:** `DB_CONNECTION=sqlite` no `.env` e no `.env.example`, o
+    arquivo `database/database.sqlite` criado, o Docker de desenvolvimento
+    sem os serviços do PostgreSQL e o `scripts/verificar` com a suíte no
+    SQLite. O instalador avisa que as travas por privilégio do banco (papéis
+    separados, tabelas só-acréscimo garantidas pelo banco) não existem nele,
+    e que a produção pelo `docker-compose.prod.yml` continua no PostgreSQL.
+  - **Sem Redis:** sessão, cache e fila no banco; o `laravel/horizon` sai do
+    `composer.json` (com o provider, a configuração e o teste do dashboard), o
+    serviço `redis` sai dos dois composes, e o `horizon` de produção vira o
+    worker `queue` (`queue:work`). Nenhuma variável `REDIS_*` nem `HORIZON_*`.
+  - Num projeto que já existe, a escolha é ignorada, com aviso; o manifesto
+    do `tws:upgrade` é gravado depois das adaptações. MySQL e hospedagem
+    compartilhada continuam fora. Ver "Banco de dados e Redis" em
+    `docs/instalacao.md`.
+
+### Atenção ao atualizar
+
+- Arquivos de starter que mudaram (o `php artisan tws:upgrade --check`
+  lista): `tests/Pest.php`, os testes de arquitetura do Docker
+  (`ProductionDockerFilesTest`, `DevelopmentEnvironmentFilesTest`),
+  `scripts/verificar`, `.github/workflows/ci.yml` e, no Livewire, os testes
+  que usam o Horizon. Num projeto com PostgreSQL e Redis, só ganham os
+  desvios para projeto sem Redis ou com SQLite: atualizar é opcional.
+
 ## [2.0.0-beta.20] — 2026-11-04
 
 As telas do kit (entrada, cadastro, segundo fator, perfil, contas, chaves de

@@ -36,8 +36,13 @@ function menu(?bool $fallback = null, $input = null, $output = null, ?FakeHost $
  */
 const ACCEPT_NAME_AND_SLOT = [Key::ENTER, Key::ENTER];
 
+/**
+ * Enter no banco e no Redis: PostgreSQL, com Redis (o padrão).
+ */
+const ACCEPT_DATABASE_AND_REDIS = [Key::ENTER, Key::ENTER];
+
 it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
-    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, ...ACCEPT_DATABASE_AND_REDIS, Key::ENTER]);
 
     $choice = menu(false)->ask();
 
@@ -45,7 +50,9 @@ it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
         ->and($choice->modules)->toBe(['accounts', 'uploads', 'admin', 'webhooks'])
         ->and($choice->name)->toBe('meu-app')
         ->and($choice->slot)->toBe(0)
-        ->and($choice->exposeDatabase)->toBeFalse();
+        ->and($choice->exposeDatabase)->toBeFalse()
+        ->and($choice->database)->toBe('pgsql')
+        ->and($choice->redis)->toBeTrue();
 
     Prompt::assertStrippedOutputContains('Project name');
     Prompt::assertStrippedOutputContains('Project number (the ports)');
@@ -57,7 +64,7 @@ it('Enter, Enter, Enter: Livewire com todos os módulos', function (): void {
 });
 
 it('React, sem uploads: seta, espaço no segundo módulo, e confirma', function (): void {
-    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::DOWN, Key::ENTER, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::DOWN, Key::ENTER, Key::DOWN, Key::SPACE, Key::ENTER, ...ACCEPT_DATABASE_AND_REDIS, Key::ENTER]);
 
     $choice = menu(false)->ask();
 
@@ -65,6 +72,21 @@ it('React, sem uploads: seta, espaço no segundo módulo, e confirma', function 
         ->and($choice->modules)->toBe(['accounts', 'admin', 'webhooks']);
 
     Prompt::assertStrippedOutputContains('Optional modules: Accounts with members, API keys and projects (twstec/kit-accounts), /admin panel with Filament (twstec/kit-admin), Signed outgoing webhooks (twstec/kit-webhooks)');
+});
+
+it('SQLite sem Redis: seta no banco e no Redis, e o plano diz os dois', function (): void {
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, Key::DOWN, Key::ENTER, Key::DOWN, Key::ENTER, Key::ENTER]);
+
+    $choice = menu(false)->ask();
+
+    expect($choice->database)->toBe('sqlite')
+        ->and($choice->redis)->toBeFalse()
+        ->and($choice->toEnvironment())->toMatchArray(['TWS_KIT_DATABASE' => 'sqlite', 'TWS_KIT_REDIS' => '0']);
+
+    Prompt::assertStrippedOutputContains('Which database?');
+    Prompt::assertStrippedOutputContains('Use Redis?');
+    Prompt::assertStrippedOutputContains('Database: SQLite — prototype mode (without the database safeguards; production stays on PostgreSQL)');
+    Prompt::assertStrippedOutputContains('Redis: no (session, cache and queue in the database)');
 });
 
 it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua até a escolha valer', function (): void {
@@ -75,6 +97,7 @@ it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua at�
         Key::ENTER,          // tenta seguir: recusado
         Key::SPACE,          // marca Contas de novo
         Key::ENTER,          // agora vale
+        ...ACCEPT_DATABASE_AND_REDIS,
         Key::ENTER,          // confirma
     ]);
 
@@ -86,7 +109,7 @@ it('IMPEDE uploads sem contas: o Enter mostra o motivo e a pergunta continua at�
 });
 
 it('desmarcar contas, uploads e webhooks juntos vale (só a base e o /admin)', function (): void {
-    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::DOWN, Key::DOWN, Key::SPACE, Key::ENTER, Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::SPACE, Key::DOWN, Key::SPACE, Key::DOWN, Key::DOWN, Key::SPACE, Key::ENTER, ...ACCEPT_DATABASE_AND_REDIS, Key::ENTER]);
 
     expect(menu(false)->ask()->modules)->toBe(['admin']);
 
@@ -105,6 +128,7 @@ it('IMPEDE webhooks sem contas, mesmo com uploads também desmarcado', function 
         Key::UP,
         Key::SPACE,          // marca Contas de novo
         Key::ENTER,          // agora vale
+        ...ACCEPT_DATABASE_AND_REDIS,
         Key::ENTER,          // confirma
     ]);
 
@@ -126,7 +150,7 @@ it('a regra do menu, sozinha', function (array $values, ?string $error): void {
 ]);
 
 it('recusar a confirmação desiste (null)', function (): void {
-    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, 'n', Key::ENTER]);
+    fakeKeys([...ACCEPT_NAME_AND_SLOT, Key::ENTER, Key::ENTER, ...ACCEPT_DATABASE_AND_REDIS, 'n', Key::ENTER]);
 
     expect(menu(false)->ask())->toBeNull();
 });
@@ -141,9 +165,9 @@ it('Windows (sem stty): as mesmas perguntas em listas numeradas, com a mesma rec
     $input = new ArrayInput([]);
     // Nome e número: Enter (as sugestões); interface 2 (React); módulos só
     // "2" (Uploads, sem Contas) → recusado; de novo "0,1" (Contas e
-    // Uploads); confirma.
+    // Uploads); banco 1 (SQLite); Redis 1 (não); confirma.
     $stream = fopen('php://memory', 'r+');
-    fwrite($stream, "\n\n1\n1\n0,1\ny\n");
+    fwrite($stream, "\n\n1\n1\n0,1\n1\n1\ny\n");
     rewind($stream);
     $input->setStream($stream);
     $output = new BufferedOutput;
@@ -155,6 +179,8 @@ it('Windows (sem stty): as mesmas perguntas em listas numeradas, com a mesma rec
         ->and($choice->modules)->toBe(['accounts', 'uploads'])
         ->and($choice->name)->toBe('meu-app')
         ->and($choice->slot)->toBe(0)
+        ->and($choice->database)->toBe('sqlite')
+        ->and($choice->redis)->toBeFalse()
         ->and($output->fetch())->toContain('Project name')->toContain('Which interface?')
         ->toContain('needs Accounts with members');
 });

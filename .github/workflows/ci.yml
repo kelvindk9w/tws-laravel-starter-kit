@@ -81,6 +81,12 @@
 # criado, e a prova de que o módulo desmarcado não chegou ao projeto nem à
 # imagem.
 #
+# BANCO E REDIS DO PROJETO CRIADO (#73): as quatro combinações passam pelas
+# simulações, sem job novo — PostgreSQL com Redis (os dois starters e o
+# caminho só com o Docker), PostgreSQL sem Redis (comando único, React),
+# SQLite sem Redis (comando único, Livewire) e SQLite com Redis (o caminho só
+# com o Docker, de novo, com a suíte no container).
+#
 # INSTALAÇÃO PUBLICADA (simulação): no fim do job do PostgreSQL, cada pacote
 # vira um ZIP (`composer archive`, com o composer.json da versão publicada) e
 # o projeto é criado SÓ a partir deles (`composer create-project` com
@@ -424,15 +430,17 @@ jobs:
 
       # O COMANDO ÚNICO: `composer create-project twstec/kit` só a partir dos
       # ZIPs (os dois starters empacotados), sem terminal — a escolha do menu
-      # pelo ambiente: React sem uploads. Confere que o projeto é o do React,
-      # que nada do twstec/kit sobrou e que o módulo desmarcado não está no
-      # composer.json, no vendor nem na imagem; build, suíte e imagens.
-      - name: Comando único · instalação publicada (simulação) · React sem uploads · build, Pest e imagens de produção
+      # pelo ambiente: React sem uploads, PostgreSQL SEM Redis (#73). Confere
+      # que o projeto é o do React, que nada do twstec/kit sobrou, que o
+      # módulo desmarcado não está no composer.json, no vendor nem na imagem
+      # e que não sobrou nada do Redis nem do Horizon; build, suíte e imagens.
+      - name: Comando único · instalação publicada (simulação) · React sem uploads · PostgreSQL sem Redis · build, Pest e imagens de produção
         working-directory: .
         env:
           STARTER: kit
           KIT_STACK: react
           KIT_WITHOUT: uploads
+          KIT_REDIS: '0'
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-react"
 
   # A mesma suíte no SQLite em memória — o `pest` puro de quem clona o kit.
@@ -557,14 +565,17 @@ jobs:
         run: ./vendor/bin/pest --ci
 
       # O comando único com a outra interface e a menor combinação: Livewire
-      # só com a base (foundation + auth). ANTES dos passos que mexem nos
-      # checkouts dos starters (a simulação copia os arquivos do checkout).
-      - name: Comando único · instalação publicada (simulação) · Livewire só a base · build, Pest e imagens de produção
+      # só com a base (foundation + auth), SQLite (modo protótipo) e SEM
+      # Redis (#73). ANTES dos passos que mexem nos checkouts dos starters (a
+      # simulação copia os arquivos do checkout).
+      - name: Comando único · instalação publicada (simulação) · Livewire só a base · SQLite sem Redis · build, Pest e imagens de produção
         working-directory: .
         env:
           STARTER: kit
           KIT_STACK: livewire
           KIT_WITHOUT: accounts,uploads,admin,webhooks
+          KIT_DATABASE: sqlite
+          KIT_REDIS: '0'
         run: sh .github/release/simulate-install.sh all "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
       # O CAMINHO SÓ COM O DOCKER (sem PHP na máquina), com os ZIPs do passo
@@ -583,6 +594,23 @@ jobs:
           KIT_STACK: livewire
           KIT_WITHOUT: accounts,uploads,admin,webhooks
           DOCKER_NAME: ci-docker
+        run: sh .github/release/simulate-install.sh docker "$RUNNER_TEMP/kit-publicado-kit-livewire"
+
+      # O MESMO CAMINHO com SQLite e Redis (#73): sem o serviço do banco, o
+      # init roda as migrations no arquivo, o site sobe e a suíte do projeto
+      # roda dentro do container. Com os passos acima, as quatro combinações
+      # de banco e Redis passam por aqui: PostgreSQL com Redis (os starters e
+      # o caminho só com o Docker), PostgreSQL sem Redis (React), SQLite sem
+      # Redis (Livewire) e SQLite com Redis (este).
+      - name: Comando único · caminho só com o Docker (instalar, subir, o site no ar e a suíte) · Livewire só a base · SQLite com Redis
+        working-directory: .
+        env:
+          STARTER: kit
+          KIT_STACK: livewire
+          KIT_WITHOUT: accounts,uploads,admin,webhooks
+          KIT_DATABASE: sqlite
+          DOCKER_NAME: ci-docker-sqlite
+          DOCKER_PEST: '1'
         run: sh .github/release/simulate-install.sh docker "$RUNNER_TEMP/kit-publicado-kit-livewire"
 
       # STARTER REACT (starters/react): dependências, checagem de tipos

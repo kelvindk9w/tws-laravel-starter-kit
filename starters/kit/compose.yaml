@@ -55,6 +55,8 @@ services:
       - TWS_KIT_STACK
       - TWS_KIT_WITH
       - TWS_KIT_WITHOUT
+      - TWS_KIT_DATABASE
+      - TWS_KIT_REDIS
       - TWS_KIT_LOCALE
       # A identidade do projeto no composer.json (padrão: app/<nome>, proprietary).
       - TWS_KIT_VENDOR

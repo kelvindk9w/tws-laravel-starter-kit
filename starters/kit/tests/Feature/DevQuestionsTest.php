@@ -25,9 +25,10 @@ function retype(string $text, int $erase = 20): array
 }
 
 /**
- * Enter nas três perguntas do fim (interface, módulos, confirmação).
+ * Enter nas cinco perguntas do fim (interface, módulos, banco, Redis,
+ * confirmação).
  */
-const ACCEPT_REST = [Key::ENTER, Key::ENTER, Key::ENTER];
+const ACCEPT_REST = [Key::ENTER, Key::ENTER, Key::ENTER, Key::ENTER, Key::ENTER];
 
 it('Enter aceita as sugestões: o nome da pasta sem colidir e o primeiro número livre — e mostra quem usa os outros', function (): void {
     $host = (new FakeHost)->withProject('meu-app', 0);

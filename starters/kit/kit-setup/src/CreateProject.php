@@ -20,7 +20,7 @@ use Twstec\Kit\Setup\Platform\PlatformRequirements;
  *
  * 1. A ESCOLHA: pelo menu (terminal) ou pelo ambiente (TWS_KIT_NAME,
  *    TWS_KIT_SLOT, TWS_KIT_EXPOSE_DB, TWS_KIT_STACK, TWS_KIT_WITH,
- *    TWS_KIT_WITHOUT; sem nada, o padrão: o nome da pasta, o primeiro número
+ *    TWS_KIT_WITHOUT, TWS_KIT_DATABASE, TWS_KIT_REDIS; sem nada, o padrão: o nome da pasta, o primeiro número
  *    com as portas livres, Livewire com todos os módulos). Escolha inválida
  *    para aqui, antes de baixar qualquer coisa.
  * 2. O STARTER escolhido é baixado pelo MESMO Composer
@@ -300,6 +300,8 @@ final class CreateProject
             'slot' => (string) $choice->slot,
             'stack' => $this->t->get("stack.{$choice->stack}"),
             'modules' => $choice->modules === [] ? $this->t->get('modules.none') : $this->t->modules($choice->modules),
+            'database' => $this->t->get("database_choice.{$choice->database}"),
+            'redis' => $this->t->get($choice->redis ? 'redis_choice.summary_yes' : 'redis_choice.summary_no'),
         ]));
 
         return $choice;
@@ -414,6 +416,9 @@ final class CreateProject
             ['steps.installer', ['run-script', 'post-create-project-cmd', '--no-interaction'], [
                 'TWS_KIT_WITH' => implode(',', $choice->modules),
                 'TWS_KIT_WITHOUT' => implode(',', $choice->without()),
+                // O banco e o Redis: o instalador adapta o projeto na criação.
+                'TWS_KIT_DATABASE' => $choice->database,
+                'TWS_KIT_REDIS' => $choice->redis ? '1' : '0',
                 // O instalador do projeto fala a língua do menu.
                 'APP_LOCALE' => $this->t->locale,
                 // O resumo final é o deste comando (o aviso do Windows, uma vez).
@@ -501,7 +506,7 @@ final class CreateProject
         $docker = is_file($this->directory.'/compose.yaml') && $choice->name !== null && $choice->slot !== null;
 
         if ($docker) {
-            $this->out->info($this->t->get('database.docker'));
+            $this->out->info($this->t->get($choice->database === Choice::SQLITE ? 'database.docker_sqlite' : 'database.docker'));
         } elseif ($this->runner->quietPhp(['artisan', 'migrate:status', '--pending=1', '--no-interaction'], $this->directory) === 0) {
             $this->out->info($this->t->get('database.ready'));
         } else {
@@ -531,7 +536,7 @@ final class CreateProject
 
         // Windows: o Horizon não roda nativo (sem pcntl/posix, ignoradas na
         // instalação) — o resto do aplicativo sim.
-        if ($this->windows && ! $this->inDocker) {
+        if ($this->windows && ! $this->inDocker && $choice->redis) {
             $this->out->line();
             $this->out->warn($this->t->get('extensions.windows_horizon'));
         }
@@ -556,9 +561,15 @@ final class CreateProject
         ]));
         $this->out->line($this->t->get('done.site', ['url' => DevEnvironment::url($name, $ports['site'])]));
         $this->out->line($this->t->get('done.mail', ['url' => DevEnvironment::url($name, $ports['mail'])]));
-        $this->out->line($this->t->get($choice->exposeDatabase ? 'done.database_exposed' : 'done.database_internal', [
-            'port' => (string) $ports['database'],
-        ]));
+        if ($choice->database === Choice::SQLITE) {
+            $this->out->line($this->t->get('done.database_sqlite'));
+        } else {
+            $this->out->line($this->t->get($choice->exposeDatabase ? 'done.database_exposed' : 'done.database_internal', [
+                'port' => (string) $ports['database'],
+            ]));
+        }
+
+        $this->out->line($this->t->get($choice->redis ? 'done.redis' : 'done.no_redis'));
         $this->out->line();
         $this->out->line($this->t->get('done.next'));
 
