@@ -40,8 +40,12 @@ Mailpit, fila, agendador e Vite com recarga ao vivo).
 - **Aplicativo Laravel que já existe:** instale o `twstec/kit-foundation` e o
   `twstec/kit-installer` pelo Composer e rode `php artisan tws:add`, que
   acrescenta os outros pacotes — ver [Instalação e módulos](docs/instalacao.md).
-- **Atualizar um projeto criado:** a seção "Atenção ao atualizar" de cada
-  versão no [CHANGELOG](CHANGELOG.md) diz o que fazer.
+- **Atualizar um projeto criado:** `composer update 'twstec/*'` traz os
+  textos, e-mails, configurações e telas do kit; `php artisan tws:upgrade
+  --check` lista os arquivos que ficam no projeto (Docker, CI, `.env*`,
+  scripts) e que a versão nova mudou; a seção "Atenção ao atualizar" de cada
+  versão no [CHANGELOG](CHANGELOG.md) diz o que fazer — ver
+  [Personalização](docs/personalizacao.md).
 - **Sem terminal (CI, scripts), por starter ou com `laravel new`:**
   [Instalação e módulos](docs/instalacao.md).
 

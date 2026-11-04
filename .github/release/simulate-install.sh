@@ -368,6 +368,15 @@ package() {
     overrides=$(php artisan kit:overrides)
     if ! printf '%s' "$overrides" | grep -q 'INFO'; then echo "kit:overrides apontou cópias no projeto criado:"; printf '%s\n' "$overrides"; exit 1; fi
 
+    # A base da conferência dos arquivos de starter (tws:upgrade), gravada na
+    # criação: com o starter publicado da mesma versão como referência, nada
+    # a conferir (o que o instalador adaptou não conta como diferença).
+    test -f .tws/manifest.json
+    grep -q "\"starter\": \"$STACK\"" .tws/manifest.json
+    if ! conferencia=$(php artisan tws:upgrade --check --from="$WORK/src/starter-$STACK" 2>&1); then
+        echo "tws:upgrade apontou diferenças no projeto recém-criado:"; printf '%s\n' "$conferencia"; exit 1
+    fi
+
     # O instalador rodou no post-create-project-cmd: chave da aplicação, com o
     # pacote de contas o pepper dedicado das chaves de API (sem ele, não há
     # chave de API nem pepper) e, com o de uploads, a chave dos confidenciais.

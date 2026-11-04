@@ -202,6 +202,62 @@ e-mail, configuração e telas) com esse padrão, sem alterar nada:
 Projeto criado depois desta mudança, sem nada personalizado, ouve que nenhum
 arquivo sobrescreve o kit.
 
+## O que fica no projeto: `tws:upgrade --check`
+
+Docker (`compose.yaml`, `docker-compose.prod.yml`, `docker/`), CI
+(`.github/`), `.env.example`/`.env.prod.example`, `scripts/`, a configuração
+do Vite e do TypeScript, o `package.json`, os testes, as rotas e os providers
+**não podem morar num pacote**: são do projeto desde a criação. Quando o kit
+muda um deles, a mudança continua sendo aplicada à mão — mas sem garimpar:
+
+```bash
+composer update 'twstec/*' --with-all-dependencies
+php artisan tws:upgrade --check          # só lista; não altera nada
+php artisan tws:upgrade --check --diff   # com a diferença de cada arquivo
+```
+
+O comando compara cada arquivo de starter do projeto com o do **starter
+publicado da versão do kit instalada** (`twstec/starter-react` ou
+`twstec/starter-livewire`, baixado pelo Composer sem instalar nada e guardado
+em `storage/framework/cache/tws-starters/`). Sem rede, ou no monorepo, aponte
+uma pasta com o starter publicado: `--from=<pasta>`. Ficam fora da conta o que é
+gerado (`vendor`, `node_modules`, `storage`, build), os lockfiles, o `.env`, o
+`composer.json` (é do projeto desde a criação; as dependências do kit sobem
+pelo `composer update`, e mudança de script vem no CHANGELOG), o README, o
+SECURITY e a licença.
+
+A **base** fica em `.tws/manifest.json` (versione junto com o projeto): o
+`tws:install` grava, na criação, o hash de cada arquivo do starter como chegou
+e do projeto como o instalador o deixou. Com ela, cada arquivo que o kit mudou
+desde a base sai como:
+
+- **desatualizado — pode substituir**: você não mexeu e o arquivo era o do
+  kit: copie o da referência;
+- **personalizado — comparar à mão**: o seu é diferente (você mexeu, ou o
+  instalador o adaptou na criação — nome, banco, identidade): leve a mudança
+  do kit para o seu, com o CHANGELOG ao lado;
+- **novo no kit** / **o kit deixou de trazer**: copie, ou veja no CHANGELOG se
+  pode apagar.
+
+O que o kit **não** mudou desde a base não aparece, mesmo que você tenha
+personalizado. Arquivo que o projeto não tinha na base (módulo que ficou de
+fora, arquivo apagado de propósito) também não.
+
+Depois de conferir e atualizar, grave a base nova — é o único arquivo que o
+comando escreve, e só com essa opção:
+
+```bash
+php artisan tws:upgrade --record
+```
+
+Saída: `0` nada a conferir, `1` há arquivos a conferir, `2` sem referência
+(sem rede e sem `--from`, ou versão do kit que não é publicada).
+
+**Projeto criado antes desta versão (sem `.tws/manifest.json`):** o comando só
+consegue dizer o que **difere** da referência — sem saber se é personalização
+ou atraso. Confira a lista uma vez, atualize o que for do kit e grave a base
+com `--record`; a partir daí, só aparece o que o kit mudar.
+
 ## Projeto criado antes (com as cópias)
 
 Continua funcionando igual: as cópias completas vencem o pacote como sempre.
