@@ -27,6 +27,19 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `frontFile()`/`frontSourceFiles()` (`tests/Pest.php`): copie os helpers e
   os testes de `tests/Feature/Customization/KitScreensTest.php` se quiser as
   mesmas travas.
+- **Telas Livewire do kit no pacote (#72, etapa 2), só starter Livewire.**
+  Nada quebra: as cópias de `resources/views` continuam valendo como antes.
+  Para voltar a receber as correções das telas:
+  1. copie do starter Livewire da versão nova a linha
+     `LivewireScreens::register($this->app)` do `AppServiceProvider` e os
+     `@source` de `vendor/twstec/kit-foundation/resources/livewire` em
+     `resources/css/app.css` e `resources/css/filament.css`;
+  2. rode `php artisan kit:overrides` e apague o que estiver marcado "igual
+     ao padrão do kit — pode apagar" em `resources/views`;
+  3. rode `npm run build` e a suíte.
+
+  Os testes do starter que liam views passaram a usar `viewFile()`,
+  `viewDirectories()` e `kitViewsPath()` (`tests/Pest.php`).
 
 ### Mudado
 
@@ -39,8 +52,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   dashboard) e muda uma tela do kit copiando só aquele arquivo para o mesmo
   caminho em `resources/js` — o do aplicativo vence, também para as telas do
   kit que o importam ([personalização](docs/personalizacao.md#telas-react)).
-- `php artisan kit:overrides` também compara as telas React do aplicativo com
-  as do kit (cópia igual pode sair; personalizada é apontada).
+- **As telas Livewire do kit moram no `twstec/kit-foundation`**
+  (`resources/livewire`, com os nomes de view de sempre): entrada, cadastro,
+  segundo fator, recuperação de senha, senha de transação, convite, perfil,
+  notificações, conta e membros, chaves de API, projetos, webhooks, a página
+  429, a galeria de e-mails, o seletor de idioma do `/admin`, os layouts, o
+  esqueleto do site, os componentes do design system e as parciais. O
+  projeto criado tem só a página inicial e o dashboard, e muda uma tela ou um
+  componente do kit copiando só aquele arquivo para o mesmo caminho em
+  `resources/views` ([personalização](docs/personalizacao.md#telas-livewire)).
+  As classes Livewire, os controllers e os apoios continuam no aplicativo.
+- `php artisan kit:overrides` também compara as telas React e Livewire do
+  aplicativo com as do kit (cópia igual pode sair; personalizada é apontada).
 - O serviço `vite` do Docker de desenvolvimento do starter React espera o
   `init` (num clone novo, é ele que instala o `vendor/` de onde vêm as telas).
 

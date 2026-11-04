@@ -36,7 +36,8 @@ podem ser trocadas por parâmetro. O componente `App\Livewire\Dashboard` só
 apresenta; outro front chama a mesma consulta e mostra os mesmos números.
 
 **O painel consome o próprio design system.** Nenhuma view de
-`resources/views/livewire/**` escreve Tailwind cru de botão, modal, alerta,
+`livewire/**` (do aplicativo ou das telas do kit no `twstec/kit-foundation`)
+escreve Tailwind cru de botão, modal, alerta,
 estado vazio ou superfície: se falta variante, o componente é estendido.
 Isso é lei verificada por teste, não convenção — `tests/Feature/Architecture/
 DesignSystemTest.php` reprova o build se aparecer `bg-brand px-4`,

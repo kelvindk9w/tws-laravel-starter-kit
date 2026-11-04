@@ -1,5 +1,13 @@
 # Interface: landing, showcase, i18n, tema e identidade visual
 
+> **Onde moram as views citadas aqui (starter Livewire):** as telas do kit —
+> layouts, componentes, parciais, entrada, painel — ficam no
+> `twstec/kit-foundation`, em `vendor/twstec/kit-foundation/resources/livewire/`,
+> com os mesmos caminhos (`components/button.blade.php`…). Os caminhos
+> `resources/views/…` abaixo são os nomes de sempre: copie o arquivo para o
+> mesmo caminho em `resources/views/` do aplicativo para mudá-lo (o do
+> aplicativo vence — [personalizacao.md](personalizacao.md#telas-livewire)).
+
 ## Landing pública, showcase de componentes (/ui) e demos
 
 A home `/` é a landing **"Céu"** — a direção escolhida pelo dono entre as três
