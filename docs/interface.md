@@ -73,7 +73,8 @@ diferentes — e o cliente logado sentia que tinha saído do site. Muda só o qu
 precisa mudar: `background` (o painel usa a superfície rebaixada, para os
 cartões flutuarem) e `width` (1152px na landing, 1280px no painel, onde a
 coluna do menu lateral come 240px). `<x-layouts.landing>` sobrevive como
-apelido de `<x-layouts.site>` para as views públicas.
+apelido de `<x-layouts.site>` para as views públicas da demonstração (no
+`twstec/kit-demo`).
 
 - **Hierarquia de CTA**: UM primário ("Clonar"), UM secundário ("Ver a demo")
   e o resto como link de texto sublinhado (o "Ver admin demo" só existe onde o
@@ -232,7 +233,8 @@ e Livewire/AJAX) e as 4 estratégias de exibição de erros.
   servido pelo Vite — nada de `<script>` inline nas views (CSP-friendly; a
   única exceção deliberada é o anti-flash de tema no `<head>`).
 
-Kill switch: `UI_SHOWCASE_ENABLED` (config/ui.php). **Padrão: ligado só em
+Kill switch: `UI_SHOWCASE_ENABLED` (`ui.showcase_enabled`, no `config/ui.php`
+do `twstec/kit-demo`). **Padrão: ligado só em
 `APP_ENV=local`**; desabilitado, a rota responde **404**. Em `APP_ENV=production`
 a vitrine responde 404 **mesmo com a flag ligada** — ver
 [Superfície de demonstração: fail-closed em produção](demo.md#superfície-de-demonstração-fail-closed-em-produção).
@@ -295,7 +297,7 @@ com `blocked_at` + `attack_type`, o payload fica **inerte** (texto cru exibido
 escapado — nunca `{!! !!}`), a resposta ao atacante é **sucesso falso** e as
 tentativas aparecem **no topo da listagem do admin com badge vermelho**
 "ataque bloqueado". Testes Pest executam ataques reais contra os dois forms
-(`tests/Feature/FormSubmissionsTest.php`).
+(`tests/Demo/Feature/FormSubmissionsTest.php`).
 
 **Regras do kit:**
 
@@ -313,7 +315,7 @@ tentativas aparecem **no topo da listagem do admin com badge vermelho**
   `field_error('email', 'summary')` vencem o config naquele form. A demo
   clássica do `/ui` tem um seletor que troca a estratégia ao vivo.
 - **Flash de sessão → toast**: renderize `<x-flash-toast />` uma vez no
-  layout (já está nos 3 layouts do kit). Chaves padronizadas:
+  layout (já está no esqueleto único `<x-layouts.site>` e na landing). Chaves padronizadas:
   `session('status')`/`session('success')`/`session('contact_status')` →
   toast de sucesso; `session('error')` → toast de erro.
 

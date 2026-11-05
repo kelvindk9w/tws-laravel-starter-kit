@@ -23,7 +23,8 @@ Authorization: Bearer sk_test_xQ7...
 ```
 
 O prefixo de ambiente (`live`/`test`) vem de `API_KEYS_ENVIRONMENT`
-(`config/api_keys.php`).
+(`api_keys.environment`, config do pacote; padrão `live`, e o `.env.example` dos starters traz
+`test`).
 
 **Prefixo do produto (opcional).** `API_KEY_PREFIX=acme` faz as chaves novas
 nascerem como `acme_pk_live_...` / `acme_sk_live_...` — útil para o cliente
@@ -221,7 +222,7 @@ Exemplo de 422:
 - O `Retry-After` do rate limit é preservado no header (informação útil e
   não sensível).
 
-Cobertura: `tests/Feature/Api/ErrorEnvelopeTest.php` — um teste por status
+Cobertura: `tests/Feature/Api/ErrorEnvelopeTest.php` (starter Livewire) — um teste por status
 (401/403/404/422/429/500), mais a checagem de que nada de servidor vaza.
 
 ## Endpoints da API v1 (do pacote — `Twstec\Kit\Accounts\Http\ApiRoutes`)
@@ -296,11 +297,14 @@ curta duração da [ação sensível](autenticacao.md) (senha de transação + c
 
 **Bootstrap (primeira chave):** os endpoints exigem uma chave existente. A
 primeira chave do usuário é criada pelo painel (`/api-keys`) ou, em dev, via
-`tinker` com o `ApiKeyService`:
+`tinker` com o `ApiKeyService` — dentro da conta, porque fora de requisição não
+há conta atual e a chave nasce na conta atual:
 
 ```php
-app(Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService::class)
-    ->create($user, ['name' => 'Bootstrap']); // retorna a sk_ em claro 1x
+$conta = app(Twstec\Kit\Accounts\Account\Services\AccountService::class)->personalAccountOf($user);
+
+Twstec\Kit\Accounts\Accounts::actingAs($conta, fn () => app(Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService::class)
+    ->create($user, ['name' => 'Bootstrap']), $user); // ['api_key' => …, 'secret_key' => a sk_ em claro, 1x]
 ```
 
 ## Idempotência (`Idempotency-Key`)
@@ -725,7 +729,7 @@ isolamento entre contas (pessoa em duas contas, chave de cada conta, chave que
 sobrevive à saída de quem a criou, contexto nos jobs), a migração da 1.x, os
 nomes antigos, as traduções e a arquitetura do pacote.
 
-`tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` do starter (Pest): geração/hash (só
+`tests/Feature/ApiKeys/` + `tests/Feature/Tenancy/` do starter Livewire (Pest): geração/hash (só
 hash no banco, formato por ambiente, pepper), ciclo criar/usar/revogar,
 rotação com e sem grace (`travel()`), scopes (exato/wildcards/negado = 403 com
 mensagem), validade por data, inatividade (aviso 1x, expiração, rearme,
