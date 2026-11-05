@@ -20,7 +20,9 @@
 # 1ª publicação da 2.0.0-beta.17 falhou por isso): ao renová-lo, grave pela
 # tela do GitHub ou por `gh secret set` num terminal interativo — sem
 # terminal, o `gh` grava o segredo vazio. Republicar uma tag que já existe:
-# Actions → este workflow → Run workflow, com a tag.
+# Actions → este workflow → Run workflow, com a tag — o espelho que já tem a
+# tag é pulado (a ação do split, desde a v2.4, reprova ao recriar uma tag
+# existente) e só os que faltam recebem a cópia.
 #
 # Antes da cópia, o composer.json de cada pasta vira o da versão publicada
 # (.github/release/prepare-composer.php): sem os path repositories do
@@ -129,11 +131,30 @@ jobs:
           php-version: '8.4'
           coverage: none
 
+      # Republicação (Run workflow com uma tag já publicada em parte): o
+      # espelho que já tem a tag não é copiado de novo. Desde a v2.4 a ação
+      # do split reprova quando o `git tag` falha, e a tag já existente no
+      # espelho faria o job sair vermelho sem nada de errado.
+      - name: Espelho já tem a tag?
+        id: mirror
+        env:
+          REPOSITORY: ${{ matrix.repository }}
+        run: |
+          url="https://github.com/$SPLIT_OWNER/$REPOSITORY"
+          if git ls-remote --exit-code --tags "$url" "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "$url já tem $TAG: a cópia é pulada"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: composer.json (e, no starter, compose de produção) da versão publicada
+        if: steps.mirror.outputs.published != 'true'
         run: php .github/release/prepare-composer.php "${{ matrix.path }}" "$TAG"
 
       - name: Cópia para ${{ env.SPLIT_OWNER }}/${{ matrix.repository }}
-        uses: symplify/monorepo-split-github-action@ac9845270ef47266435b4f124b133a323619e738 # v2.3.0
+        if: steps.mirror.outputs.published != 'true'
+        uses: symplify/monorepo-split-github-action@14e42e2437f674b8987c1f50ca3689116aea1893 # v2.4.5
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
         with:
@@ -145,10 +166,11 @@ jobs:
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
-      # A ação acima engole erro de push: na 2.0.0-beta.15 o SPLIT_TOKEN não
-      # tinha o espelho twstec-kit-webhooks, o push levou 403 e o job saiu
-      # verde com o espelho vazio. Aqui a prova é o espelho: a tag e a branch
-      # main precisam estar lá, senão o job reprova.
+      # Até a v2.3 a ação acima engolia erro de push: na 2.0.0-beta.15 o
+      # SPLIT_TOKEN não tinha o espelho twstec-kit-webhooks, o push levou 403
+      # e o job saiu verde com o espelho vazio. Desde a v2.4 ela reprova no
+      # erro, mas a prova continua sendo o espelho: a tag e a branch main
+      # precisam estar lá, senão o job reprova.
       - name: Conferir o espelho
         env:
           REPOSITORY: ${{ matrix.repository }}
