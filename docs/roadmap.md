@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-05, com a versão **2.0.0-beta.21** publicada.
+> Atualizado em 2026-11-05, com a versão **2.0.0-beta.22** publicada.
 > Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
 > o que fica para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -118,7 +118,7 @@ próximo recurso.
    banco; a produção continua no PostgreSQL) — e se usa Redis; sem ele,
    sessão, fila e cache vão para o banco e o Horizon não é instalado
    ([Banco de dados e Redis](instalacao.md#banco-de-dados-e-redis-só-na-criação)).
-5. **Atualizações pendentes do Dependabot — resolvido na próxima versão.**
+5. **Atualizações pendentes do Dependabot — resolvido na 2.0.0-beta.22.**
    Pest 5 aceito em todos os pacotes e no comando único (suítes verdes no
    Pest 5), ações de build do Docker, do split e do PHP atualizadas, grupos
    Laravel e de frontend e Larastan do starter Livewire aplicados; os PRs

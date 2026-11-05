@@ -6,6 +6,13 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.22] — 2026-11-05
+
+Revisão antes da 2.0.0: guia de atualização da 1.x para a 2.0 e documentação
+conferida contra o código; `laravel new --using` testado e documentado com as
+opções que funcionam; atualizações pendentes do Dependabot aplicadas, com o
+Pest 5 aceito nos pacotes.
+
 ### Documentação
 
 - **Guia de atualização** ([Atualização](docs/atualizacao.md)): de um projeto
@@ -2806,7 +2813,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.21...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.22...desenvolvimento
+[2.0.0-beta.22]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.22
 [2.0.0-beta.21]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.21
 [2.0.0-beta.20]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.20
 [2.0.0-beta.19]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.19
