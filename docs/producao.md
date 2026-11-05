@@ -1,9 +1,9 @@
 # Produção e deploy
 
 > **Monorepo:** o deploy de produção é do starter. O `docker-compose.prod.yml`,
-> o `.env.prod.example` e o contexto das imagens vivem em `starters/livewire/`,
-> e todos os comandos desta página rodam **de dentro dessa pasta** (é ela que
-> vai para o servidor). O `docker-compose.yml` da raiz do repositório é só o
+> o `.env.prod.example` e o contexto das imagens vivem em `starters/livewire/`
+> (e em `starters/react/`), e todos os comandos desta página rodam **de dentro
+> dessa pasta** (é ela que vai para o servidor). O `docker-compose.yml` da raiz do repositório é só o
 > ambiente de desenvolvimento.
 
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,
@@ -11,7 +11,9 @@
 PHP-FPM com OPcache (imagem imutável), nginx nas portas 80/443 (TLS com
 certificado **autoassinado** embutido na imagem), migrate one-shot,
 Horizon (filas), scheduler, PostgreSQL e Redis — **banco e Redis sem porta exposta no
-host** (rede interna apenas). Nenhuma configuração de SO adicional é exigida
+host** (rede interna apenas). Projeto criado sem Redis (escolha da criação —
+ver [instalação](instalacao.md#sem-redis)): sem o `redis`, e o worker `queue`
+(`php artisan queue:work`) no lugar do `horizon`. Nenhuma configuração de SO adicional é exigida
 pelo projeto — firewall/DNS são responsabilidade de quem administra o servidor.
 
 Para produção real:
@@ -50,8 +52,8 @@ Para produção real:
 > **Dados NUNCA se perdem ao reiniciar/recriar containers**: banco,
 > Redis e assets públicos ficam em volumes nomeados. Nunca use `down -v`.
 
-**Ordem de subida e healthchecks:** o Redis (`redis-cli ping`, com a senha), o
-app (o php-fpm aceitando conexão na porta 9000) e o nginx (um endereço interno,
+**Ordem de subida e healthchecks:** o PostgreSQL (`pg_isready`), o Redis
+(`redis-cli ping`, com a senha), o app (o php-fpm aceitando conexão na porta 9000) e o nginx (um endereço interno,
 `127.0.0.1:8081/nginx-health`, que não é publicado) têm healthcheck; o app só
 sobe com o Redis e o PostgreSQL prontos e as migrations concluídas, e o nginx,
 o Horizon e o scheduler só sobem com o app pronto.
@@ -331,8 +333,9 @@ instrução. A simulação da instalação publicada, no CI, constrói as imagen
 projeto criado e passa as mesmas conferências de imagem limpa do job de imagens.
 
 Esperado: `uid=82(www-data)`; na raiz só `app artisan bootstrap composer.json
-composer.lock config database demo lang package*.json public resources routes
-storage vendor vite.config.js`, o `README.md`, o `LICENSE` e o `SECURITY.md` do starter,
+composer.lock config database lang package*.json phpstan.modules.php
+phpstan.neon.dist public resources routes storage vendor vite.config.js` (no
+React, `vite.config.ts`, `tsconfig.json` e `components.json`), o `README.md`, o `LICENSE` e o `SECURITY.md` do starter,
 `.npmrc` e `.dockerignore` (o contexto do build é a pasta do starter: `docs/` e os demais `.md`
 da raiz do repositório não entram); zero arquivo em `storage/`; nenhum `.env*`.
 
@@ -384,7 +387,7 @@ silenciosa de dado é pior que serviço que não sobe, então hoje:
 | --- | --- |
 | `docker/php/entrypoint-prod.sh` | Chave **ausente** → aborta com código **78** (`EX_CONFIG`) e imprime como gerar e onde colocar. Nunca escreve chave em arquivo. |
 | `Twstec\Kit\Foundation\Support\CriticalSecrets` (boot) | Chave ausente **ou com valor de exemplo/placeholder** → recusa o boot (`MissingApplicationKeyException`) nos processos que **servem tráfego ou processam trabalho**; nos comandos de instalação e manutenção, avisa em voz alta (log + stderr) e deixa passar. |
-| `docker-compose.prod.yml` | `PROD_PLATFORM_NAME`, `PROD_POSTGRES_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
+| `docker-compose.prod.yml` | `PROD_PLATFORM_NAME`, `PROD_POSTGRES_PASSWORD`, `PROD_DB_APP_PASSWORD`, `PROD_DB_MAINTENANCE_PASSWORD` / `PROD_REDIS_PASSWORD` sem fallback (`${VAR:?…}`): o Compose não resolve o arquivo sem elas. |
 
 Fora de produção o entrypoint continua conveniente: gera uma chave efêmera,
 **só no ambiente do processo** (nunca em arquivo), e avisa em voz alta que ela

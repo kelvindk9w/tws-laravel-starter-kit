@@ -1,7 +1,8 @@
 # Instalação: escolher o que instalar
 
 O kit é um conjunto de pacotes e um starter (o aplicativo pronto). Você
-escolhe o que entra:
+escolhe o que entra. Para atualizar um projeto que já existe (inclusive um
+criado com a 1.x), ver [Atualização](atualizacao.md).
 
 - **Frontend (escolha única, ao criar o projeto):** o starter **Livewire**
   (`starters/livewire`, pacote `twstec/starter-livewire`) ou o starter
@@ -25,7 +26,8 @@ escolhe o que entra:
 | Contas e API | `twstec/kit-accounts` | Contas com membros e convites, projetos, chaves de API e a API v1 | foundation, auth |
 | Uploads | `twstec/kit-uploads` | Upload validado pelo conteúdo, entrega por URL assinada, foto de perfil, `POST /api/v1/uploads` | foundation, auth, **accounts** (o upload pertence a uma conta) |
 | Painel `/admin` | `twstec/kit-admin` | O super admin (plugin do Filament): usuários, logs, trilha de auditoria, configurações, dashboards — e as telas de contas, chaves, projetos e uploads **quando esses módulos estão instalados** | foundation, auth (accounts e uploads são sugeridos, não exigidos) |
-| Demonstração | `twstec/kit-demo` | Landings, vitrine, contas demo, seeders de dado fictício — **só no monorepo, não publicado** | **todos** os módulos acima (require-dev do monorepo) |
+| Webhooks de saída | `twstec/kit-webhooks` | Endpoints por conta, entregas assinadas (HMAC-SHA256) com novas tentativas, log de entregas e reenvio, proteção contra SSRF | foundation, auth, **accounts** (o endpoint pertence a uma conta) |
+| Demonstração | `twstec/kit-demo` | Landings, vitrine, contas demo, seeders de dado fictício — **só no monorepo, não publicado** | accounts, uploads e admin (require-dev do monorepo) |
 
 ## Criar um projeto só com o Docker (sem PHP na máquina)
 
@@ -95,7 +97,9 @@ já vem com a resposta sugerida, e Enter aceita:
    `/admin`, webhooks de saída (todos marcados de início). `foundation` e
    `auth` vêm sempre. Uploads e Webhooks exigem contas: com um deles marcado
    e Contas não, o Enter mostra o motivo e a pergunta continua aberta;
-5. **a confirmação** do plano.
+5. **o banco de dados** — PostgreSQL (o sugerido) ou SQLite, e **se usa
+   Redis** (ver [Banco de dados e Redis](#banco-de-dados-e-redis-só-na-criação));
+6. **a confirmação** do plano.
 
 Depois, sem perguntar mais nada:
 
@@ -132,6 +136,8 @@ e no Windows:
 | `TWS_KIT_STACK` | `livewire` ou `react` | `livewire` |
 | `TWS_KIT_WITHOUT` | opcionais que ficam de fora, separados por vírgula | nenhum |
 | `TWS_KIT_WITH` | opcionais que entram (o padrão já é todos) | todos |
+| `TWS_KIT_DATABASE` | `pgsql` ou `sqlite` | `pgsql` |
+| `TWS_KIT_REDIS` | `1` (Redis, com o Horizon) ou `0` (sessão, cache e fila no banco) | `1` |
 | `TWS_KIT_LOCALE` | idioma do menu: `pt_BR`, `en` ou `es` | o do sistema, se for um dos três; senão `pt_BR` |
 
 ```bash
@@ -148,11 +154,13 @@ $env:TWS_KIT_STACK = "react"; $env:TWS_KIT_WITHOUT = "uploads"
 composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
 
-Qualquer uma dessas variáveis (mesmo vazia) desliga o menu; sem nenhuma e sem
+Qualquer uma dessas variáveis (mesmo vazia), menos a `TWS_KIT_LOCALE`,
+desliga o menu; sem nenhuma e sem
 terminal, vale o padrão seguro: o nome da pasta, o primeiro número livre,
-Livewire com todos os módulos. Escolha inválida (interface ou módulo
-desconhecido, `foundation`/`auth` de fora, uploads sem contas, o mesmo módulo
-nas duas listas, nome fora do padrão ou de um projeto Docker que já existe,
+Livewire com todos os módulos, PostgreSQL e Redis. Escolha inválida (interface ou módulo
+desconhecido, `foundation`/`auth` de fora, uploads ou webhooks sem contas, o mesmo módulo
+nas duas listas, banco desconhecido, valor de Redis que não é sim nem não,
+nome fora do padrão ou de um projeto Docker que já existe,
 número fora de 0–99 ou com alguma porta ocupada) é recusada **antes** de
 baixar qualquer coisa, com o motivo e a sugestão.
 
@@ -321,8 +329,12 @@ houver `COMPOSE_PROJECT_NAME`): `COMPOSE_PROJECT_NAME`, `COMPOSE_PROFILES`
 (`db-port` ou vazio), `DEV_SLOT`, `DEV_SITE_PORT`, `DEV_MAIL_PORT`,
 `DEV_VITE_PORT`, `DEV_DB_PORT`, `DEV_UID`/`DEV_GID` (o dono dos arquivos: os
 containers gravam como ele), `DEV_VITE_POLLING`, `APP_URL` e
-`PLATFORM_OFFICIAL_URL`, `SESSION_COOKIE`, `DB_*` (host `postgres`, banco do
-projeto, **senha gerada**), `REDIS_PASSWORD` (**gerada**) e o Mailpit
+`PLATFORM_OFFICIAL_URL`, `SESSION_COOKIE`, a identidade (`APP_NAME` e
+`PLATFORM_NAME` com o nome do projeto, `PLATFORM_VERSION=0.1.0`, e
+`PLATFORM_REPO_URL`, `PLATFORM_COMPANY_NAME` e `PLATFORM_COMPANY_URL`
+vazias), `DB_*` (host `postgres`, banco do projeto, **senhas geradas** — a do
+papel da aplicação, `DB_PASSWORD`, e a do de migração,
+`DB_MIGRATION_PASSWORD`), `REDIS_PASSWORD` (**gerada**) e o Mailpit
 (`MAIL_HOST=mailpit`) e `RATE_LIMIT_SENSITIVE=30` (as rotas sensíveis no
 desenvolvimento: a suíte E2E entra e cadastra em paralelo, do mesmo IP; a
 produção continua com 5, o padrão da `config/security.php` e do
@@ -347,13 +359,15 @@ o starter trazia:
 
 | Arquivo | O que fica |
 | --- | --- |
-| `.env.example` | `APP_URL`, `PLATFORM_OFFICIAL_URL`, `DB_DATABASE` e `SESSION_COOKIE` do projeto (as senhas geradas ficam só no `.env`) |
+| `.env.example` | `APP_URL`, `PLATFORM_OFFICIAL_URL`, `DB_DATABASE`, `SESSION_COOKIE` e a identidade (`APP_NAME`, `PLATFORM_NAME`, `PLATFORM_VERSION=0.1.0`, sem o repositório e a empresa do kit) do projeto (as senhas geradas ficam só no `.env`) |
+| `.devcontainer/devcontainer.json` | o nome do projeto no Dev Container |
 | `phpunit.pgsql.xml` | o banco da suíte `<banco>_test` — o mesmo que o `db-init` do `compose.yaml` cria |
 | `docker-compose.prod.yml` | o nome padrão do banco de produção (`PROD_POSTGRES_DB`) |
 | `composer.json` | `name` = `<vendor>/<nome>` (`TWS_KIT_VENDOR`, padrão `app`), `license` = `proprietary` (`TWS_KIT_LICENSE`: um identificador SPDX como `MIT` ou `Apache-2.0`), sem a descrição, a página, o suporte, as palavras-chave e a versão do starter; o `content-hash` do `composer.lock` acompanha |
 | `LICENSE` → `NOTICE-KIT-MIT.txt` | a licença MIT do kit vira o aviso que a MIT exige manter, com um cabeçalho dizendo que ela não é a licença do projeto — o projeto escolhe a dele (o `license` do `composer.json` e, se quiser, um `LICENSE` próprio) |
 | `.github/workflows/ci.yml` | o CI base (sem sobrescrever um que exista) |
 | `.github/dependabot.yml` | o Dependabot modelo (sem sobrescrever um que exista) |
+| `.tws/manifest.json` | a base da conferência dos arquivos de starter (`php artisan tws:upgrade --check`): a versão do kit, a interface e, por arquivo, o hash do arquivo do starter e o do projeto como o instalador o deixou — versione junto com o projeto |
 
 Vendor ou licença inválidos param a instalação antes de qualquer mudança,
 como o nome e o número. `TWS_KIT_VENDOR` e `TWS_KIT_LICENSE` valem nos dois
@@ -483,17 +497,19 @@ laravel new meu-app --using=twstec/starter-livewire
 O que acontece: o Composer baixa o starter e os pacotes, copia o
 `.env.example` para `.env` e roda o `post-create-project-cmd` do starter, que
 chama o **instalador** (`php artisan tws:install --graceful`). Num terminal, o
-instalador pergunta os módulos; sem terminal (CI), mantém tudo como veio — ou
-aplica `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`, se estiverem no ambiente
+instalador pergunta o banco, o Redis e os módulos; sem terminal (CI), mantém tudo como veio — ou
+aplica `TWS_KIT_WITH`/`TWS_KIT_WITHOUT` (e `TWS_KIT_DATABASE`/`TWS_KIT_REDIS`), se estiverem no ambiente
 (`TWS_KIT_WITHOUT=admin composer create-project …`). O
 projeto nasce **sem a demonstração** (ela não é publicada: o `composer.json`
 publicado do starter não a cita): `/` é a página inicial do produto e os
 testes da demo pulam sozinhos. Depois dele, o projeto tem a `APP_KEY`, com o módulo de
 contas um pepper dedicado para as chaves de API e, com o de uploads, a chave própria dos
-uploads confidenciais (`UPLOADS_ENCRYPTION_KEY` — guarde uma cópia no cofre de segredos). As migrations rodam se o
-banco do `.env` estiver acessível; senão, ficam para depois
-(`php artisan migrate`) — o `.env.example` aponta para o PostgreSQL do
-`docker-compose.yml`.
+uploads confidenciais (`UPLOADS_ENCRYPTION_KEY` — guarde uma cópia no cofre de segredos). Com o
+Docker de desenvolvimento do starter publicado (o `compose.yaml` na raiz), as
+migrations ficam para o primeiro `docker compose up -d` (ver
+[o Docker de desenvolvimento](#o-docker-de-desenvolvimento-do-projeto-criado));
+sem ele, rodam se o banco do `.env` estiver acessível e, senão, ficam para
+depois (`php artisan migrate`).
 
 ## Starter React
 
@@ -527,11 +543,11 @@ cd meu-app && npm install && npm run build
 
 Como no Livewire, o `post-create-project-cmd` cria o SQLite local e chama o
 instalador (`php artisan tws:install --graceful`): num terminal ele pergunta
-os módulos opcionais (contas, uploads, `/admin`, webhooks); sem terminal, mantém todos.
+o banco, o Redis e os módulos opcionais (contas, uploads, `/admin`, webhooks); sem terminal, mantém todos.
 Gera a `APP_KEY`, com contas o pepper dedicado das chaves de API e, com
 uploads, a chave dos uploads confidenciais (`UPLOADS_ENCRYPTION_KEY`). O React
-não tem a demonstração, então ela nunca é perguntada. Enquanto a publicação
-não é ligada, o CI simula exatamente isso a partir dos pacotes empacotados
+não tem a demonstração, então ela nunca é perguntada. O CI simula
+exatamente isso a partir dos pacotes empacotados
 (`STARTER=react sh .github/release/simulate-install.sh`).
 
 **No monorepo (desenvolvimento):** o `docker-compose.yml` da raiz sobe o React
@@ -582,13 +598,15 @@ vezes quiser.
 php artisan tws:install
 ```
 
-1. Pergunta quais módulos opcionais você quer — os já instalados vêm
-   marcados. Uploads sem Contas é recusado na hora (com a explicação).
-2. Se a demonstração estiver instalada (só no clone do monorepo): pergunta se ela fica. Se você tirou
-   algum módulo, avisa que a demo exige todos e que ela vai sair junto (e pede
+1. Só na criação do projeto: pergunta o banco e o Redis (ver
+   [abaixo](#banco-de-dados-e-redis-só-na-criação)).
+2. Pergunta quais módulos opcionais você quer — os já instalados vêm
+   marcados. Uploads ou Webhooks sem Contas é recusado na hora (com a explicação).
+3. Se a demonstração estiver instalada (só no clone do monorepo): pergunta se ela fica. Se você tirou
+   contas, uploads ou o `/admin`, avisa que a demo exige os três e que ela vai sair junto (e pede
    confirmação).
-3. Mostra o plano (módulo por módulo: agora → depois) e pede confirmação.
-4. Aplica e imprime o resumo e os próximos passos.
+4. Mostra o plano (módulo por módulo: agora → depois) e pede confirmação.
+5. Aplica e imprime o resumo e os próximos passos.
 
 ### Não interativo (CI, scripts)
 
@@ -613,6 +631,7 @@ php artisan tws:add webhooks
 | `--no-demo` | Remove a demonstração (`twstec/kit-demo`) |
 | `--force` | Permite rodar com `APP_ENV=production` (sem ela, recusa) |
 | `--graceful` | Banco inacessível não reprova a rodada: as migrations ficam para depois |
+| `--database=pgsql\|sqlite`, `--redis` / `--no-redis` | Só na criação: o banco e o Redis (ver [abaixo](#banco-de-dados-e-redis-só-na-criação)) |
 
 Sem a opção, `TWS_KIT_WITH` e `TWS_KIT_WITHOUT` no ambiente valem como
 `--with` e `--without` (é por onde a escolha chega ao `post-create-project-cmd`
@@ -623,8 +642,8 @@ Qualquer opção de escolha (`--with`, `--without`, `--no-demo`), uma dessas
 variáveis ou `--no-interaction` desliga as perguntas. O que não foi citado
 fica como está.
 Módulo desconhecido, módulo obrigatório em `--without`, o mesmo módulo nas
-duas listas, uploads sem contas e tirar um módulo com a demo ficando são
-recusados **antes** de mexer em qualquer coisa.
+duas listas, uploads ou webhooks sem contas e tirar contas, uploads ou o
+`/admin` com a demo ficando são recusados **antes** de mexer em qualquer coisa.
 
 ### Banco de dados e Redis (só na criação)
 
@@ -718,10 +737,12 @@ as variáveis `REDIS_*` / `HORIZON_*`.
    `/admin`: ele vem pelo `twstec/kit-admin`).
 3. `composer require` dos escolhidos que faltam, com a mesma restrição de
    versão do `twstec/kit-foundation` no seu `composer.json`.
-4. `php artisan optimize:clear` (config, rotas e views em cache mudam com os
-   módulos).
+4. `php artisan optimize:clear`, quando os pacotes mudaram (config, rotas e
+   views em cache mudam com os módulos). Na criação sem Redis, antes, o
+   `composer remove laravel/horizon`.
 5. `.env`: criado do `.env.example` se faltar; `APP_KEY` gerada se vazia;
-   com contas, `API_KEYS_HASH_PEPPER` gerado se vazio. Se a `APP_KEY` já
+   com uploads, `UPLOADS_ENCRYPTION_KEY` gerada se vazia (a que existe nunca
+   é trocada); com contas, `API_KEYS_HASH_PEPPER` gerado se vazio. Se a `APP_KEY` já
    existia, ela vai para `API_KEYS_PREVIOUS_HASH_PEPPERS` — as chaves de API
    emitidas com o fallback continuam autenticando e migram sozinhas no
    primeiro uso ([API](api.md)). Toda vez que grava nele (e quando o cria),
@@ -729,8 +750,13 @@ as variáveis `REDIS_*` / `HORIZON_*`.
    `APP_KEY`, os peppers e as senhas. Os containers de desenvolvimento do kit
    rodam com o seu uid e continuam lendo; num servidor em que **outro**
    usuário (o do servidor web) lê o `.env`, dê a leitura pelo grupo
-   (`chmod 640 .env` e o grupo desse usuário).
-6. `php artisan migrate --force`.
+   (`chmod 640 .env` e o grupo desse usuário). Na criação, também o Docker
+   de desenvolvimento e a identidade do projeto
+   ([acima](#o-docker-de-desenvolvimento-do-projeto-criado)), os arquivos
+   adaptados ao banco e ao Redis escolhidos e o manifesto
+   `.tws/manifest.json`.
+6. `php artisan migrate --force` — na criação com o Docker de
+   desenvolvimento, fica para o primeiro `docker compose up -d`.
 7. Resumo: módulos (instalado, instalado agora, removido, não instalado),
    `APP_KEY`, pepper, chave dos uploads confidenciais, migrations e os próximos passos — recompilar o front
    (`npm install && npm run build`), `migrate:fresh` num banco de
@@ -757,8 +783,9 @@ registrado pelo Composer **e** com o provider carregável.
 
 | Sem… | No painel do usuário (Livewire) | No `/admin` | Outros |
 | --- | --- | --- | --- |
-| `accounts` (e, por consequência, `uploads`) | Não existem as rotas `/api-keys`, `/projects`, `/account`, `/accounts/*` e `/invitations/*` (404); o menu perde o grupo "Desenvolvimento" e "Conta e membros"; o seletor de conta some; o painel inicial mostra os atalhos da conta (perfil, senha de transação, notificações) em vez dos números da conta | Sem as telas de contas, chaves e projetos; sem o filtro por conta na trilha; os dashboards sem os cards de chaves/projetos e sem a tabela de projetos recentes; a guarda de exclusão de usuário não consulta contas | Sem a API v1 e sem o agendamento `api-keys:process-inactivity`; o `/api/health` continua com o limite `throttle:api` e o envelope de erro (postos pelo próprio aplicativo); as chaves de API somem das configurações editáveis |
+| `accounts` (e, por consequência, `uploads` e `webhooks`) | Não existem as rotas `/api-keys`, `/projects`, `/account`, `/accounts/*` e `/invitations/*` (404); o menu perde o grupo "Desenvolvimento" e "Conta e membros"; o seletor de conta some; o painel inicial mostra os atalhos da conta (perfil, senha de transação, notificações) em vez dos números da conta | Sem as telas de contas, chaves e projetos; sem o filtro por conta na trilha; os dashboards sem os cards de chaves/projetos e sem a tabela de projetos recentes; a guarda de exclusão de usuário não consulta contas | Sem a API v1 e sem o agendamento `api-keys:process-inactivity`; o `/api/health` continua com o limite `throttle:api` e o envelope de erro (postos pelo próprio aplicativo); as chaves de API somem das configurações editáveis |
 | `uploads` | Sem a rota `settings/avatar` e sem o cartão da foto no perfil (a ação responde 404); o avatar são as iniciais | Sem a tela de uploads, sem o widget dos últimos uploads e sem o campo de foto (usuários e perfil) | Os limites de upload somem das configurações editáveis; num banco criado sem o módulo, a coluna `users.avatar_upload_id` nasce sem chave estrangeira (não há tabela `uploads`). Tirar um módulo **não apaga as tabelas dele** — elas ficam, sem uso |
+| `webhooks` | Sem a rota `/webhooks` (404) e sem o item dela no menu | — | Sem os agendamentos `webhooks:dispatch-pending` e `webhooks:prune` |
 | `admin` | — | Não existe: o `AdminPanelProvider` do aplicativo não é registrado e o Filament nem está instalado (`/admin` → 404) | O `/horizon` fecha fora do ambiente local (o critério de acesso é o do painel; declare o seu em `app/Providers/HorizonServiceProvider.php` se quiser); o tema `filament.css` sai do build do front; os scripts do Composer pulam os assets do Filament |
 | demo | As landings, a vitrine e o contato ([demo](demo.md)) | As telas de produtos e submissões | Nenhuma conta protegida; `db:seed` não semeia nada |
 
@@ -843,7 +870,8 @@ Cada pacote sobe sozinho pela descoberta do Laravel e liga as próprias
 proteções. O que o aplicativo fornece está no README de cada pacote
 ([foundation](../packages/foundation/README.md),
 [auth](../packages/auth/README.md), [accounts](../packages/accounts/README.md),
-[uploads](../packages/uploads/README.md), [admin](../packages/admin/README.md)):
+[uploads](../packages/uploads/README.md), [admin](../packages/admin/README.md),
+[webhooks](../packages/webhooks/README.md)):
 em resumo, o model de usuário com as traits do auth (e a foto do uploads, se
 quiser), as colunas `is_admin` e `avatar_upload_id` se usar o `/admin` e a
 foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
@@ -854,11 +882,11 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   obrigatório.
 - **As combinações principais do starter**, no job do SQLite, pelo próprio
   instalador, uma depois da outra: completo (com a demo), sem a demo, sem
-  uploads, só o `/admin` (sem contas nem uploads), só a base
-  (foundation + auth) e sem o `/admin` (contas e uploads reinstalados pelo
-  `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre —
+  uploads, só o `/admin` (sem contas, uploads nem webhooks), só a base
+  (foundation + auth) e sem o `/admin` (contas, uploads e webhooks
+  reinstalados pelo `--with`). Em cada uma: o build do front e a suíte com o `pest` de sempre —
   os testes de um módulo ausente **pulam sozinhos** (grupos `accounts`,
-  `uploads`, `admin`; ver [testes](testes.md)).
+  `uploads`, `admin`, `webhooks`; ver [testes](testes.md)).
 - **As mesmas combinações no starter React** (sem uploads, só o `/admin`, só
   a base, sem o `/admin`), no mesmo job, no checkout do React: instalador,
   build (sem o tema do `/admin` quando ele sai) e a suíte.
@@ -893,9 +921,10 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   credencial.
 - **O comando único, simulado:** o mesmo, com `composer create-project
   twstec/kit` a partir dos ZIPs (os dois starters empacotados), sem terminal
-  e com a escolha pelo ambiente — React sem uploads no job do PostgreSQL,
-  Livewire só com a base no do SQLite (`STARTER=kit KIT_STACK=…
-  KIT_WITHOUT=…`). Além das conferências de sempre: o projeto é o do starter
+  e com a escolha pelo ambiente — React sem uploads, PostgreSQL sem Redis,
+  no job do PostgreSQL; Livewire só com a base, SQLite sem Redis, no do
+  SQLite (`STARTER=kit KIT_STACK=… KIT_WITHOUT=… KIT_DATABASE=…
+  KIT_REDIS=…`). Além das conferências de sempre: o projeto é o do starter
   escolhido, nada do `twstec/kit` sobrou, e os módulos **desmarcados** não
   estão no `composer.json`, no vendor, no registro do Composer nem na imagem
   de produção. A suíte do próprio `twstec/kit` roda nos dois jobs.
@@ -907,16 +936,17 @@ foto, e um PanelProvider do Filament que registra o `AdminPlugin`.
   `.devcontainer/`, o `.env` com o nome, as portas e as senhas geradas, os
   arquivos com o dono da máquina), `docker compose up -d`, o site respondendo
   em `http://<nome>.localhost:<porta>/up` (e `localhost` levando para lá) e
-  `docker compose down -v --rmi local`.
+  `docker compose down -v --rmi local` — e de novo com SQLite e Redis, rodando
+  também a suíte.
 - **As imagens de produção** dos dois starters são construídas e conferidas
   (o React num job próprio, `Imagens de produção do starter React`).
 
 ## Publicação
 
 O workflow `.github/workflows/split.yml` copia, a cada tag `v2.*`, cada
-pacote, cada starter e o comando único para o repositório só-leitura dele (9
+pacote, cada starter e o comando único para o repositório só-leitura dele (10
 destinos: `kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`,
-`…-uploads`, `…-admin`, `…-installer`, `kelvindk9w/twstec-starter-livewire`,
+`…-uploads`, `…-admin`, `…-webhooks`, `…-installer`, `kelvindk9w/twstec-starter-livewire`,
 `kelvindk9w/twstec-starter-react` e, a partir da 2.0.0-beta.2,
 `kelvindk9w/twstec-kit` — a demonstração **não** é publicada), com o
 `composer.json` preparado por `.github/release/prepare-composer.php` (sem path
@@ -942,7 +972,11 @@ que **todos** os splits passam, avisa o Packagist de cada espelho da lista
 https://packagist.org/api/update-package` com o cabeçalho `Authorization:
 Bearer <usuário>:<token>` e o corpo `{"repository":
 "https://github.com/kelvindk9w/<espelho>"}`. A lista dos espelhos fica num
-lugar só (o job "Espelhos"), usada pelo split e pelo aviso.
+lugar só (o job "Espelhos"), usada pelo split, pelo aviso e pela conferência
+final. Cada split confere no espelho a tag e a branch `main` (um push recusado
+deixa o job vermelho), e o job "Conferir o Packagist", mesmo sem o token do
+aviso, exige que cada pacote da lista responda no Packagist com a versão da
+tag (pega o espelho nunca registrado).
 
 **O que o dono configura** (Settings → Secrets and variables → Actions):
 
