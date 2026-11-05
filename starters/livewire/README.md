@@ -27,9 +27,15 @@ ou `pdo_sqlite`), Composer 2 e Node 24.
 
 ```bash
 composer create-project "twstec/starter-livewire:^2.0@beta" meu-app
-# ou, com o instalador do Laravel:
-laravel new meu-app --using="twstec/starter-livewire:^2.0@beta"
+# ou, com o instalador do Laravel (as opções a mais são obrigatórias; ver abaixo):
+laravel new meu-app --using="twstec/starter-livewire:~2.0@beta" --database=pgsql --phpunit --no-boost
 ```
+
+No `laravel new`, a versão no `--using` evita o branch de desenvolvimento,
+o `--database` igual ao banco escolhido no kit evita a troca do
+`DB_CONNECTION` para SQLite e o `--phpunit` evita a reinstalação do Pest que
+quebra os testes do kit (o projeto continua no Pest) — detalhes em
+[docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new).
 
 O Composer copia o `.env.example` para `.env`, e o `post-create-project-cmd`
 chama o instalador (`php artisan tws:install --graceful`), que num terminal

@@ -13,6 +13,13 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   sobrescreve, variáveis novas do `.env`, banco e papéis) e entre versões da
   2.0 (`kit:overrides`, `tws:upgrade --check/--diff/--record`); READMEs dos
   pacotes e dos starters e os `docs/` conferidos contra o código atual.
+- **`laravel new --using` com as opções que funcionam**
+  ([Instalação](docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)):
+  o comando simples estragava o projeto (branch de desenvolvimento,
+  `DB_CONNECTION` trocado para SQLite, Pest reinstalado quebrando os testes
+  do kit). Com a versão no `--using`, `--database` igual ao do kit,
+  `--phpunit` e `--no-boost`, testado na 2.0.0-beta.21 com o
+  `laravel/installer` 5.32.
 
 ## [2.0.0-beta.21] — 2026-11-05
 

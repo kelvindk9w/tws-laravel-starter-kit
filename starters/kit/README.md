@@ -411,7 +411,8 @@ diferente de 0.
 
 Os comandos por starter continuam valendo
 (`composer create-project "twstec/starter-livewire:^2.0@beta"` ou
-`twstec/starter-react`, e `laravel new --using=`), e aceitam as mesmas
+`twstec/starter-react`, e `laravel new --using=` com as opções de
+[Com o instalador do Laravel](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)), e aceitam as mesmas
 `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`. Para um aplicativo Laravel que já existe,
 use `php artisan tws:add` (pacote `twstec/kit-installer`). Tudo em
 [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).

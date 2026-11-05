@@ -488,11 +488,11 @@ por dentro):
 
 ```bash
 composer create-project "twstec/starter-livewire:^2.0@beta" meu-app
-# ou
-laravel new meu-app --using=twstec/starter-livewire
 ```
 
-(`twstec/starter-react` para o React — ver [Starter React](#starter-react).)
+(`twstec/starter-react` para o React — ver [Starter React](#starter-react).
+Com o instalador do Laravel, o `laravel new` precisa de opções a mais — ver
+[abaixo](#com-o-instalador-do-laravel-laravel-new).)
 
 O que acontece: o Composer baixa o starter e os pacotes, copia o
 `.env.example` para `.env` e roda o `post-create-project-cmd` do starter, que
@@ -510,6 +510,46 @@ migrations ficam para o primeiro `docker compose up -d` (ver
 [o Docker de desenvolvimento](#o-docker-de-desenvolvimento-do-projeto-criado));
 sem ele, rodam se o banco do `.env` estiver acessível e, senão, ficam para
 depois (`php artisan migrate`).
+
+### Com o instalador do Laravel (`laravel new`)
+
+O `laravel new` funciona com o comando único e com os starters, **com estas
+opções** — o comando simples (`laravel new meu-app --using=twstec/kit`)
+estraga o projeto. Testado na 2.0.0-beta.21 com o `laravel/installer` 5.32:
+
+```bash
+# PostgreSQL (o padrão do kit)
+laravel new meu-app --using="twstec/kit:~2.0@beta" --database=pgsql --phpunit --no-boost
+
+# SQLite, sem Redis, sem perguntas
+TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+```
+
+Direto por um starter: `--using="twstec/starter-livewire:~2.0@beta"` ou
+`--using="twstec/starter-react:~2.0@beta"`, com as mesmas outras opções.
+
+O que cada opção faz:
+
+- **a versão no `--using`** (`:~2.0@beta`; na 2.0.0 estável, `:~2.0`): sem
+  ela, o instalador do Laravel usa `--stability=dev` e baixa o branch de
+  desenvolvimento, não a versão publicada. É `~`, e não `^`, porque o `cmd`
+  do Windows come o `^`;
+- **`--database` igual ao banco escolhido no kit** (`pgsql` ou `sqlite`):
+  sem ela, o instalador do Laravel troca o `DB_CONNECTION` do `.env` e do
+  `.env.example` para `sqlite` **depois** que o kit configurou o projeto;
+- **`--phpunit`**: impede o instalador do Laravel de reinstalar o Pest — ele
+  faria um `composer update` geral (para o Pest 5 e o PHPUnit 13) e
+  reescreveria os testes do kit, quebrando-os. O projeto continua no Pest,
+  como o kit o entrega;
+- **`--no-boost`**: opcional; sem ela, o instalador do Laravel acrescenta o
+  `laravel/boost`;
+- **as escolhas do kit** (interface, módulos, banco, Redis): pelo menu, num
+  terminal, ou pelas variáveis `TWS_KIT_*` (ver
+  [Banco de dados e Redis](#banco-de-dados-e-redis-só-na-criação)).
+
+Com PostgreSQL, o instalador do Laravel tenta rodar o `migrate` na máquina e
+mostra um erro de conexão: pode ignorar — as migrations rodam no primeiro
+`docker compose up -d`.
 
 ## Starter React
 
@@ -536,8 +576,7 @@ conferida no CI) e passa pelas mesmas combinações de módulos no CI.
 
 ```bash
 composer create-project "twstec/starter-react:^2.0@beta" meu-app
-# ou
-laravel new meu-app --using=twstec/starter-react
+# ou: laravel new, com as opções de "Com o instalador do Laravel" acima
 cd meu-app && npm install && npm run build
 ```
 
