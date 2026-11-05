@@ -2,7 +2,8 @@
 
 Implementação própria e enxuta — **sem** Breeze/Jetstream/Fortify. A regra mora no
 pacote **`twstec/kit-auth`** ([`packages/auth`](../packages/auth), sem telas); as
-telas, as rotas e o model de usuário são do starter (ver
+telas são do `twstec/kit-foundation` (o aplicativo sobrescreve a que quiser) e
+as rotas e o model de usuário são do starter (ver
 [O pacote e os pontos de extensão](#o-pacote-twsteckit-auth-e-os-pontos-de-extensão)).
 Autenticação web por **sessão** (os painéis usam sessão/cookie; a API pública usa
 o par de chaves pk_/sk_ no header — ver [API e chaves de API](api.md) e [Tenancy](tenancy.md)).
@@ -16,7 +17,8 @@ e-mail e recuperação com os e-mails do kit, idioma preferido), a trait de avat
 de uploads e o acesso ao `/admin` (Filament). O pacote nunca nomeia a classe:
 trabalha com o model configurado em `auth.providers.users.model`. Até a 1.x ele
 era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
-(payload de fila antigo o carrega — ver `app/Support/legacy-aliases.php`).
+(payload de fila antigo o carrega — ver `app/Support/legacy-aliases.php` do
+starter Livewire).
 
 - Identificadores em 3 camadas (anti-enumeração): `id` interno nunca exposto, `uuid` (HasUuids)
   e `codigo_publico` `USR-xxxxxx` (HasPublicCode).
@@ -55,7 +57,7 @@ era `App\Core\Auth\Models\User`; o nome antigo continua resolvendo até a 3.0
 | Segundo fator do login | `GET/POST /two-factor-challenge`, `POST /two-factor-challenge/resend`, `POST /two-factor-challenge/cancel` | só para quem ligou; ver [Verificação em duas etapas](#verificação-em-duas-etapas-no-login-opcional) |
 | Configuração do segundo fator obrigatório | `GET /two-factor/setup`, `POST /two-factor/setup/code`, `POST /two-factor/setup` | só com `AUTH_TWO_FACTOR_REQUIRED`; ver [Segundo fator obrigatório](#segundo-fator-obrigatório) |
 | Logout | `POST /logout` | invalida sessão + renova token CSRF |
-| Recuperação | `GET/POST /forgot-password`, `GET/POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; as outras sessões caem e o `remember_token` é renovado — ver [Sessão e CSRF](#sessão-e-csrf) |
+| Recuperação | `GET/POST /forgot-password`, `GET /reset-password/{token}`, `POST /reset-password` | broker nativo do Laravel (token com hash + expiração); resposta uniforme anti-enumeração; as outras sessões caem e o `remember_token` é renovado — ver [Sessão e CSRF](#sessão-e-csrf) |
 | Senha de transação | `GET/PUT /settings/transaction-password` | deve ser **diferente** da senha de login; alteração exige a atual |
 | Ação sensível | `POST /sensitive-actions/code` + `POST /sensitive-actions/confirm` | ver abaixo |
 
@@ -162,10 +164,10 @@ cliente precisa passar por `SafeRedirect::url()` também.
 
 Senha de transação e ação sensível já tinham a regra em serviços
 (`TransactionPasswordService`, `SensitiveActionService`, compartilhados com o
-painel Livewire) e seguem assim. As telas `GET` (formulários) continuam como
-views do starter.
+painel Livewire) e seguem assim. As telas `GET` (formulários) são telas do
+kit no `twstec/kit-foundation`, servidas pelas rotas do starter.
 
-Um teste de arquitetura (`tests/Unit/Architecture/BusinessLogicPlacementTest.php`)
+Um teste de arquitetura (`tests/Unit/Architecture/BusinessLogicPlacementTest.php`, no starter Livewire)
 reprova o build se um desses controllers voltar a autenticar, mexer no
 broker de senha, no limiter, no banco, na sessão ou no estado intermediário do
 segundo fator.
@@ -337,7 +339,7 @@ preço de o segundo fator valer alguma coisa; o cartão do perfil avisa. O
 suporte de uma instalação pode desligar a preferência de uma conta
 verificando a identidade por fora (ex.:
 `User::whereKey($id)->update(['two_factor_enabled_at' => null])`). App
-autenticador (TOTP) e códigos de recuperação ficam para depois da 1.0 (ver
+autenticador (TOTP) e códigos de recuperação ainda não existem (ver
 README, "Pendências conhecidas").
 
 **`/admin` (Filament).** O login do `/admin` usa o mecanismo de MFA do
@@ -517,7 +519,7 @@ Fluxo (para cancelar um pedido, criação e rotação de chave de API, transfer�
 1. `POST /sensitive-actions/code` com a senha de transação → gera código de
    **6 dígitos**, persiste **somente o hash** (`verification_codes`) com
    expiração (`AUTH_VERIFICATION_CODE_TTL_MINUTES`, padrão 10 min) e envia por
-   **e-mail enfileirado** (Redis; Mailpit em dev). Reenvio com cooldown
+   **e-mail enfileirado** (Mailpit em dev). Reenvio com cooldown
    (`AUTH_VERIFICATION_CODE_RESEND_COOLDOWN_SECONDS`, padrão 60s); código novo
    invalida os anteriores.
 2. `POST /sensitive-actions/confirm` com o código → valida (expiração +
@@ -633,8 +635,9 @@ e os dois aliases, e o pacote grava um aviso no log a cada boot.
    ela que o segundo fator obrigatório leva — sem ela, a barreira responde
    403. Com o cadastro fechado, a tela de registro chama
    `Registration::ensureOpen()` e os links perguntam `Registration::enabled()`.
-3. **Telas:** são suas (no starter Livewire, `AuthPageController` + views Blade;
-   num starter React, as páginas dele). A tela do código do segundo fator pergunta
+3. **Telas:** são do front (nos starters, `AuthPageController` + as telas do
+   kit no `twstec/kit-foundation` — views Blade no Livewire, páginas React no
+   React —, que o aplicativo sobrescreve copiando o arquivo). A tela do código do segundo fator pergunta
    `CompleteTwoFactorLogin::pendingUser()` e, sem estado, responde com
    `TwoFactorChallengeController::respond()`.
 4. **Respostas:** as padrão redirecionam para as rotas nomeadas `login`,
@@ -642,14 +645,15 @@ e os dois aliases, e o pacote grava um aviso no log a cada boot.
    usam `password.reset` e `verification.verify`). Para JSON ou Inertia,
    registre a sua implementação de cada contrato de
    `Twstec\Kit\Auth\Contracts\Responses` num provider do app — o padrão é
-   `bindIf` e cede. O starter React é o exemplo pronto: as 12 respostas
+   `bindIf` e cede. O starter React é o exemplo pronto: as 13 respostas
    Inertia em `starters/react/app/Http/Responses/Inertia`, registradas no
    `AppServiceProvider` dele (carga completa, com o `SafeRedirect`, para quem
    entra ou sai; redirect comum, com o erro no campo, para o resto).
-5. **E-mails:** as classes (código, recuperação de senha, verificação) e os
-   assuntos são do pacote; os corpos são views do front
-   (`mail.messages.verification-code`, `mail.messages.password-reset`,
-   `mail.messages.email-verification`), no layout `<x-email::…>` do foundation.
+5. **E-mails:** as classes (código, recuperação de senha, verificação), os
+   assuntos e os corpos são do pacote (`mail.messages.verification-code`,
+   `mail.messages.password-reset`, `mail.messages.email-verification`), no
+   layout `<x-email::…>` do foundation; o front sobrescreve um corpo pondo o
+   arquivo de mesmo nome em `resources/views/mail/messages/`.
 6. **Front com Livewire:** registre o `EnsureEmailIsVerified` como middleware
    persistente do Livewire (`Livewire::addPersistentMiddleware`, no starter em
    `AppServiceProvider`), para que as ações dos componentes também exijam o
@@ -669,9 +673,9 @@ O corpo dos e-mails da autenticação também vem do pacote
 do front.
 
 **Nomes antigos:** `App\Core\Auth\…` continua resolvendo para
-`Twstec\Kit\Auth\…` até a 3.0 (payload de fila e extensões antigas); o model e o
-comando `user:make-admin`, que ficaram no starter, têm o apelido deles no
-starter.
+`Twstec\Kit\Auth\…` até a 3.0 (payload de fila e extensões antigas); o model,
+que ficou no starter, tem o apelido no starter, e o comando `user:make-admin`,
+que foi para o `twstec/kit-admin`, tem o apelido no pacote do painel.
 
 ## Testes
 
@@ -718,8 +722,15 @@ AUTH_PASSWORD_MIN=8
 
 Descomentou, valeu: a validação passa a cobrar, a dica embaixo do campo
 descreve exatamente o que está ativo (`PasswordPolicy::hint()`, nos 3
-idiomas) e as mensagens de erro já existem em `lang/*/validation.php`. A
+idiomas) e as mensagens de erro já existem nos textos de validação que o kit
+traz (`validation.*`, do pacote; o `lang/` do aplicativo vence). A
 senha de **transação** tem política própria (`AUTH_TRANSACTION_PASSWORD_MIN`).
+
+## Login demo (só no desenvolvimento)
+
+Com o `twstec/kit-demo`, `DEMO_LOGIN_ENABLED=true` pré-preenche o login do
+painel e do `/admin` com as credenciais demo (ver
+[Login demo e admin demo](demo.md#login-demo-e-admin-demo-fricção-zero-em-dev)).
 
 **NUNCA habilite em produção** — credenciais conhecidas seriam uma backdoor.
 Em produção nada disso aparece na tela — e não por causa da flag: a

@@ -22,13 +22,18 @@
   dashboard precisa de `unsafe-eval` e das fontes do fonts.bunny.net —
   liberados SOMENTE nas rotas do Horizon (configurável por
   `SECURITY_CSP_HORIZON`); o resto da aplicação segue com a CSP estrita.
-- **Dev**: o serviço `queue` do `docker-compose.yml` segue com
-  `queue:work` simples; para ver o dashboard com dados reais, troque o
+- **Dev**: o serviço `queue` do `compose.yaml` do projeto (no monorepo, o do
+  `docker-compose.yml` da raiz) segue com `queue:work` simples; para ver o dashboard com dados reais, troque o
   comando do serviço por `php artisan horizon` (opcional).
 - **Produção**: o serviço `horizon` do `docker-compose.prod.yml` roda
   `php artisan horizon` (supervisor com balanceamento; processos via
   `HORIZON_MAX_PROCESSES`). `tries=1` por padrão — fintech não faz retry
   cego em job financeiro (retry que repete efeito de dinheiro duplica o efeito).
+- **Projeto sem Redis** (escolha da criação — ver
+  [instalação](instalacao.md#sem-redis)): sem o Horizon nem o `/horizon`; a
+  fila fica no banco (`QUEUE_CONNECTION=database`) e, em produção, o serviço
+  `queue` do `docker-compose.prod.yml` roda `php artisan queue:work`
+  (reciclado de hora em hora).
 - Assets: o Horizon serve CSS/JS inline (não exige publicação em
   `public/vendor`).
 - **O que a fila guarda, e por quanto tempo.** O job de e-mail carrega o que o

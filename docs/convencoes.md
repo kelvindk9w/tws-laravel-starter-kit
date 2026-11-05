@@ -21,15 +21,17 @@
 5. **Logs de requisição:** append-only, status
    INICIADA→CONCLUÍDA, ID de correlação e redaction de dados sensíveis (LGPD).
 6. **i18n:** locale padrão `pt_BR`; TODA string de UI via `__()`.
-   O kit já sai com `lang/pt_BR`, `lang/en` e `lang/es` completos (teste de
-   paridade de chaves entre os idiomas que existem em `lang/`); novo idioma =
-   nova pasta em `lang/` + entrada em `PLATFORM_AVAILABLE_LOCALES`; projeto de
+   O kit já sai com pt-BR, en e es completos — os textos dos pacotes no
+   próprio pacote, os do projeto em `lang/pt_BR`, `lang/en` e `lang/es` (teste
+   de paridade de chaves entre os idiomas que existem em `lang/`); novo idioma =
+   nova pasta em `lang/` (com os textos do projeto e os dos pacotes) + entrada
+   em `PLATFORM_AVAILABLE_LOCALES`; projeto de
    um idioma só pode apagar as pastas dos outros
    ([Identidade → Idiomas](identidade.md#idiomas)).
 7. **Segredos:** somente em `.env` (gitignored), nunca no código nem na imagem.
 8. **Testes:** Pest 4 + Playwright, validando **conteúdo** das
    respostas, não apenas status HTTP. A suíte PHP roda contra PostgreSQL 18
-   no CI (`phpunit.pgsql.xml`, banco `tws_starter_test`) e, localmente por
+   no CI (`phpunit.pgsql.xml`, banco `<DB_DATABASE>_test`) e, localmente por
    padrão, com SQLite em memória (o `phpunit.xml` força `DB_*` para isolar do
    PostgreSQL de dev). Ver [Testes contra o PostgreSQL](testes.md#testes-contra-o-postgresql).
 

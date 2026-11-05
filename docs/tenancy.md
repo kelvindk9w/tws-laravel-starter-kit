@@ -520,9 +520,11 @@ As ações: `api_key.created`, `api_key.rotated`, `api_key.revoked`,
 
 **Na API v1 (por chave)**, a chave **autenticada** que tenta além do que
 pode também fica na trilha, no contexto `api`, com a própria chave como alvo:
-`api_key.scope_denied` (escopo que ela não tem — `EnsureApiKeyScope`) e
+`api_key.scope_denied` (escopo que ela não tem — `EnsureApiKeyScope`),
 `api_key.account_key_required` (chave vinculada a projetos em operação de
-conta — `EnsureAccountWideApiKey`). A resposta é o mesmo 403. **Ficam fora
+conta — `EnsureAccountWideApiKey`) e `api_key.privilege_exceeded` (criar,
+rotacionar ou editar chave mais ampla que ela mesma — `ApiKeyService`, ver
+[`docs/api.md`](api.md)). A resposta é o mesmo 403. **Ficam fora
 da trilha**, de propósito, os **401** (credencial ausente ou inválida: não há
 quem registrar) e os **404** (recurso de outra conta ou inexistente): os dois
 são o sinal de quem varre a API, já vão para o `request_logs` (com o status

@@ -60,8 +60,8 @@ não os declara. A ordem é conferida por teste na suíte do pacote.
      (/admin)**: middleware de grupo não executa em rota não encontrada, e requisição
      para endpoint inexistente é sinal de varredura. Ficam FORA do log em
      banco (`REQUEST_LOG_EXCLUDED_PATHS`): health checks (`/up`, `/api/health`),
-     assets estáticos (`build/*`, `storage/*`, `favicon.ico`) e preflights OPTIONS.
-     Os updates genéricos do Livewire (`livewire/*`, `admin/livewire/*`) são
+     assets estáticos (`build/*`, `storage/*`, `vendor/*`, `favicon.ico`) e preflights OPTIONS.
+     Os updates genéricos do Livewire (`livewire/*`, `livewire-*`, `admin/livewire/*`) são
      registrados com **payload resumido** — só os nomes dos componentes
      (`REQUEST_LOG_SUMMARIZED_PATHS`), porque o snapshot serializado é ruído.
    - **Contenção do tráfego de varredura**: requisição para rota **inexistente** (404/405) só vai
@@ -175,7 +175,7 @@ mudança foi "select a plan from the list" recusado com 422. As regras foram rev
 handler `on*=` precisa estar dentro de uma tag ou logo depois de fechar um atributo;
 `javascript:` precisa estar em posição de URL e seguido de código), e um corpus de frases
 legítimas em pt-BR, en e es e de padrões canônicos de ataque trava cada regra
-(`tests/Unit/Security/AttackDetectorCorpusTest.php`). Mesmo assim, falso positivo continua
+(`packages/foundation/tests/Unit/Security/AttackDetectorCorpusTest.php`). Mesmo assim, falso positivo continua
 possível — em `observe` ele custa uma linha marcada na trilha, não um cliente perdido.
 
 **Quando ligar `block`:** quando a aplicação tem superfície que **não** passa pelas defesas do
@@ -483,8 +483,10 @@ caminho simples é apontar a sonda para `localhost`.)
 **A validação vale em todo ambiente, desenvolvimento e testes incluídos** (o `TrustHosts` do
 framework desliga em `local` e em teste; o do kit não). Desligada em teste, ela não poderia ser
 provada; desligada em dev, o PoC acima continuaria reproduzível exatamente onde as pessoas testam o
-kit. No caso padrão o custo é zero: a `APP_URL` de exemplo é `http://localhost:8180` e os testes do
-Laravel montam as requisições sobre a própria `APP_URL`. Se você acessa o ambiente de dev por outro
+kit. No caso padrão o custo é zero: o ambiente de dev é acessado pelo host da própria `APP_URL` (no
+projeto criado, `http://<projeto>.localhost:<porta>`; no monorepo, `http://localhost:8180` no
+Livewire e `http://127.0.0.1:8181` no React) e os testes do Laravel montam as requisições sobre a
+própria `APP_URL`. Se você acessa o ambiente de dev por outro
 nome (IP do WSL, `kit.test`), declare-o em `TRUSTED_HOSTS`.
 
 **Produção com `APP_URL` ainda de exemplo** (`localhost`) e `TRUSTED_HOSTS` vazio aceita só

@@ -103,8 +103,10 @@ todos os e-mails da plataforma é presente de phishing. Ver
 [Superfície de demonstração: fail-closed em produção](demo.md#superfície-de-demonstração-fail-closed-em-produção).
 
 Para ver o e-mail **como ele chega** (cabeçalhos, multipart, anexos), o
-`docker compose` já sobe o **Mailpit** em <http://localhost:18025> (SMTP em
-`mailpit:1025`, sem credenciais). Dispare o fluxo real e abra a caixa.
+`docker compose` já sobe o **Mailpit** — no projeto criado, no host da `APP_URL`
+na porta `DEV_MAIL_PORT` (a galeria mostra o endereço; `MAIL_PREVIEW_MAILPIT_URL`
+o troca); no monorepo, em <http://localhost:18025> — com SMTP em
+`mailpit:1025`, sem credenciais. Dispare o fluxo real e abra a caixa.
 
 > Ao mexer no código de um e-mail em dev, **reinicie o worker**
 > (`docker compose restart queue`): os e-mails são sempre enfileirados e o

@@ -13,7 +13,7 @@ própria, com a suíte de testes verde antes e depois.
 | [`uploads`](uploads) | `twstec/kit-uploads` | Uploads seguros sem telas: validação pelo conteúdo real, limite por tipo, re-encode de imagem, nome seguro, entrega por URL assinada, foto de perfil e o `POST /api/v1/uploads` | foundation, auth, accounts |
 | [`webhooks`](webhooks) | `twstec/kit-webhooks` | Webhooks de saída sem telas: endpoints por conta, segredo cifrado mostrado uma vez, assinatura HMAC-SHA256 com carimbo de tempo, outbox e fila cifrada, novas tentativas com backoff, desativação por falhas com aviso, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio, conexão no IP conferido) | foundation, auth, accounts |
 | [`admin`](admin) | `twstec/kit-admin` | O painel de super admin como plugin do Filament 5: usuários, logs de requisição, trilha de auditoria e configurações, login com segundo fator por e-mail, variantes de dashboard, trilha de auditoria de toda ação (falha fechada) e as proteções de acesso ligadas pelo pacote — e as telas de contas, chaves de API, projetos e uploads **quando esses pacotes estão instalados** | foundation, auth, Filament (accounts e uploads **sugeridos**: o painel se adapta ao que existe) |
-| [`installer`](installer) | `twstec/kit-installer` | O instalador `php artisan tws:install`: escolhe os módulos opcionais (accounts, uploads, admin, webhooks) e a demonstração, e aplica — Composer, migrations, `APP_KEY` e pepper; e o `php artisan tws:add`, que acrescenta pacotes do kit a um aplicativo Laravel que já existe (recusa o que exige dependência ausente). Ferramenta de desenvolvimento (`require-dev` dos starters) | foundation |
+| [`installer`](installer) | `twstec/kit-installer` | O instalador `php artisan tws:install`: escolhe os módulos opcionais (accounts, uploads, admin, webhooks) e a demonstração — e, na criação do projeto, o banco (PostgreSQL ou SQLite) e se usa Redis —, e aplica — Composer, migrations, `APP_KEY` e pepper; o `php artisan tws:add`, que acrescenta pacotes do kit a um aplicativo Laravel que já existe (recusa o que exige dependência ausente); e o `php artisan tws:upgrade --check`, que confere os arquivos de starter do projeto contra o starter da versão instalada. Ferramenta de desenvolvimento (`require-dev` dos starters) | foundation |
 | [`demo`](demo) | `twstec/kit-demo` | A **demonstração** do kit, só para o ambiente de desenvolvimento (`require-dev` do starter): landings, vitrine `/ui`, contato, catálogo e submissões no `/admin`, contas demo protegidas e seeders de dado fictício. O produto não a nomeia — ela entra pela descoberta de pacotes e pelos pontos de extensão | foundation, auth, accounts, uploads, admin, Filament (e o starter, pelos pontos de extensão dele) |
 
 ## Como o starter usa os pacotes
@@ -38,15 +38,17 @@ um ponto só, `Twstec\Kit\Foundation\Kit::has()`, e é o que o starter e o
 `admin` perguntam antes de registrar uma tela, rota ou menu de módulo
 opcional. Ver [docs/instalacao.md](../docs/instalacao.md).
 
-**Publicação.** O Packagist (e os repositórios só-leitura de cada pacote,
+**Publicação.** A cada tag `v2.*`, o workflow de split
+(`.github/workflows/split.yml`, ligado pela variável do repositório
+`KIT_SPLIT_ENABLED`) copia cada pacote para o repositório só-leitura dele,
 `kelvindk9w/twstec-kit-<pacote>` — todos menos a `demo`, que vive só neste
-monorepo e não é publicada) chega na fase F10b; o workflow de split
-(`.github/workflows/split.yml`) está pronto e desligado. Até lá, o path
-repository é o caminho. Cada `composer.json` daqui já tem o que o Packagist
-lê (nome, descrição, licença, palavras-chave, autoload, `extra.laravel`,
-requisitos, `branch-alias` de `dev-main` para `2.x-dev`); na cópia publicada,
-`.github/release/prepare-composer.php` tira os path repositories e troca o
-`2.x-dev` dos pacotes do kit por `^2.0`. O `.gitattributes` de cada pacote
+monorepo e não é publicada —, e o Packagist publica a versão (ver
+[docs/instalacao.md](../docs/instalacao.md#publicação)). Dentro do monorepo,
+o path repository continua sendo o caminho. Cada `composer.json` daqui tem
+o que o Packagist lê (nome, descrição, licença, palavras-chave, autoload,
+`extra.laravel`, requisitos, `branch-alias` de `dev-main` para `2.x-dev`); na
+cópia publicada, `.github/release/prepare-composer.php` tira os path
+repositories e troca o `2.x-dev` dos pacotes do kit por `^2.0`. O `.gitattributes` de cada pacote
 deixa testes e arquivos de desenvolvimento fora do ZIP que o Composer baixa —
 o CI instala o starter a partir desses ZIPs a cada push
 (`.github/release/simulate-install.sh`).
@@ -88,7 +90,7 @@ docker compose exec -w /var/packages/installer app ./vendor/bin/pint --test
 As dependências de desenvolvimento do pacote (`packages/<pacote>/vendor`, fora
 do git) são instaladas com o Composer em container, da raiz do repositório
 (troque `foundation` pelo pacote; o `auth`, o `accounts`, o `uploads`, o
-`webhooks`, o `admin` e o `demo` acham os irmãos de que dependem pelos path repositories do
+`webhooks`, o `admin`, o `demo` e o `installer` acham os irmãos de que dependem pelos path repositories do
 próprio `composer.json`; no `uploads`, no `admin` e no `demo`, acrescente
 `--ignore-platform-req=ext-gd`, porque a imagem do Composer não traz a GD — a
 suíte roda no container do app, que traz):

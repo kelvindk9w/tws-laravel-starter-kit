@@ -49,7 +49,8 @@ fila, agendador e Vite com recarga ao vivo) — ver
   --check` lista os arquivos que ficam no projeto (Docker, CI, `.env*`,
   scripts) e que a versão nova mudou; a seção "Atenção ao atualizar" de cada
   versão no [CHANGELOG](CHANGELOG.md) diz o que fazer — ver
-  [Personalização](docs/personalizacao.md).
+  [Atualização](docs/atualizacao.md), que também traz o caminho de um
+  projeto da 1.x para a 2.0.
 - **Sem terminal (CI, scripts), por starter ou com `laravel new`:**
   [Instalação e módulos](docs/instalacao.md).
 
@@ -103,6 +104,7 @@ As regras que o código segue estão em [Convenções](docs/convencoes.md).
 | Webhooks de saída: assinatura, SSRF, novas tentativas, log e reenvio | [docs/webhooks.md](docs/webhooks.md) |
 | Painel do usuário, super admin e dashboards | [docs/admin-e-dashboards.md](docs/admin-e-dashboards.md) |
 | E-mails transacionais | [docs/emails.md](docs/emails.md) |
+| Atualização: da 1.x para a 2.0 e entre versões da 2.0 (`tws:upgrade`, `.tws/manifest.json`, variáveis novas) | [docs/atualizacao.md](docs/atualizacao.md) |
 | Personalização: mudar textos, e-mails, configuração e telas do kit sem copiar arquivos (`kit:overrides`) | [docs/personalizacao.md](docs/personalizacao.md) |
 | Demonstração (pacote `twstec/kit-demo`), modo demo e contas demo | [docs/demo.md](docs/demo.md) |
 | Interface: landing, showcase `/ui`, i18n, tema, formulários, identidade visual | [docs/interface.md](docs/interface.md) |

@@ -15,7 +15,9 @@ teste, reenviar), o envio, a política de destino, os comandos agendados e as
 traduções. As telas são dos starters, as duas sobre as mesmas Actions:
 `App\Livewire\Webhooks\Index` (Livewire) e
 `App\Http\Controllers\Panel\WebhooksController` + `pages/webhooks/index.tsx`
-(React), no endereço `/webhooks` do painel.
+(React), no endereço `/webhooks` do painel — a classe e o controller ficam
+no aplicativo; a view e a página vêm do `twstec/kit-foundation` (ver
+[personalização](personalizacao.md)).
 
 ## Disparar um evento
 
@@ -388,8 +390,9 @@ conta, geridos por quem é dela).
 
 O padrão vem do pacote (`config('webhooks')`); para mudar um bloco, o
 aplicativo cria `config/webhooks.php` só com as chaves de primeiro nível que
-muda (ver [personalizacao.md](personalizacao.md)). Variáveis no
-`.env.example` dos starters:
+muda (ver [personalizacao.md](personalizacao.md)). Variáveis (todas no
+`.env.example` dos starters, menos `WEBHOOKS_LOCK_SECONDS`,
+`WEBHOOKS_REQUEUE_AFTER_SECONDS` e `WEBHOOKS_QUEUE`/`WEBHOOKS_QUEUE_CONNECTION`):
 
 | Variável | Padrão | |
 |---|---|---|

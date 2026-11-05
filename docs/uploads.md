@@ -10,8 +10,9 @@ nenhum controller faz `store()` direto de arquivo.
 > conta). Sem ele, o perfil não tem foto e o `/admin` não tem a tela de
 > uploads — ver [instalação e módulos](instalacao.md).
 
-O pacote não tem telas. O formulário do perfil (Livewire), o campo de foto do
-`/admin` (Filament) e a rota web do avatar são do starter; o pacote traz o
+O pacote não tem telas. O formulário do perfil e a rota web do avatar são do
+starter, e o campo de foto do `/admin` (Filament) é do `twstec/kit-admin`; o
+pacote traz o
 serviço, a validação, o model, a migration, a configuração, as traduções, a
 foto de perfil (`HasAvatar`) e a rota `POST /api/v1/uploads`.
 
@@ -334,7 +335,7 @@ conta e não enxerga a foto pessoal: para ler a foto, `avatarUpload()` /
 | --- | --- | --- |
 | Painel do cliente (`/profile`) | Livewire (`App\Livewire\Profile::updateAvatar`) | `Avatar\AvatarService` → `SecureUploadService::handlePersonal` → `users.avatar_upload_id` |
 | Painel do cliente React (`/profile`) | `App\Http\Controllers\Panel\ProfilePhotoController` (starter React) | idem; tirar a foto: `AvatarService::remove()` |
-| Rota web `POST /settings/avatar` | `AvatarController` (pacote) | idem |
+| Rota web `POST /settings/avatar` (starter Livewire) | `AvatarController` (pacote) | idem |
 | Super admin (`/admin/users`, `/admin/profile`) | `Twstec\Kit\Admin\Support\AvatarUpload` (pacote twstec/kit-admin) | `saveUploadedFileUsing` → `SecureUploadService::handlePersonal` (enviado pelo operador) → `users.avatar_upload_id`. Só vira foto de uma pessoa o upload **dela** (foto pessoal que ela enviou ou upload da conta pessoal dela), a foto atual ou o enviado agora, neste formulário |
 
 Nenhum dos caminhos grava arquivo por conta própria: todos chamam o service, e
@@ -531,10 +532,12 @@ onde pôr chave estrangeira recria a tabela, a migration guarda e devolve
   **registrada pelo pacote**, sempre: a entrega dos confidenciais (URL
   assinada, sem sessão, limitada por IP). Prefixo em
   `uploads.confidential.route.prefix`.
-- `POST /settings/avatar` (web autenticada) — rota do **starter**
+- `POST /settings/avatar` (web autenticada) — rota do **starter** Livewire
   (`routes/web.php`, `throttle:sensitive`) apontando para o
   `AvatarController` do pacote. Campo `avatar`, restrito a imagens
-  (`avatars/`, re-encode GD obrigatório).
+  (`avatars/`, re-encode GD obrigatório). O starter React usa
+  `POST`/`DELETE /profile/avatar` (`ProfilePhotoController`, do próprio
+  starter, sobre o mesmo `AvatarService`).
 
 ## Configuração (Cloudflare R2 — S3-compatível)
 

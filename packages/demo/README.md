@@ -24,7 +24,8 @@ A **demonstração** do TWS Laravel Starter Kit — tudo o que existe para
 
 - **Requisitos:** PHP 8.4+, Laravel 13, Filament 5, Livewire 4, os cinco
   pacotes do kit 2.x e o starter Livewire (as views da demo são páginas dele:
-  usam os componentes Blade, o layout e o painel do aplicativo).
+  usam os componentes Blade e o layout das telas Livewire do kit, que o
+  starter liga a partir do `twstec/kit-foundation`, e o painel do aplicativo).
 - **Licença:** MIT.
 
 ## Como se liga ao produto

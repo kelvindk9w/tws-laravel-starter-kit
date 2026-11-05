@@ -108,8 +108,9 @@ próximo recurso.
    Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
    rodar o guia do iniciante e o comando único num Windows e num Mac de
    verdade.
-3. **`laravel new --using=twstec/kit`.** Preparado, mas ainda não testado
-   contra o instalador oficial do Laravel.
+3. **`laravel new --using=twstec/kit`.** Testado na 2.0.0-beta.21 com o
+   `laravel/installer` 5.32, com as opções de
+   [Com o instalador do Laravel](instalacao.md#com-o-instalador-do-laravel-laravel-new).
 4. **Banco e Redis no instalador (#73) — resolvido na 2.0.0-beta.21.** Todo projeto nascia com PostgreSQL, Redis
    e Horizon. O menu (e o `tws:install`, por `--database`/`--no-redis` ou
    `TWS_KIT_DATABASE`/`TWS_KIT_REDIS`) passa a perguntar o banco — PostgreSQL

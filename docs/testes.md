@@ -10,7 +10,8 @@ Na raiz do projeto, com ele no ar (`docker compose up -d`). Nada disso exige
 PHP ou Node na máquina.
 
 ```bash
-# Tudo o que o CI confere, de uma vez (segredos, Pint, Larastan, auditorias, build, Pest PostgreSQL):
+# Tudo o que o CI confere, de uma vez (segredos, Pint, Larastan, auditorias, build, Pest PostgreSQL;
+# no projeto criado com SQLite, o Pest roda no SQLite):
 scripts/verificar
 
 # Ou cada camada:
@@ -21,7 +22,10 @@ docker compose exec app ./vendor/bin/pest -c phpunit.pgsql.xml  # Pest contra o 
 O banco da suíte PostgreSQL é `<banco do projeto>_test`: o instalador grava o
 nome no `phpunit.pgsql.xml`, e o serviço `db-init` do `compose.yaml` cria o
 mesmo (`${DB_DATABASE}_test`) na subida. A `tests/TestCase.php` recusa
-qualquer banco que não termine em `_test`.
+qualquer banco que não termine em `_test`. No projeto criado com SQLite
+(modo protótipo), não há o serviço do PostgreSQL nem o `db-init`: a suíte é
+a do `phpunit.xml` (SQLite em memória), e é ela que o `scripts/verificar`
+roda.
 
 **E2E (Playwright), sem Node na máquina:** `scripts/e2e` faz tudo — sobe o
 projeto, espera o site e o Vite, respeita os 60 s entre rodadas, cria as
@@ -208,6 +212,7 @@ docker compose exec -w /var/packages/accounts app ./vendor/bin/pest     # pacote
 docker compose exec -w /var/packages/uploads app ./vendor/bin/pest      # pacote twstec/kit-uploads
 docker compose exec -w /var/packages/admin app ./vendor/bin/pest        # pacote twstec/kit-admin
 docker compose exec -w /var/packages/webhooks app ./vendor/bin/pest     # pacote twstec/kit-webhooks
+docker compose exec -w /var/packages/installer app ./vendor/bin/pest    # pacote twstec/kit-installer
 ```
 
 Ela cobre as peças da base que não dependem de rotas nem telas (filtro de
@@ -348,7 +353,7 @@ termine em `_test`.
 
 ```bash
 # Uma vez só, se o volume do Postgres já existia antes deste arquivo
-# (volumes novos já nascem com o banco — docker/postgres/initdb/):
+# (volumes novos já nascem com o banco — starters/livewire/docker/postgres/initdb/):
 docker compose exec postgres createdb -U tws tws_starter_test
 
 # Suíte contra o PostgreSQL:

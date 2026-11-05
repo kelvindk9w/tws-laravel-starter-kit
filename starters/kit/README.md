@@ -99,13 +99,17 @@ projeto. Ao final, o instalador mostra o endereço do site.
 
 O projeto já nasce **seu**: o `composer.json` com o nome `app/<nome>` e a
 licença `proprietary` (troque à vontade), a licença MIT do kit guardada como
-aviso em `NOTICE-KIT-MIT.txt`, o banco de teste `<nome>_test`, um CI base em
+aviso em `NOTICE-KIT-MIT.txt`, o banco da suíte no PostgreSQL `<nome>_test`
+(o do `phpunit.pgsql.xml`; o `php artisan test` comum roda em SQLite na
+memória), um CI base em
 `.github/workflows/ci.yml` (roda à mão e uma vez por semana, com o E2E
 opcional no disparo manual), o `.github/dependabot.yml` (atualizações
 semanais agrupadas) e o `scripts/verificar`, que roda o mesmo conjunto do CI
-na sua máquina, pelo Docker — com, desligado por padrão, o modelo de
-verificação local que publica um selo no commit (`scripts/instalar-hooks`,
-`scripts/verificar --selo`, `scripts/promover`). Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
+na sua máquina, pelo Docker, a começar pela varredura de segredos no
+histórico do git (`scripts/segredos`) — com, desligado por padrão, o modelo de
+verificação local que publica um selo no commit e recusa commit com possível
+segredo (`scripts/instalar-hooks`, `scripts/verificar --selo`,
+`scripts/promover`). Ver [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
 
 ### 5. Suba o projeto
 
@@ -325,8 +329,9 @@ composer create-project "twstec/kit:^2.0@beta" meu-projeto
 ```
 
 Qualquer uma dessas variáveis (mesmo vazia) desliga o menu — menos
-`TWS_KIT_VENDOR` e `TWS_KIT_LICENSE`, que o menu não pergunta (as duas se
-trocam depois no `composer.json`). Sem terminal
+`TWS_KIT_LOCALE` (só o idioma do menu) e `TWS_KIT_VENDOR` e
+`TWS_KIT_LICENSE`, que o menu não pergunta (as duas se trocam depois no
+`composer.json`). Sem terminal
 (`composer create-project -n`, CI) e sem variável nenhuma, vale o padrão
 seguro: o nome da pasta, o primeiro número livre, Livewire com todos os
 módulos, PostgreSQL e Redis. Uma escolha inválida (interface, módulo ou banco
@@ -376,8 +381,8 @@ comando são lidas no Linux e no WSL; no Windows, use as variáveis.)
 O `post-create-project-cmd` deste pacote roda `kit-setup/create.php` com o
 mesmo PHP e o mesmo Composer do `create-project`:
 
-1. a escolha (menu ou ambiente): o nome e o número do projeto, a interface e
-   os módulos;
+1. a escolha (menu ou ambiente): o nome e o número do projeto, a interface,
+   os módulos, o banco e o Redis;
 2. o starter escolhido é baixado (`composer create-project --no-install
    --no-scripts`, com a mesma restrição de versão deste pacote e os mesmos
    repositórios — os do `--repository … --add-repository`, se você usou)
@@ -387,7 +392,8 @@ mesmo PHP e o mesmo Composer do `create-project`:
    passos do `create-project` do próprio starter: `post-root-package-install`
    (o `.env`), `composer update` e `post-create-project-cmd`, que chama o
    instalador do starter (`php artisan tws:install`) **com a escolha no
-   ambiente** (`TWS_KIT_WITH`/`TWS_KIT_WITHOUT`, e o nome e o número em
+   ambiente** (`TWS_KIT_WITH`/`TWS_KIT_WITHOUT`, o banco e o Redis em
+   `TWS_KIT_DATABASE`/`TWS_KIT_REDIS`, e o nome e o número em
    `TWS_KIT_NAME`/`TWS_KIT_SLOT`): ele não pergunta de novo, gera as chaves e
    grava no `.env` o Docker de desenvolvimento do projeto — o nome, as portas,
    o endereço `http://<nome>.localhost:<porta>`, o cookie de sessão, o banco e
@@ -405,7 +411,8 @@ diferente de 0.
 
 Os comandos por starter continuam valendo
 (`composer create-project "twstec/starter-livewire:^2.0@beta"` ou
-`twstec/starter-react`, e `laravel new --using=`), e aceitam as mesmas
+`twstec/starter-react`, e `laravel new --using=` com as opções de
+[Com o instalador do Laravel](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)), e aceitam as mesmas
 `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`. Para um aplicativo Laravel que já existe,
 use `php artisan tws:add` (pacote `twstec/kit-installer`). Tudo em
 [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md).

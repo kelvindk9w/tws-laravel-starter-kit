@@ -258,6 +258,9 @@ consegue dizer o que **difere** da referência — sem saber se é personalizaç
 ou atraso. Confira a lista uma vez, atualize o que for do kit e grave a base
 com `--record`; a partir daí, só aparece o que o kit mudar.
 
+O passo a passo de cada atualização, e o de um projeto da 1.x para a 2.0,
+está em [Atualização](atualizacao.md).
+
 ## Projeto criado antes (com as cópias)
 
 Continua funcionando igual: as cópias completas vencem o pacote como sempre.
