@@ -6,6 +6,14 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Documentação
+
+- **Guia de atualização** ([Atualização](docs/atualizacao.md)): de um projeto
+  da 1.x para a 2.0 (pacotes no lugar do código copiado, só o que o projeto
+  sobrescreve, variáveis novas do `.env`, banco e papéis) e entre versões da
+  2.0 (`kit:overrides`, `tws:upgrade --check/--diff/--record`); READMEs dos
+  pacotes e dos starters e os `docs/` conferidos contra o código atual.
+
 ## [2.0.0-beta.21] — 2026-11-05
 
 Fecha a lista do que entra na 2.0.0: o instalador pergunta o banco
