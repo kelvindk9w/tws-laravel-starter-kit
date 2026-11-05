@@ -76,7 +76,7 @@ Decisão do dono: **toda ação de admin que altera dado fica registrada no banc
 | Coluna | Conteúdo |
 |---|---|
 | `uuid`, `occurred_at` | identificador e momento (UTC) |
-| `context` | de onde partiu: `admin`, `panel` (os eventos de conta do painel) e `console`; `api` já previsto (`AuditContext`) |
+| `context` | de onde partiu: `admin`, `panel` (o painel do usuário: eventos de conta, segundo fator, uploads confidenciais), `api` (recusas de escopo e de chave vinculada na API v1, uploads confidenciais pela API) e `console` (`AuditContext`) |
 | `actor_uuid`, `actor_is_admin` | quem agiu e se era admin naquele momento (nulo no console) |
 | `action` | nome estável `<tipo>.<verbo>`: `user.blocked`, `api_key.revoked`, `product.created`, `setting.changed`, `user.two_factor_enabled`, `user.admin_granted`... |
 | `outcome` | `success` ou `denied` (tentativa recusada por guarda de servidor) |
@@ -128,7 +128,7 @@ correlação, IP e User-Agent. Enquanto ele está aberto, `Twstec\Kit\Foundation
 `created`/`updated`/`deleted` de model Eloquent. Um resource novo, portanto, já nasce auditado,
 sem nenhuma linha de código de auditoria. O verbo sai do nome da Action (`block` → `blocked`,
 `revoke` → `revoked`; nome fora do mapa vira snake_case) ou, no CRUD, do evento do model. O teste
-de arquitetura (`tests/Architecture/AdminAuditTest.php` do pacote e `tests/Feature/Architecture/AdminAuditTest.php` do starter) reprova o build nas portas que o
+de arquitetura (`tests/Architecture/AdminAuditTest.php` do pacote e `tests/Feature/Architecture/AdminAuditTest.php` do starter Livewire) reprova o build nas portas que o
 gancho não fecha: escrita que não dispara evento de model (query em massa, `DB::`, `*Quietly`,
 `withoutEvents`), recusa montada à mão sem registro, componente fora da cobertura e resource com
 escrita sobre model ignorado.

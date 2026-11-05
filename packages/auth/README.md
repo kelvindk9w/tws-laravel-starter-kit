@@ -20,7 +20,7 @@ garante isso.
 
 | Peça | O que faz |
 | --- | --- |
-| `Actions` | A regra de cada fluxo, sem resposta HTTP: `AttemptLogin` (bloqueio por tentativas por e-mail+IP, conta ativa, anti-enumeração, sessão regenerada, início do segundo fator), `CompleteTwoFactorLogin`, `Logout`, `RegisterUser`, `SendPasswordResetLink`, `ResetPassword`, `VerifyEmail`, `ResendEmailVerification` |
+| `Actions` | A regra de cada fluxo, sem resposta HTTP: `AttemptLogin` (bloqueio por tentativas por e-mail + cliente — IPv6 pelo prefixo — e por conta, conta ativa, anti-enumeração, sessão regenerada, início do segundo fator), `CompleteTwoFactorLogin`, `Logout`, `RegisterUser`, `SendPasswordResetLink`, `ResetPassword`, `VerifyEmail`, `ResendEmailVerification` |
 | `Services` | `TwoFactorLogin` (segundo fator por e-mail, limites por código, conta e IP), `VerificationCodes` (motor dos códigos), `SensitiveActionService` (senha de transação + código → token de uso único), `TransactionPasswordService` |
 | `Contracts` | `AuthUser` (o que o pacote espera do model de usuário), os contratos de resposta (`Contracts\Responses`), `AccountProtection` (contas protegidas), `LoginPrefillProvider` (credenciais sugeridas no login), `VerificationChannelDriver` |
 | `Http` | Controllers de ENVIO (sem telas) com o próprio `throttle:sensitive`, Form Requests, respostas padrão por redirecionamento e os middlewares `EnsureAccountIsActive`, `EnsureEmailIsVerified` e `RequiresSensitiveActionToken` |
@@ -94,7 +94,7 @@ class User extends Authenticatable implements AuthUser, HasLocalePreference
 ```
 
 `KitAuthenticatable` junta as partes, que também existem sozinhas:
-`HasAccountStatus`, `HasTransactionPassword`, `HasTwoFactor`,
+`EndsOtherSessions`, `HasAccountStatus`, `HasTransactionPassword`, `HasTwoFactor`,
 `ProtectsAccounts`, `VerifiesEmail`, `SendsPasswordResetNotification` e
 `HasPreferredLocale`. Os casts das colunas de autenticação vêm delas.
 
@@ -174,9 +174,9 @@ aplicação instalar as mesmas proteções por conta própria.
 | --- | --- | --- |
 | Telas (login, cadastro, código, esqueci/redefinir senha, aviso de e-mail, senha de transação, configuração do segundo fator obrigatório `two-factor.setup`) | Rotas GET e views do front; os POSTs apontam para os controllers do pacote | São a interface; o endereço de cada rota é do front |
 | Respostas próprias (JSON, Inertia…) | `bind` do contrato de `Contracts\Responses` num provider do app | As padrão redirecionam para as rotas nomeadas `login`, `dashboard`, `two-factor.challenge` e `verification.notice` |
-| Corpo dos e-mails | Views `mail.messages.verification-code`, `mail.messages.password-reset`, `mail.messages.email-verification` | São interface (o layout `<x-email::…>` é do foundation) |
+| Corpo dos e-mails (opcional) | O pacote traz `mail.messages.verification-code`, `mail.messages.password-reset` e `mail.messages.email-verification`; um arquivo de mesmo nome em `resources/views/mail/messages/` do aplicativo vence (`PackageViews`) | O texto é interface: o projeto muda só o que precisar (o layout `<x-email::…>` é do foundation) |
 | Ações Livewire exigirem e-mail confirmado | `Livewire::addPersistentMiddleware([EnsureEmailIsVerified::class])` | O pacote não conhece o Livewire |
-| `user:make-admin` e o acesso ao `/admin` | No starter (vão para o pacote admin) | São do painel de administração |
+| `user:make-admin` e o acesso ao `/admin` | No pacote `twstec/kit-admin` | São do painel de administração |
 | Contas protegidas, credenciais sugeridas | Registrar `AccountProtection` / `LoginPrefillProvider` | Pontos de extensão; sem registro, nada é protegido nem preenchido |
 
 O guia completo, com o passo a passo de um front novo, está em
