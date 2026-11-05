@@ -21,6 +21,20 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `--phpunit` e `--no-boost`, testado na 2.0.0-beta.21 com o
   `laravel/installer` 5.32.
 
+### Dependências
+
+- **Atualizações pendentes do Dependabot aplicadas:** pacotes e comando
+  único aceitam o Pest 5 (`^4.7 || ^5.0`; suítes verdes no Pest 5.3.5 com o
+  PHPUnit 13); no starter Livewire, `laravel/framework` 13.39,
+  `laravel/horizon` 5.50.1, Larastan 3.14 (PHPStan 2.3) e o grupo de
+  frontend (`@playwright/test` 1.64.1, `chart.js` 4.6.1, `lenis` 1.3.27,
+  `three` 0.187.0, `@laravel/multiplex` 0.4.5); no CI,
+  `docker/setup-buildx-action` v4, `docker/build-push-action` v7 e
+  `shivammathur/setup-php` 2.40.0; no split,
+  `symplify/monorepo-split-github-action` v2.4.5 — que passa a reprovar em
+  erro de git, por isso a republicação de uma tag pula o espelho que já a
+  tem.
+
 ## [2.0.0-beta.21] — 2026-11-05
 
 Fecha a lista do que entra na 2.0.0: o instalador pergunta o banco

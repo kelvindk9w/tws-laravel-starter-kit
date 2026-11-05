@@ -118,9 +118,11 @@ próximo recurso.
    banco; a produção continua no PostgreSQL) — e se usa Redis; sem ele,
    sessão, fila e cache vão para o banco e o Horizon não é instalado
    ([Banco de dados e Redis](instalacao.md#banco-de-dados-e-redis-só-na-criação)).
-5. **Atualizações pendentes do Dependabot** (Pest 5 nos pacotes, ações de
-   build do Docker e do split, grupo de frontend do starter Livewire):
-   aplicar e validar juntas.
+5. **Atualizações pendentes do Dependabot — resolvido na próxima versão.**
+   Pest 5 aceito em todos os pacotes e no comando único (suítes verdes no
+   Pest 5), ações de build do Docker, do split e do PHP atualizadas, grupos
+   Laravel e de frontend e Larastan do starter Livewire aplicados; os PRs
+   do starter React já estavam cobertos.
 6. **Guia de atualização 1.x → 2.0 revisado com um caso real** (o resumo já
    está no CHANGELOG da 2.0.0-beta.1).
 7. **Documentação por pacote** conferida contra a versão final (os READMEs
