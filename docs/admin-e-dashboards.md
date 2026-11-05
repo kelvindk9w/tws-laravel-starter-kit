@@ -1,15 +1,17 @@
 # Painéis: painel do usuário, super admin e dashboards
 
-Dois frontends na mesma codebase: **painel do usuário em Livewire 4** e
-**super admin em Filament 5**. Branding 100% via `platform()` (nome, logo e
+Dois frontends na mesma codebase: **painel do usuário em Livewire 4** (no
+starter React, em React + Inertia, com as mesmas rotas) e **super admin em
+Filament 5**. Branding 100% via `platform()` (nome, logo e
 cor primária — `PLATFORM_NAME`/`PLATFORM_LOGO_URL`/`PLATFORM_PRIMARY_COLOR`
 no .env — nada hardcoded). Toda string via `__()` (pt-BR/en/es). Tema
 claro/escuro/sistema no painel do usuário (toggle de 3 estados no topo,
 default = preferência do SO).
 
 > **Módulos opcionais.** As telas de chaves, projetos e conta do painel do
-> usuário são do `twstec/kit-accounts`, a foto de perfil do `twstec/kit-uploads`
-> e o super admin inteiro do `twstec/kit-admin` — os três opcionais. Sem um
+> usuário são do `twstec/kit-accounts`, a foto de perfil do `twstec/kit-uploads`,
+> a de webhooks do `twstec/kit-webhooks` e o super admin inteiro do
+> `twstec/kit-admin` — os quatro opcionais. Sem um
 > deles, as telas somem (rota, menu e atalhos) e o `/admin` mostra só o que
 > existe. Ver [instalação e módulos](instalacao.md#o-que-some-em-cada-combinação).
 
@@ -21,6 +23,8 @@ default = preferência do SO).
 | `/profile` | Dados, idioma, aparência (tema), senha de login, senha de transação e avatar (mesma tela) |
 | `/api-keys` | Chaves de API: criar (scopes + vínculo N:N com projetos), visualização única da secreta, rotacionar (grace period), revogar |
 | `/projects` | Projetos: CRUD só com nome, tudo inline |
+| `/account`, `/accounts/create` | A conta atual (membros, convites e papéis) e a criação de outra conta — ver [Tenancy](tenancy.md) |
+| `/webhooks` | Webhooks de saída da conta — ver [Webhooks](webhooks.md) |
 | `/notifications` | Preferências de e-mail (esqueleto p/ notificações do produto) |
 
 **O dashboard mostra tráfego REAL**: as métricas, o gráfico e a lista saem de
@@ -87,7 +91,7 @@ produto — por isso é pacote.
 
 | Onde | O quê |
 | --- | --- |
-| Pacote (`packages/admin`) | resources (usuários, chaves de API, projetos, uploads, logs de requisição, auditoria), páginas (perfil, configurações, login com o segundo fator por e-mail — provedor MFA próprio), dashboards e widgets (`DashboardRegistry`, as variantes Visão geral e Crescimento & API), a captura da trilha de auditoria (`AdminAudit`), guardas (`UserAdminGuard`), ações (marcar e-mail verificado), o comando `user:make-admin`, o critério de acesso (`AdminAccess`), as proteções do painel e as traduções `admin.*` |
+| Pacote (`packages/admin`) | resources (usuários, contas, chaves de API, projetos, uploads, logs de requisição, auditoria, aprovações), páginas (perfil, configurações, login com o segundo fator por e-mail — provedor MFA próprio), dashboards e widgets (`DashboardRegistry`, as variantes Visão geral e Crescimento & API), a captura da trilha de auditoria (`AdminAudit`), guardas (`UserAdminGuard`), ações (marcar e-mail verificado), o comando `user:make-admin`, o critério de acesso (`AdminAccess`), as proteções do painel e as traduções `admin.*` |
 | Starter (`app/Providers/Filament/AdminPanelProvider.php`) | o registro do painel (`id`, `path`), a marca, as cores, a fonte, o tema (`resources/css/filament.css`), o seletor de idioma da topbar e a descoberta de telas próprias em `app/Filament` |
 | Demonstração (`Twstec\Kit\Demo\Filament\DemoAdminPlugin`, pacote `twstec/kit-demo`, só no desenvolvimento) | produtos, submissões e o dashboard "Conteúdo & Operação" — outro plugin, com as traduções dela no `lang/admin.php` do pacote |
 
@@ -182,12 +186,13 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
 
 - **i18n + seletor compacto na topbar** (bandeira + sigla): o painel segue a
   mesma resolução de locale do app (preferência da conta → cookie → padrão).
-- **Três dashboards nomeados para escolher** (`/admin`): "Visão geral",
-  "Crescimento & API" e "Conteúdo & Operação" — a seção
+- **Três dashboards nomeados para escolher** (`/admin`): "Visão geral" e
+  "Crescimento & API" (do pacote) e "Conteúdo & Operação" (da demonstração,
+  `twstec/kit-demo`, só no desenvolvimento) — a seção
   [Dashboards: escolhendo e adaptando a sua variante](#dashboards-escolhendo-e-adaptando-a-sua-variante)
   explica como ligar/desligar cada uma, como criar a quarta e como um widget
-  novo nasce em poucas linhas. Todo número vem de tabela real; os seeders do
-  kit garantem que as três nasçam CHEIAS em qualquer instalação.
+  novo nasce em poucas linhas. Todo número vem de tabela real; os seeders da
+  demonstração garantem que as três nasçam CHEIAS no desenvolvimento.
 - **Identidade unificada com o resto do produto**: `->font('Space Grotesk
   Variable')` (self-hosted, sem CDN de fonte — a CSP não permite),
   `->viteTheme('resources/css/filament.css')` (que importa o preset do
@@ -210,10 +215,10 @@ docker compose exec app php artisan user:make-admin email@exemplo.com
   também as sessões do `/admin` da pessoa); `UserSeeder` idempotente com 40 usuários
   realistas para paginação e filtros nascerem com conteúdo),
   Chaves de API (visão global de todos os tenants + revogar), Projetos,
-  **Produtos** (vitrine de CRUD: foto por upload validado ou URL, valor
+  **Produtos** (da demonstração; vitrine de CRUD: foto por upload validado ou URL, valor
   monetário em centavos — nunca float —, paginação de 10 e paginação/filtros
   refletidos na query string; `ProductSeeder` com 36 itens),
-  **Submissões de formulário** (read-only; ataques bloqueados no topo, com
+  **Submissões de formulário** (da demonstração; read-only; ataques bloqueados no topo, com
   selo do tipo e **trecho neutralizado** — ver abaixo; filtro por origem na
   URL — os dois forms demo do `/ui` **e o formulário de contato real da
   landing**, origem `contact`, a única com remetente identificado),
@@ -604,7 +609,8 @@ registrada na trilha.
 ## Dashboards: escolhendo e adaptando a sua variante
 
 Como nos temas de admin clássicos ("Analytics / SaaS / E-commerce"), o
-`/admin` entrega **três dashboards nomeados**. A ideia não é que os três
+`/admin` entrega **três dashboards nomeados** (o terceiro, `content`, vem da
+demonstração — `twstec/kit-demo`). A ideia não é que os três
 fiquem ligados para sempre: é que você abra os três, escolha o que mais se
 parece com o seu produto, **apague os outros dois** e adapte o que sobrou.
 
@@ -765,14 +771,14 @@ mesma `<x-filament::section>` dos demais).
 `users` (90 dias) e `request_logs` (30 dias) já vinham semeados; `projects`,
 `api_keys` e `uploads` nasciam **vazios**, e as submissões cabiam todas nas
 últimas 40 horas — metade dos cards abriria em zero. O
-`DashboardHistorySeeder` (chamado pelo `DatabaseSeeder`, só com o login demo
-habilitado) resolve isso com seis seeders **idempotentes**, todos por
+`DashboardHistorySeeder` (da demonstração, chamado pelo `DemoSeeder` que o
+`DatabaseSeeder` roda, só com o login demo habilitado) resolve isso com seis seeders **idempotentes**, todos por
 identificador determinístico (UUID v5 com semente fixa):
 
 | Seeder | O que semeia |
 |---|---|
-| `ProjectSeeder` | 22 projetos espalhados em até 200 dias, com status variado |
-| `ApiKeySeeder` | 18 chaves **inertes** (nenhuma secreta existe — só um hash sem par), com os quatro status e vínculo com projetos |
+| `ProjectSeeder` | 28 projetos espalhados em até 200 dias, com status variado |
+| `ApiKeySeeder` | 24 chaves **inertes** (nenhuma secreta existe — só um hash sem par), com os quatro status e vínculo com projetos |
 | `UploadSeeder` | ~700 registros de upload em 200 dias, com tipo real, tamanho plausível e volume crescendo rumo ao presente |
 | `SubmissionHistorySeeder` | submissões ANTIGAS (conteúdo banal — payload de ataque continua sendo assunto do `FormSubmissionSeeder`) |
 | `ProductHistorySeeder` | data de cadastro dos produtos derivada do uuid: não cria nem apaga nada, só espalha o catálogo no tempo |
