@@ -6,6 +6,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0] — 2026-11-06
+
+Primeira versão estável da 2.x. O kit deixa de ser código copiado para o
+projeto e vira pacotes `twstec/kit-*` versionados: o projeto guarda só o que
+personaliza (`kit:overrides`), confere o que mudou entre versões
+(`tws:upgrade --check`) e escolhe interface (React ou Livewire), módulos,
+banco (PostgreSQL ou SQLite) e Redis na criação. Validado criando projetos do
+zero no Linux, no Windows e no macOS e num projeto real feito sobre o kit.
+De uma 1.x para a 2.0: [Atualização](docs/atualizacao.md). As mudanças de
+cada beta estão nas seções abaixo; o que ficou para depois, no
+[roteiro](docs/roadmap.md). A partir daqui a 2.x segue o SemVer.
+
 ### Documentação
 
 - **Linguagem e comandos da versão estável:** README, CONTRIBUTING, `docs/`,
@@ -2940,7 +2952,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.23...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...desenvolvimento
+[2.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0
 [2.0.0-beta.23]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.23
 [2.0.0-beta.22]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.22
 [2.0.0-beta.21]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.21
