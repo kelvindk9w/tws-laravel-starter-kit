@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 
 // =============================================================================
@@ -14,8 +15,10 @@ use Symfony\Component\Process\Process;
 // A prova roda o artisan de verdade, em dois processos: o primeiro gera o
 // cache com BACKUP_*_CRON fora do padrão; o segundo lista o agendamento SEM
 // essas variáveis no ambiente — só o cache sabe delas. O cache vai para um
-// arquivo temporário (APP_CONFIG_CACHE); o bootstrap/cache do projeto não é
-// tocado.
+// arquivo temporário (APP_CONFIG_CACHE) em storage/framework/testing; o
+// bootstrap/cache do projeto não é tocado. Não na pasta temporária do sistema:
+// no Windows, com ela em nome curto (C:\Users\RUNNER~1\…), o tempnam() do
+// config:cache avisa que caiu na pasta temporária, e o aviso vira erro.
 // =============================================================================
 
 /**
@@ -31,7 +34,8 @@ function backupScheduleArtisan(array $command, array $env): Process
 }
 
 it('com config:cache, schedule:list mostra as frequências configuradas, não o padrão', function (): void {
-    $cache = sys_get_temp_dir().'/kit-backup-schedule-'.bin2hex(random_bytes(6)).'.php';
+    $cache = storage_path('framework/testing/kit-backup-schedule-'.bin2hex(random_bytes(6)).'.php');
+    File::ensureDirectoryExists(dirname($cache));
     $configured = [
         'BACKUP_RUN_CRON' => '*/5 * * * *',
         'BACKUP_CLEAN_CRON' => '15 4 * * *',

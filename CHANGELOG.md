@@ -62,6 +62,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   do aplicativo saía vazia no teste. O React passa a declarar, com um teste
   que prova a listagem de todas as contas. Projeto React que já existe:
   copie o bloco `pest()->in('Feature/Admin')` do `tests/Pest.php` do starter.
+- **Suíte do projeto criado no Windows** (#101): 11 testes do Livewire e 7
+  do React reprovavam por defeito do teste, não do produto — caminho
+  comparado com `/` contra o `\` do Windows (extensões do Larastan, telas
+  do kit, isolamento por conta), `import()` do Node com o caminho `D:\…`
+  (passa a ir por URL `file://`) e o cache de config do teste do backup na
+  pasta temporária do sistema em nome curto (`RUNNER~1`, passa para
+  `storage/framework/testing`). A conferência do bit de execução dos
+  `scripts/*` vira um teste próprio, pulado só no Windows (que não tem o
+  bit); no Linux e no macOS tudo continua conferido. Projeto que já existe:
+  copie do starter os testes `DevelopmentEnvironmentFilesTest`,
+  `E2eIsolationTest`, `BackupScheduleConfigCacheTest`, `KitScreensTest` e
+  (Livewire) `AccountIsolationTest`.
 
 ### CI
 

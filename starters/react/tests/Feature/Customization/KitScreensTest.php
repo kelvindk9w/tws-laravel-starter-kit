@@ -88,8 +88,12 @@ it('o Vite procura cada `@/…` primeiro no aplicativo e depois no kit', functio
     $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($root));
 
     $script = <<<'JS'
+        import { pathToFileURL } from 'node:url';
+
         const [plugin, root] = process.argv.slice(1);
-        const kit = (await import(plugin)).default();
+        // Por URL file://: no Windows, o import() recusa o caminho com a letra
+        // do disco (D:\…).
+        const kit = (await import(pathToFileURL(plugin).href)).default();
         kit.configResolved({ root });
         const resolve = (id) => kit.resolveId(id);
         console.log(JSON.stringify({
@@ -106,8 +110,9 @@ it('o Vite procura cada `@/…` primeiro no aplicativo e depois no kit', functio
 
     $resolved = json_decode($result->output(), true);
 
+    // O caminho comparado com `/`: no Windows, o Node devolve com `\`.
     expect($resolved['own'])->toBeNull('o arquivo do aplicativo segue o caminho normal do Vite')
-        ->and($resolved['kit'])->toBe($root.'/vendor/twstec/kit-foundation/resources/react/components/card.tsx')
+        ->and(str_replace('\\', '/', (string) $resolved['kit']))->toBe(str_replace('\\', '/', $root).'/vendor/twstec/kit-foundation/resources/react/components/card.tsx')
         ->and($resolved['missing'])->toBeNull()
         ->and($resolved['other'])->toBeNull();
 });

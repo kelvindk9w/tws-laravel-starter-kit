@@ -250,14 +250,15 @@ de saída do `create-project` é diferente de 0.
 O workflow manual **"Instalação no Windows e no macOS"**
 (`.github/workflows/instalacao-sistemas.yml`; Actions → Run workflow, com a
 escolha de rodar um sistema só) cria projetos com o pacote **publicado** no
-Packagist nas máquinas do GitHub (`windows-latest` e `macos-latest`): o
+Packagist — ou, com a entrada `fonte=branch`, com o código de uma branch,
+antes de publicar — nas máquinas do GitHub (`windows-latest` e `macos-latest`): o
 comando único e o `laravel new --using`, as duas interfaces, SQLite e sem
 Redis, pela sintaxe deste guia em cada terminal — PowerShell e `cmd` no
 Windows, bash no macOS. Em cada projeto confere os arquivos (e que nada do
 `twstec/kit` sobrou), o `.env` (SQLite; sessão, cache e fila no banco; sem
 `REDIS_*`), o `composer.json` (sem o Horizon), `php artisan about`,
 `php artisan migrate`, o build do front e a suíte do projeto
-(`php artisan test`).
+(`php artisan test`, que reprova por qualquer falha).
 
 Na 2.0.0-beta.22 (PHP 8.4.27, Composer 2.11.1, `laravel/installer` 5.32.0,
 Node 24):
@@ -265,11 +266,13 @@ Node 24):
 - **macOS:** tudo verde nos quatro casos (os dois caminhos × as duas
   interfaces), com a suíte inteira.
 - **Windows (PowerShell e `cmd`):** o projeto nasce pelos dois caminhos e
-  pelas duas interfaces; `about`, `migrate` e o build passam. Ainda em
-  aberto: alguns testes da suíte do projeto não são portáveis para o Windows
-  (caminho com `/`, bit de execução, `import()` do Node com caminho do
-  Windows) — o produto não é o problema; o workflow os mostra como aviso
-  até a correção. Corrigida para a próxima versão: a pasta `kit-setup/` do
+  pelas duas interfaces; `about`, `migrate` e o build passam. Alguns testes
+  da suíte do projeto não eram portáveis para o Windows (caminho com `/`,
+  bit de execução, `import()` do Node com caminho do Windows, pasta
+  temporária em nome curto) — o produto não era o problema; corrigidos para
+  a próxima versão (no Windows, só a conferência do bit de execução dos
+  `scripts/*` pula, porque lá ele não existe). Também corrigida para a
+  próxima versão: a pasta `kit-setup/` do
   instalador sobrava vazia no projeto (o PHP do Windows segura o arquivo do
   script principal até o fim do processo) — se sobrar, apague-a.
 
