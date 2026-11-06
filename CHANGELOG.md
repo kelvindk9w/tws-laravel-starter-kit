@@ -26,6 +26,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   processo. O `post-create-project-cmd` do `twstec/kit` passa a incluí-lo por
   `php -r "require 'kit-setup/create.php';"`, e a pasta sai. Visto no
   workflow manual de criação de projeto no Windows e no macOS.
+- **O projeto criado recebe um README próprio**, não o do starter (que se
+  apresentava como espelho só-leitura do monorepo e ensinava comandos que
+  falham no projeto: `scripts/preparar-dev`, `react-app`, porta 8181…). O
+  instalador grava, na criação, o README do projeto (modelo
+  `stubs/project-readme.md` do `twstec/kit-installer`): o nome, o endereço e
+  o Mailpit do `.env`, `docker compose up -d`, `scripts/verificar`,
+  `scripts/e2e`, `user:make-admin` (com o `/admin`), `kit:overrides`,
+  `tws:upgrade --check`, onde personalizar e os links para a documentação do
+  kit da versão instalada — de acordo com a interface, o banco e o Redis
+  escolhidos. A simulação da instalação publicada passa a reprovar citação do
+  monorepo também no README do projeto. O README do starter continua servindo
+  ao espelho e ao Packagist (#104).
 - **`scripts/verificar` vermelho no projeto criado, em uso normal:** o teste
   das telas do kit no pacote (`KitScreensTest`) reprovava o projeto em dois
   casos. (1) React: esperava o build no documento, mas com o Vite de

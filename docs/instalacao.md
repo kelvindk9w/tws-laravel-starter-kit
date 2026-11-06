@@ -370,6 +370,7 @@ o starter trazia:
 | `LICENSE` → `NOTICE-KIT-MIT.txt` | a licença MIT do kit vira o aviso que a MIT exige manter, com um cabeçalho dizendo que ela não é a licença do projeto — o projeto escolhe a dele (o `license` do `composer.json` e, se quiser, um `LICENSE` próprio) |
 | `.github/workflows/ci.yml` | o CI base (sem sobrescrever um que exista) |
 | `.github/dependabot.yml` | o Dependabot modelo (sem sobrescrever um que exista) |
+| `README.md` | o README **do projeto** no lugar do do starter (que descreve o monorepo e o espelho publicado): o nome, o endereço e o Mailpit do `.env`, como subir, os comandos do dia a dia (`scripts/verificar`, `scripts/e2e`, `user:make-admin` com o `/admin`, `kit:overrides`, `tws:upgrade --check`), onde personalizar e os links para a documentação do kit da versão instalada — acompanhando a interface, o banco e o Redis escolhidos. Modelo: `stubs/project-readme.md` do `twstec/kit-installer` |
 | `.tws/manifest.json` | a base da conferência dos arquivos de starter (`php artisan tws:upgrade --check`): a versão do kit, a interface e, por arquivo, o hash do arquivo do starter e o do projeto como o instalador o deixou — versione junto com o projeto |
 
 Vendor ou licença inválidos param a instalação antes de qualquer mudança,
