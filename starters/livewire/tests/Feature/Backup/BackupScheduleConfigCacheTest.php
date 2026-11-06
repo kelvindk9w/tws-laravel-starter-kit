@@ -16,9 +16,11 @@ use Symfony\Component\Process\Process;
 // cache com BACKUP_*_CRON fora do padrão; o segundo lista o agendamento SEM
 // essas variáveis no ambiente — só o cache sabe delas. O cache vai para um
 // arquivo temporário (APP_CONFIG_CACHE) em storage/framework/testing; o
-// bootstrap/cache do projeto não é tocado. Não na pasta temporária do sistema:
-// no Windows, com ela em nome curto (C:\Users\RUNNER~1\…), o tempnam() do
-// config:cache avisa que caiu na pasta temporária, e o aviso vira erro.
+// bootstrap/cache do projeto não é tocado. O APP_CONFIG_CACHE vai RELATIVO à
+// raiz do projeto: o Laravel só toma por absoluto o caminho que começa com
+// `/` ou `\` — no Windows, `C:\…` viraria uma pasta dentro do projeto que não
+// existe, e o tempnam() do config:cache cairia na pasta temporária do
+// sistema (o aviso vira erro).
 // =============================================================================
 
 /**
@@ -34,7 +36,8 @@ function backupScheduleArtisan(array $command, array $env): Process
 }
 
 it('com config:cache, schedule:list mostra as frequências configuradas, não o padrão', function (): void {
-    $cache = storage_path('framework/testing/kit-backup-schedule-'.bin2hex(random_bytes(6)).'.php');
+    $relative = 'storage/framework/testing/kit-backup-schedule-'.bin2hex(random_bytes(6)).'.php';
+    $cache = base_path($relative);
     File::ensureDirectoryExists(dirname($cache));
     $configured = [
         'BACKUP_RUN_CRON' => '*/5 * * * *',
@@ -43,7 +46,7 @@ it('com config:cache, schedule:list mostra as frequências configuradas, não o 
     ];
 
     try {
-        $cached = backupScheduleArtisan(['config:cache'], ['APP_CONFIG_CACHE' => $cache, ...$configured]);
+        $cached = backupScheduleArtisan(['config:cache'], ['APP_CONFIG_CACHE' => $relative, ...$configured]);
 
         expect($cached->getExitCode())->toBe(0, $cached->getErrorOutput().$cached->getOutput())
             ->and(is_file($cache))->toBeTrue();
@@ -51,7 +54,7 @@ it('com config:cache, schedule:list mostra as frequências configuradas, não o 
         // Sem as variáveis no ambiente (false = remove a herdada): um env()
         // na rota cairia no padrão; config() lê o cache.
         $list = backupScheduleArtisan(['schedule:list'], [
-            'APP_CONFIG_CACHE' => $cache,
+            'APP_CONFIG_CACHE' => $relative,
             ...array_fill_keys(array_keys($configured), false),
         ]);
 

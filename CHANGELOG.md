@@ -66,8 +66,9 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   do React reprovavam por defeito do teste, não do produto — caminho
   comparado com `/` contra o `\` do Windows (extensões do Larastan, telas
   do kit, isolamento por conta), `import()` do Node com o caminho `D:\…`
-  (passa a ir por URL `file://`) e o cache de config do teste do backup na
-  pasta temporária do sistema em nome curto (`RUNNER~1`, passa para
+  (passa a ir por URL `file://`) e o cache de config do teste do backup com
+  caminho absoluto `C:\…` no `APP_CONFIG_CACHE`, que o Laravel só toma por
+  absoluto começando com `/` ou `\` (passa relativo à raiz do projeto, em
   `storage/framework/testing`). A conferência do bit de execução dos
   `scripts/*` vira um teste próprio, pulado só no Windows (que não tem o
   bit); no Linux e no macOS tudo continua conferido. Projeto que já existe:
