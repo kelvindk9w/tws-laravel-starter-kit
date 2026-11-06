@@ -29,7 +29,8 @@
 #   pasta é APAGADA e recriada pela etapa copy: o script só aceita uma que
 #   não existe ou que ele mesmo criou (tem o arquivo-marca
 #   .simulacao-twstec-kit), nunca a raiz, a pasta pessoal ou o monorepo.
-#   etapas: all | copy (git + tar) | package (php + composer) | build (npm) |
+#   etapas: all | copy (git + tar) | package (php + composer) | archive (só
+#           os ZIPs de package, sem criar o projeto) | build (npm) |
 #           test (larastan, sonda da análise e pest) | analyse (só a sonda
 #           da análise — ver analysis_probe) | image (docker: imagens de produção e conferências) |
 #           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
@@ -398,7 +399,11 @@ secret_scan() {
     echo "segredos do projeto: gitleaks sem achado; a chave falsa recusada pelo pre-commit, pelo scripts/segredos e pelo scripts/verificar"
 }
 
-package() {
+# Os ZIPs (o que o Packagist vai servir) em $WORK/packages: os pacotes, o(s)
+# starter(s) e, com o comando único, o twstec/kit. Sozinha (etapa archive,
+# depois de copy), serve ao workflow da instalação no Windows e no macOS com
+# o código da branch.
+archive() {
     for pkg in $PACKAGES; do
         php "$ROOT/.github/release/prepare-composer.php" "$WORK/src/$pkg" "$VERSION" --set-version
         (cd "$WORK/src/$pkg" && composer archive --format=zip --dir="$WORK/packages" --file="twstec-kit-$pkg-$VERSION" --no-interaction)
@@ -414,6 +419,10 @@ package() {
     fi
 
     ls -la "$WORK/packages"
+}
+
+package() {
+    archive
 
     # O projeto, como `composer create-project` / `laravel new --using=`. O
     # repositório `artifact` relativo (ver o cabeçalho): daqui ($WORK/src) e do
@@ -832,6 +841,7 @@ image() {
 
 case "$STEP" in
     copy) copy ;;
+    archive) archive ;;
     package) package ;;
     build) build ;;
     test) run_tests ;;

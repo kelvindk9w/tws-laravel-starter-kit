@@ -36,6 +36,15 @@ function applicationViews(array $views): void
     test()->beforeApplicationDestroyed(fn () => File::deleteDirectory($dir));
 }
 
+/**
+ * O caminho com `/`: no Windows, o localizador de views guarda as pastas pelo
+ * realpath() (com `\`), e o LivewireScreens::path() junta com `/`.
+ */
+function kitScreensPath(string $path): string
+{
+    return str_replace('\\', '/', $path);
+}
+
 // Que o STARTER não traz cópia das telas do kit (só a inicial e o dashboard)
 // é conferido em StarterOwnFilesTest.php, só no repositório do kit: no
 // projeto criado, telas novas e cópias personalizadas em resources/views são
@@ -49,15 +58,19 @@ it('as telas do kit vêm do pacote', function (): void {
 });
 
 it('sem a tela no aplicativo, vale a do kit', function (): void {
-    expect(app('view')->getFinder()->find('auth.login'))->toBe(LivewireScreens::path().'/auth/login.blade.php');
+    expect(kitScreensPath(app('view')->getFinder()->find('auth.login')))->toBe(kitScreensPath(LivewireScreens::path().'/auth/login.blade.php'));
 
     $this->get('/login')->assertOk()->assertSee('name="email"', false);
 });
 
 it('o resources/views do aplicativo vem antes das telas do kit na busca', function (): void {
-    $paths = app('view')->getFinder()->getPaths();
+    $paths = array_map(kitScreensPath(...), app('view')->getFinder()->getPaths());
+    $application = array_search(kitScreensPath(resource_path('views')), $paths, true);
+    $kit = array_search(kitScreensPath(LivewireScreens::path()), $paths, true);
 
-    expect(array_search(resource_path('views'), $paths, true))->toBeLessThan(array_search(LivewireScreens::path(), $paths, true));
+    expect($application)->toBeInt()
+        ->and($kit)->toBeInt()
+        ->and($application)->toBeLessThan($kit);
 });
 
 it('com a tela no aplicativo, vale a dele', function (): void {
