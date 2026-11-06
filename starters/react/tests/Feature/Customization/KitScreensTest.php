@@ -15,14 +15,12 @@ use Twstec\Kit\Foundation\Customization\ReactScreens;
 // resources/js vale no lugar do pacote. O projeto criado não recebe cópias.
 // =============================================================================
 
-it('o aplicativo não traz cópia das telas do kit: só o que é dele', function (): void {
-    $application = collect(File::allFiles(resource_path('js')))
-        ->map(fn (SplFileInfo $file): string => str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname()))
-        ->sort()
-        ->values()
-        ->all();
-
-    expect($application)->toBe(['app.tsx', 'pages/dashboard.tsx', 'pages/welcome.tsx', 'types/vite-env.d.ts']);
+// Que o STARTER não traz cópia das telas do kit (só app.tsx, a inicial e o
+// dashboard) é conferido em StarterOwnFilesTest.php, só no repositório do
+// kit: no projeto criado, telas novas e cópias personalizadas em
+// resources/js são o uso normal (docs/personalizacao.md).
+it('as telas do kit vêm do pacote', function (): void {
+    expect(resource_path('js/app.tsx'))->toBeFile();
 
     foreach (['pages/auth/login.tsx', 'layouts/app-layout.tsx', 'components/ui/button.tsx', 'lib/pages.ts'] as $kitFile) {
         expect(kitFrontPath($kitFile))->toBeFile();

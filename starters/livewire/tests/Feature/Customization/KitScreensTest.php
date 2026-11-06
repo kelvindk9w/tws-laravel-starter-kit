@@ -36,15 +36,12 @@ function applicationViews(array $views): void
     test()->beforeApplicationDestroyed(fn () => File::deleteDirectory($dir));
 }
 
-it('o aplicativo não traz cópia das telas do kit: só o que é dele', function (): void {
-    $application = collect(File::allFiles(resource_path('views')))
-        ->map(fn (SplFileInfo $file): string => str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname()))
-        ->sort()
-        ->values()
-        ->all();
-
-    expect($application)->toBe(['home.blade.php', 'livewire/dashboard.blade.php'])
-        ->and(PackageViews::paths())->toContain(LivewireScreens::path());
+// Que o STARTER não traz cópia das telas do kit (só a inicial e o dashboard)
+// é conferido em StarterOwnFilesTest.php, só no repositório do kit: no
+// projeto criado, telas novas e cópias personalizadas em resources/views são
+// o uso normal (docs/personalizacao.md).
+it('as telas do kit vêm do pacote', function (): void {
+    expect(PackageViews::paths())->toContain(LivewireScreens::path());
 
     foreach (['auth/login.blade.php', 'layouts/app.blade.php', 'components/button.blade.php', 'livewire/profile.blade.php'] as $kitView) {
         expect(kitViewsPath($kitView))->toBeFile();
