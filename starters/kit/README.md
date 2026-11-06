@@ -384,7 +384,9 @@ comando são lidas no Linux e no WSL; no Windows, use as variáveis.)
 ## Como funciona
 
 O `post-create-project-cmd` deste pacote roda `kit-setup/create.php` com o
-mesmo PHP e o mesmo Composer do `create-project`:
+mesmo PHP e o mesmo Composer do `create-project` (incluído por `php -r`, e não
+como script principal: no Windows, o PHP segura o arquivo do script principal
+até o fim do processo, e a pasta `kit-setup/` sobraria no projeto):
 
 1. a escolha (menu ou ambiente): o nome e o número do projeto, a interface,
    os módulos, o banco e o Redis;

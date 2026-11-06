@@ -20,6 +20,12 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **Comando único no Windows:** a pasta `kit-setup/` do instalador sobrava
+  vazia no projeto criado ("Não foi possível apagar … (arquivo em uso?)") —
+  o PHP do Windows segura o arquivo do script principal até o fim do
+  processo. O `post-create-project-cmd` do `twstec/kit` passa a incluí-lo por
+  `php -r "require 'kit-setup/create.php';"`, e a pasta sai. Visto no
+  workflow manual de criação de projeto no Windows e no macOS.
 - **`scripts/verificar` vermelho no projeto criado, em uso normal:** o teste
   das telas do kit no pacote (`KitScreensTest`) reprovava o projeto em dois
   casos. (1) React: esperava o build no documento, mas com o Vite de
