@@ -24,7 +24,7 @@ Passo a passo, para quem está começando:
 **Com PHP 8.4 e Composer na máquina:**
 
 ```bash
-composer create-project "twstec/kit:^2.0@beta" meu-projeto   # na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0@beta" meu-projeto   # na 2.0.0 estável: twstec/kit
 cd meu-projeto
 docker compose up -d
 ```

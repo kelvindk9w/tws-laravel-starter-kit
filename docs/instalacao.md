@@ -79,8 +79,16 @@ O CI prova esse caminho (abaixo, "Como o CI garante").
 ## Criar um projeto: o comando único
 
 ```bash
-composer create-project "twstec/kit:^2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
 ```
+
+**`~2.0`, e não `^2.0`, nos comandos deste guia.** Para a 2.x, as duas
+restrições aceitam as mesmas versões; a diferença é o terminal do Windows. No
+PowerShell, `composer` e `laravel` são arquivos `.bat`: o PowerShell tira as
+aspas do argumento ao chamá-los, e o `cmd` que roda o `.bat` come o `^` —
+`"twstec/kit:^2.0@beta"` chega ao Composer como `twstec/kit:2.0@beta` (só a
+versão exata `2.0`, que não existe: "Could not find package"). O `~` passa
+intacto no PowerShell, no `cmd`, no bash e no zsh.
 
 O pacote `twstec/kit` ([starters/kit](../starters/kit/README.md)) é o ponto
 de entrada. Num terminal, um menu (Laravel Prompts) pergunta — toda pergunta
@@ -145,17 +153,27 @@ e no Windows:
 
 ```bash
 # Linux / macOS: React sem uploads
-TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:^2.0@beta" meu-projeto
+TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:~2.0@beta" meu-projeto
 
 # Só a base (foundation + auth), Livewire
-TWS_KIT_WITHOUT=accounts,uploads,admin,webhooks composer create-project "twstec/kit:^2.0@beta" meu-projeto
+TWS_KIT_WITHOUT=accounts,uploads,admin,webhooks composer create-project "twstec/kit:~2.0@beta" meu-projeto
 ```
 
 ```powershell
 # Windows (PowerShell)
 $env:TWS_KIT_STACK = "react"; $env:TWS_KIT_WITHOUT = "uploads"
-composer create-project "twstec/kit:^2.0@beta" meu-projeto
+composer create-project "twstec/kit:~2.0@beta" meu-projeto
 ```
+
+```bat
+:: Windows (cmd) — sem espaço antes do "=" nem depois do valor
+set TWS_KIT_STACK=react
+set TWS_KIT_WITHOUT=uploads
+composer create-project "twstec/kit:~2.0@beta" meu-projeto
+```
+
+No PowerShell e no `cmd`, a variável vale até fechar o terminal: para criar
+outro projeto com outra escolha, troque-a ou abra outro terminal.
 
 Qualquer uma dessas variáveis (mesmo vazia), menos a `TWS_KIT_LOCALE`,
 desliga o menu; sem nenhuma e sem
@@ -171,6 +189,15 @@ baixar qualquer coisa, com o motivo e a sugestão.
 numeradas (o Question Helper do Symfony Console), com as mesmas perguntas e a
 mesma validação. As extensões: ver [Windows e extensões do PHP](#windows-e-extensões-do-php).
 
+**Windows e macOS sem o Docker:** o projeto criado com **SQLite e sem
+Redis** (`TWS_KIT_DATABASE=sqlite`, `TWS_KIT_REDIS=0`) roda com o PHP e o
+Node da máquina — `php artisan migrate`, `npm ci` + `npm run build` e
+`php artisan test`. O Docker de desenvolvimento do projeto (PostgreSQL,
+Redis, Mailpit, o site em `http://<nome>.localhost:808N`) precisa do Docker
+Desktop — no Windows, com o WSL 2 —, e os scripts do projeto
+(`scripts/verificar`, `scripts/e2e`…) são `sh`: no Windows, pelo terminal do
+WSL ou pelo Git Bash. Ver [Provado no Windows e no macOS](#provado-no-windows-e-no-macos).
+
 ### Windows e extensões do PHP
 
 - **O que a pessoa pede vale por dentro.** `--ignore-platform-req=…` e
@@ -182,7 +209,7 @@ mesma validação. As extensões: ver [Windows e extensões do PHP](#windows-e-e
   define, valem em qualquer sistema.
 - **Windows: só `ext-pcntl` e `ext-posix` são ignoradas, sozinhas.** Só o
   Horizon as exige, e o PHP do Windows não as tem. Sem elas, o resto roda — foi
-  provado num PHP 8.4 sem as duas: a suíte inteira passa, o site sobe com
+  provado no Linux, num PHP 8.4 sem as duas: a suíte inteira passa, o site sobe com
   login, `queue:work` processa a fila (banco e Redis) e o `schedule:run`
   roda; o que não roda é `php artisan horizon` (`pcntl_async_signals`). O
   código dos pacotes só chama `posix_*` depois de conferir que a função existe.
@@ -192,6 +219,12 @@ mesma validação. As extensões: ver [Windows e extensões do PHP](#windows-e-e
   próximos comandos do Composer, e o caminho só com o Docker, que roda tudo.
   (`TWS_KIT_OS_FAMILY=Windows` simula o Windows em outro sistema — é o que a
   prova usa.)
+- **`sodium` no Windows: ligue no `php.ini`** (`extension=sodium`). O PHP do
+  Windows traz a extensão, mas desligada, e ela não é conferida na
+  instalação (o `twstec/kit-uploads` não a declara — ver
+  [roteiro](roadmap.md)): sem ela, o projeto nasce e roda, mas o upload
+  **confidencial** responde 503 ("falta a extensão sodium do PHP") e a suíte
+  do projeto tem falhas nos testes dele. Confira com `php -m`.
 - **Qualquer outra extensão que falte** (bcmath, gd, intl, zip…) **não é
   ignorada**: o `composer update` para, e a mensagem lista as extensões que
   faltam (lidas da saída do Composer) com as duas saídas — instalar (no
@@ -211,6 +244,34 @@ instalador) para ali e diz o passo e os **comandos exatos** para terminar sem
 recomeçar (`composer update`, `composer run-script
 post-create-project-cmd`…) — ou para apagar a pasta e rodar de novo. O código
 de saída do `create-project` é diferente de 0.
+
+### Provado no Windows e no macOS
+
+O workflow manual **"Instalação no Windows e no macOS"**
+(`.github/workflows/instalacao-sistemas.yml`; Actions → Run workflow, com a
+escolha de rodar um sistema só) cria projetos com o pacote **publicado** no
+Packagist nas máquinas do GitHub (`windows-latest` e `macos-latest`): o
+comando único e o `laravel new --using`, as duas interfaces, SQLite e sem
+Redis, pela sintaxe deste guia em cada terminal — PowerShell e `cmd` no
+Windows, bash no macOS. Em cada projeto confere os arquivos (e que nada do
+`twstec/kit` sobrou), o `.env` (SQLite; sessão, cache e fila no banco; sem
+`REDIS_*`), o `composer.json` (sem o Horizon), `php artisan about`,
+`php artisan migrate`, o build do front e a suíte do projeto
+(`php artisan test`).
+
+Na 2.0.0-beta.22 (PHP 8.4.27, Composer 2.11.1, `laravel/installer` 5.32.0,
+Node 24):
+
+- **macOS:** tudo verde nos quatro casos (os dois caminhos × as duas
+  interfaces), com a suíte inteira.
+- **Windows (PowerShell e `cmd`):** o projeto nasce pelos dois caminhos e
+  pelas duas interfaces; `about`, `migrate` e o build passam. Ainda em
+  aberto: alguns testes da suíte do projeto não são portáveis para o Windows
+  (caminho com `/`, bit de execução, `import()` do Node com caminho do
+  Windows) — o produto não é o problema; o workflow os mostra como aviso
+  até a correção. Corrigida para a próxima versão: a pasta `kit-setup/` do
+  instalador sobrava vazia no projeto (o PHP do Windows segura o arquivo do
+  script principal até o fim do processo) — se sobrar, apague-a.
 
 ## O Docker de desenvolvimento do projeto criado
 
@@ -490,7 +551,7 @@ Os comandos por starter continuam valendo (e são o que o comando único faz
 por dentro):
 
 ```bash
-composer create-project "twstec/starter-livewire:^2.0@beta" meu-app
+composer create-project "twstec/starter-livewire:~2.0@beta" meu-app
 ```
 
 (`twstec/starter-react` para o React — ver [Starter React](#starter-react).
@@ -518,7 +579,9 @@ depois (`php artisan migrate`).
 
 O `laravel new` funciona com o comando único e com os starters, **com estas
 opções** — o comando simples (`laravel new meu-app --using=twstec/kit`)
-estraga o projeto. Testado na 2.0.0-beta.21 com o `laravel/installer` 5.32:
+estraga o projeto. Testado na 2.0.0-beta.21 com o `laravel/installer` 5.32
+e, na 2.0.0-beta.22, com o `laravel/installer` 5.32.0 no Windows (PowerShell e
+`cmd`) e no macOS ([abaixo](#provado-no-windows-e-no-macos)):
 
 ```bash
 # PostgreSQL (o padrão do kit)
@@ -528,6 +591,17 @@ laravel new meu-app --using="twstec/kit:~2.0@beta" --database=pgsql --phpunit --
 TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
 ```
 
+```powershell
+# Windows (PowerShell): SQLite, sem Redis, sem perguntas
+$env:TWS_KIT_DATABASE = "sqlite"; $env:TWS_KIT_REDIS = "0"
+laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+```
+
+(No `cmd`: `set TWS_KIT_DATABASE=sqlite` e `set TWS_KIT_REDIS=0`, uma por
+linha, e o mesmo `laravel new`.) O instalador do Laravel vem do Composer
+(`composer global require laravel/installer`, com a pasta
+`composer global config bin-dir --absolute` no `PATH`).
+
 Direto por um starter: `--using="twstec/starter-livewire:~2.0@beta"` ou
 `--using="twstec/starter-react:~2.0@beta"`, com as mesmas outras opções.
 
@@ -535,8 +609,8 @@ O que cada opção faz:
 
 - **a versão no `--using`** (`:~2.0@beta`; na 2.0.0 estável, `:~2.0`): sem
   ela, o instalador do Laravel usa `--stability=dev` e baixa o branch de
-  desenvolvimento, não a versão publicada. É `~`, e não `^`, porque o `cmd`
-  do Windows come o `^`;
+  desenvolvimento, não a versão publicada. É `~`, e não `^`, pelo terminal
+  do Windows (ver [o comando único](#criar-um-projeto-o-comando-único));
 - **`--database` igual ao banco escolhido no kit** (`pgsql` ou `sqlite`):
   sem ela, o instalador do Laravel troca o `DB_CONNECTION` do `.env` e do
   `.env.example` para `sqlite` **depois** que o kit configurou o projeto;
@@ -578,7 +652,7 @@ conferida no CI) e passa pelas mesmas combinações de módulos no CI.
 (`TWS_KIT_STACK=react`, ou escolhida no menu), ou direto pelo starter:
 
 ```bash
-composer create-project "twstec/starter-react:^2.0@beta" meu-app
+composer create-project "twstec/starter-react:~2.0@beta" meu-app
 # ou: laravel new, com as opções de "Com o instalador do Laravel" acima
 cd meu-app && npm install && npm run build
 ```
@@ -861,8 +935,8 @@ lucide-react — só os do menu do kit (`bell`, `circle-user`, `folder`,
 ```bash
 # Durante o beta, o foundation também leva o @beta (a estabilidade só vale no
 # projeto raiz); na 2.0.0 estável, basta a segunda linha, sem o @beta.
-composer require "twstec/kit-foundation:^2.0@beta"
-composer require --dev "twstec/kit-installer:^2.0@beta"
+composer require "twstec/kit-foundation:~2.0@beta"
+composer require --dev "twstec/kit-installer:~2.0@beta"
 php artisan tws:add                                        # pergunta (Laravel Prompts)
 php artisan tws:add accounts admin                         # sem perguntas
 ```
@@ -917,7 +991,7 @@ composer require twstec/kit-webhooks          # opcional (exige accounts)
 ```
 
 Durante o beta, com a estabilidade mínima `stable` do seu projeto, acrescente
-`:^2.0@beta` a **cada** pacote do kit que você requerer (inclusive
+`:~2.0@beta` a **cada** pacote do kit que você requerer (inclusive
 `twstec/kit-foundation`, mesmo que ele venha como dependência) — ou use
 `"minimum-stability": "beta"` com `"prefer-stable": true`.
 
