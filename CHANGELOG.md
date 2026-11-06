@@ -6,6 +6,15 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Corrigido
+
+- **`/admin`: a coluna do código público mostrava a chave crua
+  `admin.common.code`** em todas as listagens (usuários, contas, projetos,
+  chaves, uploads e as telas novas do aplicativo que usam
+  `AdminColumns::publicCode()`), e no detalhe da conta e do usuário. A chave
+  passa a existir nos três idiomas ("Código" / "Code" / "Código"); a
+  exceção que o teste de traduções do pacote abria para ela sai.
+
 ## [2.0.0-beta.22] — 2026-11-05
 
 Revisão antes da 2.0.0: guia de atualização da 1.x para a 2.0 e documentação
