@@ -47,7 +47,10 @@ nativos do front do React são de glibc) e a linha de comando do Docker. Ele
 monta a pasta em `/app` e roda o **mesmo** `post-create-project-cmd` do
 comando único — o menu, o starter, o `composer update`, o instalador do
 starter — e depois `npm ci --ignore-scripts` e `npm run build`. O projeto é montado **na
-própria pasta**, que deixa de ser o `twstec/kit`.
+própria pasta**, que deixa de ser o `twstec/kit`: tudo o que havia nela sai,
+inclusive o `.git` de um `git clone` (o histórico do kit não é o do projeto).
+O projeto nasce sem git — `git init` e o primeiro commit depois da
+instalação, com o `.tws/manifest.json` junto.
 
 - **Dono dos arquivos:** tudo roda com o uid/gid de quem é dono da pasta na
   máquina (`TWS_KIT_UID`/`TWS_KIT_GID` vencem) — nada fica com dono root no
@@ -837,6 +840,19 @@ Escrevendo telas próprias que usam um módulo opcional, faça a mesma pergunta:
 rota dentro de `if (Kit::has('accounts')) { … }`, item de menu com
 `'module' => 'accounts'` em `App\Livewire\Support\Navigation`, bloco de view em
 `@kit('accounts') … @endkit`.
+
+**No starter React**, a tela própria entra no menu por três lugares do
+aplicativo: o item em `App\Support\Navigation` (com `'module'` se depender de
+um módulo opcional), o nome da rota em `App\Support\FrontRoutes::NAMES` (o
+front só conhece as rotas dessa lista — `route('nome')` de rota fora dela
+falha alto) e, se a tela tiver textos num grupo de tradução novo, o grupo em
+`App\Support\FrontTranslations::GROUPS`. O ícone do item é um **nome** que o
+componente `components/nav-icon.tsx` do kit troca pelo desenho do
+lucide-react — só os do menu do kit (`bell`, `circle-user`, `folder`,
+`key-round`, `layout-grid`, `lock`, `users`, `webhook`); outro nome vira
+`layout-grid`. Para usar outro ícone, copie o `nav-icon.tsx` para
+`resources/js/components/` e acrescente o seu (ver
+[Telas React](personalizacao.md#telas-react)).
 
 ## Só os pacotes, num aplicativo Laravel que já existe
 
