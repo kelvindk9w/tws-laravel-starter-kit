@@ -6,7 +6,10 @@ declare(strict_types=1);
 // O COMANDO ÚNICO — `composer create-project twstec/kit meu-projeto`.
 //
 // O post-create-project-cmd do twstec/kit chama este arquivo (`@php`, o mesmo
-// PHP do Composer; nada de bash — vale no Linux, no macOS e no Windows). Ele
+// PHP do Composer; nada de bash — vale no Linux, no macOS e no Windows) por
+// `php -r "require …"`, não como o script principal: no Windows, o PHP segura
+// o arquivo do script principal até o fim do processo, e a pasta kit-setup/
+// não sairia do projeto (o arquivo incluído é solto depois de compilado). Ele
 // pergunta a interface e os módulos (ou lê TWS_KIT_STACK / TWS_KIT_WITH /
 // TWS_KIT_WITHOUT) e troca este pacote pelo starter escolhido, com só os
 // pacotes marcados. Ver src/CreateProject.php.

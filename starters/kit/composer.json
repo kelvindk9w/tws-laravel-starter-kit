@@ -47,7 +47,7 @@
     "scripts": {
         "post-create-project-cmd": [
             "Composer\\Config::disableProcessTimeout",
-            "@php kit-setup/create.php"
+            "@php -r \"require 'kit-setup/create.php';\""
         ],
         "test": "pest",
         "lint": "pint --test"

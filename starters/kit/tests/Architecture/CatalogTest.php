@@ -68,7 +68,7 @@ it('depende só do PHP e do Laravel Prompts, e o create-project chama o kit-setu
     expect($composer['name'])->toBe('twstec/kit')
         ->and($composer['type'])->toBe('project')
         ->and(array_keys($composer['require']))->toBe(['php', 'laravel/prompts'])
-        ->and($composer['scripts']['post-create-project-cmd'])->toBe(['Composer\\Config::disableProcessTimeout', '@php kit-setup/create.php']);
+        ->and($composer['scripts']['post-create-project-cmd'])->toBe(['Composer\\Config::disableProcessTimeout', "@php -r \"require 'kit-setup/create.php';\""]);
 });
 
 it('o código usa só o próprio pacote, o Laravel Prompts e o Symfony Console', function () use ($root): void {
