@@ -8,6 +8,12 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **`/admin`: a coluna do código público mostrava a chave crua
+  `admin.common.code`** em todas as listagens (usuários, contas, projetos,
+  chaves, uploads e as telas novas do aplicativo que usam
+  `AdminColumns::publicCode()`), e no detalhe da conta e do usuário. A chave
+  passa a existir nos três idiomas ("Código" / "Code" / "Código"); a
+  exceção que o teste de traduções do pacote abria para ela sai.
 - **Starter React: tela do `/admin` testada com `Livewire::test` só via a
   conta de quem estava logado.** O `tests/Pest.php` do React não declarava o
   modo sistema para `tests/Feature/Admin` (o do Livewire declara, e a
