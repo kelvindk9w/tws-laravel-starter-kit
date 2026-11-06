@@ -31,6 +31,18 @@ cada beta estão nas seções abaixo; o que ficou para depois, no
   segue em `2.x-dev`, e o `prepare-composer.php` grava `^2.0` quando a tag é
   estável (e `^2.0@beta` só numa pré-release).
 
+### Corrigido
+
+- **Teste do modo sistema no `/admin` do starter Livewire falhava ao
+  acaso:** a busca das chaves de API também procura no e-mail de quem é dono
+  e de quem criou a chave, e o e-mail aleatório da Faker em pt-BR (o locale
+  do `.env` do projeto criado) às vezes contém "bruno" — a "Chave da Ana"
+  aparecia legitimamente na busca por "Bruno". O teste passa a criar as duas
+  pessoas com e-mails fixos; a busca continua provando o filtro e o modo
+  sistema pelo endpoint do Livewire. Os `composer.lock` dos dois starters
+  passam do Filament 5.8.4 para o 5.11.1, a versão que um projeto novo
+  recebe.
+
 ### CI
 
 - **Simulação da instalação publicada na versão estável:** o padrão do
