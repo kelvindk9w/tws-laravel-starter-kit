@@ -63,7 +63,7 @@ projeto 2.0 e trazer para ele o que é do produto.
 ### 1. Criar o projeto 2.0
 
 ```bash
-composer create-project "twstec/kit:^2.0@beta" meu-projeto   # na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0@beta" meu-projeto   # na 2.0.0 estável: twstec/kit
 ```
 
 Ou só com o Docker (`docker compose run --rm instalar`), ou por um starter —

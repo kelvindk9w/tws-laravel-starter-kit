@@ -18,6 +18,17 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   comentário do `lang/pt_BR/mail.php` do React deixa de mandar para uma pasta
   de e-mails que o projeto não tem.
 
+- **Windows: `~2.0@beta` em vez de `^2.0@beta` nos comandos**
+  ([Instalação](docs/instalacao.md#criar-um-projeto-o-comando-único)): no
+  PowerShell, `composer create-project "twstec/kit:^2.0@beta"` falhava
+  ("Could not find package twstec/kit with version 2.0@beta") — o PowerShell
+  tira as aspas ao chamar o `composer.bat`, e o `cmd` come o `^`. Os
+  comandos da documentação e dos READMEs passam a usar `~`, que aceita as
+  mesmas versões da 2.x. Também: o `create-project` e o `laravel new` no
+  `cmd`, o `sodium` desligado no `php.ini` do Windows (uploads
+  confidenciais), o que roda sem o Docker no Windows e no macOS e o que foi
+  provado em cada sistema.
+
 ### Corrigido
 
 - **Comando único no Windows:** a pasta `kit-setup/` do instalador sobrava
