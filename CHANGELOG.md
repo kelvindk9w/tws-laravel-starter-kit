@@ -63,6 +63,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   que prova a listagem de todas as contas. Projeto React que já existe:
   copie o bloco `pest()->in('Feature/Admin')` do `tests/Pest.php` do starter.
 
+### CI
+
+- **Criação de projeto no Windows e no macOS** (workflow manual
+  `instalacao-sistemas.yml`): nas máquinas do GitHub (`windows-latest` com
+  PowerShell e `cmd`, `macos-latest` com bash), cria projetos com o pacote
+  publicado pelo comando único e pelo `laravel new --using`, React e
+  Livewire, SQLite e sem Redis, e confere os arquivos, o `.env`, `about`,
+  `migrate`, o build e a suíte do projeto. Ver
+  [Instalação](docs/instalacao.md).
+
 ## [2.0.0-beta.22] — 2026-11-05
 
 Revisão antes da 2.0.0: guia de atualização da 1.x para a 2.0 e documentação
