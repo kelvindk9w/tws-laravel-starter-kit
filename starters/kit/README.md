@@ -15,7 +15,7 @@ ambiente de desenvolvimento em Docker já pronto. Dois caminhos:
   este repositório e rode `docker compose run --rm instalar`. Veja os
   [primeiros passos](#primeiros-passos-para-iniciantes-só-com-o-docker).
 - **Com PHP 8.4 e Composer na máquina:** `composer create-project
-  "twstec/kit:~2.0@beta" meu-projeto` (ver [Com PHP na
+  "twstec/kit:~2.0" meu-projeto` (ver [Com PHP na
   máquina](#com-php-na-máquina-composer-create-project)).
 
 Os dois fazem as mesmas perguntas e entregam o mesmo projeto, com o Docker de
@@ -264,7 +264,7 @@ Um comando cria o projeto inteiro, com a interface e os módulos que você
 escolher:
 
 ```bash
-composer create-project "twstec/kit:~2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 Num terminal, um menu pergunta — as duas primeiras perguntas são as mesmas
@@ -324,13 +324,13 @@ macOS e no Windows:
 
 ```bash
 # Linux / macOS
-TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:~2.0@beta" meu-projeto
+TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 ```powershell
 # Windows (PowerShell)
 $env:TWS_KIT_STACK = "react"; $env:TWS_KIT_WITHOUT = "uploads"
-composer create-project "twstec/kit:~2.0@beta" meu-projeto
+composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 Qualquer uma dessas variáveis (mesmo vazia) desliga o menu — menos
@@ -417,7 +417,7 @@ exatos para terminar sem recomeçar. O código de saída do `create-project` é
 diferente de 0.
 
 Os comandos por starter continuam valendo
-(`composer create-project "twstec/starter-livewire:~2.0@beta"` ou
+(`composer create-project "twstec/starter-livewire:~2.0"` ou
 `twstec/starter-react`, e `laravel new --using=` com as opções de
 [Com o instalador do Laravel](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)), e aceitam as mesmas
 `TWS_KIT_WITH`/`TWS_KIT_WITHOUT`. Para um aplicativo Laravel que já existe,

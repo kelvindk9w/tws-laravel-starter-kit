@@ -79,16 +79,16 @@ O CI prova esse caminho (abaixo, "Como o CI garante").
 ## Criar um projeto: o comando único
 
 ```bash
-composer create-project "twstec/kit:~2.0@beta" meu-projeto   # durante o beta; na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 **`~2.0`, e não `^2.0`, nos comandos deste guia.** Para a 2.x, as duas
 restrições aceitam as mesmas versões; a diferença é o terminal do Windows. No
 PowerShell, `composer` e `laravel` são arquivos `.bat`: o PowerShell tira as
 aspas do argumento ao chamá-los, e o `cmd` que roda o `.bat` come o `^` —
-`"twstec/kit:^2.0@beta"` chega ao Composer como `twstec/kit:2.0@beta` (só a
-versão exata `2.0`, que não existe: "Could not find package"). O `~` passa
-intacto no PowerShell, no `cmd`, no bash e no zsh.
+`"twstec/kit:^2.0"` chega ao Composer como `twstec/kit:2.0` (só a versão
+exata 2.0.0, sem as correções seguintes). O `~` passa intacto no PowerShell,
+no `cmd`, no bash e no zsh.
 
 O pacote `twstec/kit` ([starters/kit](../starters/kit/README.md)) é o ponto
 de entrada. Num terminal, um menu (Laravel Prompts) pergunta — toda pergunta
@@ -153,23 +153,23 @@ e no Windows:
 
 ```bash
 # Linux / macOS: React sem uploads
-TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:~2.0@beta" meu-projeto
+TWS_KIT_STACK=react TWS_KIT_WITHOUT=uploads composer create-project "twstec/kit:~2.0" meu-projeto
 
 # Só a base (foundation + auth), Livewire
-TWS_KIT_WITHOUT=accounts,uploads,admin,webhooks composer create-project "twstec/kit:~2.0@beta" meu-projeto
+TWS_KIT_WITHOUT=accounts,uploads,admin,webhooks composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 ```powershell
 # Windows (PowerShell)
 $env:TWS_KIT_STACK = "react"; $env:TWS_KIT_WITHOUT = "uploads"
-composer create-project "twstec/kit:~2.0@beta" meu-projeto
+composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 ```bat
 :: Windows (cmd) — sem espaço antes do "=" nem depois do valor
 set TWS_KIT_STACK=react
 set TWS_KIT_WITHOUT=uploads
-composer create-project "twstec/kit:~2.0@beta" meu-projeto
+composer create-project "twstec/kit:~2.0" meu-projeto
 ```
 
 No PowerShell e no `cmd`, a variável vale até fechar o terminal: para criar
@@ -555,7 +555,7 @@ Os comandos por starter continuam valendo (e são o que o comando único faz
 por dentro):
 
 ```bash
-composer create-project "twstec/starter-livewire:~2.0@beta" meu-app
+composer create-project "twstec/starter-livewire:~2.0" meu-app
 ```
 
 (`twstec/starter-react` para o React — ver [Starter React](#starter-react).
@@ -589,16 +589,16 @@ e, na 2.0.0-beta.22, com o `laravel/installer` 5.32.0 no Windows (PowerShell e
 
 ```bash
 # PostgreSQL (o padrão do kit)
-laravel new meu-app --using="twstec/kit:~2.0@beta" --database=pgsql --phpunit --no-boost
+laravel new meu-app --using="twstec/kit:~2.0" --database=pgsql --phpunit --no-boost
 
 # SQLite, sem Redis, sem perguntas
-TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0" --database=sqlite --phpunit --no-boost
 ```
 
 ```powershell
 # Windows (PowerShell): SQLite, sem Redis, sem perguntas
 $env:TWS_KIT_DATABASE = "sqlite"; $env:TWS_KIT_REDIS = "0"
-laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+laravel new meu-app --using="twstec/kit:~2.0" --database=sqlite --phpunit --no-boost
 ```
 
 (No `cmd`: `set TWS_KIT_DATABASE=sqlite` e `set TWS_KIT_REDIS=0`, uma por
@@ -606,12 +606,12 @@ linha, e o mesmo `laravel new`.) O instalador do Laravel vem do Composer
 (`composer global require laravel/installer`, com a pasta
 `composer global config bin-dir --absolute` no `PATH`).
 
-Direto por um starter: `--using="twstec/starter-livewire:~2.0@beta"` ou
-`--using="twstec/starter-react:~2.0@beta"`, com as mesmas outras opções.
+Direto por um starter: `--using="twstec/starter-livewire:~2.0"` ou
+`--using="twstec/starter-react:~2.0"`, com as mesmas outras opções.
 
 O que cada opção faz:
 
-- **a versão no `--using`** (`:~2.0@beta`; na 2.0.0 estável, `:~2.0`): sem
+- **a versão no `--using`** (`:~2.0`): sem
   ela, o instalador do Laravel usa `--stability=dev` e baixa o branch de
   desenvolvimento, não a versão publicada. É `~`, e não `^`, pelo terminal
   do Windows (ver [o comando único](#criar-um-projeto-o-comando-único));
@@ -656,7 +656,7 @@ conferida no CI) e passa pelas mesmas combinações de módulos no CI.
 (`TWS_KIT_STACK=react`, ou escolhida no menu), ou direto pelo starter:
 
 ```bash
-composer create-project "twstec/starter-react:~2.0@beta" meu-app
+composer create-project "twstec/starter-react:~2.0" meu-app
 # ou: laravel new, com as opções de "Com o instalador do Laravel" acima
 cd meu-app && npm install && npm run build
 ```
@@ -937,10 +937,7 @@ lucide-react — só os do menu do kit (`bell`, `circle-user`, `folder`,
 ### Com o `tws:add`
 
 ```bash
-# Durante o beta, o foundation também leva o @beta (a estabilidade só vale no
-# projeto raiz); na 2.0.0 estável, basta a segunda linha, sem o @beta.
-composer require "twstec/kit-foundation:~2.0@beta"
-composer require --dev "twstec/kit-installer:~2.0@beta"
+composer require --dev "twstec/kit-installer:~2.0"
 php artisan tws:add                                        # pergunta (Laravel Prompts)
 php artisan tws:add accounts admin                         # sem perguntas
 ```
@@ -993,11 +990,6 @@ composer require twstec/kit-uploads           # opcional (exige accounts)
 composer require twstec/kit-admin             # opcional (traz o Filament)
 composer require twstec/kit-webhooks          # opcional (exige accounts)
 ```
-
-Durante o beta, com a estabilidade mínima `stable` do seu projeto, acrescente
-`:~2.0@beta` a **cada** pacote do kit que você requerer (inclusive
-`twstec/kit-foundation`, mesmo que ele venha como dependência) — ou use
-`"minimum-stability": "beta"` com `"prefer-stable": true`.
 
 Cada pacote sobe sozinho pela descoberta do Laravel e liga as próprias
 proteções. O que o aplicativo fornece está no README de cada pacote
@@ -1083,8 +1075,8 @@ destinos: `kelvindk9w/twstec-kit-foundation`, `…-auth`, `…-accounts`,
 `kelvindk9w/twstec-starter-react` e, a partir da 2.0.0-beta.2,
 `kelvindk9w/twstec-kit` — a demonstração **não** é publicada), com o
 `composer.json` preparado por `.github/release/prepare-composer.php` (sem path
-repositories, pacotes do kit em `^2.0`; nos starters, `^2.0@beta` durante o
-beta, sem `composer.lock` e sem nenhuma referência à demo; o
+repositories, pacotes do kit em `^2.0` — nos starters, com a estabilidade
+junto quando a tag é pré-release, como `^2.0@beta` —, sem `composer.lock` e sem nenhuma referência à demo; o
 `docker-compose.prod.yml` sem o contexto `packages` do monorepo; no
 `twstec/kit`, a restrição do starter que ele baixa em
 `extra.twstec-kit.constraint` e nada da suíte dele). Cada pasta publicada leva

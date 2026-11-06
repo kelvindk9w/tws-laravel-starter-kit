@@ -4,8 +4,9 @@ Base estrutural reutilizável para projetos Laravel — segurança primeiro, Doc
 
 **Stack:** PHP 8.4 · Laravel 13 · PostgreSQL 18 · Redis 8 · Pest 4 · Playwright · Livewire 4 (painel do usuário) · Filament 5 (super admin) · Horizon (filas) · spatie/laravel-backup (backup → R2) · nginx+php-fpm.
 
-> **Beta público (2.0.0-beta).** O escopo está congelado até a 2.0.0 estável:
-> só entram correções achadas no uso e a lista do [roteiro](docs/roadmap.md).
+> **Versão estável (linha 2.x).** A 2.x segue o [SemVer](https://semver.org/lang/pt-BR/):
+> correções nas versões de correção, novidades compatíveis nas menores, e
+> quebra só numa 3.0. O que ficou para depois está no [roteiro](docs/roadmap.md).
 
 ## Comece aqui
 
@@ -24,7 +25,7 @@ Passo a passo, para quem está começando:
 **Com PHP 8.4 e Composer na máquina:**
 
 ```bash
-composer create-project "twstec/kit:~2.0@beta" meu-projeto   # na 2.0.0 estável: twstec/kit
+composer create-project "twstec/kit:~2.0" meu-projeto
 cd meu-projeto
 docker compose up -d
 ```
@@ -113,7 +114,7 @@ As regras que o código segue estão em [Convenções](docs/convencoes.md).
 | Backup | [docs/backup.md](docs/backup.md) |
 | Filas (Horizon) | [docs/filas.md](docs/filas.md) |
 
-**Estado do kit e roteiro** (o que falta para a 2.0.0 estável e o que vem
+**Estado do kit e roteiro** (o que entrou na 2.0.0 e o que vem
 depois): [docs/roadmap.md](docs/roadmap.md).
 
 Vulnerabilidades: [SECURITY.md](SECURITY.md) · Contribuir: [CONTRIBUTING.md](CONTRIBUTING.md) · Conduta: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
