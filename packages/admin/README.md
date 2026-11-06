@@ -354,12 +354,6 @@ Onde o nome antigo pode estar gravado, e o que acontece:
   importação nem job com o nome da classe; a trilha de auditoria grava o nome
   curto do model (`user`), nunca a classe.
 
-## Lacunas conhecidas
-
-- A coluna de código público das listagens pede `admin.common.code`, chave que
-  nunca existiu (a 1.x já mostrava a chave crua). A extração manteve a tela
-  idêntica; a correção é uma mudança de texto própria.
-
 ## Testes
 
 A suíte do pacote (Pest + Orchestra Testbench) sobe uma aplicação Laravel
