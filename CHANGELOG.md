@@ -6,6 +6,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.0.0-beta.23] — 2026-11-06
+
+Correções achadas usando o kit num projeto novo e criando projetos no
+Windows e no macOS: `scripts/verificar` verde no projeto recém-criado e
+depois da primeira tela personalizada, README próprio no projeto criado
+(#104), suíte do projeto verde no Windows (#101), pasta `kit-setup/` que
+sobrava no Windows, coluna "Código" do `/admin` e modo sistema nos testes do
+`/admin` do React; comandos com `~2.0@beta` (o PowerShell perde o `^`) e
+workflow manual que cria projetos no Windows e no macOS.
+
 ### Documentação
 
 - **Lacunas achadas criando um projeto novo** (React, pelo caminho só com o
@@ -2909,7 +2919,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.22...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0-beta.23...desenvolvimento
+[2.0.0-beta.23]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.23
 [2.0.0-beta.22]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.22
 [2.0.0-beta.21]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.21
 [2.0.0-beta.20]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.20
