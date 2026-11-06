@@ -84,6 +84,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Livewire, SQLite e sem Redis, e confere os arquivos, o `.env`, `about`,
   `migrate`, o build e a suíte do projeto. Ver
   [Instalação](docs/instalacao.md).
+  A suíte reprova por qualquer falha (sem a lista de exceções do Windows), e
+  a entrada `fonte=branch` cria os projetos com o código da branch (ZIPs
+  montados como na simulação da instalação publicada, repositório
+  `artifact` na configuração global do Composer), antes de publicar.
 
 ## [2.0.0-beta.22] — 2026-11-05
 
