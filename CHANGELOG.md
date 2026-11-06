@@ -6,6 +6,16 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Corrigido
+
+- **`scripts/verificar` vermelho no projeto React recém-criado:** o teste das
+  telas do kit no pacote (`KitScreensTest`) esperava o build no documento,
+  mas com o Vite de desenvolvimento no ar (o serviço `vite` do
+  `compose.yaml`, que grava o `public/hot`) a página aponta para ele. O teste
+  passa a ignorar o `public/hot` e confere o build com ou sem o Vite no ar.
+  Projeto que já existe: copie o teste do starter
+  (`tests/Feature/Customization/KitScreensTest.php`).
+
 ## [2.0.0-beta.22] — 2026-11-05
 
 Revisão antes da 2.0.0: guia de atualização da 1.x para a 2.0 e documentação

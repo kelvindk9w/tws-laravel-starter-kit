@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Vite;
 use Inertia\Testing\AssertableInertia as Assert;
 use Twstec\Kit\Foundation\Customization\ReactScreens;
 
@@ -48,6 +49,13 @@ it('sem a tela no aplicativo, vale a do kit: a página existe e o build a carreg
     $chunk = $manifest['vendor/twstec/kit-foundation/resources/react/pages/auth/login.tsx']['file'] ?? null;
 
     expect($chunk)->toBeString();
+
+    // Com o Vite de desenvolvimento no ar (o serviço `vite` do compose.yaml
+    // grava o public/hot), o documento apontaria para ele, e não para o
+    // build — é o caso do `scripts/verificar` no projeto criado. Aqui o que
+    // se confere é o build: o arquivo de "hot" passa a ser um que não existe.
+    Vite::useHotFile(storage_path('framework/testing/vite-hot-ausente'));
+
     $this->get('/login')->assertOk()->assertSee('build/'.$chunk, false);
 });
 
