@@ -313,6 +313,36 @@ consulta de conta:
 - o **órfão** da migração (`orphaned_at`): registro antigo cujo dono não
   existia mais — sai na limpeza.
 
+### Mostrar o upload de uma conta numa página pública (sem login)
+
+Uma página aberta sem sessão (o cartão, a vitrine, o perfil público de um
+registro do projeto) não tem conta atual: a busca do registro e a URL da
+imagem dariam erro. O caminho é declarar as duas coisas, cada uma no menor
+trecho possível:
+
+```php
+use Twstec\Kit\Accounts\Accounts;
+
+// 1. Achar o registro pelo identificador público, em qualquer conta (modo
+//    sistema declarado, com um motivo que diz por quê).
+$cartao = Accounts::asSystem('cartões: página pública pelo endereço curto',
+    fn () => Cartao::query()->with(['account', 'foto'])->where('slug', $slug)->first());
+
+// 2. Assinar a URL NA CONTA DO REGISTRO: o upload só assina na conta dele.
+$foto = $cartao?->foto;
+$url = $foto === null ? null : Accounts::actingAs($cartao->account, fn () => $foto->url());
+```
+
+- Grave o upload com `classification: UploadClassification::Public` — ele é
+  feito para ser mostrado a quem tiver o link; a entrega continua pela URL
+  assinada de curta duração (`UPLOADS_TEMPORARY_URL_MINUTES`), gerada a cada
+  abertura da página (não guarde a URL em cache nem em arquivo que dure mais
+  que isso — um vCard, por exemplo).
+- Mostre só os campos que são públicos de propósito (nunca `id`, conta ou
+  autor): o modo sistema enxerga o registro inteiro.
+- Confidencial (`confidential`) não serve aqui: a entrega dele exige quem
+  gerou a URL ainda ser membro da conta.
+
 ## Foto de perfil: da pessoa, não da conta
 
 O model de usuário do aplicativo usa a trait `Twstec\Kit\Uploads\Concerns\HasAvatar`

@@ -52,6 +52,11 @@ Quem usa git pode clonar direto com o nome do projeto:
 git clone https://github.com/kelvindk9w/twstec-kit.git loja-da-maria
 ```
 
+O instalador troca **tudo** o que há na pasta pelos arquivos do projeto —
+inclusive o `.git` do clone (o histórico do kit não é o do seu projeto). O
+projeto nasce sem git: depois da instalação, `git init` e o primeiro commit
+(com o `.tws/manifest.json`, a base do `tws:upgrade --check`).
+
 > **No Windows**, o projeto fica mais rápido **dentro do WSL** (no Explorador
 > de Arquivos: "Linux" → Ubuntu → `home` → seu usuário). Numa pasta comum do
 > Windows também funciona, só que mais devagar, e o instalador já liga a

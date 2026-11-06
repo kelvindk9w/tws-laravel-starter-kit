@@ -6,6 +6,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Documentação
+
+- **Lacunas achadas criando um projeto novo** (React, pelo caminho só com o
+  Docker): o instalador troca tudo o que há na pasta, inclusive o `.git` de
+  um `git clone` do `twstec/kit` — o projeto nasce sem git (`git init`
+  depois); como pôr a tela própria no menu do starter React (`Navigation`,
+  `FrontRoutes`, `FrontTranslations` e os ícones que o `nav-icon.tsx` do kit
+  conhece); e como mostrar o upload de uma conta numa página pública, sem
+  login (modo sistema para achar o registro, URL assinada na conta dele). O
+  comentário do `lang/pt_BR/mail.php` do React deixa de mandar para uma pasta
+  de e-mails que o projeto não tem.
+
 ## [2.0.0-beta.22] — 2026-11-05
 
 Revisão antes da 2.0.0: guia de atualização da 1.x para a 2.0 e documentação
