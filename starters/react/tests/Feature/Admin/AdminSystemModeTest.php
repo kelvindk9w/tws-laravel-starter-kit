@@ -26,7 +26,6 @@ it('a tela do /admin testada com Livewire::test vê os registros de todas as con
     expect(Accounts::inSystemMode())->toBeTrue();
 
     Livewire::test(ListProjects::class)
-        ->call('loadTable')
         ->assertCanSeeTableRecords([$projetoAna, $projetoBruno])
         ->assertSee('Projeto da Ana')
         ->assertSee('Projeto do Bruno');
