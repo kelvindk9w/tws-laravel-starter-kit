@@ -232,6 +232,11 @@ created_project() {
         if [ -e "$marca" ]; then echo "arquivo de marca do kit no projeto: $marca"; exit 1; fi
     done
 
+    # O README é o do projeto (o modelo do instalador), não o do starter.
+    head -n 1 README.md | grep -qx "# $name"
+    grep -q 'scripts/verificar' README.md
+    if grep -q '{{' README.md; then echo 'README.md do projeto com marca do modelo sobrando'; exit 1; fi
+
     test -f .github/workflows/ci.yml
     test -x scripts/verificar
     test ! -e docker/dev/ci.yml
@@ -244,7 +249,7 @@ created_project() {
     done
     if grep -Eq '^FROM .* AS dev$' docker/nginx/Dockerfile; then echo 'alvo dev do nginx (só do monorepo) no projeto'; exit 1; fi
     citacoes=$(grep -n -i -E 'monorepo|starters/|react-(app|queue|nginx|scheduler|db-init)' \
-        compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
+        README.md compose.yaml .devcontainer/devcontainer.json .env.example phpunit.pgsql.xml playwright.config.* vite.config.* \
         docker/php/Dockerfile docker/nginx/Dockerfile docker/dev/* .github/workflows/ci.yml .github/dependabot.yml \
         scripts/verificar scripts/e2e scripts/promover scripts/instalar-hooks scripts/hooks/pre-push scripts/lib/selo.sh \
         scripts/segredos scripts/hooks/pre-commit .gitleaks.toml \
