@@ -16,8 +16,8 @@
 #   o Composer que o instalador chama — e o projeto é conferido com essa
 #   versão instalada. O resto do caminho (comandos, terminais) é o mesmo.
 #
-# - `composer create-project "twstec/kit:~2.0@beta"` (o comando único) e
-#   `laravel new --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit
+# - `composer create-project "twstec/kit:~2.0"` (o comando único) e
+#   `laravel new --using="twstec/kit:~2.0" --database=sqlite --phpunit
 #   --no-boost` (o instalador do Laravel, posto pelo `composer global
 #   require`);
 # - as duas interfaces (react e livewire), escolhidas pelas variáveis
@@ -26,7 +26,7 @@
 # - no Windows, pelos dois terminais de quem não tem WSL: PowerShell e `cmd`
 #   (o `^` da restrição de versão é o ponto sensível do `cmd`); no macOS, pelo
 #   bash. Cada terminal usa a sintaxe da documentação para as variáveis. A
-#   restrição é `~2.0@beta`, como na documentação: com `^`, o PowerShell
+#   restrição é `~2.0`, como na documentação: com `^`, o PowerShell
 #   tira as aspas ao chamar o composer.bat e o `cmd` come o `^`.
 #
 # O PHP é o 8.4 com as extensões que os pacotes exigem — no Windows, sem
@@ -65,9 +65,10 @@ permissions:
   contents: read
 
 env:
-  # A versão dos ZIPs com `fonte=branch`: acima de qualquer beta publicada e
-  # dentro de ~2.0@beta — instalada, prova que o projeto veio da branch.
-  VERSAO_BRANCH: 2.0.0-beta.999
+  # A versão dos ZIPs com `fonte=branch`: estável, acima de qualquer versão
+  # 2.x publicada e dentro de ~2.0 — instalada, prova que o projeto veio da
+  # branch.
+  VERSAO_BRANCH: 2.999.999
 
 jobs:
   # Só com `fonte=branch`: os ZIPs do código da branch (pacotes, starters e o
@@ -182,7 +183,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           $env:TWS_KIT_STACK = "${{ matrix.stack }}"; $env:TWS_KIT_DATABASE = "sqlite"; $env:TWS_KIT_REDIS = "0"
-          composer create-project "twstec/kit:~2.0@beta" meu-app
+          composer create-project "twstec/kit:~2.0" meu-app
 
       - name: Criar (PowerShell · laravel new)
         if: matrix.shell == 'pwsh' && matrix.caminho == 'laravel-new'
@@ -190,7 +191,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           $env:TWS_KIT_STACK = "${{ matrix.stack }}"; $env:TWS_KIT_DATABASE = "sqlite"; $env:TWS_KIT_REDIS = "0"
-          laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+          laravel new meu-app --using="twstec/kit:~2.0" --database=sqlite --phpunit --no-boost
 
       # No `cmd`, o comando de criação é a ÚLTIMA linha e sem `call`, como
       # quem digita no terminal: `call` dobraria o `^` entre aspas, e um .bat
@@ -203,7 +204,7 @@ jobs:
           set TWS_KIT_STACK=${{ matrix.stack }}
           set TWS_KIT_DATABASE=sqlite
           set TWS_KIT_REDIS=0
-          composer create-project "twstec/kit:~2.0@beta" meu-app
+          composer create-project "twstec/kit:~2.0" meu-app
 
       - name: Criar (cmd · laravel new)
         if: matrix.shell == 'cmd' && matrix.caminho == 'laravel-new'
@@ -213,19 +214,19 @@ jobs:
           set TWS_KIT_STACK=${{ matrix.stack }}
           set TWS_KIT_DATABASE=sqlite
           set TWS_KIT_REDIS=0
-          laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+          laravel new meu-app --using="twstec/kit:~2.0" --database=sqlite --phpunit --no-boost
 
       - name: Criar (bash · composer create-project)
         if: matrix.shell == 'bash' && matrix.caminho == 'create-project'
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: TWS_KIT_STACK=${{ matrix.stack }} TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 composer create-project "twstec/kit:~2.0@beta" meu-app
+        run: TWS_KIT_STACK=${{ matrix.stack }} TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 composer create-project "twstec/kit:~2.0" meu-app
 
       - name: Criar (bash · laravel new)
         if: matrix.shell == 'bash' && matrix.caminho == 'laravel-new'
         shell: bash
         working-directory: ${{ github.workspace }}
-        run: TWS_KIT_STACK=${{ matrix.stack }} TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0@beta" --database=sqlite --phpunit --no-boost
+        run: TWS_KIT_STACK=${{ matrix.stack }} TWS_KIT_DATABASE=sqlite TWS_KIT_REDIS=0 laravel new meu-app --using="twstec/kit:~2.0" --database=sqlite --phpunit --no-boost
 
       # ---- Conferir o projeto criado (PowerShell nos dois sistemas).
 

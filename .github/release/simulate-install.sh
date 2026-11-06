@@ -35,7 +35,9 @@
 #           da análise — ver analysis_probe) | image (docker: imagens de produção e conferências) |
 #           docker (só com STARTER=kit: o caminho SEM PHP na máquina — ver
 #           abaixo; depois de copy e package)
-#   VERSION (padrão 2.0.0-beta.1)
+#   VERSION (padrão 2.0.0): a versão dos ZIPs. Estável, os pacotes do kit
+#   saem em ^2.0; pré-release (2.0.0-beta.N, -RC.N…), o starter leva a
+#   estabilidade junto (^2.0@beta) — ver prepare-composer.php.
 #   STARTER (padrão livewire): livewire | react | kit — qual pacote vira o
 #   projeto: twstec/starter-livewire, twstec/starter-react ou o COMANDO ÚNICO
 #   twstec/kit (que baixa o starter escolhido — os dois vão empacotados).
@@ -74,7 +76,7 @@ set -eu
 
 STEP=${1:-all}
 WORK=${2:-}
-VERSION=${VERSION:-2.0.0-beta.1}
+VERSION=${VERSION:-2.0.0}
 STARTER=${STARTER:-livewire}
 KIT_STACK=${KIT_STACK:-livewire}
 KIT_WITHOUT=${KIT_WITHOUT:-}
@@ -499,7 +501,17 @@ package() {
     if grep -Eq '"type": *"path"' vendor/composer/installed.json; then echo 'vendor apontando para o monorepo (path)'; exit 1; fi
     if grep -E '"url": *"\.\./' vendor/composer/installed.json | grep -Evq '"url": *"\.\./packages/[^"/]+\.zip"'; then echo 'vendor apontando para o monorepo (caminho relativo que não é ZIP)'; exit 1; fi
     grep -q '"type": *"artifact"\|"type": *"zip"' vendor/composer/installed.json
-    grep -q '"twstec/kit-foundation": "\^2.0@beta"' composer.json
+    # A restrição dos pacotes do kit é a da versão publicada (a mesma regra do
+    # prepare-composer.php): ^2.0 na estável; na pré-release, com a
+    # estabilidade junto (só vale no projeto raiz).
+    restricao="\\^${VERSION%%.*}.0"
+    case "$VERSION" in
+        *-alpha*|*-a.*) restricao="$restricao@alpha" ;;
+        *-beta*|*-b.*) restricao="$restricao@beta" ;;
+        *-RC*|*-rc*) restricao="$restricao@RC" ;;
+        *-*) restricao="$restricao@dev" ;;
+    esac
+    grep -q "\"twstec/kit-foundation\": \"$restricao\"" composer.json
 
     # Sem a demonstração: nem no composer.json, nem no vendor, nem nas rotas —
     # "/" é a página inicial do produto (rota `home`).
