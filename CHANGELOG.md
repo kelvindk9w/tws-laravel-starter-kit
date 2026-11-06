@@ -8,6 +8,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **`scripts/verificar` vermelho no projeto criado, em uso normal:** o teste
+  das telas do kit no pacote (`KitScreensTest`) reprovava o projeto em dois
+  casos. (1) React: esperava o build no documento, mas com o Vite de
+  desenvolvimento no ar (o serviço `vite` do `compose.yaml`, que grava o
+  `public/hot`) a página aponta para ele — já no projeto recém-criado. (2)
+  React e Livewire: exigia que `resources/js` (ou `resources/views`) tivesse
+  exatamente os arquivos do starter, então a primeira tela nova ou cópia
+  personalizada (o caminho de `docs/personalizacao.md`) derrubava a suíte.
+  O teste passa a ignorar o `public/hot`, e a lista exata dos arquivos do
+  starter vira um teste só do repositório do kit (`StarterOwnFilesTest`,
+  fora do pacote publicado). Projeto que já existe: copie o
+  `tests/Feature/Customization/KitScreensTest.php` do starter.
 - **`/admin`: a coluna do código público mostrava a chave crua
   `admin.common.code`** em todas as listagens (usuários, contas, projetos,
   chaves, uploads e as telas novas do aplicativo que usam
