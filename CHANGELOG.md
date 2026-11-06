@@ -33,6 +33,13 @@ cada beta estão nas seções abaixo; o que ficou para depois, no
 
 ### Corrigido
 
+- **UUIDs corrompidos na auditoria e no log:** a máscara de número de
+  cartão do `Redactor` (foundation) pegava os grupos só de dígitos de um
+  UUID emendados pelos hífens (`…-9492-611262858b78` → `…-****-*****2858b78`)
+  quando eles passavam no Luhn, e a auditoria gravava o identificador
+  corrompido (achado num teste do pacote de webhooks que falhava ao acaso).
+  Trechos com forma de UUID passam intactos; cartão em texto livre, mesmo
+  ao lado de um UUID, continua mascarado.
 - **Teste do modo sistema no `/admin` do starter Livewire falhava ao
   acaso:** a busca das chaves de API também procura no e-mail de quem é dono
   e de quem criou a chave, e o e-mail aleatório da Faker em pt-BR (o locale
