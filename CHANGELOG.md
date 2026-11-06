@@ -14,6 +14,13 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `AdminColumns::publicCode()`), e no detalhe da conta e do usuário. A chave
   passa a existir nos três idiomas ("Código" / "Code" / "Código"); a
   exceção que o teste de traduções do pacote abria para ela sai.
+- **Starter React: tela do `/admin` testada com `Livewire::test` só via a
+  conta de quem estava logado.** O `tests/Pest.php` do React não declarava o
+  modo sistema para `tests/Feature/Admin` (o do Livewire declara, e a
+  documentação ensina o teste da tela nova ali): a listagem de um resource
+  do aplicativo saía vazia no teste. O React passa a declarar, com um teste
+  que prova a listagem de todas as contas. Projeto React que já existe:
+  copie o bloco `pest()->in('Feature/Admin')` do `tests/Pest.php` do starter.
 
 ## [2.0.0-beta.22] — 2026-11-05
 
