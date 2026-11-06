@@ -21,8 +21,8 @@ declare(strict_types=1);
 // O COMANDO ÚNICO (twstec/kit, starters/kit — também `type: project`) não
 // requer pacote do kit: ele baixa o starter escolhido no create-project, com
 // a restrição gravada em `extra.twstec-kit.constraint` (no monorepo,
-// `2.x-dev`), que aqui vira a da versão publicada (`^2.0@beta` durante o
-// beta). E sai sem o que é da suíte dele (require-dev, autoload-dev e os
+// `2.x-dev`), que aqui vira a da versão publicada (`^2.0`; `^2.0@beta` numa
+// pré-release beta). E sai sem o que é da suíte dele (require-dev, autoload-dev e os
 // scripts de teste): o create-project instala as dependências de
 // desenvolvimento do pacote raiz, e o Pest não tem o que fazer no projeto de
 // quem usa o kit.

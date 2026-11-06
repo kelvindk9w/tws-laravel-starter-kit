@@ -1,14 +1,16 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-06, com a versão **2.0.0-beta.23** publicada.
-> Este documento diz onde o kit está, o que falta para a **2.0.0 estável** e
-> o que fica para depois. O histórico detalhado de cada versão está no
+> Atualizado em 2026-11-06, para a versão **2.0.0**.
+> Este documento diz onde o kit está, o que entrou na **2.0.0** e o que fica
+> para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
 
 ## Onde o kit está
 
-A linha **2.x** está em **beta público**: instalável, testada e usada como
-base de projetos novos, mas ainda sem a promessa de estabilidade da 2.0.0.
+A linha **2.x** é **estável** e segue o
+[SemVer](https://semver.org/lang/pt-BR/): correções nas versões de correção
+(2.0.x), novidades compatíveis nas menores (2.x) e quebra de compatibilidade
+só numa 3.0.
 
 | Frente | Estado |
 |---|---|
@@ -35,16 +37,15 @@ dos dois starters, combinações de módulos, simulação da instalação public
 com build da imagem de produção, prova do caminho Docker, CodeQL,
 `composer audit` e `npm audit`.
 
-## O que falta para a 2.0.0 estável
+## O escopo da 2.0.0
 
-**Escopo congelado** (decisão de 2026-11-03): até a 2.0.0 estável entra só o
-que está nesta lista — os critérios abaixo e as issues com o rótulo
+**Escopo congelado** (decisão de 2026-11-03): até a 2.0.0 entrou só o que
+está nesta lista — os critérios abaixo e as issues com o rótulo
 [`antes-da-2.0.0`](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues?q=label%3Aantes-da-2.0.0)
-— e os defeitos que o uso real achar. Ideia nova vai para
-[Depois da 2.0.0](#depois-da-200-backlog). Fechar a estável vale mais que o
-próximo recurso.
+— e os defeitos que o uso real achou. O que ficou de fora está em
+[Depois da 2.0.0](#depois-da-200-backlog).
 
-1. **Uso real em um projeto novo** — **em andamento.** O primeiro projeto de
+1. **Uso real em um projeto novo.** O primeiro projeto de
    verdade (starter React pelo caminho só com o Docker, com contas, uploads e
    `/admin`) já achou dez lacunas, todas resolvidas na 2.0.0-beta.5: a tela em
    branco no dev (CORS do Vite), o limite das rotas sensíveis no `.env` de dev,
@@ -102,12 +103,15 @@ próximo recurso.
    webhook recebido (#63) — resolvidos na 2.0.0-beta.18. Projeto de um
    idioma só não podia apagar os outros sem quebrar a suíte — resolvido na
    2.0.0-beta.19, junto com a primeira etapa da pasta de personalização
-   (#72).
-   Falta usar por algumas semanas; é o critério principal para sair do beta.
-2. **Teste em máquinas reais Windows e macOS.** Os caminhos foram provados em
-   Linux/WSL2 e com o Windows simulado (PHP sem `pcntl`/`posix`); falta
-   rodar o guia do iniciante e o comando único num Windows e num Mac de
-   verdade.
+   (#72). As últimas lacunas achadas criando um projeto novo (README próprio
+   no projeto criado, `scripts/verificar` verde depois da primeira tela
+   personalizada) saíram na 2.0.0-beta.23.
+2. **Windows e macOS.** Além do Linux/WSL2 e do Windows simulado (PHP sem
+   `pcntl`/`posix`), o workflow manual `instalacao-sistemas.yml` cria
+   projetos nas máquinas Windows (PowerShell e `cmd`) e macOS do GitHub, pelo
+   comando único e pelo `laravel new --using`, e roda a suíte do projeto
+   criado — na 2.0.0-beta.23, com os comandos em `~2.0` (o `^` se perde no
+   terminal do Windows).
 3. **`laravel new --using=twstec/kit`.** Testado na 2.0.0-beta.21 com o
    `laravel/installer` 5.32, com as opções de
    [Com o instalador do Laravel](instalacao.md#com-o-instalador-do-laravel-laravel-new).
@@ -123,10 +127,11 @@ próximo recurso.
    Pest 5), ações de build do Docker, do split e do PHP atualizadas, grupos
    Laravel e de frontend e Larastan do starter Livewire aplicados; os PRs
    do starter React já estavam cobertos.
-6. **Guia de atualização 1.x → 2.0 revisado com um caso real** (o resumo já
-   está no CHANGELOG da 2.0.0-beta.1).
-7. **Documentação por pacote** conferida contra a versão final (os READMEs
-   de cada espelho já existem).
+6. **Guia de atualização 1.x → 2.0** ([Atualização](atualizacao.md)) —
+   revisado na 2.0.0-beta.22 (o resumo das quebras está no CHANGELOG da
+   2.0.0-beta.1).
+7. **Documentação por pacote** conferida contra o código na 2.0.0-beta.22,
+   e com os comandos e as faixas da versão estável na 2.0.0.
 8. **Pasta de personalização (#72).** Atualizar um projeto ainda pede copiar
    à mão os arquivos de starter que a versão mudou (a 2.0.0-beta.18 listou
    uns 26). O padrão (textos, e-mails, configurações, telas) passa a morar
@@ -135,7 +140,7 @@ próximo recurso.
    configurações; telas; e `php artisan tws:upgrade --check`, que lista o que
    ficou diferente nos arquivos que precisam continuar no projeto (Docker,
    CI, `.env`). A primeira etapa (textos, e-mails e configurações) saiu na
-   2.0.0-beta.19; a segunda (telas) e a terceira (`tws:upgrade --check`), na 2.0.0-beta.20. Vem antes da estável porque muda a estrutura do projeto
+   2.0.0-beta.19; a segunda (telas) e a terceira (`tws:upgrade --check`), na 2.0.0-beta.20. Entrou antes da estável porque muda a estrutura do projeto
    criado — depois dela, exigiria uma 3.0.
 9. **Endurecimento achado no uso (rótulo `antes-da-2.0.0`) — resolvido
    na 2.0.0-beta.21.**
@@ -181,8 +186,6 @@ próximo recurso.
   tempo de execução — sem ela, o upload confidencial é recusado com a mensagem
   que diz para instalá-la, e o boot de produção avisa. Vem no PHP oficial e na
   imagem do kit; os uploads comuns não dependem dela.
-- **Durante o beta**, quem instala um pacote avulso precisa de `@beta` em
-  cada pacote do kit.
 - **Idempotência com resultado indeterminado:** fora do modo transacional,
   o processo que morre (ou a conclusão que falha) depois de a rota gravar
   deixa a chave presa em `409` até vencer. Esse é o padrão, pela segurança:

@@ -44,7 +44,7 @@ de nada acima deles; um teste de arquitetura na suíte do pacote garante isso.
 ## Instalação
 
 ```bash
-composer require "twstec/kit-webhooks:~2.0@beta"   # durante o beta; na 2.0.0 estável, ~2.0
+composer require "twstec/kit-webhooks:~2.0"
 php artisan migrate
 ```
 

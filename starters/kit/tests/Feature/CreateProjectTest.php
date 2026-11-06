@@ -23,7 +23,7 @@ beforeEach(function (): void {
 
     $kit = json_decode((string) file_get_contents(dirname(__DIR__, 2).'/composer.json'), true);
     // A versão publicada (prepare-composer.php troca o 2.x-dev do monorepo).
-    $kit['extra']['twstec-kit']['constraint'] = '^2.0@beta';
+    $kit['extra']['twstec-kit']['constraint'] = '^2.0';
     $this->writeKit = function (array $changes = []) use ($kit): void {
         file_put_contents($this->project.'/composer.json', json_encode(array_replace_recursive($kit, $changes), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     };
@@ -58,12 +58,19 @@ afterEach(function (): void {
     removeDirectory($this->project);
 });
 
+it('publicado numa pré-release: o starter vem com a restrição dela, com a estabilidade junto', function (): void {
+    ($this->writeKit)(['extra' => ['twstec-kit' => ['constraint' => '^2.0@beta']]]);
+
+    expect(($this->create)())->toBe(0)
+        ->and($this->runner->composerSteps()[0])->toStartWith('create-project twstec/starter-livewire:^2.0@beta '.$this->project.'/.tws-kit-starter-');
+});
+
 it('sem perguntas e sem escolha: Livewire com todos os módulos, na ordem do create-project do starter', function (): void {
     expect(($this->create)())->toBe(0);
 
     $steps = $this->runner->composerSteps();
 
-    expect($steps[0])->toStartWith('create-project twstec/starter-livewire:^2.0@beta '.$this->project.'/.tws-kit-starter-')
+    expect($steps[0])->toStartWith('create-project twstec/starter-livewire:^2.0 '.$this->project.'/.tws-kit-starter-')
         ->and($steps[0])->toEndWith('--no-install --no-scripts --no-interaction')
         ->and(array_slice($steps, 1))->toBe([
             'run-script post-root-package-install --no-interaction',

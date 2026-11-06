@@ -1,6 +1,6 @@
 # Contribuindo
 
-Obrigado pelo interesse. O kit está em **beta público** (linha 2.x): issues
+Obrigado pelo interesse. O kit está na linha **2.x estável**: issues
 com defeitos, dúvidas de uso e sugestões são bem-vindas, e pull requests
 também — para mudança grande, abra uma issue antes para combinar o caminho.
 Ao participar, você concorda com o [código de conduta](CODE_OF_CONDUCT.md).

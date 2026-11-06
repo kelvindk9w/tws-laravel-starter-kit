@@ -6,6 +6,27 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Documentação
+
+- **Linguagem e comandos da versão estável:** README, CONTRIBUTING, `docs/`,
+  READMEs dos pacotes e dos starters passam a usar `~2.0` (sem `@beta`) em
+  `composer create-project`, `laravel new --using` e `composer require`, e
+  perdem o aviso de beta público e as notas "durante o beta" (inclusive a de
+  requerer o `twstec/kit-foundation` com `@beta` junto do instalador). O
+  README diz que a 2.x segue o SemVer, e o [roteiro](docs/roadmap.md) passa
+  a descrever o escopo que entrou na 2.0.0 e o que ficou para depois. As
+  restrições publicadas não mudam de lugar: o `composer.json` do monorepo
+  segue em `2.x-dev`, e o `prepare-composer.php` grava `^2.0` quando a tag é
+  estável (e `^2.0@beta` só numa pré-release).
+
+### CI
+
+- **Simulação da instalação publicada na versão estável:** o padrão do
+  `simulate-install.sh` passa de `2.0.0-beta.1` para `2.0.0`, e a
+  conferência da restrição do projeto criado segue a versão simulada (`^2.0`
+  na estável; `^2.0@beta`, `@RC`… numa pré-release). O workflow manual de
+  Windows e macOS usa `~2.0` e monta os ZIPs da branch como `2.999.999`.
+
 ## [2.0.0-beta.23] — 2026-11-06
 
 Correções achadas usando o kit num projeto novo e criando projetos no
