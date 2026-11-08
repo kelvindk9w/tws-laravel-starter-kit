@@ -6,6 +6,13 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.1.0] — 2026-11-07
+
+Primeira versão menor da 2.x: chegam os **webhooks de entrada** no
+`twstec/kit-webhooks`, para receber avisos de provedores (pagamento,
+mensageria) com verificação de assinatura, janela de tempo, deduplicação
+no banco e fila. Nada muda para quem não declara fontes.
+
 ### Adicionado
 
 - **Webhooks de entrada (`twstec/kit-webhooks`, #75).** O aplicativo declara
@@ -3032,7 +3039,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...desenvolvimento
+[2.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0
 [2.0.0-beta.23]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.23
 [2.0.0-beta.22]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.22

@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-06, para a versão **2.0.0**.
+> Atualizado em 2026-11-07, para a versão **2.1.0**.
 > Este documento diz onde o kit está, o que entrou na **2.0.0** e o que fica
 > para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -208,8 +208,8 @@ Os módulos novos entram como pacotes à parte, puxados por um projeto real:
 
 - **Cobrança e planos (#74):** assinatura no Mercado Pago ou no Asaas,
   planos, direitos por plano ("pode X?") e webhook de cobrança.
-- **Webhooks de entrada (#75):** no `twstec/kit-webhooks`, ainda não
-  publicado (seção "Não publicado" do CHANGELOG) — fontes com verificador
+- **Webhooks de entrada (#75):** publicado na 2.1.0, no
+  `twstec/kit-webhooks` — fontes com verificador
   plugável, janela de tempo, deduplicação no banco e fila; ver
   [webhooks de entrada](webhooks-entrada.md).
 - **Login de app pelo navegador (#76):** desktop, mobile e CLI entram pelo
