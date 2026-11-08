@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // =============================================================================
-// Webhooks de saída — configuração padrão do pacote twstec/kit-webhooks. O
+// Webhooks de saída e de entrada — configuração padrão do pacote twstec/kit-webhooks. O
 // aplicativo só tem config/webhooks.php se mudar algo, com as chaves que muda
 // de primeiro nível que muda — cada uma vence a do pacote inteira; para um
 // valor solto, prefira a variável do .env (ver docs/personalizacao.md).
@@ -113,5 +113,81 @@ return [
         'days' => (int) env('WEBHOOKS_PRUNE_DAYS', 30),
         'schedule' => env('WEBHOOKS_PRUNE_SCHEDULE', '20 4 * * *'),
     ],
+
+    // =========================================================================
+    // Webhooks RECEBIDOS (entrada) — ver docs/webhooks-entrada.md.
+    //
+    // Uma rota para todas as fontes: `POST /<path>/<fonte>`, fora do grupo
+    // `web` (sem sessão nem CSRF). Cada requisição passa por: fonte conhecida
+    // (senão 404) → allowlist de IP da fonte (403) → tamanho do corpo (413) →
+    // VERIFICAÇÃO sobre o corpo cru (401, sem o motivo) → deduplicação no
+    // banco por (fonte, id do evento) → fila. Responde 202 (aceito) ou 200
+    // (repetição). O corpo e os cabeçalhos de assinatura nunca vão para log
+    // nem trilha; o caminho entra sozinho nos caminhos de corpo assinado do
+    // filtro de ataques (security.validation.signed_body_paths).
+    // =========================================================================
+    'inbound' => [
+        // `false` tira a rota (e o caminho dos caminhos de corpo assinado).
+        'enabled' => (bool) env('WEBHOOKS_INBOUND_ENABLED', true),
+
+        // O prefixo da rota: só segmentos literais (sem `*`).
+        'path' => env('WEBHOOKS_INBOUND_PATH', 'webhooks/inbound'),
+
+        // Maior corpo aceito, em bytes (o teto do filtro de ataques,
+        // security.validation.max_inspected_bytes, vale antes). Cada fonte
+        // pode baixar ou subir o seu (`max_body_bytes`).
+        'max_body_bytes' => (int) env('WEBHOOKS_INBOUND_MAX_BODY_BYTES', 262144),
+
+        // Janela do carimbo de tempo, em segundos, para os dois lados (velho
+        // e futuro), nos esquemas que assinam um carimbo. Fonte: `tolerance`
+        // dentro do `verifier`.
+        'tolerance_seconds' => (int) env('WEBHOOKS_INBOUND_TOLERANCE_SECONDS', 300),
+
+        // Requisições por minuto, por fonte e IP (fonte: `rate_limit_per_minute`).
+        'rate_limit_per_minute' => (int) env('WEBHOOKS_INBOUND_RATE_LIMIT', 600),
+
+        // Guardar o corpo decodificado no banco (CIFRADO, APP_KEY)? Padrão
+        // NÃO: ele viaja só no job da fila, também cifrado. Ligado, é apagado
+        // depois de `retention.payload_days`. Fonte: `store_payload`.
+        'store_payload' => (bool) env('WEBHOOKS_INBOUND_STORE_PAYLOAD', false),
+
+        // O job que chama o handler: tentativas, espera antes de cada nova
+        // tentativa (segundos), tempo máximo, fila e conexão (nulo = as
+        // padrão). Fonte: `tries`, `backoff`, `queue`, `connection`.
+        'tries' => (int) env('WEBHOOKS_INBOUND_TRIES', 5),
+        'backoff' => array_values(array_map('intval', array_filter(array_map('trim', explode(',', (string) env('WEBHOOKS_INBOUND_BACKOFF', '10,60,300,1800'))), 'strlen'))),
+        'timeout' => (int) env('WEBHOOKS_INBOUND_TIMEOUT', 60),
+        'queue' => env('WEBHOOKS_INBOUND_QUEUE'),
+        'connection' => env('WEBHOOKS_INBOUND_QUEUE_CONNECTION'),
+
+        // `webhooks:prune-inbound`: o registro de deduplicação fica `days`
+        // dias (a janela da deduplicação); o corpo guardado, `payload_days`.
+        // Cron vazio desliga, com aviso no log a cada boot.
+        'retention' => [
+            'days' => (int) env('WEBHOOKS_INBOUND_RETENTION_DAYS', 30),
+            'payload_days' => (int) env('WEBHOOKS_INBOUND_PAYLOAD_RETENTION_DAYS', 7),
+            'schedule' => env('WEBHOOKS_INBOUND_PRUNE_SCHEDULE', '35 4 * * *'),
+        ],
+    ],
+
+    // --- Fontes de webhooks recebidos --------------------------------------------
+    // Uma por provedor, pelo nome da URL (`/webhooks/inbound/<nome>`). Fica
+    // VAZIO no pacote: o aplicativo declara as dele no config/webhooks.php
+    // só com esta chave. Segredos sempre por variável de ambiente — dois por
+    // fonte durante uma rotação (o atual e o anterior). Exemplo:
+    //
+    //     'inbound_sources' => [
+    //         'pagamentos' => [
+    //             'verifier' => [
+    //                 'driver' => 'header_token',     // header_token | hmac | standard_webhooks | public_key | classe
+    //                 'header' => 'x-webhook-token',
+    //                 'secrets' => [env('PAGAMENTOS_WEBHOOK_TOKEN'), env('PAGAMENTOS_WEBHOOK_TOKEN_PREVIOUS')],
+    //             ],
+    //             'handler' => App\Webhooks\PagamentosHandler::class,
+    //             'event' => ['id' => 'id', 'type' => 'event', 'occurred_at' => 'dateCreated'],
+    //             'allowed_ips' => array_filter(explode(',', (string) env('PAGAMENTOS_WEBHOOK_IPS', ''))),
+    //         ],
+    //     ],
+    'inbound_sources' => [],
 
 ];

@@ -4,7 +4,8 @@
 > pull requests ficam no monorepo
 > [kelvindk9w/tws-laravel-starter-kit](https://github.com/kelvindk9w/tws-laravel-starter-kit) (pasta `packages/webhooks`); este
 > repositório é o espelho só-leitura publicado a cada versão.
-> Documentação: [docs/webhooks.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks.md) · Segurança:
+> Documentação: [docs/webhooks.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks.md) (saída) e
+> [docs/webhooks-entrada.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks-entrada.md) (entrada) · Segurança:
 > [SECURITY.md](SECURITY.md) · Licença: MIT ([LICENSE](LICENSE)).
 
 Webhooks de saída do **TWS Laravel Starter Kit**, como pacote Laravel **sem
@@ -16,6 +17,16 @@ sucesso (com aviso por e-mail; as entregas ficam pausadas e saem ao
 reativar),
 log de entregas redigido, reenvio auditado e **proteção contra SSRF** (DNS
 revalidado em cada envio e conexão no IP conferido, sem redirect nem proxy).
+
+E **webhooks de entrada**: o aplicativo declara uma **fonte** por provedor
+(nome, verificador, handler) e o pacote recebe em `POST /webhooks/inbound/<fonte>`
+— sem sessão nem CSRF, com limite por fonte e IP —, confere a allowlist de
+IP e o tamanho do corpo, **verifica sobre o corpo cru** (token em
+cabeçalho, HMAC configurável, Standard Webhooks ou chave pública RSA/EC, com
+rotação de segredo e janela de tempo), **deduplica no banco** por (fonte, id
+do evento) com INSERT de conflito ignorado, responde 202/200 na hora e
+entrega o evento ao handler na **fila cifrada**, com novas tentativas. O
+corpo e os cabeçalhos de assinatura não vão para log nem trilha.
 
 Depende do [`twstec/kit-accounts`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/accounts) (o endpoint é da
 conta), do [`twstec/kit-auth`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth) (ação sensível) e do
@@ -39,6 +50,9 @@ de nada acima deles; um teste de arquitetura na suíte do pacote garante isso.
 | `Support\WebhookPanel`, `WebhookAccess`, `WebhookAudit`, `EventCatalog`, `WebhookLifecycle` | O que as telas mostram (nunca o segredo), quem pode o quê, a trilha, o catálogo e a exclusão com a conta e a pessoa |
 | `Console\DispatchPendingDeliveries`, `PruneWebhookEvents` | `webhooks:dispatch-pending` (outbox de volta à fila, a cada minuto) e `webhooks:prune` (retenção), agendados pelo pacote |
 | `Mail\EndpointDisabledMail` | O aviso de endpoint desativado, ao dono e aos admins da conta |
+| `Inbound\InboundWebhooks`, `InboundSource`, `InboundEvent`, `Contracts\InboundWebhookHandler` | Webhooks de ENTRADA: registrar uma fonte (pela configuração `webhooks.inbound_sources` ou pelo código), o evento que o handler recebe (id, tipo, ocorrido em, payload decodificado) e o contrato do handler |
+| `Inbound\Verifiers\SharedSecretHeader`, `HmacSignature`, `StandardWebhooks`, `PublicKeySignature` (`Contracts\Verifier`) | Os verificadores plugáveis (drivers `header_token`, `hmac`, `standard_webhooks`, `public_key`): corpo cru, tempo constante, rotação, janela de tempo, recusa sem segredo configurado |
+| `Inbound\InboundReceiver`, `ProcessInboundWebhook`, `Models\InboundWebhookEvent`, `Console\PruneInboundWebhooks` | O recebimento (404/403/413/401/400, deduplicação, 202/200, 503 com a fila fora), o job cifrado e idempotente, o registro de deduplicação (sem o corpo, ou com ele cifrado) e o `webhooks:prune-inbound` agendado |
 | `examples/verify-signature.php` | O exemplo de verificação para o receptor (tolerância de tempo, tempo constante) — o mesmo código que a suíte usa |
 
 ## Instalação
@@ -51,7 +65,7 @@ php artisan migrate
 Ou pelo instalador do kit: `php artisan tws:add webhooks` (num aplicativo que
 já tem o `twstec/kit-accounts`) ou `php artisan tws:install --with=webhooks`.
 
-Depois:
+Depois, para a **saída**:
 
 1. Declare os eventos que o aplicativo emite (`WEBHOOKS_EVENTS` ou
    `config/webhooks.php` do aplicativo só com a chave `events` — ver
@@ -60,6 +74,29 @@ Depois:
 3. Mantenha a fila e o agendador rodando.
 4. Dê às contas uma tela sobre as Actions (os starters do kit trazem as
    deles, em Livewire e em React).
+
+Para a **entrada**:
+
+1. Declare as fontes no `config/webhooks.php` do aplicativo, só com a chave
+   `inbound_sources` (segredos por variável de ambiente, dois na rotação):
+
+   ```php
+   'inbound_sources' => [
+       'pagamentos' => [
+           'verifier' => ['driver' => 'header_token', 'header' => 'x-provedor-token', 'secrets' => [env('PAGAMENTOS_WEBHOOK_TOKEN'), env('PAGAMENTOS_WEBHOOK_TOKEN_PREVIOUS')]],
+           'handler' => App\Webhooks\PagamentosHandler::class,
+           'event' => ['id' => 'id', 'type' => 'event', 'occurred_at' => 'dateCreated'],
+       ],
+   ],
+   ```
+
+2. Escreva o handler (`Inbound\Contracts\InboundWebhookHandler`): idempotente,
+   valida o payload e, com verificação fraca (token fixo), reconsulta a API
+   do provedor antes de mudar estado.
+3. Cadastre no provedor `https://<domínio>/webhooks/inbound/pagamentos`.
+
+Exemplos de HMAC, Standard Webhooks e chave pública em
+[docs/webhooks-entrada.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks-entrada.md).
 
 ## O que o receptor confere
 

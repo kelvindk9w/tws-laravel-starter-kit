@@ -27,6 +27,9 @@
         <testsuite name="Protections">
             <directory>tests/Protections</directory>
         </testsuite>
+        <testsuite name="Inbound">
+            <directory>tests/Inbound</directory>
+        </testsuite>
         <testsuite name="Architecture">
             <directory>tests/Architecture</directory>
         </testsuite>

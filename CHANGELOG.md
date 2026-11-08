@@ -6,6 +6,67 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Webhooks de entrada (`twstec/kit-webhooks`, #75).** O aplicativo declara
+  uma **fonte** por provedor — nome, verificador, handler — em
+  `webhooks.inbound_sources` (ou pelo código, `InboundWebhooks::register`) e
+  recebe em `POST /webhooks/inbound/<fonte>` (prefixo em
+  `WEBHOOKS_INBOUND_PATH`), fora do grupo `web` (sem sessão, cookie nem
+  CSRF), com limite por fonte e IP. Cada requisição passa por: fonte
+  conhecida (senão 404) → allowlist de IP da fonte, IPv4 e IPv6, sobre o
+  `ip()` com os proxies confiáveis do kit (403) → tamanho do corpo (413) →
+  **verificação sobre o corpo cru**, antes de qualquer decodificação (401,
+  sem dizer o motivo — ele vai só para o log interno) → leitura do evento
+  (400) → **deduplicação no banco** por (fonte, id do evento), com `UNIQUE`
+  e `INSERT … ON CONFLICT DO NOTHING` (200 `duplicate` na repetição, sem
+  reprocessar) → fila (202; com a fila fora do ar, 503 e o registro
+  desfeito, para o provedor reenviar).
+  - **Verificadores plugáveis** (`Inbound\Contracts\Verifier`), sem nome de
+    provedor no núcleo: `header_token` (segredo fixo em cabeçalho, com
+    prefixo opcional), `hmac` (algoritmo, cabeçalho, prefixo, hex ou
+    base64, formatos `plain`, `keyed` — `t=…,v1=…` — e `versioned`, conteúdo
+    assinado configurável com `{id}`, `{timestamp}` e `{body}`, carimbo em
+    segundos ou milissegundos), `standard_webhooks` e `public_key` (RSA ou
+    EC por `openssl_verify`, PEM no texto ou `file://`). Todos comparam em
+    tempo constante, aceitam mais de um segredo/chave vigente (rotação),
+    recusam sem segredo configurado e, com carimbo, recusam fora da janela
+    (`WEBHOOKS_INBOUND_TOLERANCE_SECONDS`, padrão 5 min, velho e futuro).
+    Classe própria do aplicativo entra pelo nome em `verifier.driver`.
+  - **O handler** (`Inbound\Contracts\InboundWebhookHandler`) recebe na fila
+    só o evento verificado e não duplicado, como objeto de valor
+    (`Inbound\InboundEvent`: fonte, id, tipo, ocorrido em, payload
+    decodificado, recebido em, uuid do registro, tentativa). O id, o tipo e
+    a data saem do corpo JSON pelos caminhos de `event` (ou de cabeçalho);
+    sem id, vale o id assinado pelo esquema ou o hash do corpo. Outro
+    formato de corpo: um `EventParser` próprio.
+  - **Fila:** o job `ProcessInboundWebhook` vai cifrado (`ShouldBeEncrypted`)
+    e é idempotente — reserva o registro com troca condicional antes de
+    chamar o handler, tenta de novo com `tries`/`backoff` da fonte (padrão 5
+    tentativas: 10 s, 1 min, 5 min, 30 min) e marca `failed` no fim; um
+    reenvio do provedor com o mesmo id põe um evento `failed` na fila de
+    novo, uma vez.
+  - **Corpo fora de log e trilha:** o prefixo da rota entra sozinho nos
+    caminhos de corpo assinado do filtro de ataques
+    (`security.validation.signed_body_paths`), mesmo com a chave
+    `validation` escrita pelo aplicativo; o log do pacote leva só fonte,
+    motivo, IP e ids, passado pelo `Redactor`; a falha do handler grava só a
+    classe da exceção. O corpo não fica no banco por padrão (viaja só no
+    job); com `store_payload`, fica cifrado e o `webhooks:prune-inbound`
+    (agendado, `35 4 * * *`) o apaga em 7 dias e o registro de deduplicação
+    em 30 (`WEBHOOKS_INBOUND_PAYLOAD_RETENTION_DAYS`,
+    `WEBHOOKS_INBOUND_RETENTION_DAYS`).
+  - Tabela nova `webhook_inbound_events` (migration do pacote; sem
+    `account_id` — o registro é do recebimento, quem liga o evento à conta é
+    o handler). O pacote passa a declarar `ext-openssl`.
+  - Testes: cada verificador (válido, inválido, sem cabeçalho, carimbo
+    velho e futuro, rotação), a rota inteira, a corrida entre a verificação
+    e o INSERT, a fila cifrada, que o corpo e o token não aparecem em log nem
+    na trilha, a retenção; e, no starter Livewire contra o PostgreSQL, o
+    mesmo evento quatro vezes ao mesmo tempo em processos separados,
+    processado uma vez. Documentação em
+    [webhooks de entrada](docs/webhooks-entrada.md).
+
 ## [2.0.0] — 2026-11-06
 
 Primeira versão estável da 2.x. O kit deixa de ser código copiado para o

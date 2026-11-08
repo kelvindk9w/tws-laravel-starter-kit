@@ -244,8 +244,10 @@ continua inspecionado e gravado (lado estreito), e em produção a recusa é avi
 boot (`SECURITY_VALIDATION_SIGNED_BODY_PATHS tem entradas RECUSADAS…`). Ver
 `Twstec\Kit\Foundation\Security\SignedBodyPaths`.
 
-O `twstec/kit-webhooks` só **envia** webhooks (não tem rota de recebimento), então não registra
-nada nesta lista: quem lista é o projeto, rota a rota, ao criar o seu receptor.
+Os **webhooks de entrada** do `twstec/kit-webhooks` ([webhooks-entrada.md](webhooks-entrada.md))
+põem o prefixo da rota deles (`webhooks/inbound/*`, ou o de `WEBHOOKS_INBOUND_PATH`) nesta lista
+**sozinhos** — a rota verifica a assinatura de cada fonte sobre o corpo cru antes de qualquer uso. Um
+receptor próprio do projeto, fora dessa rota, continua sendo listado aqui à mão.
 
 ## Limite de requisições (rate limit) e contenção da trilha
 

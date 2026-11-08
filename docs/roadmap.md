@@ -208,9 +208,10 @@ Os módulos novos entram como pacotes à parte, puxados por um projeto real:
 
 - **Cobrança e planos (#74):** assinatura no Mercado Pago ou no Asaas,
   planos, direitos por plano ("pode X?") e webhook de cobrança.
-- **Webhooks de entrada (#75):** verificador genérico de assinatura (HMAC),
-  carimbo de tempo e deduplicação por evento, sobre a lista de corpo
-  assinado da 2.0.0-beta.18 (#63). Pode vir antes, se um projeto precisar.
+- **Webhooks de entrada (#75):** no `twstec/kit-webhooks`, ainda não
+  publicado (seção "Não publicado" do CHANGELOG) — fontes com verificador
+  plugável, janela de tempo, deduplicação no banco e fila; ver
+  [webhooks de entrada](webhooks-entrada.md).
 - **Login de app pelo navegador (#76):** desktop, mobile e CLI entram pelo
   login web, com o segundo fator, e recebem um token (device flow).
 - **`tws:upgrade` que aplica sozinho** o que não foi personalizado (a 2.0.0

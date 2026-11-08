@@ -5,6 +5,9 @@ namespace `Twstec\Kit\Webhooks\`. Avisa outros sistemas quando algo acontece
 numa conta: o aplicativo dispara um evento e o pacote o entrega, assinado, a
 cada endpoint da conta que o assina.
 
+> Para **receber** webhooks de provedores (verificador por fonte, janela de
+> tempo, deduplicação, fila), ver [webhooks de entrada](webhooks-entrada.md).
+
 > **Módulo opcional** (exige o `twstec/kit-accounts`: o endpoint pertence a
 > uma conta). Sem ele, a tela de webhooks não existe e o menu não a mostra —
 > ver [instalação e módulos](instalacao.md).

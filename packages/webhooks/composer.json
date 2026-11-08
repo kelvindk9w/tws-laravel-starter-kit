@@ -1,7 +1,7 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "twstec/kit-webhooks",
-    "description": "Webhooks de saída do TWS Laravel Starter Kit, sem telas: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado).",
+    "description": "Webhooks de saída e de entrada do TWS Laravel Starter Kit, sem telas. Saída: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado). Entrada: fontes configuráveis com verificador plugável (token em cabeçalho, HMAC, Standard Webhooks, chave pública RSA/EC) sobre o corpo cru, janela de tempo, deduplicação no banco por id do evento, allowlist de IP, limite de corpo, fila cifrada com novas tentativas e trilha sem o corpo.",
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
@@ -16,10 +16,11 @@
         "source": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/webhooks",
         "docs": "https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/docs"
     },
-    "keywords": ["laravel", "webhooks", "hmac", "ssrf", "security", "starter-kit"],
+    "keywords": ["laravel", "webhooks", "hmac", "ssrf", "inbound-webhooks", "standard-webhooks", "security", "starter-kit"],
     "require": {
         "php": "^8.4",
         "ext-curl": "*",
+        "ext-openssl": "*",
         "laravel/framework": "^13.17",
         "twstec/kit-accounts": "2.x-dev",
         "twstec/kit-auth": "2.x-dev",
