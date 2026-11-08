@@ -80,7 +80,9 @@ O que já vem pronto:
 - **Uploads validados pelo conteúdo** (magic bytes, polyglot, re-encode).
 - **Webhooks de saída assinados** (HMAC com carimbo de tempo), com outbox,
   novas tentativas, log de entregas, reenvio auditado e proteção contra SSRF
-  (DNS revalidado no envio, conexão no IP conferido).
+  (DNS revalidado no envio, conexão no IP conferido) — e **de entrada**
+  verificados sobre o corpo cru (token, HMAC, Standard Webhooks, chave
+  pública), com janela de tempo, deduplicação no banco e fila cifrada.
 - **Painel do usuário** (Livewire) e **super admin** (Filament) com
   dashboards, allowlist de IP e i18n em pt-BR, English e Español.
 - **Produção em Docker** que recusa subir sem chave, sem mailer real ou com
@@ -103,6 +105,7 @@ As regras que o código segue estão em [Convenções](docs/convencoes.md).
 | Tenancy e projetos | [docs/tenancy.md](docs/tenancy.md) |
 | Uploads seguros | [docs/uploads.md](docs/uploads.md) |
 | Webhooks de saída: assinatura, SSRF, novas tentativas, log e reenvio | [docs/webhooks.md](docs/webhooks.md) |
+| Webhooks de entrada: fontes, verificadores (token, HMAC, Standard Webhooks, chave pública), janela de tempo, deduplicação e fila | [docs/webhooks-entrada.md](docs/webhooks-entrada.md) |
 | Painel do usuário, super admin e dashboards | [docs/admin-e-dashboards.md](docs/admin-e-dashboards.md) |
 | E-mails transacionais | [docs/emails.md](docs/emails.md) |
 | Atualização: da 1.x para a 2.0 e entre versões da 2.0 (`tws:upgrade`, `.tws/manifest.json`, variáveis novas) | [docs/atualizacao.md](docs/atualizacao.md) |
