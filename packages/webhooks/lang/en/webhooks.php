@@ -97,6 +97,7 @@ return [
     'console' => [
         'requeued' => ':count webhook delivery(ies) queued.',
         'pruned' => ':count old webhook event(s) deleted.',
+        'inbound_pruned' => ':count old received webhook(s) deleted; body removed from :payloads.',
     ],
 
     'ui' => [

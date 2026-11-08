@@ -97,6 +97,7 @@ return [
     'console' => [
         'requeued' => ':count entrega(s) de webhook posta(s) na fila.',
         'pruned' => ':count evento(s) de webhook antigo(s) apagado(s).',
+        'inbound_pruned' => ':count webhook(s) recebido(s) antigo(s) apagado(s); corpo apagado de :payloads.',
     ],
 
     'ui' => [

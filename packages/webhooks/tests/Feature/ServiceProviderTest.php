@@ -30,13 +30,27 @@ it('traz a configuração padrão: HTTPS obrigatório, nenhuma rede privada libe
         ->and(config('webhooks.delivery.disable_after_hours'))->toBe(72)
         ->and(config('webhooks.delivery.response_excerpt_bytes'))->toBe(1024)
         ->and(config('webhooks.secret.max_overlap_minutes'))->toBe(10080)
-        ->and(config('webhooks.prune.days'))->toBe(30);
+        ->and(config('webhooks.prune.days'))->toBe(30)
+        // Webhooks recebidos: janela de 5 min, corpo NÃO guardado, nenhuma fonte.
+        ->and(config('webhooks.inbound.enabled'))->toBeTrue()
+        ->and(config('webhooks.inbound.path'))->toBe('webhooks/inbound')
+        ->and(config('webhooks.inbound.tolerance_seconds'))->toBe(300)
+        ->and(config('webhooks.inbound.max_body_bytes'))->toBe(262144)
+        ->and(config('webhooks.inbound.store_payload'))->toBeFalse()
+        ->and(config('webhooks.inbound.backoff'))->toBe([10, 60, 300, 1800])
+        ->and(config('webhooks.inbound.retention.days'))->toBe(30)
+        ->and(config('webhooks.inbound.retention.payload_days'))->toBe(7)
+        ->and(config('webhooks.inbound_sources'))->toBe([]);
 });
 
-it('roda a migration das quatro tabelas e a do endurecimento da entrega', function (): void {
+it('roda a migration das quatro tabelas, a do endurecimento da entrega e a dos webhooks recebidos', function (): void {
     $arquivos = array_map('basename', glob(dirname(__DIR__, 2).'/database/migrations/*.php'));
 
-    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php', '2026_10_29_000001_harden_webhook_delivery.php'])
+    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php', '2026_10_29_000001_harden_webhook_delivery.php', '2026_11_07_000001_create_webhook_inbound_events_table.php'])
+        ->and(Schema::hasTable('webhook_inbound_events'))->toBeTrue()
+        // A deduplicação é do banco: UNIQUE (fonte, id do evento).
+        ->and(collect(Schema::getIndexes('webhook_inbound_events'))->first(fn (array $index): bool => $index['columns'] === ['source', 'event_id'])['unique'] ?? false)->toBeTrue()
+        ->and(Schema::hasColumn('webhook_inbound_events', 'account_id'))->toBeFalse()
         ->and(Schema::hasTable('webhook_endpoints'))->toBeTrue()
         ->and(Schema::hasTable('webhook_events'))->toBeTrue()
         ->and(Schema::hasTable('webhook_deliveries'))->toBeTrue()
@@ -52,14 +66,17 @@ it('registra os comandos e agenda o outbox e a limpeza', function (): void {
     $commands = array_keys(Artisan::all());
 
     expect($commands)->toContain('webhooks:dispatch-pending')
-        ->and($commands)->toContain('webhooks:prune');
+        ->and($commands)->toContain('webhooks:prune')
+        ->and($commands)->toContain('webhooks:prune-inbound');
 
     $agendados = collect(app(Schedule::class)->events())->map(fn ($event): string => $event->expression.' '.$event->command)->implode("\n");
 
     expect($agendados)->toContain('* * * * *')
         ->and($agendados)->toContain('webhooks:dispatch-pending')
         ->and($agendados)->toContain('20 4 * * *')
-        ->and($agendados)->toContain('webhooks:prune');
+        ->and($agendados)->toContain('webhooks:prune')
+        ->and($agendados)->toContain('35 4 * * *')
+        ->and($agendados)->toContain('webhooks:prune-inbound');
 });
 
 it('o resolvedor padrão é o do sistema (a suíte troca pelo de mentira)', function (): void {

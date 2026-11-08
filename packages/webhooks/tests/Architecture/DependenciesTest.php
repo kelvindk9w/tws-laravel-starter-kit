@@ -44,7 +44,7 @@ const WEBHOOKS_ALLOWED_ROOTS = [
     'Psr\\Http\\Message\\',
 ];
 
-const WEBHOOKS_SHIPPED_DIRECTORIES = ['src', 'config', 'database', 'lang', 'examples'];
+const WEBHOOKS_SHIPPED_DIRECTORIES = ['src', 'config', 'database', 'lang', 'examples', 'routes'];
 
 function webhooksRoot(): string
 {
@@ -162,12 +162,14 @@ it('não tem telas: a única view é a do e-mail de aviso', function (): void {
     expect($blade)->toBe([]);
 });
 
-it('declara no composer.json as dependências que usa — e só as do kit, o Laravel e a extensão cURL', function (): void {
+it('declara no composer.json as dependências que usa — e só as do kit, o Laravel e as extensões cURL e OpenSSL', function (): void {
     $composer = json_decode((string) file_get_contents(webhooksRoot().'/composer.json'), true);
 
     expect(array_keys($composer['require']))->toBe([
         'php',
         'ext-curl',
+        // A verificação por chave pública dos webhooks recebidos (openssl_verify).
+        'ext-openssl',
         'laravel/framework',
         'twstec/kit-accounts',
         'twstec/kit-auth',
