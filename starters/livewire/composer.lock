@@ -2555,16 +2555,16 @@
         },
         {
             "name": "laravel/prompts",
-            "version": "v0.3.26",
+            "version": "v0.3.27",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/prompts.git",
-                "reference": "2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0"
+                "reference": "abdfc75a1ae6c6f21522daed50da7124cbff09d2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/prompts/zipball/2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
-                "reference": "2d1e9bf6bab8d3f383c254db7f2b4ea8816d55e0",
+                "url": "https://api.github.com/repos/laravel/prompts/zipball/abdfc75a1ae6c6f21522daed50da7124cbff09d2",
+                "reference": "abdfc75a1ae6c6f21522daed50da7124cbff09d2",
                 "shasum": ""
             },
             "require": {
@@ -2607,9 +2607,9 @@
             ],
             "description": "Add beautiful and user-friendly forms to your command-line applications.",
             "support": {
-                "source": "https://github.com/laravel/prompts/tree/v0.3.26"
+                "source": "https://github.com/laravel/prompts/tree/v0.3.27"
             },
-            "time": "2026-10-09T14:45:13+00:00"
+            "time": "2026-11-09T16:07:10+00:00"
         },
         {
             "name": "laravel/sentinel",
@@ -4112,31 +4112,31 @@
         },
         {
             "name": "nunomaduro/termwind",
-            "version": "v2.4.0",
+            "version": "v2.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nunomaduro/termwind.git",
-                "reference": "712a31b768f5daea284c2169a7d227031001b9a8"
+                "reference": "9b85ae4d802403bfc004ea633ce542bc262ee5c3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nunomaduro/termwind/zipball/712a31b768f5daea284c2169a7d227031001b9a8",
-                "reference": "712a31b768f5daea284c2169a7d227031001b9a8",
+                "url": "https://api.github.com/repos/nunomaduro/termwind/zipball/9b85ae4d802403bfc004ea633ce542bc262ee5c3",
+                "reference": "9b85ae4d802403bfc004ea633ce542bc262ee5c3",
                 "shasum": ""
             },
             "require": {
                 "ext-mbstring": "*",
                 "php": "^8.2",
-                "symfony/console": "^7.4.4 || ^8.0.4"
+                "symfony/console": "^7.4.23 || ^8.1.11"
             },
             "require-dev": {
-                "illuminate/console": "^11.47.0",
-                "laravel/pint": "^1.27.1",
-                "mockery/mockery": "^1.6.12",
-                "pestphp/pest": "^2.36.0 || ^3.8.4 || ^4.3.2",
-                "phpstan/phpstan": "^1.12.32",
+                "illuminate/console": "^11.51 || ^12.70 || ^13.40",
+                "laravel/pint": "^1.30.4",
+                "mockery/mockery": "^1.6.15",
+                "pestphp/pest": "^2.36.1 || ^3.8.7 || ^4.7.8 || ^5.3.5",
+                "phpstan/phpstan": "^1.12.34",
                 "phpstan/phpstan-strict-rules": "^1.6.2",
-                "symfony/var-dumper": "^7.3.5 || ^8.0.4",
+                "symfony/var-dumper": "^7.4.22 || ^8.1.10",
                 "thecodingmachine/phpstan-strict-rules": "^1.0.0"
             },
             "type": "library",
@@ -4179,7 +4179,7 @@
             ],
             "support": {
                 "issues": "https://github.com/nunomaduro/termwind/issues",
-                "source": "https://github.com/nunomaduro/termwind/tree/v2.4.0"
+                "source": "https://github.com/nunomaduro/termwind/tree/v2.4.1"
             },
             "funding": [
                 {
@@ -4195,7 +4195,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-16T23:10:27+00:00"
+            "time": "2026-11-07T03:57:16+00:00"
         },
         {
             "name": "openspout/openspout",
@@ -5500,20 +5500,20 @@
         },
         {
             "name": "spatie/laravel-backup",
-            "version": "10.3.3",
+            "version": "10.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-backup.git",
-                "reference": "1ab5c2211481d5f962d118d0d35c40b9abf5b3f0"
+                "reference": "f5622c47d8aada2542c28a7612d832357d2e8979"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-backup/zipball/1ab5c2211481d5f962d118d0d35c40b9abf5b3f0",
-                "reference": "1ab5c2211481d5f962d118d0d35c40b9abf5b3f0",
+                "url": "https://api.github.com/repos/spatie/laravel-backup/zipball/f5622c47d8aada2542c28a7612d832357d2e8979",
+                "reference": "f5622c47d8aada2542c28a7612d832357d2e8979",
                 "shasum": ""
             },
             "require": {
-                "ext-zip": "^1.14.0",
+                "ext-zip": "^1.14.0|^8.6",
                 "illuminate/console": "^12.40|^13.0",
                 "illuminate/contracts": "^12.40|^13.0",
                 "illuminate/events": "^12.40|^13.0",
@@ -5521,7 +5521,7 @@
                 "illuminate/notifications": "^12.40|^13.0",
                 "illuminate/support": "^12.40|^13.0",
                 "league/flysystem": "^3.30.2",
-                "php": "^8.3",
+                "php": "^8.4",
                 "spatie/db-dumper": "^4.0",
                 "spatie/laravel-package-tools": "^1.92.7",
                 "spatie/laravel-signal-aware-command": "^2.1",
@@ -5537,7 +5537,7 @@
                 "league/flysystem-aws-s3-v3": "^3.30.1",
                 "mockery/mockery": "^1.6.12",
                 "orchestra/testbench": "^10.8|^11.0",
-                "pestphp/pest": "^4.1.5",
+                "pestphp/pest": "^4.7.8|^5.3.5",
                 "phpstan/extension-installer": "^1.4.3",
                 "phpstan/phpstan-deprecation-rules": "^2.0.3",
                 "phpstan/phpstan-phpunit": "^2.0.8",
@@ -5584,7 +5584,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-backup/issues",
-                "source": "https://github.com/spatie/laravel-backup/tree/10.3.3"
+                "source": "https://github.com/spatie/laravel-backup/tree/10.4.0"
             },
             "funding": [
                 {
@@ -5596,7 +5596,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-09-14T12:01:22+00:00"
+            "time": "2026-11-06T11:04:53+00:00"
         },
         {
             "name": "spatie/laravel-package-tools",
@@ -9127,10 +9127,11 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/webhooks",
-                "reference": "c8e4f3ea2e8550bc59d344fc729ba2e2ef00ae24"
+                "reference": "d438e9427f4c0fdd78d6a5c504af335c19cd6dfb"
             },
             "require": {
                 "ext-curl": "*",
+                "ext-openssl": "*",
                 "laravel/framework": "^13.17",
                 "php": "^8.4",
                 "twstec/kit-accounts": "2.x-dev",
@@ -9180,13 +9181,15 @@
                     "homepage": "https://github.com/kelvindk9w"
                 }
             ],
-            "description": "Webhooks de saída do TWS Laravel Starter Kit, sem telas: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado).",
+            "description": "Webhooks de saída e de entrada do TWS Laravel Starter Kit, sem telas. Saída: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado). Entrada: fontes configuráveis com verificador plugável (token em cabeçalho, HMAC, Standard Webhooks, chave pública RSA/EC) sobre o corpo cru, janela de tempo, deduplicação no banco por id do evento, allowlist de IP, limite de corpo, fila cifrada com novas tentativas e trilha sem o corpo.",
             "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "hmac",
+                "inbound-webhooks",
                 "laravel",
                 "security",
                 "ssrf",
+                "standard-webhooks",
                 "starter-kit",
                 "webhooks"
             ],
