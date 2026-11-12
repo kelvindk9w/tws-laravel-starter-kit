@@ -56,6 +56,9 @@ it('requisição anônima: ator anônimo, sem uuid, com o nome da rota', functio
 });
 
 it('pessoa pela sessão: o uuid dela (nunca o id interno) e a referência da sessão, não o id', function (): void {
+    // O grupo `web` cifra o cookie da sessão; a referência é um HMAC com a
+    // mesma chave (a suíte do pacote roda sem APP_KEY no ambiente).
+    config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
     $uuid = (string) Str::uuid();
 
     $this->actingAs(trailPerson($uuid))->get('/_trilha/painel')->assertOk();
