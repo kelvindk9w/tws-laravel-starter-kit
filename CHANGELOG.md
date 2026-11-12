@@ -6,6 +6,20 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Segurança
+
+- **Imagem base do PHP 8.4.27 (#123).** O PHP 8.4.27 (21/10/2026) corrige
+  execução remota de código sem autenticação no tratamento de `multipart`
+  (CVE-2026-109618), alcançável a partir de qualquer rota. Os Dockerfiles dos
+  starters (`php:8.4.27-fpm-alpine`) e do instalador (`php:8.4.27-cli`), a
+  plataforma do Composer (`config.platform.php`) dos pacotes e dos starters e
+  o `content-hash` dos `composer.lock` passam a 8.4.27. **Arquivo de starter:
+  não chega pelo Composer** — em projeto já criado, troque à mão o `FROM` do
+  `docker/php/Dockerfile` e o `config.platform.php` do `composer.json`, rode
+  `composer update --lock` e reconstrua as imagens (`docker compose build
+  --pull`; recriado o `app`, reinicie o `nginx`, que guarda o endereço do
+  container antigo).
+
 ## [2.1.0] — 2026-11-07
 
 Primeira versão menor da 2.x: chegam os **webhooks de entrada** no

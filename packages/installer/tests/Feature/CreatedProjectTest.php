@@ -398,7 +398,7 @@ it('o content-hash é o mesmo que o Composer calcula', function (): void {
             "prefer-stable": true,
             "config": {
                 "platform": {
-                    "php": "8.4.24"
+                    "php": "8.4.27"
                 },
                 "sort-packages": true
             },
