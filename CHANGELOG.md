@@ -6,6 +6,15 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.2.0] — 2026-11-12
+
+Versão de segurança e auditoria, sem quebra: PHP 8.4.27 nas imagens,
+máscara dos logs estendida pelo aplicativo, quem fez e por onde em cada
+linha da trilha de requisições, e webhooks recebidos que não se perdem com
+a fila fora do ar. Duas migrations novas (foundation e webhooks) e
+arquivos de starter (Dockerfile, `.env.example`) para aplicar à mão em
+projeto já criado. Atualize todos os pacotes `twstec/*` juntos.
+
 ### Adicionado
 
 - **Máscara do aplicativo nos logs (`twstec/kit-foundation`, #122).** O
@@ -3098,7 +3107,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...desenvolvimento
+[2.2.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0
 [2.0.0-beta.23]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0-beta.23

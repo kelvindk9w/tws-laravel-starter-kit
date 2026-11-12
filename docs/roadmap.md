@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-07, para a versão **2.1.0**.
+> Atualizado em 2026-11-12, para a versão **2.2.0**.
 > Este documento diz onde o kit está, o que entrou na **2.0.0** e o que fica
 > para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
