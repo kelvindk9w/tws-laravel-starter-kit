@@ -24,7 +24,7 @@ FROM composer:2.10.3 AS composer-bin
 FROM docker:29.9.2-cli AS docker-cli
 FROM node:24.22.1-slim AS node
 
-FROM php:8.4.24-cli
+FROM php:8.4.27-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

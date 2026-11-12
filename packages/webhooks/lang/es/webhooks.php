@@ -99,6 +99,8 @@ return [
         'requeued' => ':count entrega(s) de webhook en la cola.',
         'pruned' => ':count evento(s) de webhook antiguo(s) eliminado(s).',
         'inbound_pruned' => ':count webhook(s) recibido(s) antiguo(s) eliminado(s); cuerpo eliminado de :payloads.',
+        'inbound_requeued' => ':count webhook(s) recibido(s) devuelto(s) a la cola.',
+        'inbound_queue_unavailable' => 'La cola sigue no disponible: los demás quedan para la próxima ronda.',
     ],
 
     'ui' => [

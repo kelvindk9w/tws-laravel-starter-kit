@@ -36,6 +36,7 @@ use Twstec\Kit\Webhooks\Enums\InboundStatus;
  * @property array<array-key, mixed>|null $payload
  * @property string $payload_hash
  * @property Carbon $received_at
+ * @property Carbon|null $queued_at
  * @property Carbon|null $processed_at
  * @property Carbon|null $locked_until
  * @property string|null $last_error
@@ -53,7 +54,7 @@ class InboundWebhookEvent extends Model
      */
     protected $fillable = [
         'source', 'event_id', 'event_type', 'occurred_at', 'status', 'attempts',
-        'payload', 'payload_hash', 'received_at', 'processed_at', 'locked_until', 'last_error',
+        'payload', 'payload_hash', 'received_at', 'queued_at', 'processed_at', 'locked_until', 'last_error',
     ];
 
     /**
@@ -80,6 +81,7 @@ class InboundWebhookEvent extends Model
             'attempts' => 'integer',
             'occurred_at' => 'datetime',
             'received_at' => 'datetime',
+            'queued_at' => 'datetime',
             'processed_at' => 'datetime',
             'locked_until' => 'datetime',
         ];

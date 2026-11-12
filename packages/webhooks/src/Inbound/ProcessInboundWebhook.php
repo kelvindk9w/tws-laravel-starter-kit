@@ -169,13 +169,21 @@ final class ProcessInboundWebhook implements ShouldBeEncrypted, ShouldQueue
             throw $exception;
         }
 
-        InboundWebhookEvent::query()->whereKey($record->getKey())->update([
+        $done = [
             'status' => InboundStatus::Processed->value,
             'processed_at' => Carbon::now(),
             'locked_until' => null,
             'last_error' => null,
             'updated_at' => Carbon::now(),
-        ]);
+        ];
+
+        // Fonte que não guarda o corpo: o que foi guardado só para reenviar à
+        // fila (ela estava fora, #120) sai assim que o evento é processado.
+        if (! $source->storesPayload()) {
+            $done['payload'] = null;
+        }
+
+        InboundWebhookEvent::query()->whereKey($record->getKey())->update($done);
     }
 
     /**

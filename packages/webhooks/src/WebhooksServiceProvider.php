@@ -16,6 +16,7 @@ use Twstec\Kit\Foundation\Security\SignedBodyPaths;
 use Twstec\Kit\Webhooks\Console\DispatchPendingDeliveries;
 use Twstec\Kit\Webhooks\Console\PruneWebhookEvents;
 use Twstec\Kit\Webhooks\Inbound\Console\PruneInboundWebhooks;
+use Twstec\Kit\Webhooks\Inbound\Console\RequeueInboundWebhooks;
 use Twstec\Kit\Webhooks\Inbound\Http\ReceiveInboundWebhook;
 use Twstec\Kit\Webhooks\Inbound\InboundSources;
 use Twstec\Kit\Webhooks\Inbound\InboundWebhooks;
@@ -84,6 +85,7 @@ final class WebhooksServiceProvider extends ServiceProvider
                 DispatchPendingDeliveries::class,
                 PruneWebhookEvents::class,
                 PruneInboundWebhooks::class,
+                RequeueInboundWebhooks::class,
             ]);
 
             $this->publishes([
@@ -143,6 +145,7 @@ final class WebhooksServiceProvider extends ServiceProvider
 
         $this->loadRoutesFrom($this->path('routes/inbound.php'));
 
+        $this->schedule('webhooks:requeue-inbound', 'webhooks.inbound.requeue.schedule', 'webhooks.inbound.requeue.schedule vazio: a rodada que põe na fila os webhooks recebidos com a fila fora do ar (webhooks:requeue-inbound) está DESLIGADA. Esses avisos ficam `received` até rodar o comando à mão.');
         $this->schedule('webhooks:prune-inbound', 'webhooks.inbound.retention.schedule', 'webhooks.inbound.retention.schedule vazio: a limpeza dos webhooks recebidos (webhooks:prune-inbound) está DESLIGADA. Os registros de deduplicação e o corpo guardado (store_payload) ficam até rodar o comando à mão.');
     }
 

@@ -9,9 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 use Twstec\Kit\Foundation\Logging\CorrelationContext;
 use Twstec\Kit\Foundation\Logging\Redactor;
+use Twstec\Kit\Webhooks\Enums\InboundDispatchOutcome;
 use Twstec\Kit\Webhooks\Enums\InboundStatus;
 use Twstec\Kit\Webhooks\Models\InboundWebhookEvent;
 
@@ -29,10 +29,15 @@ use Twstec\Kit\Webhooks\Models\InboundWebhookEvent;
  * 5. leitura do evento (corpo ilegível: 400);
  * 6. DEDUPLICAÇÃO: INSERT com conflito ignorado sobre UNIQUE (fonte, id do
  *    evento) — sob corrida, o banco escolhe um; os outros são repetição;
- * 7. fila: o job leva o evento (cifrado); se a fila recusar, o registro é
- *    desfeito e a resposta é 503 — o provedor reenvia e nada se perde.
+ * 7. fila: o job leva o evento (cifrado). Aviso autêntico gravado é SEMPRE
+ *    202 (#120): se a fila recusar, o registro fica `received` fora da fila
+ *    e o `webhooks:requeue-inbound` agendado o põe lá depois — nunca é
+ *    apagado nem vira 503 (provedores interrompem a fila do endereço depois
+ *    de falhas seguidas). Com fila síncrona, a falha do handler leva o
+ *    registro a `failed`, como na fila assíncrona.
  *
- * Respostas: 202 (aceito, na fila) ou 200 (repetição, nada reprocessado).
+ * Respostas: 202 (aceito) ou 200 (repetição, nada reprocessado). Um reenvio
+ * de aviso que ainda espera a fila tenta pôr na fila na hora.
  * Nenhum log desta classe leva corpo, cabeçalho ou segredo — e o contexto
  * ainda passa pelo Redactor do kit.
  */
@@ -41,6 +46,7 @@ final class InboundReceiver
     public function __construct(
         private readonly InboundSources $sources,
         private readonly Redactor $redactor,
+        private readonly InboundDispatcher $dispatcher,
     ) {}
 
     public function receive(Request $request, string $name): Response
@@ -126,12 +132,7 @@ final class InboundReceiver
         $payload = $source->storesPayload() ? null : $parsed->payload;
 
         if ($inserted && $stored->uuid === $record->uuid) {
-            if (! $this->dispatch($source, $stored, $payload, $request)) {
-                InboundWebhookEvent::query()->whereKey($stored->getKey())->where('uuid', $record->uuid)->delete();
-
-                return $this->empty(Response::HTTP_SERVICE_UNAVAILABLE);
-            }
-
+            $this->dispatch($source, $stored, $payload, $request);
             $this->log('info', 'webhooks.inbound.accepted', $request, $name, ['event' => $stored->uuid, 'type' => $type]);
 
             return $this->json('accepted', Response::HTTP_ACCEPTED);
@@ -148,15 +149,24 @@ final class InboundReceiver
         $retried = $stored->status === InboundStatus::Failed && InboundWebhookEvent::query()
             ->whereKey($stored->getKey())
             ->where('status', InboundStatus::Failed->value)
-            ->update(['status' => InboundStatus::Received->value, 'updated_at' => $now]) === 1;
+            ->update(['status' => InboundStatus::Received->value, 'queued_at' => null, 'updated_at' => $now]) === 1;
 
-        if ($retried) {
-            if (! $this->dispatch($source, $stored, $payload, $request)) {
-                InboundWebhookEvent::query()->whereKey($stored->getKey())->update(['status' => InboundStatus::Failed->value]);
+        // Ainda esperando a fila (ela estava fora): o reenvio do provedor põe
+        // na fila agora, sem esperar a rodada agendada. Só depois do mesmo
+        // prazo da rodada — antes dele, o recebimento concorrente que gravou
+        // o registro ainda vai pôr na fila. A troca condicional de
+        // `queued_at` deixa só um (reenvio ou rodada) passar.
+        $waitingSince = $now->copy()->subSeconds(InboundDispatcher::requeueAfterSeconds());
+        $waiting = ! $retried && $stored->status === InboundStatus::Received && $stored->queued_at === null
+            && InboundWebhookEvent::query()
+                ->whereKey($stored->getKey())
+                ->where('status', InboundStatus::Received->value)
+                ->whereNull('queued_at')
+                ->where('updated_at', '<=', $waitingSince)
+                ->update(['queued_at' => $now, 'updated_at' => $now]) === 1;
 
-                return $this->empty(Response::HTTP_SERVICE_UNAVAILABLE);
-            }
-
+        if ($retried || $waiting) {
+            $this->dispatch($source, $stored, $payload, $request);
             $this->log('info', 'webhooks.inbound.requeued', $request, $name, ['event' => $stored->uuid]);
 
             return $this->json('accepted', Response::HTTP_ACCEPTED);
@@ -183,19 +193,14 @@ final class InboundReceiver
     /**
      * @param  array<array-key, mixed>|null  $payload
      */
-    private function dispatch(InboundSource $source, InboundWebhookEvent $record, ?array $payload, Request $request): bool
+    private function dispatch(InboundSource $source, InboundWebhookEvent $record, ?array $payload, Request $request): void
     {
-        try {
-            ProcessInboundWebhook::queueFor($source, $record, $payload);
+        $outcome = $this->dispatcher->dispatch($source, $record, $payload);
 
-            return true;
-        } catch (Throwable $exception) {
-            $this->log('error', 'webhooks.inbound.queue_unavailable', $request, $source->name, [
-                'event' => $record->uuid,
-                'exception' => $exception::class,
-            ]);
-
-            return false;
+        if ($outcome === InboundDispatchOutcome::QueueUnavailable) {
+            $this->log('error', 'webhooks.inbound.queue_unavailable', $request, $source->name, ['event' => $record->uuid]);
+        } elseif ($outcome === InboundDispatchOutcome::HandlerFailed) {
+            $this->log('warning', 'webhooks.inbound.handler_failed', $request, $source->name, ['event' => $record->uuid]);
         }
     }
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3e6c7d4b179143baf008ff7c68096807",
+    "content-hash": "dbca709bbc2342d5b6f31bbc8c4d71e2",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -8716,7 +8716,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/accounts",
-                "reference": "918794f134ee998864fc0f3c2c4d6b967cbe5e01"
+                "reference": "2b0c007cf4d25f41f8b770d570dccf58c2e84569"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -8797,7 +8797,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/admin",
-                "reference": "ce7f272afed2ac19ec04935e4ce4b94c9edb3fe1"
+                "reference": "1de32a76d0e1ccfc22d9027354688038e432980e"
             },
             "require": {
                 "filament/filament": "^5.7",
@@ -8884,7 +8884,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/auth",
-                "reference": "7b12505c1a2ab758062990f9de133bb60c9974ad"
+                "reference": "e1d27ede3f94b2c8a825295f7d4575669aec7d00"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -8962,7 +8962,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/foundation",
-                "reference": "fc8c9c4aef0601d4466df940d9732404ce683bfb"
+                "reference": "f76a7a393748e6c10f68c4b50a9d1b4ed2b90ffd"
             },
             "require": {
                 "ext-bcmath": "*",
@@ -9046,7 +9046,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/uploads",
-                "reference": "0e2eb537a6e953c330ff3b0588572ff9c7c39b8e"
+                "reference": "f78a6ff57eede9977c9b20cc005fac1557239dbd"
             },
             "require": {
                 "ext-fileinfo": "*",
@@ -9127,10 +9127,11 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/webhooks",
-                "reference": "c8e4f3ea2e8550bc59d344fc729ba2e2ef00ae24"
+                "reference": "88521c60348a269676854bf303bc397b48949cc8"
             },
             "require": {
                 "ext-curl": "*",
+                "ext-openssl": "*",
                 "laravel/framework": "^13.17",
                 "php": "^8.4",
                 "twstec/kit-accounts": "2.x-dev",
@@ -9180,13 +9181,15 @@
                     "homepage": "https://github.com/kelvindk9w"
                 }
             ],
-            "description": "Webhooks de saída do TWS Laravel Starter Kit, sem telas: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado).",
+            "description": "Webhooks de saída e de entrada do TWS Laravel Starter Kit, sem telas. Saída: endpoints por conta (e por projeto), eventos assinados por endpoint, segredo gerado pelo servidor e guardado cifrado, assinatura HMAC-SHA256 com carimbo de tempo, saída por outbox durável e fila cifrada, novas tentativas com backoff exponencial, desativação por falhas seguidas, log de entregas redigido, reenvio auditado e proteção contra SSRF (DNS revalidado no envio e conexão no IP validado). Entrada: fontes configuráveis com verificador plugável (token em cabeçalho, HMAC, Standard Webhooks, chave pública RSA/EC) sobre o corpo cru, janela de tempo, deduplicação no banco por id do evento, allowlist de IP, limite de corpo, fila cifrada com novas tentativas e trilha sem o corpo.",
             "homepage": "https://github.com/kelvindk9w/tws-laravel-starter-kit",
             "keywords": [
                 "hmac",
+                "inbound-webhooks",
                 "laravel",
                 "security",
                 "ssrf",
+                "standard-webhooks",
                 "starter-kit",
                 "webhooks"
             ],
@@ -11477,7 +11480,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T12:14:22+00:00"
+            "time": "2026-11-03T12:14:22+00:00",
+            "published-time": "2026-11-03T12:14:36+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -12990,7 +12994,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/demo",
-                "reference": "9d0e2ca1a47a73286a7f257609ca1fb794924690"
+                "reference": "d91ab6dd78fb558b720c139d632b9a0d7027039b"
             },
             "require": {
                 "fakerphp/faker": "^1.23",
@@ -13072,7 +13076,7 @@
             "dist": {
                 "type": "path",
                 "url": "../../packages/installer",
-                "reference": "55a9c0eda440e55c1e27e83ec2250bcf71aab475"
+                "reference": "841fef355d73fd704f12ba2bbc734544866bd50d"
             },
             "require": {
                 "laravel/framework": "^13.17",
@@ -13225,7 +13229,7 @@
     },
     "platform-dev": {},
     "platform-overrides": {
-        "php": "8.4.24"
+        "php": "8.4.27"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }

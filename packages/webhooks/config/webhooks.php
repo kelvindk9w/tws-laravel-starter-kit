@@ -168,6 +168,17 @@ return [
             'payload_days' => (int) env('WEBHOOKS_INBOUND_PAYLOAD_RETENTION_DAYS', 7),
             'schedule' => env('WEBHOOKS_INBOUND_PRUNE_SCHEDULE', '35 4 * * *'),
         ],
+
+        // `webhooks:requeue-inbound`: aviso autêntico gravado com a fila fora
+        // do ar é respondido com 202 e fica esperando (nunca 503, que faz o
+        // provedor interromper a fila do endereço). A rodada põe na fila os
+        // parados há mais de `after_seconds`, até `batch` por vez. Cron vazio
+        // desliga, com aviso no log a cada boot.
+        'requeue' => [
+            'after_seconds' => (int) env('WEBHOOKS_INBOUND_REQUEUE_AFTER', 60),
+            'batch' => (int) env('WEBHOOKS_INBOUND_REQUEUE_BATCH', 100),
+            'schedule' => env('WEBHOOKS_INBOUND_REQUEUE_SCHEDULE', '* * * * *'),
+        ],
     ],
 
     // --- Fontes de webhooks recebidos --------------------------------------------

@@ -14,6 +14,28 @@
 - os **nomes dos campos** passam pelas mesmas máscaras (um cartão mandado como nome de campo
   não escapa por ser chave);
 - strings gigantes são truncadas (logs não são storage de payload).
+- **dados pessoais sem formato reconhecível**, por nome de campo: telefone (`phone`,
+  `telefone`, `celular`, `mobile_phone`), nascimento (`birth_date`, `data_nascimento`), nome da
+  mãe, conta bancária (`bank_account`, `account_number`, `conta_bancaria`) e chave Pix
+  (`pix_key`, `chave_pix`, `address_key`) → `[REDACTED]`;
+- **segredos de provedor em texto livre**, onde estiverem (mensagem de exceção, corpo de
+  resposta, texto digitado): chaves de API do próprio kit (`<prefixo>_sk_live_…`), do Asaas
+  (`$aact_…`), da Stripe (`sk_`/`rk_`/`pk_` live/test, `whsec_`), tokens do GitHub, chaves da AWS, JWT, `Bearer`/`Basic` e blocos PEM
+  → `[REDACTED]`. Os padrões exigem o formato inteiro: UUID, número de pedido e valor ficam.
+
+**O aplicativo acrescenta os do domínio dele** em `security.redaction` — nunca tira os do kit:
+
+| Chave | Variável | O que faz |
+|---|---|---|
+| `keys` | `SECURITY_REDACTION_KEYS` | nomes de campo (vírgula; sem diferenciar maiúsculas; `postalCode` vale como `postal_code`) |
+| `suffixes` | `SECURITY_REDACTION_SUFFIXES` | sufixos de nome de campo |
+| `patterns` | — (só no arquivo) | expressões PCRE completas para segredo em texto livre |
+
+A instância do contêiner (`app(Redactor::class)`, montada por `Redactor::fromConfig()`) vale na
+trilha de requisições, nas chamadas de saída, na auditoria, nos webhooks e nos logs de arquivo
+(o formatter mascara o contexto por nome de campo e os segredos na linha final). Expressão
+inválida ou nome vazio derruba o boot com `InvalidArgumentException` — melhor que uma máscara
+que não mascara.
 
 **Webhook recebido com corpo assinado:** nos caminhos de `SECURITY_VALIDATION_SIGNED_BODY_PATHS`,
 a trilha não grava o corpo, nem redigido — só `_corpo_assinado` com o tamanho e o formato. A
@@ -55,6 +77,24 @@ são o dado do próprio contato, necessário para respondê-lo.
 | Banco (saída) | tabela `outbound_http_logs` | cada chamada HTTP de saída (uma linha por tentativa): destino normalizado, método, status, duração, tamanhos, `correlation_id` e conta — ver [Rastreio de ponta a ponta](#rastreio-de-ponta-a-ponta-fila-e-http-de-saída) |
 | Arquivo (sobrevive a falha do banco) | `storage/logs/request-YYYY-MM-DD.log` | JSON estruturado, 1 linha por evento (`request.started`, `request.finished`, `security.blocked`, `security.observed`, `request.throttled`, `request.unmatched.sampled_out`, `audit.event`, `audit.persist_failed`, `http.outbound`, `http.outbound.persist_failed`); número de cartão sai mascarado (ver [Redaction](#redaction-lgpd)) |
 | Borda | access log do nginx | tudo, inclusive health checks |
+
+### Quem, por onde e com quais cabeçalhos (`request_logs`)
+
+Cada linha da trilha de requisições diz:
+
+| Coluna | O que guarda |
+|---|---|
+| `actor_type` | `user` (pessoa pela sessão), `api_key` (chamada por chave de API), `system` (rota de corpo assinado, como webhook de provedor) ou `anonymous` |
+| `actor_uuid` | o **uuid** da pessoa — nunca o id interno |
+| `api_key_uuid` | o uuid da chave de API usada (posto pelo middleware de chave do `kit-accounts` no atributo `RequestLog::API_KEY_ATTRIBUTE`) |
+| `session_ref` | HMAC (com a `APP_KEY`) do id da sessão, 32 hex: liga as requisições da mesma sessão sem guardar o id, que abriria a sessão |
+| `route_name` | o nome da rota |
+| `ip_chain` | a cadeia do `X-Forwarded-For`; item que não é IP vira `[invalid]` |
+| `forwarded_trusted` | se a cadeia veio de um proxy confiável (`TRUSTED_PROXIES`) — sem isso, ela é só o que o cliente disse |
+| `headers` | lista **fechada** (`REQUEST_LOG_HEADERS`), valores pelo Redactor; `Origin`/`Referer` sem a query. Credencial nunca entra, mesmo listada: `Authorization`, `Cookie`, `X-Api-Key`, `X-CSRF-Token`, `X-XSRF-Token` e qualquer nome que o Redactor trate como segredo |
+
+Ator, chave, sessão e rota são gravados ao fim da requisição (só esses campos da linha podem
+mudar, além do fechamento — a trava append-only lista as colunas).
 
 O `correlation_id` conecta as camadas: resposta (`X-Correlation-Id`), linha do banco e linhas de
 arquivo da mesma requisição. Também entra no contexto compartilhado do Monolog

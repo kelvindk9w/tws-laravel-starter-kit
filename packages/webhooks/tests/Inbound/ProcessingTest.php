@@ -158,17 +158,27 @@ it('tentativas esgotadas: `failed`; o reenvio do provedor (mesmo id) põe na fil
         ->and(InboundWebhookEvent::query()->sole()->status)->toBe(InboundStatus::Processed);
 });
 
-it('fila sync (desenvolvimento): o handler roda na requisição; se falhar, 503 e o registro é desfeito — o reenvio processa', function (): void {
+it('fila sync (desenvolvimento): o handler roda na requisição; se falhar, 202 e `failed`, como em produção — o reenvio processa (#120)', function (): void {
     RecordingInboundHandler::$failures = 1;
+    $logs = captureLogs();
 
-    postInbound('token', inboundBody('evt_sync'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(503);
+    postInbound('token', inboundBody('evt_sync'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(202)->assertExactJson(['status' => 'accepted']);
 
-    expect(InboundWebhookEvent::query()->count())->toBe(0);
+    $record = InboundWebhookEvent::query()->sole();
+
+    // Falha do handler não é "fila indisponível": nada de esperar a fila.
+    expect($record->status)->toBe(InboundStatus::Failed)
+        ->and($record->attempts)->toBe(1)
+        ->and($record->last_error)->toBe(RuntimeException::class)
+        ->and($record->queued_at)->not->toBeNull()
+        ->and($record->payload)->toBeNull()
+        ->and(implode("\n", (array) $logs))->toContain('webhooks.inbound.handler_failed')->not->toContain('webhooks.inbound.queue_unavailable');
 
     postInbound('token', inboundBody('evt_sync'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(202);
 
     expect(RecordingInboundHandler::$events)->toHaveCount(1)
-        ->and(InboundWebhookEvent::query()->sole()->status)->toBe(InboundStatus::Processed);
+        ->and(InboundWebhookEvent::query()->sole()->status)->toBe(InboundStatus::Processed)
+        ->and(InboundWebhookEvent::query()->sole()->attempts)->toBe(2);
 });
 
 it('o failed() do job marca `failed` sem tocar no que está concluído', function (): void {
