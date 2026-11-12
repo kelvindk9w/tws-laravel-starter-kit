@@ -98,6 +98,8 @@ return [
         'requeued' => ':count entrega(s) de webhook posta(s) na fila.',
         'pruned' => ':count evento(s) de webhook antigo(s) apagado(s).',
         'inbound_pruned' => ':count webhook(s) recebido(s) antigo(s) apagado(s); corpo apagado de :payloads.',
+        'inbound_requeued' => ':count webhook(s) recebido(s) posto(s) de volta na fila.',
+        'inbound_queue_unavailable' => 'A fila continua indisponível: os demais ficam para a próxima rodada.',
     ],
 
     'ui' => [

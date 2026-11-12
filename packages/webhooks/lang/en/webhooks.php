@@ -98,6 +98,8 @@ return [
         'requeued' => ':count webhook delivery(ies) queued.',
         'pruned' => ':count old webhook event(s) deleted.',
         'inbound_pruned' => ':count old received webhook(s) deleted; body removed from :payloads.',
+        'inbound_requeued' => ':count received webhook(s) put back on the queue.',
+        'inbound_queue_unavailable' => 'The queue is still unavailable: the rest wait for the next run.',
     ],
 
     'ui' => [

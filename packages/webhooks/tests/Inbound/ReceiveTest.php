@@ -305,23 +305,71 @@ it('limite de requisições por fonte e IP: além dele, 429', function (): void 
     postInbound('token', inboundBody('evt_r4'), $headers, ['REMOTE_ADDR' => '198.51.100.20'])->assertStatus(202);
 });
 
-it('fila fora do ar: 503 e o registro é desfeito — o reenvio do provedor entra normalmente', function (): void {
+it('fila fora do ar: 202 (nunca 503), o registro fica esperando a fila e a rodada agendada processa uma vez (#120)', function (): void {
     inboundSources(['token' => ['connection' => 'fila-que-nao-existe']]);
     $logs = captureLogs();
+    $marcador = 'MARCADOR-ESPERANDO-FILA-5b2c';
 
     // A fila de verdade (não a falsa) — a conexão inexistente lança no envio.
     Queue::swap(Queue::getFacadeRoot()->queue);
 
-    postInbound('token', inboundBody('evt_fila'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(503);
+    postInbound('token', inboundBody('evt_fila', $marcador), ['x-provedor-token' => INBOUND_TOKEN])
+        ->assertStatus(202)
+        ->assertExactJson(['status' => 'accepted']);
 
-    expect(InboundWebhookEvent::query()->count())->toBe(0)
-        ->and(implode("\n", (array) $logs))->toContain('webhooks.inbound.queue_unavailable');
+    $record = InboundWebhookEvent::query()->sole();
+    $raw = (array) DB::table('webhook_inbound_events')->sole();
+
+    // Gravado, fora da fila, com o corpo guardado CIFRADO só para o reenvio.
+    expect($record->status)->toBe(InboundStatus::Received)
+        ->and($record->queued_at)->toBeNull()
+        ->and($record->last_error)->toBe('queue_unavailable')
+        ->and($record->payload['payment']['customer'] ?? null)->toBe('Cliente '.$marcador)
+        ->and(json_encode($raw))->not->toContain($marcador)
+        ->and(RecordingInboundHandler::$events)->toBe([])
+        ->and(implode("\n", (array) $logs))->toContain('webhooks.inbound.queue_unavailable')->not->toContain($marcador);
+
+    // A fila voltou: a rodada agendada põe na fila e o handler roda uma vez.
+    inboundSources();
+    $this->travel(2)->minutes();
+    $this->artisan('webhooks:requeue-inbound')->assertSuccessful();
+    $this->artisan('webhooks:requeue-inbound')->assertSuccessful();
+
+    $record->refresh();
+
+    expect(RecordingInboundHandler::$events)->toHaveCount(1)
+        ->and(RecordingInboundHandler::$events[0]->get('payment.customer'))->toBe('Cliente '.$marcador)
+        ->and($record->status)->toBe(InboundStatus::Processed)
+        ->and($record->attempts)->toBe(1)
+        ->and($record->queued_at)->not->toBeNull()
+        ->and($record->last_error)->toBeNull()
+        // A fonte não guarda o corpo: o guardado para o reenvio sai.
+        ->and($record->payload)->toBeNull();
+
+    // O reenvio do provedor depois disso é repetição.
+    postInbound('token', inboundBody('evt_fila', $marcador), ['x-provedor-token' => INBOUND_TOKEN])->assertOk()->assertExactJson(['status' => 'duplicate']);
+
+    expect(RecordingInboundHandler::$events)->toHaveCount(1);
+});
+
+it('fila fora do ar: o reenvio do provedor de um aviso que espera a fila põe na fila na hora', function (): void {
+    inboundSources(['token' => ['connection' => 'fila-que-nao-existe']]);
+    Queue::swap(Queue::getFacadeRoot()->queue);
+
+    postInbound('token', inboundBody('evt_espera'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(202);
 
     inboundSources();
-    Queue::fake();
 
-    postInbound('token', inboundBody('evt_fila'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(202);
-    Queue::assertPushed(ProcessInboundWebhook::class, 1);
+    // Antes do prazo, o recebimento que gravou ainda pode estar pondo na fila.
+    postInbound('token', inboundBody('evt_espera'), ['x-provedor-token' => INBOUND_TOKEN])->assertOk()->assertExactJson(['status' => 'duplicate']);
+    expect(RecordingInboundHandler::$events)->toBe([]);
+
+    $this->travel(2)->minutes();
+    postInbound('token', inboundBody('evt_espera'), ['x-provedor-token' => INBOUND_TOKEN])->assertStatus(202)->assertExactJson(['status' => 'accepted']);
+    postInbound('token', inboundBody('evt_espera'), ['x-provedor-token' => INBOUND_TOKEN])->assertOk()->assertExactJson(['status' => 'duplicate']);
+
+    expect(RecordingInboundHandler::$events)->toHaveCount(1)
+        ->and(InboundWebhookEvent::query()->sole()->status)->toBe(InboundStatus::Processed);
 });
 
 it('handler que não implementa o contrato: 503 com o motivo no log', function (): void {

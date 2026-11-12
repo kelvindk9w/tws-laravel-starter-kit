@@ -6,6 +6,7 @@ namespace Twstec\Kit\Webhooks\Inbound\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Twstec\Kit\Webhooks\Enums\InboundStatus;
 use Twstec\Kit\Webhooks\Models\InboundWebhookEvent;
 
 /**
@@ -13,7 +14,7 @@ use Twstec\Kit\Webhooks\Models\InboundWebhookEvent;
  *
  * 1. apaga o corpo guardado (`store_payload`) dos registros mais velhos que
  *    `webhooks.inbound.retention.payload_days` — o registro de
- *    deduplicação continua;
+ *    deduplicação continua; o de quem ainda espera a fila fica (#120);
  * 2. apaga os registros mais velhos que `webhooks.inbound.retention.days`
  *    (a janela da deduplicação: depois dela, o mesmo id volta a ser novo).
  *
@@ -39,6 +40,8 @@ final class PruneInboundWebhooks extends Command
             $ids = InboundWebhookEvent::query()
                 ->whereNotNull('payload')
                 ->where('received_at', '<', $now->copy()->subDays($payloadDays))
+                // Esperando a fila (#120): o corpo é o que o job vai usar.
+                ->where(fn ($query) => $query->where('status', '!=', InboundStatus::Received->value)->orWhereNotNull('queued_at'))
                 ->orderBy('id')
                 ->limit(500)
                 ->pluck('id');

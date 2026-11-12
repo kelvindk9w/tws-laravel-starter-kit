@@ -27,7 +27,7 @@ de ataques nos cabeçalhos e no caminho, trilha `request_logs`).
 | 4. **Verificação** sobre o **corpo cru**, antes de qualquer decodificação | assinatura/token inválido, ausente, carimbo fora da janela | `401` (sem o motivo) |
 | 5. Leitura do evento (JSON objeto, por padrão) | corpo ilegível | `400` |
 | 6. **Deduplicação** no banco por (fonte, id do evento) | já recebido | `200 {"status":"duplicate"}` |
-| 7. Fila (job cifrado) | fila recusou | `503` (o registro é desfeito; o provedor reenvia) |
+| 7. Fila (job cifrado) | fila recusou | `202` — o registro fica esperando a fila e a rodada `webhooks:requeue-inbound` o põe lá (nunca `503`) |
 | — | tudo certo | `202 {"status":"accepted"}` |
 
 O motivo de cada recusa vai **só para o log interno**
@@ -321,8 +321,8 @@ no PostgreSQL.
   (`WEBHOOKS_INBOUND_RETENTION_DAYS`, padrão 30 dias). Nos esquemas com
   carimbo, uma repetição velha já cai na janela de tempo antes.
 
-Estados (`Enums\InboundStatus`): `received` (na fila, ou esperando nova
-tentativa), `processing` (com um worker, com prazo), `processed`, `failed`.
+Estados (`Enums\InboundStatus`): `received` (na fila, esperando nova
+tentativa ou — com `queued_at` nulo — esperando a fila voltar), `processing` (com um worker, com prazo), `processed`, `failed`.
 
 ## Allowlist de IP
 
@@ -374,8 +374,31 @@ o corpo — o payload decodificado; nunca o corpo cru nem cabeçalho.
   Esgotado: `failed` — e o job fica no `failed_jobs` do Laravel (cifrado),
   de onde `queue:retry` o repõe.
 - Com a fila `sync` (desenvolvimento), o handler roda dentro da requisição:
-  se ele falhar, a resposta é `503`, o registro é desfeito e o reenvio do
-  provedor tenta de novo.
+  se ele falhar, a resposta é `202` e o registro vai a `failed`, como na fila
+  assíncrona; o reenvio do provedor tenta de novo.
+
+### Fila fora do ar
+
+Aviso autêntico gravado é **sempre `202`**: o registro no banco já é a prova
+durável. Responder `503` faria o provedor reenviar e, depois de falhas
+seguidas, **interromper a fila do endereço** (no Asaas, 15 falhas; os
+pendentes ficam guardados por pouco tempo) até alguém retomar à mão.
+
+- Se a fila recusar o job (Redis fora, conexão inexistente), o registro fica
+  `received` com `queued_at` nulo e `last_error = queue_unavailable`
+  (`webhooks.inbound.queue_unavailable` no log). Quando a fonte não guarda o
+  corpo, ele é guardado **cifrado** só para esse reenvio e sai assim que o
+  evento é processado (a retenção não o apaga enquanto ele espera).
+- O `webhooks:requeue-inbound` (agendado a cada minuto,
+  `WEBHOOKS_INBOUND_REQUEUE_SCHEDULE`) põe na fila os que esperam há mais de
+  `WEBHOOKS_INBOUND_REQUEUE_AFTER` segundos (padrão 60), até
+  `WEBHOOKS_INBOUND_REQUEUE_BATCH` por rodada. Cada um é reservado por troca
+  condicional: a rodada e um reenvio do provedor nunca põem o mesmo duas
+  vezes. Fila ainda fora: a rodada para na primeira recusa e sai com falha.
+- O reenvio do provedor de um aviso que espera a fila (passado o mesmo prazo)
+  o põe na fila na hora.
+- Fonte tirada da configuração: o registro vai a `failed`
+  (`last_error = unknown_source`).
 - A fila precisa ser durável (Redis com persistência ou a fila `database`):
   é nela que o evento espera.
 
@@ -383,6 +406,9 @@ o corpo — o payload decodificado; nunca o corpo cru nem cabeçalho.
 
 | Variável | Padrão | O que faz |
 | --- | --- | --- |
+| `WEBHOOKS_INBOUND_REQUEUE_SCHEDULE` | `* * * * *` | Cron da rodada que põe na fila os avisos recebidos com a fila fora (vazio desliga, com aviso no log) |
+| `WEBHOOKS_INBOUND_REQUEUE_AFTER` | `60` | Segundos que um aviso fora da fila espera antes de ser posto nela pela rodada ou por um reenvio |
+| `WEBHOOKS_INBOUND_REQUEUE_BATCH` | `100` | Máximo de avisos por rodada |
 | `WEBHOOKS_INBOUND_ENABLED` | `true` | `false` tira a rota |
 | `WEBHOOKS_INBOUND_PATH` | `webhooks/inbound` | Prefixo da rota (só segmentos literais; com `*`, a rota não é registrada) |
 | `WEBHOOKS_INBOUND_MAX_BODY_BYTES` | `262144` | Maior corpo aceito (o teto do filtro de ataques vale antes) |

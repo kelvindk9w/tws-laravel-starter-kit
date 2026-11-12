@@ -43,11 +43,13 @@ it('traz a configuração padrão: HTTPS obrigatório, nenhuma rede privada libe
         ->and(config('webhooks.inbound_sources'))->toBe([]);
 });
 
-it('roda a migration das quatro tabelas, a do endurecimento da entrega e a dos webhooks recebidos', function (): void {
+it('roda a migration das quatro tabelas, a do endurecimento da entrega, a dos webhooks recebidos e a da espera pela fila', function (): void {
     $arquivos = array_map('basename', glob(dirname(__DIR__, 2).'/database/migrations/*.php'));
 
-    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php', '2026_10_29_000001_harden_webhook_delivery.php', '2026_11_07_000001_create_webhook_inbound_events_table.php'])
+    expect($arquivos)->toBe(['2026_10_03_000001_create_webhook_tables.php', '2026_10_29_000001_harden_webhook_delivery.php', '2026_11_07_000001_create_webhook_inbound_events_table.php', '2026_11_13_000002_add_queued_at_to_webhook_inbound_events_table.php'])
         ->and(Schema::hasTable('webhook_inbound_events'))->toBeTrue()
+        // Fora da fila (fila indisponível no recebimento): `queued_at` nulo.
+        ->and(Schema::hasColumn('webhook_inbound_events', 'queued_at'))->toBeTrue()
         // A deduplicação é do banco: UNIQUE (fonte, id do evento).
         ->and(collect(Schema::getIndexes('webhook_inbound_events'))->first(fn (array $index): bool => $index['columns'] === ['source', 'event_id'])['unique'] ?? false)->toBeTrue()
         ->and(Schema::hasColumn('webhook_inbound_events', 'account_id'))->toBeFalse()

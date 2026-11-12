@@ -6,7 +6,52 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Máscara do aplicativo nos logs (`twstec/kit-foundation`, #122).** O
+  aplicativo acrescenta, em `security.redaction`, os nomes de campo
+  (`SECURITY_REDACTION_KEYS`), sufixos (`SECURITY_REDACTION_SUFFIXES`) e
+  expressões (`patterns`, só no arquivo) do domínio dele; a instância do
+  contêiner (`Redactor::fromConfig()`) vale na trilha de requisições, nas
+  chamadas de saída, na auditoria, nos webhooks e nos logs de arquivo. O que
+  o kit mascara nunca sai da lista. Expressão inválida ou nome vazio derruba
+  o boot. Por padrão passam a ser mascarados também telefone, nascimento,
+  nome da mãe, conta bancária e chave Pix (por nome de campo). Nome de campo
+  em camelCase, como vem das APIs de provedor (`mobilePhone`, `apiKey`),
+  vale como o snake_case.
+- **Quem, por onde e com quais cabeçalhos na trilha (`twstec/kit-foundation`,
+  `twstec/kit-accounts`, #121).** `request_logs` ganha `actor_type`
+  (pessoa, chave de API, sistema, anônimo), `actor_uuid` (nunca o id
+  interno), `api_key_uuid`, `session_ref` (HMAC do id da sessão, nunca o
+  id), `route_name`, `ip_chain` (item forjado vira `[invalid]`),
+  `forwarded_trusted` e `headers` — lista fechada (`REQUEST_LOG_HEADERS`),
+  redigida, sem credencial mesmo listada. Migration nova no foundation; o
+  middleware de chave de API do accounts informa a chave usada. **Atualize
+  os pacotes `twstec/*` juntos** (`composer update 'twstec/*'`).
+- **Webhooks recebidos esperam a fila voltar (`twstec/kit-webhooks`, #120).**
+  Comando `webhooks:requeue-inbound`, agendado a cada minuto
+  (`WEBHOOKS_INBOUND_REQUEUE_SCHEDULE`, `_AFTER`, `_BATCH`), e coluna
+  `queued_at` (migration nova; os registros existentes contam como já
+  postos na fila).
+
+### Alterado
+
+- **Aviso autêntico gravado é sempre `202` (#120).** Com a fila fora do ar,
+  o registro não é mais apagado nem a resposta é `503` (o provedor
+  interrompia a fila do endereço depois de falhas seguidas): fica `received`
+  esperando a fila, com o corpo cifrado quando a fonte não o guarda (apagado
+  ao processar), e a rodada agendada — ou um reenvio do provedor — o põe na
+  fila uma vez. Com fila `sync`, falha do handler responde `202` e leva o
+  registro a `failed`, como na fila assíncrona.
+
 ### Segurança
+
+- **Segredos de provedor em texto livre não chegam aos logs (#114).** Chaves
+  de API do próprio kit (com o prefixo do produto), chaves do Asaas, da
+  Stripe (inclusive `whsec_`), tokens do GitHub, chaves da AWS,
+  JWT, `Bearer`/`Basic` e blocos PEM são mascarados em qualquer texto
+  (mensagem de exceção, corpo de resposta), e o log de arquivo mascara o
+  contexto por nome de campo, não só o cartão.
 
 - **Imagem base do PHP 8.4.27 (#123).** O PHP 8.4.27 (21/10/2026) corrige
   execução remota de código sem autenticação no tratamento de `multipart`
