@@ -385,7 +385,8 @@ it('no monorepo (sem o compose.yaml de desenvolvimento), nada do projeto criado 
 it('o content-hash é o mesmo que o Composer calcula', function (): void {
     // composer.json e content-hash gravados pelo próprio Composer 2
     // (`composer update` numa pasta com só este arquivo): cobre as chaves que
-    // entram no hash, o config.platform, a barra e o texto acentuado.
+    // entram no hash, o config.platform, a barra e o texto acentuado. O
+    // valor da plataforma é o da gravação: trocá-lo exige gravar de novo.
     $composer = <<<'JSON'
         {
             "name": "app/loja-da-maria",
@@ -398,7 +399,7 @@ it('o content-hash é o mesmo que o Composer calcula', function (): void {
             "prefer-stable": true,
             "config": {
                 "platform": {
-                    "php": "8.4.27"
+                    "php": "8.4.24"
                 },
                 "sort-packages": true
             },
