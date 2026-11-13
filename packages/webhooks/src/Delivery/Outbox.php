@@ -19,8 +19,8 @@ use Twstec\Kit\Webhooks\Models\WebhookEvent;
 use Twstec\Kit\Webhooks\Support\EventCatalog;
 
 /**
- * O OUTBOX: grava o evento e uma entrega por endpoint que o assina, no
- * banco, ANTES de qualquer coisa ir para a fila.
+ * O OUTBOX: grava o evento — SEMPRE, com ou sem endpoint — e uma entrega por
+ * endpoint que o assina, no banco, ANTES de qualquer coisa ir para a fila.
  *
  * - Dentro da transação de quem disparou (se houver uma): o evento só existe
  *   se a mudança de negócio for confirmada — e, confirmado, não se perde.
@@ -31,7 +31,9 @@ use Twstec\Kit\Webhooks\Support\EventCatalog;
  *   PAUSADA: ela não sai agora e volta à fila quando o endpoint for
  *   reativado — a desativação nunca faz evento se perder.
  * - Sem endpoint que assine o evento (na conta e, se o evento é de um
- *   projeto, sem projeto ou do mesmo projeto), nada é gravado.
+ *   projeto, sem projeto ou do mesmo projeto), o evento é gravado do mesmo
+ *   jeito, sem entrega: fica para consulta (o `uuid` é o mesmo id que iria
+ *   no `X-Webhook-Id`) até a retenção (`webhooks.prune`) o apagar.
  */
 final class Outbox
 {
@@ -42,7 +44,7 @@ final class Outbox
      *
      * @throws InvalidArgumentException evento fora do catálogo, projeto de outra conta ou corpo que não vira JSON
      */
-    public function dispatch(Account $account, string $type, array $payload, ?Project $project = null): ?WebhookEvent
+    public function dispatch(Account $account, string $type, array $payload, ?Project $project = null): WebhookEvent
     {
         EventCatalog::assertDispatchable($type);
 
@@ -58,7 +60,7 @@ final class Outbox
      *
      * @internal
      */
-    public function record(Account $account, string $type, array $payload, ?Project $project, ?array $only): ?WebhookEvent
+    public function record(Account $account, string $type, array $payload, ?Project $project, ?array $only): WebhookEvent
     {
         if ($project !== null && (int) $project->account_id !== (int) $account->getKey()) {
             throw new InvalidArgumentException('O projeto do evento de webhook não é da conta informada.');
@@ -70,7 +72,7 @@ final class Outbox
             throw new InvalidArgumentException('O corpo do evento de webhook não pode ser convertido em JSON.', 0, $exception);
         }
 
-        return Accounts::actingAs($account, function () use ($type, $payload, $project, $only): ?WebhookEvent {
+        return Accounts::actingAs($account, function () use ($type, $payload, $project, $only): WebhookEvent {
             [$event, $deliveries] = DB::transaction(function () use ($type, $payload, $project, $only): array {
                 $endpoints = $only ?? WebhookEndpoint::query()
                     ->whereIn('status', [EndpointStatus::Active->value, EndpointStatus::Disabled->value])
@@ -83,10 +85,9 @@ final class Outbox
                     ->values()
                     ->all();
 
-                if ($endpoints === []) {
-                    return [null, []];
-                }
-
+                // Sem endpoint, o evento é gravado do mesmo jeito (sem
+                // entrega): o registro do que aconteceu não depende de alguém
+                // estar ouvindo.
                 $now = Carbon::now();
 
                 $event = WebhookEvent::query()->create([

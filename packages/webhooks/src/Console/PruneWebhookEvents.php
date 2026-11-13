@@ -21,27 +21,55 @@ use Twstec\Kit\Webhooks\Models\WebhookEvent;
  * prazo: dentro dele, a reativação do endpoint a envia; depois, ela sai com o
  * evento (a reativação também não a enviaria mais). Os corpos cifrados não
  * ficam guardados para sempre. Agendado pelo pacote (`webhooks.prune.schedule`).
+ *
+ * Os eventos SEM entrega (nenhum endpoint os assinava — o outbox grava todo
+ * evento) têm retenção própria, `webhooks.prune.days_without_deliveries`
+ * (vazio = a mesma de `days`), porque o volume deles cresce com cada evento
+ * disparado. Lotes de `webhooks.prune.batch`.
  */
 final class PruneWebhookEvents extends Command
 {
-    protected $signature = 'webhooks:prune {--days= : Idade mínima em dias (padrão: webhooks.prune.days)}';
+    protected $signature = 'webhooks:prune
+        {--days= : Idade mínima em dias (padrão: webhooks.prune.days)}
+        {--days-without-deliveries= : Idade mínima dos eventos sem entrega (padrão: webhooks.prune.days_without_deliveries, ou --days)}';
 
     protected $description = 'Apaga os eventos de webhook antigos, com as entregas e o log deles';
 
     public function handle(): int
     {
         $days = max(1, (int) ($this->option('days') ?? config('webhooks.prune.days', 30)));
-        $cutoff = Carbon::now()->subDays($days);
+        $withoutDeliveries = $this->option('days-without-deliveries') ?? config('webhooks.prune.days_without_deliveries');
+        $withoutDeliveriesDays = $withoutDeliveries === null || $withoutDeliveries === '' ? $days : max(1, (int) $withoutDeliveries);
+        $batch = max(1, (int) config('webhooks.prune.batch', 500));
 
-        $total = Accounts::asSystem('webhooks:prune', function () use ($cutoff): int {
+        $cutoff = Carbon::now()->subDays($days);
+        $cutoffWithoutDeliveries = Carbon::now()->subDays($withoutDeliveriesDays);
+
+        $total = Accounts::asSystem('webhooks:prune', function () use ($cutoff, $cutoffWithoutDeliveries, $batch): int {
             $total = 0;
+
+            // Os sem entrega, pela retenção própria.
+            do {
+                $ids = WebhookEvent::query()
+                    ->where('created_at', '<', $cutoffWithoutDeliveries)
+                    ->whereDoesntHave('deliveries')
+                    ->orderBy('id')
+                    ->limit($batch)
+                    ->pluck('id');
+
+                if ($ids->isNotEmpty()) {
+                    WebhookEvent::query()->whereKey($ids)->delete();
+                    $total += $ids->count();
+                }
+            } while ($ids->count() === $batch);
 
             do {
                 $ids = WebhookEvent::query()
                     ->where('created_at', '<', $cutoff)
+                    ->whereHas('deliveries')
                     ->whereDoesntHave('deliveries', fn ($query) => $query->whereIn('status', DeliveryStatus::openValues()))
                     ->orderBy('id')
-                    ->limit(500)
+                    ->limit($batch)
                     ->pluck('id');
 
                 if ($ids->isEmpty()) {
