@@ -65,6 +65,29 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   `api_keys.projects.deletion_referenced` (nas telas, a mesma mensagem), sem
   deixar abortada a transação de quem chamou; o log ganha
   `accounts.projects.deletion.undeclared_reference`.
+- **A suíte de testes não grava mais em `storage/logs`
+  (`twstec/kit-foundation`, starters).** Nos starters, o `laravel.log` e o
+  `request-AAAA-MM-DD.log` cresciam a cada rodada (dezenas de MB por dia na
+  máquina de quem desenvolve). O canal `request_log` ganha o descarte
+  (`REQUEST_LOG_DISCARD=true`, que só vale com `APP_ENV=testing` — fora dos
+  testes a variável é ignorada e o canal grava como sempre) e o
+  `phpunit.xml`/`phpunit.pgsql.xml` dos starters liga o descarte e manda o
+  canal padrão para `null`. Os eventos de log continuam saindo
+  (`Log::spy`, `Log::listen`). `RequestLogChannel::fileDefinition()` dá o
+  canal de arquivo a quem precisa testá-lo; `discardDefinition()` e
+  `discards()` dizem o que vale nos testes.
+
+### Segurança
+
+- **PHP das imagens sem o progresso de upload da sessão (CVE-2026-115560).**
+  Os `.ini` de desenvolvimento e de produção dos dois starters
+  (`docker/php/php-dev.ini`, `docker/php/php-prod.ini`) ganham
+  `session.upload_progress.enabled = 0` — a mitigação oficial de uma RCE do
+  PHP ainda sem correção (o 8.4.27 não corrige;
+  https://seclists.org/oss-sec/2026/q4/359). Nenhum efeito no Laravel, que
+  não usa a sessão nativa do PHP. Conferido nas quatro imagens construídas
+  (`ini_get` devolve `"0"`; a imagem oficial do PHP, sem o `.ini`, devolve
+  `"1"`) e travado em `tests/Feature/Architecture/ProductionDockerFilesTest.php`.
 
 ### Aplicar à mão em projeto já criado (arquivos de starter não chegam pelo Composer)
 
@@ -109,6 +132,22 @@ em `accounts`; nada muda para as contas existentes). As telas de projetos
   - Sem esses arquivos, os limites valem do mesmo jeito (API e `/admin`);
     só o dono não tem onde baixá-los.
 - **`.env.example` dos dois starters:** o bloco `API_LIMITS_*`.
+- **CVE-2026-115560 — `docker/php/php-dev.ini` e `docker/php/php-prod.ini`:**
+  acrescente `session.upload_progress.enabled = 0` (com o comentário do
+  starter) e **reconstrua as imagens** (`docker compose build` no
+  desenvolvimento; a de produção na próxima publicação) — o container que já
+  está de pé segue com o `.ini` antigo. O teste do starter que trava a
+  diretiva está em `tests/Feature/Architecture/ProductionDockerFilesTest.php`.
+- **Testes sem log em arquivo — `phpunit.xml` e `phpunit.pgsql.xml`:**
+  acrescente, junto das outras variáveis forçadas, `LOG_CHANNEL=null` e
+  `REQUEST_LOG_DISCARD=true` (cada uma como `<env … force="true"/>` e
+  `<server … force="true"/>`, como no starter). Sem elas, a suíte continua
+  gravando em `storage/logs`. Teste que conferia o arquivo do `request_log`
+  mudando só o `path` do canal passa a declarar o canal inteiro:
+  `[...RequestLogChannel::fileDefinition(), 'path' => $temporario]` (no
+  starter Livewire, `tests/Feature/Security/CardNumberRedactionTest.php`).
+  A prova nova: `tests/Feature/Logging/TestRunWritesNoLogFilesTest.php` (os
+  dois starters).
 - **Quem publicou o `config/api_keys.php`:** a chave nova `limits` vem do
   pacote; só copie se for mudá-la ali (prefira as variáveis do `.env`).
 - **Quem publicou o `config/admin.php`:** a permissão nova
