@@ -170,6 +170,13 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
 - **Limite de falhas de autenticação** por chave pública + IP e um teto por
   IP, dentro do próprio `ResolveTenant` (`ApiRateLimit`, do foundation), antes
   de qualquer consulta.
+- **Limites por conta** (2.4, desligados por padrão — `API_LIMITS_ENABLED`):
+  cota por janela, rajada por minuto e concorrência, somando as chaves da
+  conta, no Redis (`api.limits` no grupo `api`), com `RateLimit-*` e os 429
+  próprios; limite opcional por rota (`api.route-limit:<máx>,<seg>`). O
+  `/admin` muda por conta, o dono só baixa (`Account\Actions\ChangeApiLimits`).
+  Ver
+  [docs/api.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/api.md#limites-por-conta-cota-rajada-concorrência).
 - **Escopo da idempotência:** o `TenantIdempotencyScope` registrado como
   `IdempotencyScopeResolver` (um resolvedor do aplicativo vence). Ver
   [docs/api.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/api.md#idempotência-idempotency-key).
