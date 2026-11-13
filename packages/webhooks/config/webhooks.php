@@ -105,12 +105,21 @@ return [
 
     // --- Retenção ----------------------------------------------------------------
     // `webhooks:prune` apaga eventos (com as entregas e tentativas) mais
-    // velhos que `days` e já resolvidos — entrega PAUSADA (endpoint
+    // velhos que `days` — os sem entrega, que `days_without_deliveries` — e já
+    // resolvidos — entrega PAUSADA (endpoint
     // desativado) conta como resolvida só depois desse prazo: dentro dele,
     // reativar o endpoint a envia; fora, ela sai com o evento. Cron vazio
     // desliga, com aviso.
     'prune' => [
         'days' => (int) env('WEBHOOKS_PRUNE_DAYS', 30),
+        // Eventos SEM entrega (gravados quando nenhum endpoint os assinava):
+        // a retenção própria deles, em dias — o volume cresce com cada evento
+        // disparado. Vazio = a mesma de `days`.
+        'days_without_deliveries' => env('WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES') !== null && env('WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES') !== ''
+            ? (int) env('WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES')
+            : null,
+        // Quantos eventos cada lote do expurgo apaga (uma transação por lote).
+        'batch' => (int) env('WEBHOOKS_PRUNE_BATCH', 500),
         'schedule' => env('WEBHOOKS_PRUNE_SCHEDULE', '20 4 * * *'),
     ],
 

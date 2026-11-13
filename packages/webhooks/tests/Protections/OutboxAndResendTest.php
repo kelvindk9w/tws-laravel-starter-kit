@@ -23,6 +23,7 @@ use Twstec\Kit\Webhooks\Enums\DeliveryStatus;
 use Twstec\Kit\Webhooks\Models\WebhookDelivery;
 use Twstec\Kit\Webhooks\Models\WebhookDeliveryAttempt;
 use Twstec\Kit\Webhooks\Models\WebhookEndpoint;
+use Twstec\Kit\Webhooks\Models\WebhookEvent;
 use Twstec\Kit\Webhooks\Webhooks;
 
 // =============================================================================
@@ -85,11 +86,39 @@ it('só sai para os endpoints ATIVOS da conta que ASSINAM o evento — o desativ
         ->and(Accounts::asSystem('teste', fn () => $deOutroProjeto->deliveries()->count()))->toBe(0);
 });
 
-it('sem endpoint que assine, nada é gravado', function (): void {
+it('sem endpoint que assine, o evento é gravado do mesmo jeito — sem entrega, sem fila, para consulta', function (): void {
+    Queue::fake();
     $owner = $this->owner();
+    $account = $this->accountOf($owner);
+    // Endpoint que assina OUTRO tipo: não recebe este.
+    $this->createEndpoint($owner, ['events' => ['order.shipped']]);
 
-    expect(Webhooks::dispatch($this->accountOf($owner), 'order.created', ['n' => 1]))->toBeNull()
-        ->and(DB::table('webhook_events')->count())->toBe(0);
+    $event = Webhooks::dispatch($account, 'order.created', ['pedido' => 'ped-1']);
+
+    expect($event->uuid)->toBeString()
+        ->and(DB::table('webhook_events')->count())->toBe(1)
+        ->and(DB::table('webhook_deliveries')->count())->toBe(0);
+    Queue::assertNothingPushed();
+
+    // Consultável na conta dele, pelo mesmo id que iria no X-Webhook-Id.
+    $stored = Accounts::actingAs($account, fn () => WebhookEvent::query()->where('uuid', $event->uuid)->sole());
+
+    expect($stored->type)->toBe('order.created')
+        ->and($stored->payload)->toBe(['pedido' => 'ped-1'])
+        // Cifrado no banco, como os que têm entrega.
+        ->and((string) DB::table('webhook_events')->value('payload'))->not->toContain('ped-1');
+});
+
+it('com endpoint, o mesmo disparo grava o evento e a entrega dele, e põe na fila', function (): void {
+    Queue::fake();
+    $owner = $this->owner();
+    $this->createEndpoint($owner);
+
+    $event = Webhooks::dispatch($this->accountOf($owner), 'order.created', ['n' => 1]);
+
+    expect(allDeliveries()->sole()->webhook_event_id)->toBe($event->id)
+        ->and(DB::table('webhook_events')->count())->toBe(1);
+    Queue::assertPushed(DeliverWebhook::class, 1);
 });
 
 it('OUTBOX: o evento é gravado na transação de quem disparou — desfeita a transação, não sobra evento nem envio', function (): void {

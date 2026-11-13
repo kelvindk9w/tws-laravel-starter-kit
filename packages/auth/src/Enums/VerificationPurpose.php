@@ -26,4 +26,16 @@ enum VerificationPurpose: string
      * ação sensível.
      */
     case TwoFactorSetup = 'two_factor_setup';
+
+    /**
+     * Confirmação SÓ POR CÓDIGO (sem a senha de transação), para a ação cuja
+     * política aceita só o código — hoje, criar chave de API quando a
+     * política do ambiente das chaves é `code` (twstec/kit-accounts,
+     * ApiKeyCreationConfirmation). Família própria, de propósito: o código
+     * dela NUNCA vira token de ação sensível (o `sensitive.token` e o
+     * SensitiveActionService só aceitam o código de SensitiveAction, que
+     * exige a senha de transação), então dispensar a senha num fluxo não a
+     * dispensa em nenhum outro.
+     */
+    case CodeConfirmation = 'code_confirmation';
 }

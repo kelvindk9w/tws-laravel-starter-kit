@@ -26,6 +26,7 @@ garante isso.
 | `Http` | Controllers de ENVIO (sem telas) com o próprio `throttle:sensitive`, Form Requests, respostas padrão por redirecionamento e os middlewares `EnsureAccountIsActive`, `EnsureEmailIsVerified` e `RequiresSensitiveActionToken` |
 | `Models` | `VerificationCode`, `SensitiveActionToken` e as traits do model de usuário (`Models\Concerns`) |
 | `Mail`, `Notifications` | E-mail do código (login e ação sensível), recuperação de senha e verificação de e-mail, no layout do foundation e no idioma do destinatário |
+| `Events\SessionsEnded`, `Sessions\SessionBinding` | O aviso de fim de sessão por qualquer caminho (logout, outros aparelhos, troca ou redefinição de senha e do segundo fator, conta bloqueada), com o motivo (`Enums\SessionEndReason`), e a referência estável de uma sessão para o que vive preso a ela |
 | `PasswordPolicy`, `Support`, `Enums`, `Exceptions` | Política de senha configurável, verificação de e-mail, estado intermediário do segundo fator, pós-login seguro, resultados e recusas |
 
 ## Instalação

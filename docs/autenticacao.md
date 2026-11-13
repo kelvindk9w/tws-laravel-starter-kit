@@ -541,6 +541,14 @@ com consumo condicional) é do motor comum `VerificationCodes`, o mesmo do
 segundo fator do login; o token de ação sensível também é consumido com
 `UPDATE` condicional.
 
+**Confirmação só por código** (`VerificationPurpose::CodeConfirmation`,
+2.3): uma família de códigos à parte, para o que o aplicativo decide
+confirmar só com o código por e-mail (a criação de chave de API no ambiente
+`test` — ver [API](api.md#confirmação-da-criação-de-chave-por-ambiente)). O
+e-mail é o da confirmação de segurança; o código dessa família **nunca** vira
+token de ação sensível (`/sensitive-actions/confirm` o recusa), então não
+serve para nenhuma outra operação.
+
 **Canais de verificação plugáveis** (TOTP/WhatsApp futuros): contrato
 `Twstec\Kit\Auth\Contracts\VerificationChannelDriver` + `VerificationChannelManager`.
 Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no enum
@@ -582,6 +590,37 @@ Hoje só `EmailVerificationDriver`; novo canal = novo driver no mapa + case no e
   validação de origem `Sec-Fetch-Site`/`Origin`), testado com e sem token.
 - Credenciais nunca aparecem em logs: `password`, `transaction_password`, `code`
   e afins são `[REDACTED]` pelo Redactor (testado na pipeline de request log).
+
+## Fim de sessão: o evento `SessionsEnded`
+
+Todo encerramento de sessão web dispara, na hora,
+`Twstec\Kit\Auth\Events\SessionsEnded` — o gancho para o que vive preso a
+uma sessão morrer junto (as [chaves de API de sessão](api.md#chaves-de-api-de-sessão)
+do twstec/kit-accounts o escutam). O pacote liga sozinho, sem nada no
+aplicativo:
+
+| Caminho | `reason` (`SessionEndReason`) | Quais sessões |
+|---|---|---|
+| Logout (e a sessão derrubada pelo `EnsureSessionIsCurrent` ao cair) | `Logout` | a desta requisição |
+| "Sair dos outros aparelhos" (`Auth::logoutOtherDevices`) | `OtherDevices` | todas menos a atual |
+| Troca de senha ou do segundo fator na própria sessão | `CredentialsChanged` | todas menos a de quem trocou |
+| Redefinição de senha por e-mail, troca pelo `/admin` ou por comando | `CredentialsChanged` | todas |
+| Conta que deixa de estar ativa (bloqueio do `/admin`, por exemplo) | `AccountDeactivated` | todas |
+| Sessão vencida por inatividade (detectada pela rotina das chaves de sessão) | `Expired` | — (usado no aviso `SessionApiKeysRevoked`) |
+| Encerramento próprio do aplicativo | `Administrative` | o que o aplicativo disser |
+
+- O evento traz `user`, `reason`, `allSessions`, `sessionRef` (a sessão que
+  terminou) e `keptSessionRef` (a que fica); `ends($ref)` diz se uma sessão
+  terminou. Construtores: `SessionsEnded::session($user, $ref, $reason)` e
+  `SessionsEnded::allExcept($user, $mantida, $reason)`; dispare com
+  `event(...)`.
+- A referência da sessão vem de `Twstec\Kit\Auth\Sessions\SessionBinding`:
+  `for($session, $user)` liga à sessão um valor aleatório guardado nela (que
+  sobrevive à troca do id no login) e devolve o SHA-256 dele — a referência não
+  abre nada e não é o id da sessão; `current()`, `belongsTo()` e
+  `ofCurrentRequestFor($user)` leem.
+- Mudança que não toca credencial nem status (nome, idioma...) não encerra
+  sessão; desbloquear também não.
 
 ## O pacote `twstec/kit-auth` e os pontos de extensão
 

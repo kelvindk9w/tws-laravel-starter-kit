@@ -139,6 +139,7 @@ return [
         'password_hint' => 'Enter your transaction password to receive a verification code by email.',
         'send_code' => 'Send code by email',
         'code_hint' => 'We sent a 6-digit code to your email. It expires in a few minutes.',
+        'code_only_hint' => 'To confirm, we will send a verification code to your email.',
         'code' => 'Verification code',
         'confirm' => 'Confirm and execute',
         'resend_in' => 'Resend in :seconds s',

@@ -24,6 +24,15 @@ não os declara. A ordem é conferida por teste na suíte do pacote.
    `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, CSP básica
    e HSTS (só sob HTTPS com `SECURITY_HSTS_ENABLED=true`, padrão em produção). Como é o primeiro,
    até respostas de bloqueio/erro saem com os headers. Valores em `config/security.php`.
+   **Referrer-Policy por rota** (2.3): a rota pode pedir uma política **mais restrita** que a
+   padrão (`SECURITY_REFERRER_POLICY`) com o middleware `referrer.policy:<política>` (ex.:
+   `->middleware('referrer.policy:no-referrer')` numa página com token na URL) ou pondo o
+   cabeçalho na própria resposta. O `SecurityHeaders` só a mantém se ela não mandar mais do
+   endereço que a padrão em nenhum caso (mesma origem, outra origem, rebaixamento para HTTP —
+   `Security\ReferrerPolicy`); mais frouxa, não comparável ou desconhecida, vale a padrão.
+   Política desconhecida no middleware é erro de programação. O nginx de produção dos
+   starters repassa a política da resposta (`map $upstream_http_referrer_policy`) em vez de
+   acrescentar um valor fixo — com dois cabeçalhos, o navegador ficaria com o último.
 1b. **EdgeRateLimit** (`packages/foundation/src/Security/Middleware/EdgeRateLimit.php`) — **teto de requisições
    por cliente** para TUDO que chega ao PHP: páginas, updates do Livewire, `/admin`, `/up`, API e
    rotas inexistentes. Ver *Limite de requisições (rate limit)*, abaixo. Roda antes de todo trabalho

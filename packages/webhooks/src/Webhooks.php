@@ -18,11 +18,15 @@ use Twstec\Kit\Webhooks\Models\WebhookEvent;
  *
  * - O evento precisa estar no catálogo (`webhooks.events`).
  * - Vai para cada endpoint ATIVO da conta que o assina; com projeto, só para
- *   os endpoints sem projeto ou daquele projeto.
+ *   os endpoints sem projeto ou daquele projeto. Sem endpoint que o assine, o
+ *   evento é gravado do mesmo jeito, sem entrega, para consulta.
+ * - Objeto continua objeto no JSON enviado, inclusive vazio: passe
+ *   `new \stdClass()` (ou `(object) []`) onde o receptor deve ver `{}`; um
+ *   array PHP vazio vira `[]`, salvo o corpo inteiro vazio, que sai `{}`.
  * - É gravado no banco (outbox) na transação em volta, se houver — dispare
  *   DENTRO da transação da mudança de negócio — e só vai para a fila depois
- *   do commit. Devolve o evento (o `uuid` é o id que o receptor recebe) ou
- *   null quando nenhum endpoint o assina.
+ *   do commit. Devolve SEMPRE o evento gravado (o `uuid` é o id que o
+ *   receptor recebe no corpo e no `X-Webhook-Id`).
  * - O corpo é CIFRADO no banco; não ponha nele o que o receptor não deve ver.
  */
 final class Webhooks
@@ -32,7 +36,7 @@ final class Webhooks
      *
      * @throws InvalidArgumentException
      */
-    public static function dispatch(Account $account, string $type, array $payload, ?Project $project = null): ?WebhookEvent
+    public static function dispatch(Account $account, string $type, array $payload, ?Project $project = null): WebhookEvent
     {
         return app(Outbox::class)->dispatch($account, $type, $payload, $project);
     }

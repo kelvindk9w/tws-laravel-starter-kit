@@ -20,6 +20,7 @@ use Twstec\Kit\Auth\Http\Middleware\RequiresSensitiveActionToken;
 use Twstec\Kit\Auth\Http\Responses as Defaults;
 use Twstec\Kit\Auth\Models\SensitiveActionToken;
 use Twstec\Kit\Auth\Models\VerificationCode;
+use Twstec\Kit\Auth\Sessions\SessionEndEvents;
 use Twstec\Kit\Auth\Support\AdministratorFlag;
 use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 use Twstec\Kit\Foundation\Customization\PackageConfig;
@@ -144,6 +145,11 @@ final class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerWebProtections();
+
+        // Fim de sessão (logout, outros aparelhos) vira Events\SessionsEnded:
+        // o que está preso a uma sessão morre junto. Não depende das
+        // proteções web — é aviso, não barreira.
+        SessionEndEvents::register($this->app['events']);
 
         if (TwoFactorRequirement::graceMisconfigured()) {
             Log::warning('AUTH_TWO_FACTOR_GRACE_DAYS sem AUTH_TWO_FACTOR_REQUIRED_SINCE válido: a carência do segundo fator obrigatório NÃO vale — toda conta sem o segundo fator configura no próximo acesso. Informe a data em que a regra entrou (AAAA-MM-DD). Ver docs/autenticacao.md.');

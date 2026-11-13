@@ -6,6 +6,157 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Fim de sessão por qualquer caminho vira um evento (`twstec/kit-auth`).**
+  `Events\SessionsEnded` sai na hora no logout, em "sair dos outros
+  aparelhos", na troca de senha ou do segundo fator (na própria sessão:
+  todas menos a de quem trocou; por redefinição, `/admin` ou comando: todas),
+  na conta que deixa de estar ativa (bloqueio do `/admin`) e na sessão
+  derrubada pelo `EnsureSessionIsCurrent`, com o motivo
+  (`Enums\SessionEndReason`: `logout`, `other_devices`,
+  `credentials_changed`, `account_deactivated`, `administrative`,
+  `expired`). `Sessions\SessionBinding` dá a cada sessão uma referência
+  estável (SHA-256 de um valor aleatório guardado nela; não é o id e não abre
+  nada). Encerramento próprio do aplicativo dispara o mesmo evento
+  (`SessionsEnded::allExcept($user, null, SessionEndReason::Administrative)`).
+  Ver `docs/autenticacao.md`, "Fim de sessão".
+- **Confirmação só por código (`twstec/kit-auth`).** Caso novo
+  `VerificationPurpose::CodeConfirmation`: família de códigos à parte, com o
+  e-mail da confirmação de segurança, que nunca vira token de ação sensível.
+- **Chaves de API de sessão (`twstec/kit-accounts`).**
+  `ApiKeyService::createForSession($user, $session, $dados, $prova)` cria a
+  chave presa à sessão web de quem cria: fora da lista do painel, do `/admin`,
+  das métricas e do `GET /api/v1/api-keys` (escopo global
+  `Scopes\SessionKeyScope`; `ApiKey::withSessionKeys()`/`onlySessionKeys()`
+  para vê-las), com escopos, projetos, validade e trilha como qualquer
+  chave. É revogada **na hora** quando a sessão termina (`SessionsEnded`),
+  recusada quando a sessão vence por inatividade (`SESSION_LIFETIME`; a
+  sessão é marcada como vista no grupo `web` pelo `TouchSessionApiKeys`) e
+  apagada pela rotina `api-keys:prune-session-keys`, agendada pelo pacote. Cada
+  revogação gera o evento `ApiKeys\Events\SessionApiKeysRevoked`
+  (`userId`, `reason`, `apiKeyUuids`) e a linha `api_keys.session_keys.revoked`
+  no `request_log`. Chave criada pela API com uma chave de sessão nasce
+  presa à mesma sessão. Migration nova (`session_binding`, `session_seen_at`
+  em `api_keys`); o recurso da API ganha `session_bound`. Configuração
+  `api_keys.session_keys` (`API_KEYS_SESSION_TOUCH_SECONDS`,
+  `API_KEYS_SESSION_KEYS_PRUNE_SCHEDULE`).
+- **Confirmação da criação de chave por ambiente (`twstec/kit-accounts`).**
+  `ApiKeys\Confirmation\ApiKeyCreationConfirmation` (`sendCode()`,
+  `confirm()` → prova de uso único `ApiKeyCreationConfirmed`) segue
+  `api_keys.creation_confirmation`: em `live`, senha de transação + código,
+  **sempre** (outro valor impede a inicialização); em `test`, por padrão só o
+  código por e-mail (`API_KEYS_TEST_CREATION_CONFIRMATION`, que aceita
+  voltar a `transaction_password_and_code`). Rotação e as rotas da API v1 com
+  `sensitive.token` continuam com a ação sensível completa.
+- **Validade escolhida na criação (`twstec/kit-accounts`, telas dos dois
+  starters).** Sem validade, N horas ou N dias, com as regras e o cálculo de
+  `ApiKeys\Support\ApiKeyExpiry` e os tetos `API_KEYS_EXPIRY_MAX_HOURS`
+  (720) e `API_KEYS_EXPIRY_MAX_DAYS` (3650). A API v1 continua recebendo
+  `expires_at`.
+
+- **Código próprio em respostas 5xx da API (`twstec/kit-foundation`).** A
+  exceção que implementa `Http\Exceptions\Contracts\ProvidesServerErrorCode`
+  (por exemplo, uma `HttpException(503)` com o código
+  `provider_not_configured`) leva o código dela no envelope de erro, com a
+  mensagem `api.errors.<code>` do aplicativo ou a genérica — nunca a
+  mensagem da exceção; código fora de `^[a-z][a-z0-9_]{0,63}$` vira o
+  genérico. Exceção não tratada continua `server_error`/`service_unavailable`.
+- **Referrer-Policy mais restrita por rota (`twstec/kit-foundation`).**
+  Middleware `referrer.policy:<política>` (ou o cabeçalho na própria
+  resposta): o `SecurityHeaders` mantém a política da rota só se ela não for
+  mais frouxa que a padrão em nenhum caso (`Security\ReferrerPolicy`); mais
+  frouxa, não comparável ou desconhecida, vale a padrão. Política
+  desconhecida no middleware é erro de programação.
+- **Retenção dos eventos de webhook sem entrega (`twstec/kit-webhooks`).**
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` (vazio = `WEBHOOKS_PRUNE_DAYS`),
+  `--days-without-deliveries` no `webhooks:prune` e o lote do expurgo
+  `WEBHOOKS_PRUNE_BATCH` (500).
+
+### Alterado
+
+- **Todo evento de webhook é gravado (`twstec/kit-webhooks`).** Sem endpoint
+  que o assine, `Webhooks::dispatch()` grava o evento do mesmo jeito, sem
+  entrega nem fila, para consulta; com endpoint, nada muda (entrega, tentativas
+  com requisição e resposta). O retorno passa a ser sempre o evento
+  (`WebhookEvent`, antes `?WebhookEvent` — `null` quando ninguém assinava); o
+  `uuid` dele é o id do `X-Webhook-Id`.
+
+- **Telas de chaves (`twstec/kit-foundation`, controller React e componente
+  Livewire dos starters).** O formulário de criação troca a data de validade
+  pela escolha "sem validade / horas / dias"; a criação segue a política do
+  ambiente — em `test`, o modal da confirmação vem só com o envio do código
+  ("enviar outro código" manda outro na hora). As telas do foundation
+  continuam funcionando com o controller/componente anterior (sem
+  `expiryOptions`, voltam à data e à senha + código): atualizar o pacote sem
+  aplicar os arquivos de starter não quebra a tela.
+- **Testes dos starters que criam chave pelo painel** passam a dizer o
+  ambiente (`api_keys.environment`) e a mandar `expiry_unit`.
+
+### Corrigido
+
+- **Objeto vazio no corpo do webhook (`twstec/kit-webhooks`).** `{}` (um
+  `stdClass`, inclusive aninhado) chegava ao receptor como `[]`; agora o corpo
+  é lido no envio com os objetos preservados
+  (`WebhookEvent::payloadForDelivery()`), e o corpo inteiro vazio sai
+  `"data": {}`. Listas seguem listas.
+- **Nginx de produção dos starters repassa a Referrer-Policy da resposta.**
+  O `add_header` fixo da borda somava um segundo cabeçalho e o navegador
+  ficava com ele, desfazendo a política mais restrita da rota.
+
+### Aplicar à mão em projeto já criado (arquivos de starter não chegam pelo Composer)
+
+Atualize todos os pacotes `twstec/*` juntos (`composer update 'twstec/*'`)
+e rode `php artisan migrate` (migration nova do accounts). Depois, para ter a
+escolha da validade e a confirmação por ambiente nas telas:
+
+- **Starter React:** `app/Http/Controllers/Panel/ApiKeysController.php`
+  (manda `expiryOptions` e `creationRequiresTransactionPassword`; `code()` e
+  `store()` pela `ApiKeyCreationConfirmation`; valida `expiry_unit`/
+  `expiry_amount` pela `ApiKeyExpiry`). Testes:
+  `tests/Feature/Panel/ApiKeysTest.php`,
+  `tests/Feature/Panel/ResourceDeniedTrailTest.php` e
+  `tests/Feature/Inertia/SharedPropsTest.php` (mandam `expiry_unit`) e o
+  E2E `tests/e2e/support/flows.ts` (confirmação sem o campo da senha).
+- **Starter Livewire:** `app/Livewire/ApiKeys/Index.php` (propriedades
+  `expiryUnit`/`expiryAmount` no lugar de `expiresAt`; a criação confirmada
+  pela `ApiKeyCreationConfirmation`, a rotação segue no trait
+  `ConfirmsSensitiveAction`, que **não muda**). Testes:
+  `tests/Feature/Panel/ApiKeysTest.php`, a trava
+  `tests/Unit/Architecture/AccountIsolationTest.php` (o modo sistema
+  revisado de `SessionApiKeys` e a exceção `withoutGlobalScope(SessionKeyScope::class)`
+  — **sem ela a trava reprova o aplicativo** depois do `composer update`) e o
+  E2E `tests/e2e/api-key-scopes.spec.js`.
+- **`.env.example` dos dois starters:** `API_KEYS_TEST_CREATION_CONFIRMATION`
+  (comentada), `API_KEYS_EXPIRY_MAX_HOURS`, `API_KEYS_EXPIRY_MAX_DAYS`,
+  `API_KEYS_SESSION_TOUCH_SECONDS`, `API_KEYS_SESSION_KEYS_PRUNE_SCHEDULE`,
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` (comentada) e
+  `WEBHOOKS_PRUNE_BATCH` (todas têm padrão no config; o arquivo só
+  documenta).
+- **`docker/nginx/prod.conf` dos dois starters:** o `map
+  $upstream_http_referrer_policy $kit_referrer_policy` no topo, `add_header
+  Referrer-Policy $kit_referrer_policy always;` no lugar do valor fixo e
+  `fastcgi_hide_header Referrer-Policy;` no `location` do PHP — sem isso, a
+  política mais restrita de uma rota não chega ao navegador em produção.
+  Reconstrua a imagem do nginx. Teste: `tests/Feature/Architecture/ProductionDockerFilesTest.php`.
+- **Quem publicou o `config/webhooks.php`:** acrescente
+  `prune.days_without_deliveries` e `prune.batch` (sem eles, valem os padrões
+  do pacote).
+- **Atenção ao volume de webhooks:** depois do `composer update`, todo evento
+  disparado é gravado — com ou sem endpoint. Ajuste
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` se o aplicativo dispara muito sem
+  endpoints. Código que conferia `Webhooks::dispatch(...) === null` para saber
+  se havia endpoint passa a nunca entrar nesse ramo (consulte
+  `$evento->deliveries()->exists()`).
+- **Quem publicou o `config/api_keys.php`** (`--tag=accounts-config`):
+  acrescente os blocos `expiry`, `creation_confirmation` e `session_keys`
+  (ou publique de novo); sem eles valem os padrões do pacote — em `test`, o
+  `code`.
+- **Atenção ao ambiente `test`:** com o `.env` em `API_KEYS_ENVIRONMENT=test`,
+  criar chave pelo painel passa a pedir só o código. Teste do aplicativo que
+  confere o fluxo com a senha de transação precisa fixar
+  `api_keys.environment=live` (ou `API_KEYS_TEST_CREATION_CONFIRMATION=transaction_password_and_code`).
+
 ## [2.2.0] — 2026-11-12
 
 Versão de segurança e auditoria, sem quebra: PHP 8.4.27 nas imagens,
