@@ -6,6 +6,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.3.0] — 2026-11-13
+
+Versão menor, sem quebra de assinatura: chaves de API presas à sessão web
+(revogadas na hora em qualquer fim de sessão, que vira o evento
+`SessionsEnded`), validade escolhida e confirmação da criação por ambiente
+nas telas de chaves, todo evento de webhook gravado com ou sem endpoint (e
+`{}` que continua `{}`), código próprio em respostas 5xx da API e
+Referrer-Policy mais restrita por rota. Uma migration nova (accounts) e
+arquivos de starter (controller/componente de chaves, testes, `.env.example`,
+`prod.conf` do nginx) para aplicar à mão em projeto já criado — ver a lista
+no fim desta seção. Atualize todos os pacotes `twstec/*` juntos.
+
 ### Adicionado
 
 - **Fim de sessão por qualquer caminho vira um evento (`twstec/kit-auth`).**
@@ -3258,7 +3270,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.3.0...desenvolvimento
+[2.3.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/releases/tag/v2.0.0
