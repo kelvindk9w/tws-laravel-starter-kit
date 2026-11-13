@@ -6,6 +6,75 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Cabeçalhos de contexto na impressão da idempotência
+  (`twstec/kit-foundation`).** Uma lista de cabeçalhos entra no hash da
+  requisição: a mesma `Idempotency-Key` com o mesmo corpo e outro valor num
+  deles (ou o cabeçalho ausente) é recusada com o mesmo `422`
+  `idempotency_key_reused` do corpo diferente, sem executar. Global por
+  `IDEMPOTENCY_FINGERPRINT_HEADERS` (`idempotency.fingerprint_headers`, ex.:
+  `X-Project`) e por rota com `headers=X-Project|X-Outro` ou
+  `HandleIdempotencyKey::using(headers: [...])`, que se soma à global. Nome
+  inválido é erro de montagem. Sem lista (o padrão), a forma canônica é
+  exatamente a de antes. `RouteIdempotency::of()` expõe `headers` e
+  `fingerprintHeaders()`; `RequestFingerprint::hash()`/`canonical()` aceitam
+  a lista como segundo parâmetro (opcional).
+- **Regras que impedem a exclusão de um projeto (`twstec/kit-accounts`).** O
+  aplicativo registra regras (`Tenancy\Contracts\ProjectDeletionCheck`, que
+  devolvem `Deletion\DeletionImpediment` com código e motivo traduzido) em
+  `accounts.projects.deletion_checks` ou em código
+  (`Tenancy\Deletion\ProjectDeletionImpediments::register()`: instância,
+  classe ou Closure). O `ProjectService::delete()` pergunta a todas antes de
+  o projeto sair; havendo impedimento, nada sai e sobe
+  `Tenancy\Exceptions\ProjectDeletionRefusedException` (409): na API v1,
+  `409 project_deletion_refused` com o motivo; nas telas dos dois starters,
+  o motivo no lugar do aviso de sucesso e `project.deleted` `denied` na
+  trilha (`AccountResourceGuard::projectDeletionRefused()`).
+- **Código público do projeto no corpo do webhook (`twstec/kit-webhooks`).**
+  O topo do corpo ganha `project_codigo_publico` (`PRJ-…`) ao lado de
+  `project` (o uuid, que continua). Sem projeto, os dois saem `null`.
+
+### Corrigido
+
+- **Exclusão de projeto ainda referenciado não dá mais 500
+  (`twstec/kit-accounts`).** Registro do aplicativo com chave estrangeira
+  para o projeto, que nenhuma regra declarou: a exclusão roda num ponto de
+  salvamento e a recusa do banco vira `409 conflict` com a mensagem
+  `api_keys.projects.deletion_referenced` (nas telas, a mesma mensagem), sem
+  deixar abortada a transação de quem chamou; o log ganha
+  `accounts.projects.deletion.undeclared_reference`.
+
+### Aplicar à mão em projeto já criado (arquivos de starter não chegam pelo Composer)
+
+Atualize todos os pacotes `twstec/*` juntos (`composer update 'twstec/*'`).
+Não há migration nova. As telas de projetos (views do foundation) já mostram
+a recusa; para a recusa chegar a elas:
+
+- **Starter React:** `app/Http/Controllers/Panel/ProjectsController.php` —
+  o `destroy()` captura `ProjectDeletionRefusedException`, grava a recusa
+  (`$this->guard->projectDeletionRefused(...)`) e volta para
+  `panel.projects` com `withErrors(['project' => motivo])`. Teste:
+  `tests/Feature/Panel/ProjectsTest.php`.
+- **Starter Livewire:** `app/Livewire/Projects/Index.php` — o
+  `removeProject()` captura a mesma exceção, grava a recusa, fecha a
+  confirmação e faz `addError('project', motivo)`. Testes:
+  `tests/Feature/Panel/ProjectsTest.php` e
+  `tests/Feature/Tenancy/ProjectsTest.php`.
+- Sem esses dois arquivos, a exclusão recusada sai como a página de erro
+  `409` em vez do motivo na tela — e nada é apagado.
+- **`.env.example` dos dois starters:** `IDEMPOTENCY_FINGERPRINT_HEADERS`
+  (vazia; o arquivo só documenta).
+- **Quem publicou o `config/idempotency.php`:** acrescente
+  `fingerprint_headers` (sem ele, a lista é vazia). **Quem tem
+  `config/accounts.php`:** a chave nova `projects` vem do pacote; só
+  acrescente se for declarar regras ali.
+- **Atenção a quem consome os webhooks:** o corpo ganha um campo no topo.
+  Receptor que valida o esquema recusando campo desconhecido precisa aceitá-lo.
+- **Atenção ao ligar `IDEMPOTENCY_FINGERPRINT_HEADERS` numa rota em uso:** a
+  repetição de uma chave criada antes da mudança recebe `422` (nunca um
+  replay errado); as chaves vencem em `IDEMPOTENCY_TTL_HOURS`.
+
 ## [2.3.0] — 2026-11-13
 
 Versão menor, sem quebra de assinatura: chaves de API presas à sessão web

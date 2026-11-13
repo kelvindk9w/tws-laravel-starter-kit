@@ -127,6 +127,15 @@ Nenhuma proteção depende de o aplicativo lembrar de chamar algo:
   mesma recusa limpa, com a transação desfeita — nunca o erro bruto do banco
   (`DeletionImpediments::guardIntegrity`). Ver
   [docs/tenancy.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/tenancy.md#impedimentos-de-exclusão).
+- **Regras que impedem a exclusão de um projeto** (2.4,
+  `Tenancy\Deletion\ProjectDeletionImpediments`): regras do aplicativo
+  (`Tenancy\Contracts\ProjectDeletionCheck`) em
+  `accounts.projects.deletion_checks` ou registradas em código, perguntadas
+  pelo `ProjectService::delete()` antes de o projeto sair. Recusa:
+  `Tenancy\Exceptions\ProjectDeletionRefusedException` (409 — na API,
+  `project_deletion_refused` com o motivo; chave estrangeira que ninguém
+  declarou, `conflict` genérico, nunca 500). Ver
+  [docs/tenancy.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/tenancy.md#impedir-a-exclusão-de-um-projeto).
 - **Caminho único de exclusão** (`Deletion\AccountDeletion`): pessoa e conta
   se excluem por ele — as telas dos starters, o `/admin` e a aprovação em dois
   passos usam, e o código do aplicativo (job, comando, serviço) deve usar:
