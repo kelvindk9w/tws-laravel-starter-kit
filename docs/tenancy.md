@@ -62,6 +62,7 @@ sempre avaliada na conta atual:
 | Criar, rotacionar, revogar chave e definir o vínculo com projetos — `api-keys.manage` | ✓ | ✓ | — |
 | Convidar, remover e mudar papel de membros — `members.manage` (quem mexe em quem: abaixo) | ✓ | ✓ | — |
 | Renomear a conta — `account.update` | ✓ | ✓ | — |
+| Baixar os limites da API da conta (nunca acima do que a plataforma dá — [api.md](api.md#limites-por-conta-cota-rajada-concorrência)) — `api-limits.reduce` | ✓ | — | — |
 | Transferir a propriedade — `account.transfer` | ✓ | — | — |
 | Excluir a conta — `account.delete` | ✓ | — | — |
 
@@ -535,6 +536,7 @@ inflariam a trilha com o volume de um ataque.
 | Ação (`AccountAuditEvent`) | Quando |
 | --- | --- |
 | `account.created` / `account.renamed` / `account.deleted` | conta criada, renomeada, excluída |
+| `account.api_limits_changed` | limites da API mudados — pelo dono (redução, no painel) ou pelo `/admin` (o que a plataforma dá) |
 | `account.invitation_created` / `_resent` / `_revoked` | convite criado, reenviado, revogado |
 | `account.invitation_accepted` / `_declined` | convite aceito (inclusive criando a conta), recusado pela pessoa |
 | `account.member_role_changed` / `account.member_removed` / `account.member_left` | papel alterado, membro removido, membro saiu |

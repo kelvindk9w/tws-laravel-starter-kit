@@ -203,8 +203,12 @@ idempotency_key_missing`, `400 idempotency_key_invalid`, `409
 idempotency_request_in_progress` e `422 idempotency_key_reused` —, os da
 [escalada de privilégio](#sem-escalada-de-privilégio-pela-api) — `403
 api_key_scope_exceeded`, `403 api_key_projects_exceeded` e `403
-api_key_expiry_exceeded` — e o da [exclusão de projeto
-recusada](#exclusão-de-projeto-recusada) — `409 project_deletion_refused`.
+api_key_expiry_exceeded` —, o da [exclusão de projeto
+recusada](#exclusão-de-projeto-recusada) — `409 project_deletion_refused` — e
+os dos [limites por conta](#limites-por-conta-cota-rajada-concorrência) —
+`429 api_quota_exceeded`, `429 api_burst_exceeded`, `429
+api_concurrency_exceeded`, `429 api_route_limit_exceeded` e `503
+api_limits_unavailable`.
 
 Exemplo de 422:
 
@@ -344,6 +348,98 @@ $conta = app(Twstec\Kit\Accounts\Account\Services\AccountService::class)->person
 
 Twstec\Kit\Accounts\Accounts::actingAs($conta, fn () => app(Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService::class)
     ->create($user, ['name' => 'Bootstrap']), $user); // ['api_key' => …, 'secret_key' => a sk_ em claro, 1x]
+```
+
+## Limites por conta (cota, rajada, concorrência)
+
+**2.4.** Além do `throttle:api` (por chave, 60/min — ver
+[seguranca.md](seguranca.md#limite-de-requisições-rate-limit-e-contenção-da-trilha)),
+cada **conta** tem limites próprios, somando **todas as chaves dela**:
+
+| Limite | Padrão | Variável | Recusa |
+|---|---|---|---|
+| **Cota** por janela | 25.000 requisições a cada 12 h | `API_LIMITS_QUOTA`, `API_LIMITS_WINDOW_MINUTES` (720) | `429 api_quota_exceeded`, `Retry-After` até o fim da janela |
+| **Rajada** por minuto | 1.000 | `API_LIMITS_BURST_PER_MINUTE` | `429 api_burst_exceeded` |
+| **Concorrência** (em andamento ao mesmo tempo) | 50 | `API_LIMITS_CONCURRENCY`, `API_LIMITS_CONCURRENCY_LEASE_SECONDS` (300), `API_LIMITS_CONCURRENCY_RETRY_AFTER_SECONDS` (1) | `429 api_concurrency_exceeded` |
+
+**Desligado por padrão** (`API_LIMITS_ENABLED=false`): ligue no `.env`. Com
+ele ligado:
+
+- A **janela da cota começa na primeira requisição** da conta e não se
+  renova a cada uma; quando acaba, a próxima requisição abre outra, do zero.
+- **Toda requisição autenticada conta** — inclusive o **replay** de uma
+  `Idempotency-Key` (o limite roda antes da idempotência) e a que acaba
+  recusada por outro motivo (validação, 404, rajada, concorrência).
+- A **vaga de concorrência** é devolvida no fim da requisição, também quando
+  ela falha. A de um processo que morreu no meio vence sozinha depois de
+  `API_LIMITS_CONCURRENCY_LEASE_SECONDS` — mantenha acima do tempo máximo de
+  uma requisição.
+- Rota sem autenticação (`/api/health`) e chave recusada (401) não contam.
+
+**Cabeçalhos.** Toda resposta de requisição autenticada — sucesso ou erro —
+leva a situação da **cota**:
+
+| Cabeçalho | Valor |
+|---|---|
+| `RateLimit-Limit` | a cota da conta na janela |
+| `RateLimit-Remaining` | quanto resta (0 quando acabou) |
+| `RateLimit-Reset` | segundos até a janela recomeçar |
+| `Retry-After` | só no 429: em quantos segundos tentar de novo |
+
+**Valores por conta.** Três níveis, e vale o **menor**:
+
+1. o padrão da plataforma (`api_keys.limits`, acima);
+2. o que a plataforma dá a **esta** conta — o `/admin` sobe ou baixa no
+   detalhe da conta (ação "Limites da API", permissão
+   `accounts.set_api_limits`; o papel dono do painel já tem), com o
+   antes/depois na trilha (`account.api_limits_changed`). Campo vazio volta
+   ao padrão;
+3. a redução escolhida pelo **dono da conta** na página da conta do painel
+   (React e Livewire) — só baixa, nunca acima do nível 2
+   (`Account\Actions\ChangeApiLimits`, habilidade
+   `accounts.api-limits.reduce`, com trilha, inclusive da recusa).
+
+Os valores ficam na tabela `accounts` (`api_quota`, `api_burst_per_minute`,
+`api_concurrency` e as mesmas com `_own`); a regra, em
+`Twstec\Kit\Accounts\Tenancy\Limits\ApiLimits` (`effective()`,
+`platform()`, `setPlatform()`).
+
+**Limite próprio de uma rota.** Opcional, declarado na rota:
+`api.route-limit:<máximo>,<segundos>` — por exemplo,
+`->middleware('api.route-limit:30,60')` dá 30 por minuto **por conta**
+naquela rota (sem conta resolvida, por IP). Vale sempre que declarado, com ou
+sem `API_LIMITS_ENABLED`, e soma-se aos limites da conta (a requisição conta
+na cota também). Passou: `429 api_route_limit_exceeded` com `Retry-After`.
+
+**Contagem.** No store do RateLimiter (`cache.limiter` — Redis em produção):
+cota, rajada e rota pelo `RateLimiter` do framework (incremento atômico com
+expiração); concorrência por **vagas** — N travas do store com prazo (`SET NX
+EX` no Redis), uma por requisição em andamento. Nada depende de memória do
+processo: vale com vários workers e servidores. Quem conta é
+`Tenancy\Middleware\EnforceAccountApiLimits` (`api.limits`, no grupo `api`,
+posto depois da autenticação pela lista de prioridade), com o
+`Tenancy\Limits\ApiLimitCounter`.
+
+**Redis fora do ar: falha fechada.** É a política que os limites do kit já
+seguiam (o `throttle:api` e os baldes de falha de autenticação deixam o erro
+do store subir — a requisição não roda e o cliente recebe 500): sem
+contador, ninguém sabe se a conta ainda pode. Os limites por conta fazem o
+mesmo, com resposta própria: **`503 api_limits_unavailable`** com
+`Retry-After`, o detalhe só no log (`api.limits.unavailable`, nível
+`critical`) e nada executado. Se o store falhar só na **devolução** da vaga,
+a resposta já pronta sai normalmente e a vaga vence pelo prazo
+(`api.limits.release_failed` no log).
+
+Exemplo de 429 por cota:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 30512
+RateLimit-Limit: 25000
+RateLimit-Remaining: 0
+RateLimit-Reset: 30512
+
+{"error": {"code": "api_quota_exceeded", "message": "A cota de requisições da conta nesta janela acabou. …", "correlation_id": "01a0…"}}
 ```
 
 ## Idempotência (`Idempotency-Key`)
@@ -887,6 +983,7 @@ liga, sem nenhuma linha no `bootstrap/app.php`:
 | Escopo e operação de conta | aliases `scope` e `account.key`, declarados em cada rota |
 | Limite por chave | `throttle:api` na frente do grupo `api` (o limitador `api` é do foundation) e o `ResolveTenant` antes do `ThrottleRequests` na lista de prioridade — o limite conta a chave, não o IP |
 | Limite de falhas de autenticação por chave e por IP | dentro do próprio `ResolveTenant` (`ApiRateLimit`, do foundation) |
+| Limites por conta (cota, rajada, concorrência) | `EnforceAccountApiLimits` no fim do grupo `api`, depois do `ThrottleRequests` na lista de prioridade (e o `LimitApiRoute`, alias `api.route-limit`, depois dele); sem efeito com `API_LIMITS_ENABLED=false` — ver [Limites por conta](#limites-por-conta-cota-rajada-concorrência) |
 | Envelope de erro sem vazamento | render do `ApiErrorRenderer` para `api/*` no tratador de exceções |
 | Quem o limite conta | `TenantRateLimitSubject` (a chave, ou a conta com `RATE_LIMIT_API_BY=tenant`) |
 | Conta atual da requisição | o `ResolveTenant` define a conta da chave como conta atual (o escopo das contas filtra por ela) e a desfaz no fim da requisição |

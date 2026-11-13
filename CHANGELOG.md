@@ -35,6 +35,27 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   O topo do corpo ganha `project_codigo_publico` (`PRJ-…`) ao lado de
   `project` (o uuid, que continua). Sem projeto, os dois saem `null`.
 
+- **Limites da API por conta (`twstec/kit-accounts`, `twstec/kit-admin`).**
+  Desligados por padrão (`API_LIMITS_ENABLED`). Ligados, cada conta (todas
+  as chaves somam) tem **cota por janela** (25.000 a cada 12 h, janela
+  aberta na primeira requisição), **rajada** (1.000/min) e
+  **concorrência** (50 em andamento; a vaga volta no fim, também na falha,
+  e vence sozinha em `API_LIMITS_CONCURRENCY_LEASE_SECONDS`), contadas no
+  Redis com operação atômica. O replay de uma `Idempotency-Key` conta. Toda
+  resposta autenticada leva `RateLimit-Limit`/`-Remaining`/`-Reset`; as
+  recusas saem no envelope com `Retry-After` e código próprio:
+  `429 api_quota_exceeded`, `api_burst_exceeded`,
+  `api_concurrency_exceeded`; Redis fora do ar, `503
+  api_limits_unavailable` (falha fechada, como os demais limites). Limite
+  opcional por rota, por conta: `api.route-limit:<máx>,<seg>` →
+  `429 api_route_limit_exceeded`. Valores por conta: o `/admin` sobe ou
+  baixa (ação "Limites da API" no detalhe da conta, permissão
+  `accounts.set_api_limits`, trilha `account.api_limits_changed`); o dono
+  da conta só baixa, na página da conta dos dois painéis
+  (`Account\Actions\ChangeApiLimits`, habilidade
+  `accounts.api-limits.reduce`). Vale o menor. Regra em
+  `Tenancy\Limits\ApiLimits`; docs em `docs/api.md` ("Limites por conta").
+
 ### Corrigido
 
 - **Exclusão de projeto ainda referenciado não dá mais 500
@@ -47,9 +68,11 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Aplicar à mão em projeto já criado (arquivos de starter não chegam pelo Composer)
 
-Atualize todos os pacotes `twstec/*` juntos (`composer update 'twstec/*'`).
-Não há migration nova. As telas de projetos (views do foundation) já mostram
-a recusa; para a recusa chegar a elas:
+Atualize todos os pacotes `twstec/*` juntos (`composer update 'twstec/*'`)
+e rode `php artisan migrate`: **há uma migration nova** (`twstec/kit-accounts`,
+`2026_11_15_000001_add_api_limits_to_accounts_table` — seis colunas nulas
+em `accounts`; nada muda para as contas existentes). As telas de projetos
+(views do foundation) já mostram a recusa; para a recusa chegar a elas:
 
 - **Starter React:** `app/Http/Controllers/Panel/ProjectsController.php` —
   o `destroy()` captura `ProjectDeletionRefusedException`, grava a recusa
@@ -71,6 +94,31 @@ a recusa; para a recusa chegar a elas:
   acrescente se for declarar regras ali.
 - **Atenção a quem consome os webhooks:** o corpo ganha um campo no topo.
   Receptor que valida o esquema recusando campo desconhecido precisa aceitá-lo.
+- **Limites da API — página da conta.** As views do foundation já têm a
+  seção (só aparece quando a tela manda os dados). Para ela aparecer:
+  - **Starter React:** `app/Http/Controllers/Panel/AccountController.php`
+    — o `show()` passa `'apiLimits' => ApiLimitsPanel::for($account)` e o
+    método novo `apiLimits()` valida e chama `ChangeApiLimits`; a rota
+    `PATCH account/api-limits` (`panel.account.api-limits`) em
+    `routes/web.php` e o nome dela em `app/Support/FrontRoutes.php`. Teste:
+    `tests/Feature/Accounts/AccountPageTest.php`.
+  - **Starter Livewire:** `app/Livewire/Account/Show.php` — a propriedade
+    `apiLimitValues`, o `fillApiLimits()` no `mount()`, o método
+    `saveApiLimits()` e `'apiLimits' => ApiLimitsPanel::for($account)` no
+    `render()`. Teste: `tests/Feature/Accounts/AccountPageTest.php`.
+  - Sem esses arquivos, os limites valem do mesmo jeito (API e `/admin`);
+    só o dono não tem onde baixá-los.
+- **`.env.example` dos dois starters:** o bloco `API_LIMITS_*`.
+- **Quem publicou o `config/api_keys.php`:** a chave nova `limits` vem do
+  pacote; só copie se for mudá-la ali (prefira as variáveis do `.env`).
+- **Quem publicou o `config/admin.php`:** a permissão nova
+  `accounts.set_api_limits` já está no papel dono (`*`); dê a outro papel
+  se ele também deve mudar limites.
+- **Atenção ao ligar `API_LIMITS_ENABLED`:** o Redis passa a ser
+  dependência de toda requisição autenticada da API (fora do ar → 503), e
+  quem integra recebe `RateLimit-*` e os 429 novos; o `throttle:api` por
+  chave (`RATE_LIMIT_API`, 60/min) continua valendo à parte — suba-o se a
+  rajada por conta deve ser o teto que vale.
 - **Atenção ao ligar `IDEMPOTENCY_FINGERPRINT_HEADERS` numa rota em uso:** a
   repetição de uma chave criada antes da mudança recebe `422` (nunca um
   replay errado); as chaves vencem em `IDEMPOTENCY_TTL_HOURS`.

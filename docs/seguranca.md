@@ -266,6 +266,8 @@ Os limites, do mais largo ao mais estreito, com orçamentos independentes:
 |---|---|---|---|---|
 | **Borda** (`EdgeRateLimit`) | global: páginas, Livewire, `/admin`, `/up`, API, rotas inexistentes | IP (IPv6 por prefixo /64) | 300/min | `RATE_LIMIT_WEB`, `RATE_LIMIT_WEB_DECAY_SECONDS`, `RATE_LIMIT_IPV6_PREFIX` |
 | `throttle:api` | grupo `api` | **chave de API** (ou tenant); IP em rota sem autenticação | 60/min | `RATE_LIMIT_API`, `RATE_LIMIT_API_BY` |
+| **Limites por conta** (cota, rajada, concorrência; 2.4, desligados por padrão) | grupo `api`, depois da autenticação | **conta** (todas as chaves somam) | 25.000/12 h, 1.000/min, 50 simultâneas | `API_LIMITS_ENABLED`, `API_LIMITS_QUOTA`, `API_LIMITS_WINDOW_MINUTES`, `API_LIMITS_BURST_PER_MINUTE`, `API_LIMITS_CONCURRENCY` — ver [api.md](api.md#limites-por-conta-cota-rajada-concorrência) |
+| `api.route-limit:<máx>,<seg>` (opcional, na rota) | a rota que declarar | conta; IP sem conta | o da rota | — |
 | Falhas de autenticação da API — por credencial | `resolve.tenant` | IP (IPv6 por prefixo) + chave pública apresentada | 20/min | `RATE_LIMIT_API_AUTH_FAILURES`, `RATE_LIMIT_API_AUTH_FAILURES_DECAY_SECONDS` |
 | Falhas de autenticação da API — teto do IP | `resolve.tenant` | IP (IPv6 por prefixo); não barra chave já autenticada daquele IP | 100/min | `RATE_LIMIT_API_AUTH_FAILURES_PER_IP`, `RATE_LIMIT_API_AUTH_KNOWN_CLIENT_TTL_SECONDS` |
 | `throttle:sensitive` | login, códigos, recuperação de senha | usuário; visitante pelo IP (IPv6 por prefixo) | 5/min | `RATE_LIMIT_SENSITIVE`, `RATE_LIMIT_IPV6_PREFIX` |
@@ -328,6 +330,13 @@ chaves antigas (`API_KEYS_ACCEPT_EMPTY_PEPPER_LEGACY`) são aceitos e migrados n
 primeiro uso, sempre com todos os candidatos comparados em tempo constante — a
 recusa continua o mesmo 401 e conta para os baldes acima. Ver
 [api.md](api.md#pepper-vazio-nunca-é-pepper).
+
+**Store dos contadores fora do ar: falha fechada.** Os contadores vivem no store do RateLimiter
+(`cache.limiter`, Redis em produção). Se ele não responde, nenhum limite deixa a requisição passar
+sem contar: o `throttle:api`, a borda e os baldes de falha de autenticação deixam o erro subir (a
+requisição não roda; 500 no envelope), e os limites por conta respondem `503
+api_limits_unavailable` com `Retry-After`. Disponibilidade da API depende do Redis — monitore-o
+como dependência crítica.
 
 **IPv6 por prefixo.** Um único host costuma receber um /64 inteiro e poderia trocar de endereço
 a cada requisição para ganhar orçamento novo; por isso a conta é por prefixo
