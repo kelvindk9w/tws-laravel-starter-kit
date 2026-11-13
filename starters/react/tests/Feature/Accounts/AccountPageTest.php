@@ -450,10 +450,10 @@ it('limites da API: o dono baixa (nunca acima do máximo), os outros papéis só
     expect(app(ApiLimits::class)->effective($empresa->refresh())->quota)->toBe(300)
         ->and(AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('action', 'account.api_limits_changed')->pluck('outcome')->map(fn ($o) => $o->value)->sort()->values()->all())
         ->toBe(['denied', 'denied', 'success']);
-});
+})->group('accounts');
 
 it('limites da API desligados (padrão): a página não leva a seção', function () {
     ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
 
     expect(propsDaConta($dono, $empresa)['apiLimits'])->toBeNull();
-});
+})->group('accounts');
