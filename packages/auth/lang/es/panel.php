@@ -139,6 +139,7 @@ return [
         'password_hint' => 'Ingresa tu contraseña de transacción para recibir un código de verificación por correo.',
         'send_code' => 'Enviar código por correo',
         'code_hint' => 'Enviamos un código de 6 dígitos a tu correo. Expira en pocos minutos.',
+        'code_only_hint' => 'Para confirmar, enviaremos un código de verificación a tu correo electrónico.',
         'code' => 'Código de verificación',
         'confirm' => 'Confirmar y ejecutar',
         'resend_in' => 'Reenviar en :seconds s',
