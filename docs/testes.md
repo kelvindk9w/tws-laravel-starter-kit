@@ -27,6 +27,17 @@ qualquer banco que não termine em `_test`. No projeto criado com SQLite
 a do `phpunit.xml` (SQLite em memória), e é ela que o `scripts/verificar`
 roda.
 
+**A suíte não grava em `storage/logs`** (2.4). O `phpunit.xml` (e o
+`phpunit.pgsql.xml`) manda o canal padrão para `null` (`LOG_CHANNEL=null`) e
+liga o descarte do canal `request_log` do kit (`REQUEST_LOG_DISCARD=true`,
+que só vale com `APP_ENV=testing` — produção e desenvolvimento gravam
+sempre). Antes, cada rodada deixava dezenas de MB por dia em `laravel.log` e
+`request-AAAA-MM-DD.log`. O evento de log continua disparado: `Log::spy()`,
+`Log::shouldReceive()` e `Log::listen()` veem cada linha. Teste que precisa do
+**arquivo** aponta o canal para um caminho temporário — o `request_log` de
+verdade é `RequestLogChannel::fileDefinition()`. Prova:
+`tests/Feature/Logging/TestRunWritesNoLogFilesTest.php`.
+
 **E2E (Playwright), sem Node na máquina:** `scripts/e2e` faz tudo — sobe o
 projeto, espera o site e o Vite, respeita os 60 s entre rodadas, cria as
 pessoas fixas, roda o Playwright na imagem da versão do `package-lock.json` e
