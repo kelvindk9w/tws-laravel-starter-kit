@@ -23,13 +23,16 @@ use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
  *      binários, só no cabeçalho (primeiros 1024 bytes) — em dados
  *      comprimidos (JPEG, PNG, PDF, MP4, OGG, ZIP) 3 bytes fixos aparecem
  *      por acaso, e varrer o arquivo inteiro recusava fotos legítimas.
- *   5. PDF com JavaScript, ações automáticas, lançamento de programa ou
- *      arquivo anexado (/JS, /JavaScript, /OpenAction, /AA, /Launch,
- *      /EmbeddedFile) → fora. Procurados só onde o leitor de PDF lê objetos:
- *      fora dos dados de stream (onde fotos comprimidas formavam /JS e /AA
- *      por acaso), com nomes #xx decodificados e dentro dos streams de
- *      objetos (/ObjStm), descomprimidos. Stream de objetos que não dá para
- *      ler → fora. Política do dono: suspeita = não aceita.
+ *   5. PDF com JavaScript, ações automáticas ou lançamento de programa
+ *      (/JS, /JavaScript, /OpenAction, /AA, /Launch) → fora. Procurados só
+ *      onde o leitor de PDF lê objetos: fora dos dados de stream (onde fotos
+ *      comprimidas formavam /JS e /AA por acaso), com nomes #xx
+ *      decodificados e dentro dos streams de objetos (/ObjStm),
+ *      descomprimidos. Stream de objetos que não dá para ler → fora.
+ *      PDF com ARQUIVO ANEXADO, ou CIFRADO (com senha) com stream de
+ *      objetos, que não dá para conferir → fora com motivo próprio
+ *      (pdf_attachment_or_password), para a pessoa saber o que fazer.
+ *      Política do dono: suspeita = não aceita.
  *   6. Imagens: decodificadas e RE-ENCODADAS via GD (segunda camada — mesmo
  *      que um payload desconhecido escape da varredura, ele não sobrevive à
  *      re-geração dos pixels). Imagem que a GD não decodifica → fora.
@@ -99,14 +102,29 @@ final class FileSecurityValidator
     ];
 
     /**
-     * Tokens de dicionário PDF que indicam JavaScript, ações automáticas,
-     * lançamento de programa ou arquivo anexado. Casados com fronteira de
-     * delimitador PDF (espaço, '/', '()', '<>', '[]', '{}', '%' ou fim) para
-     * não confundir com nomes mais longos.
+     * Tokens de dicionário PDF que indicam JavaScript, ações automáticas ou
+     * lançamento de programa (motivo pdf_auto_action). Casados com fronteira
+     * de delimitador PDF (espaço, '/', '()', '<>', '[]', '{}', '%' ou fim)
+     * para não confundir com nomes mais longos.
      *
      * @var list<string>
      */
-    private const PDF_DANGEROUS_TOKENS = ['/JavaScript', '/JS', '/OpenAction', '/AA', '/Launch', '/EmbeddedFile', '/EmbeddedFiles'];
+    private const PDF_DANGEROUS_TOKENS = ['/JavaScript', '/JS', '/OpenAction', '/AA', '/Launch'];
+
+    /**
+     * Tokens de dicionário PDF que indicam ARQUIVO ANEXADO (motivo
+     * pdf_attachment_or_password): o arquivo em si (/EmbeddedFile, /EF), a
+     * lista de anexos do documento (/EmbeddedFiles) e o anexo numa página
+     * (/FileAttachment).
+     *
+     * @var list<string>
+     */
+    private const PDF_ATTACHMENT_TOKENS = ['/EmbeddedFile', '/EmbeddedFiles', '/EF', '/FileAttachment'];
+
+    /**
+     * Fronteira de delimitador PDF depois de um nome.
+     */
+    private const PDF_NAME_END = '(?=[\s\(\)<>\[\]\{\}\/%]|$)';
 
     /**
      * Filtros de stream que a varredura não lê. Stream de objetos com um
@@ -280,22 +298,26 @@ final class FileSecurityValidator
     }
 
     /**
-     * 5. PDF com JavaScript embutido, ações automáticas, lançamento de
-     *    programa ou arquivo anexado = REJEITADO (política: suspeita = não
-     *    aceita). A procura é nos OBJETOS do PDF (pdfObjectText), não nos
-     *    dados binários dos streams.
+     * 5. PDF com JavaScript embutido, ações automáticas ou lançamento de
+     *    programa = REJEITADO (pdf_auto_action); com arquivo anexado, ou
+     *    cifrado com stream de objetos = REJEITADO com motivo próprio
+     *    (pdf_attachment_or_password). Política: suspeita = não aceita. A
+     *    procura é nos OBJETOS do PDF (pdfObjectText), não nos dados
+     *    binários dos streams.
      */
     private function ensurePdfHasNoAutoActions(string $content): void
     {
-        $objects = $this->pdfObjectText($content);
+        // Cifrado (com senha, mesmo a de dono só): os streams de objetos vêm
+        // cifrados e não dá para conferir o que eles guardam.
+        $encrypted = preg_match('/\/Encrypt'.self::PDF_NAME_END.'/', $content) === 1;
 
-        foreach (self::PDF_DANGEROUS_TOKENS as $token) {
+        $objects = $this->pdfObjectText($content, $encrypted);
+
+        foreach ([...self::PDF_DANGEROUS_TOKENS, ...self::PDF_ATTACHMENT_TOKENS] as $token) {
             // Fronteira de delimitador PDF: o token só casa como objeto de
             // dicionário, não como substring de um nome maior (ex.: /AAbc).
-            $pattern = '/'.preg_quote($token, '/').'(?=[\s\(\)<>\[\]\{\}\/%]|$)/';
-
-            if (preg_match($pattern, $objects) === 1) {
-                $this->reject('pdf_auto_action');
+            if (preg_match('/'.preg_quote($token, '/').self::PDF_NAME_END.'/', $objects) === 1) {
+                $this->reject(in_array($token, self::PDF_DANGEROUS_TOKENS, true) ? 'pdf_auto_action' : 'pdf_attachment_or_password');
             }
         }
     }
@@ -316,10 +338,11 @@ final class FileSecurityValidator
      *   - os streams de OBJETOS (/Type/ObjStm, ou /First e /N inteiros, que
      *     é o que leitores como o pdf.js conferem), descomprimidos
      *     (FlateDecode, até PDF_OBJECT_STREAMS_MAX_BYTES no total). O que não
-     *     dá para ler = rejeitado;
+     *     dá para ler = rejeitado; num PDF cifrado, nem dá para tentar =
+     *     rejeitado com motivo próprio (pdf_attachment_or_password);
      *   - com os nomes escritos em hexadecimal decodificados (/J#53 = /JS).
      */
-    private function pdfObjectText(string $content): string
+    private function pdfObjectText(string $content, bool $encrypted): string
     {
         $objects = '';
         $budget = self::PDF_OBJECT_STREAMS_MAX_BYTES;
@@ -341,6 +364,10 @@ final class FileSecurityValidator
             }
 
             if ($this->isPdfObjectStream($chunk)) {
+                if ($encrypted) {
+                    $this->reject('pdf_attachment_or_password');
+                }
+
                 $decoded = $this->decodePdfObjectStream($data, $chunk, $budget);
                 $budget -= strlen($decoded);
                 $objects .= $this->decodePdfNames($decoded)."\n";

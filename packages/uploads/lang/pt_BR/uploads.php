@@ -21,6 +21,7 @@ return [
         'extension_mismatch' => 'A extensão do arquivo não corresponde ao seu conteúdo.',
         'embedded_script' => 'O arquivo contém conteúdo não permitido.',
         'pdf_auto_action' => 'O PDF contém ações automáticas ou scripts, que não são permitidos.',
+        'pdf_attachment_or_password' => 'Este PDF tem anexo ou senha. Salve sem anexo e sem senha e envie de novo.',
         'image_undecodable' => 'A imagem enviada está corrompida ou é inválida.',
         'image_too_many_pixels' => 'A imagem excede as dimensões máximas permitidas.',
         'image_reencode_unavailable' => 'Não foi possível processar a imagem no momento.',

@@ -21,6 +21,7 @@ return [
         'extension_mismatch' => 'The file extension does not match its content.',
         'embedded_script' => 'The file contains disallowed content.',
         'pdf_auto_action' => 'The PDF contains automatic actions or scripts, which are not allowed.',
+        'pdf_attachment_or_password' => 'This PDF has an attachment or a password. Save it without attachments and without a password and upload it again.',
         'image_undecodable' => 'The uploaded image is corrupted or invalid.',
         'image_too_many_pixels' => 'The image exceeds the maximum allowed dimensions.',
         'image_reencode_unavailable' => 'Could not process the image right now.',

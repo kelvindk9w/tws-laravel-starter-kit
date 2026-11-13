@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
 use Twstec\Kit\Uploads\Services\FileSecurityValidator;
+use Twstec\Kit\Uploads\Services\SecureUploadService;
 
 // =============================================================================
 // PDF COM JAVASCRIPT OU AÇÃO AUTOMÁTICA, SEM FALSO POSITIVO.
 //
-// Os nomes perigosos (/JS, /JavaScript, /OpenAction, /AA, /Launch,
-// /EmbeddedFile) são procurados onde o leitor de PDF lê OBJETOS: fora dos
+// Os nomes perigosos (/JS, /JavaScript, /OpenAction, /AA, /Launch) e os de
+// anexo (/EmbeddedFile, /EF...) são procurados onde o leitor de PDF lê OBJETOS: fora dos
 // dados de stream, com #xx decodificado e dentro dos streams de objetos
 // (/ObjStm), descomprimidos. Antes, o arquivo inteiro era varrido, e a foto
 // comprimida de um PDF escaneado formava /JS ou /AA por acaso (~3% de chance
@@ -126,15 +127,56 @@ it('stream de objetos (/ObjStm) sem nada perigoso: descomprimido, conferido e ac
 
 // --- Segurança: o que tem de continuar recusado ------------------------------
 
-it('/JS, /JavaScript, /OpenAction, /AA, /Launch e /EmbeddedFile num dicionário comum: recusados', function (): void {
+it('/JS, /JavaScript, /OpenAction, /AA e /Launch num dicionário comum: recusados (pdf_auto_action)', function (): void {
     expect(pdfaMotivo(fixtureBytesPdfComJavaScript()))->toBe('pdf_auto_action')
         ->and(pdfaMotivo(pdfaDe([4 => '<</S/JavaScript/JS(app.alert(1))>>'])))->toBe('pdf_auto_action')
         ->and(pdfaMotivo(pdfaDe([4 => '<</JS 5 0 R>>'])))->toBe('pdf_auto_action')
         ->and(pdfaMotivo(pdfaDe([], '/OpenAction[3 0 R/Fit]')))->toBe('pdf_auto_action')
         ->and(pdfaMotivo(pdfaDe([4 => '<</Type/Page/AA<</O 5 0 R>>>>'])))->toBe('pdf_auto_action')
-        ->and(pdfaMotivo(pdfaDe([4 => '<</S/Launch/F(cmd.exe)>>'])))->toBe('pdf_auto_action')
-        ->and(pdfaMotivo(pdfaDe([4 => pdfaStream('/Type/EmbeddedFile', 'MZ arquivo anexado')])))->toBe('pdf_auto_action')
-        ->and(pdfaMotivo(pdfaDe([], '/Names<</EmbeddedFiles 4 0 R>>')))->toBe('pdf_auto_action');
+        ->and(pdfaMotivo(pdfaDe([4 => '<</S/Launch/F(cmd.exe)>>'])))->toBe('pdf_auto_action');
+});
+
+it('PDF com arquivo anexado: recusado com o motivo próprio, que diz o que fazer', function (): void {
+    expect(pdfaMotivo(pdfaDe([4 => pdfaStream('/Type/EmbeddedFile', 'MZ arquivo anexado')])))->toBe('pdf_attachment_or_password')
+        ->and(pdfaMotivo(pdfaDe([], '/Names<</EmbeddedFiles 4 0 R>>')))->toBe('pdf_attachment_or_password')
+        ->and(pdfaMotivo(pdfaDe([4 => '<</Type/Filespec/F(nota.xml)/EF<</F 5 0 R>>>>', 5 => pdfaStream('', '<nota/>')])))->toBe('pdf_attachment_or_password')
+        ->and(pdfaMotivo(pdfaDe([4 => '<</Type/Annot/Subtype/FileAttachment/FS 5 0 R>>'])))->toBe('pdf_attachment_or_password')
+        ->and(pdfaMotivo(pdfaDe([4 => '<</Type/Embedded#46ile>>'])))->toBe('pdf_attachment_or_password')
+        // Anexo e JavaScript juntos: vale o motivo mais grave.
+        ->and(pdfaMotivo(pdfaDe([4 => '<</S/JavaScript/JS(app.alert(1))>>', 5 => '<</EF<</F 6 0 R>>>>'])))->toBe('pdf_auto_action');
+});
+
+it('PDF cifrado (com senha) com stream de objetos: recusado com o motivo próprio; cifrado sem stream de objetos continua entrando', function (): void {
+    $objstm = pdfaObjStm([10 => '<</Producer(Scanner)>>']);
+    $cifra = '<</Filter/Standard/V 2/R 3/Length 128/P -1068/O<'.str_repeat('ab', 32).'>/U<'.str_repeat('cd', 32).'>>>';
+    $comObjStm = str_replace("trailer\n<</Root 1 0 R>>", "trailer\n<</Root 1 0 R/Encrypt 9 0 R>>", pdfaDe([
+        4 => pdfaStream("/Type/ObjStm/N 1/First {$objstm['first']}/Filter/FlateDecode", pdfaBinario(300)),
+        9 => $cifra,
+    ]));
+    $semObjStm = str_replace("trailer\n<</Root 1 0 R>>", "trailer\n<</Root 1 0 R/Encrypt 9 0 R>>", pdfaDe([9 => $cifra]));
+
+    expect(pdfaMotivo($comObjStm))->toBe('pdf_attachment_or_password')
+        ->and(pdfaMotivo($semObjStm))->toBeNull();
+});
+
+it('a recusa de anexo ou senha chega pela função única de upload com a mensagem traduzida do pacote', function (): void {
+    $anexo = fixtureArquivoEnviado(pdfaDe([4 => pdfaStream('/Type/EmbeddedFile', 'MZ arquivo anexado')]), 'contrato.pdf');
+
+    app()->setLocale('pt_BR');
+
+    try {
+        $this->inAccountOf(null, fn () => app(SecureUploadService::class)->handle($anexo));
+        $this->fail('O PDF com anexo deveria ter sido recusado.');
+    } catch (UploadRejectedException $recusa) {
+        expect($recusa->reason)->toBe('pdf_attachment_or_password')
+            ->and($recusa->getMessage())->toBe('Este PDF tem anexo ou senha. Salve sem anexo e sem senha e envie de novo.');
+    }
+
+    app()->setLocale('en');
+    expect(__('uploads.rejected.pdf_attachment_or_password'))->toBe('This PDF has an attachment or a password. Save it without attachments and without a password and upload it again.');
+
+    app()->setLocale('es');
+    expect(__('uploads.rejected.pdf_attachment_or_password'))->toBe('Este PDF tiene un adjunto o una contraseña. Guárdelo sin adjuntos y sin contraseña y envíelo de nuevo.');
 });
 
 it('/JS dentro de um stream de objetos (/ObjStm): recusado, comprimido ou não, declarado ou não', function (): void {
