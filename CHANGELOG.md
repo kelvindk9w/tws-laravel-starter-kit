@@ -6,6 +6,21 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.4.0] — 2026-11-13
+
+Versão menor, sem quebra de assinatura: limites da API por conta (cota por
+janela, rajada, concorrência e limite opcional por rota, com `RateLimit-*` e
+códigos próprios; o `/admin` muda por conta e o dono só baixa — desligados
+por padrão), cabeçalhos de contexto na impressão da idempotência, regras que
+impedem a exclusão de um projeto (e o 409 no lugar do 500 quando um registro
+ainda aponta para ele), o código público do projeto no corpo do webhook, a
+suíte de testes sem gravar em `storage/logs` e a mitigação da
+CVE-2026-115560 no PHP das imagens. Uma migration nova (accounts) e arquivos
+de starter (controllers/componentes de projetos e da conta, rotas, testes,
+`phpunit*.xml`, `.ini` do PHP, `.env.example`) para aplicar à mão em projeto
+já criado — ver a lista no fim desta seção. Atualize todos os pacotes
+`twstec/*` juntos.
+
 ### Adicionado
 
 - **Cabeçalhos de contexto na impressão da idempotência
@@ -3426,7 +3441,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.3.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.4.0...desenvolvimento
+[2.4.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.0.0...v2.1.0
