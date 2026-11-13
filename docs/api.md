@@ -294,6 +294,9 @@ passa por ela), não no controller:
 curta duração da [ação sensível](autenticacao.md) (senha de transação + código por e-mail) no header
 `X-Sensitive-Action-Token`, obtido via `POST /sensitive-actions/code` +
 `POST /sensitive-actions/confirm` (rotas web, sessão). Uso único.
+Na API isso vale em qualquer ambiente; a confirmação mais leve do ambiente
+`test` (só o código) é só da criação pelo painel — ver
+[Confirmação da criação de chave, por ambiente](#confirmação-da-criação-de-chave-por-ambiente).
 
 **Bootstrap (primeira chave):** os endpoints exigem uma chave existente. A
 primeira chave do usuário é criada pelo painel (`/api-keys`) ou, em dev, via
@@ -683,6 +686,15 @@ Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
 
 - **Validade 100% do usuário**: `expires_at` vazio = sem validade; o sistema
   NUNCA impõe prazo.
+- **No painel, a validade é escolhida na criação** (2.3): sem validade, por N
+  horas ou por N dias, contados a partir da criação — nos dois starters, com as
+  mesmas regras (`Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyExpiry`:
+  `rules()`, `resolve()` e `options()`, que a tela recebe como
+  `expiryOptions`). Os tetos de cada unidade são `API_KEYS_EXPIRY_MAX_HOURS`
+  (padrão 720) e `API_KEYS_EXPIRY_MAX_DAYS` (padrão 3650); fora deles, o
+  formulário recusa. A unidade é escolha explícita (`expiry_unit`
+  obrigatório, "sem validade" é o padrão do formulário). A API v1 continua
+  recebendo `expires_at` (data).
 - **Inatividade**: job diário `api-keys:process-inactivity` (comando do
   pacote; o agendamento é do aplicativo, em `routes/console.php`, `daily()` + `withoutOverlapping()` + `onOneServer()`)
   desativa chaves sem uso há `API_KEYS_INACTIVITY_MONTHS` meses (padrão 3) com
@@ -691,6 +703,98 @@ Teto em `API_KEYS_MAX_GRACE_MINUTES` (padrão 7 dias).
   a flag `inactivity_warning_sent_at` impede repetição e é rearmada quando a
   chave volta a ser usada. O middleware `resolve.tenant` também rejeita chave
   inativa (defesa em profundidade caso o scheduler atrase). Tudo em UTC.
+
+## Confirmação da criação de chave, por ambiente
+
+Criar chave pelo painel é confirmado antes, pela política do ambiente das
+chaves (`API_KEYS_ENVIRONMENT`), em `api_keys.creation_confirmation`:
+
+| Ambiente | Política | Como confirma |
+|---|---|---|
+| `live` | `transaction_password_and_code` — **sempre** | senha de transação + código por e-mail (a ação sensível de sempre; o token nasce e é consumido na mesma requisição) |
+| `test` | `code` por padrão (`API_KEYS_TEST_CREATION_CONFIRMATION`) | só o código por e-mail, numa família própria (`VerificationPurpose::CodeConfirmation`) — o código nunca vira token de ação sensível para outra operação |
+| outro valor | a mais forte | senha de transação + código |
+
+- **Produção nunca afrouxa:** `creation_confirmation.live` diferente de
+  `transaction_password_and_code`, ou um valor que não é política, **impede a
+  inicialização** (`LogicException` com o que corrigir). `test` pode voltar à
+  política forte com `API_KEYS_TEST_CREATION_CONFIRMATION=transaction_password_and_code`.
+- **Só a criação muda.** Rotação no painel e as rotas da API v1 com
+  `sensitive.token` continuam pedindo a ação sensível completa em qualquer
+  ambiente.
+- **A regra num lugar só:** `Twstec\Kit\Accounts\ApiKeys\Confirmation\ApiKeyCreationConfirmation`
+  — `policy()`, `requiresTransactionPassword()`, `sendCode($user, $senha)`
+  (a senha é ignorada na política só de código), `confirm($user, $codigo)`,
+  que devolve a prova de uso único `ApiKeyCreationConfirmed`, e
+  `resendCooldownRemaining($user)`. Erros saem como `ValidationException` nas
+  chaves `transaction_password` e `code`; tentativas, validade e intervalo de
+  reenvio são os do motor de códigos do twstec/kit-auth.
+- **As telas:** o controller/componente diz à tela se a criação pede a senha
+  (`creationRequiresTransactionPassword`); sem a senha, o modal da
+  confirmação mostra só o envio do código (`passwordless` no React,
+  `$sensitivePasswordless` no Livewire) e "enviar outro código" manda outro
+  na hora.
+
+## Chaves de API de sessão
+
+Para o aplicativo que precisa de uma chave **presa à sessão web** de quem está
+logado — por exemplo, o "Experimente" de uma documentação da API, que executa
+as rotas sem a pessoa colar uma chave:
+
+```php
+use Twstec\Kit\Accounts\ApiKeys\Confirmation\ApiKeyCreationConfirmation;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+
+// 1. A confirmação do ambiente (só o código em `test`; senha + código em `live`).
+app(ApiKeyCreationConfirmation::class)->sendCode($user, $senhaDeTransacao);
+$prova = app(ApiKeyCreationConfirmation::class)->confirm($user, $codigo);
+
+// 2. A chave, na conta atual, presa à sessão desta requisição.
+['api_key' => $chave, 'secret_key' => $secreta] = app(ApiKeyService::class)
+    ->createForSession($user, $request->session(), [
+        'name' => 'Documentação',
+        'scopes' => ['projects:read'],
+        'expires_at' => now()->addHours(2)->toIso8601String(),
+    ], $prova);
+```
+
+- **Fora da lista e das contagens:** um escopo global
+  (`Scopes\SessionKeyScope`) esconde as chaves de sessão de toda consulta de
+  `ApiKey` — tela de chaves, `/admin`, métricas, API `GET /api/v1/api-keys`.
+  Para vê-las: `ApiKey::query()->withSessionKeys()` ou `->onlySessionKeys()`.
+  `ApiKey::isSessionBound()` diz se uma chave é de sessão; o recurso da API traz
+  `session_bound`.
+- **Valem como qualquer chave** na autenticação: escopos, projetos,
+  validade (`expires_at`, recomendada), limite e trilha de requisições.
+- **Morrem com a sessão, na hora,** por qualquer caminho: logout, "sair dos
+  outros aparelhos", troca ou redefinição de senha, ligar/desligar o segundo
+  fator, bloqueio da conta (o do `/admin` incluso) — pelo evento
+  `Twstec\Kit\Auth\Events\SessionsEnded` do twstec/kit-auth (ver
+  [Fim de sessão](autenticacao.md#fim-de-sessão-o-evento-sessionsended)). Um
+  encerramento próprio do aplicativo (derrubar uma sessão pelo suporte, por
+  exemplo) dispara o mesmo evento:
+  `event(SessionsEnded::allExcept($user, null, SessionEndReason::Administrative))`.
+- **Sessão que vence por inatividade** (`SESSION_LIFETIME`): o grupo `web`
+  marca a sessão como vista (`TouchSessionApiKeys`, no máximo uma escrita a
+  cada `API_KEYS_SESSION_TOUCH_SECONDS`, padrão 60); a chave cuja sessão não
+  é vista há mais que o `SESSION_LIFETIME` é **recusada na hora** e revogada
+  pela rotina.
+- **A rotina `api-keys:prune-session-keys`** (agendada pelo pacote,
+  `API_KEYS_SESSION_KEYS_PRUNE_SCHEDULE`, padrão a cada 10 minutos, com
+  `withoutOverlapping` e `onOneServer`) revoga as de sessão vencida e **apaga**
+  as revogadas, vencidas ou rotacionadas. Vazio desliga, com aviso no log a
+  cada boot.
+- **O aplicativo é avisado:** cada revogação vira o evento
+  `Twstec\Kit\Accounts\ApiKeys\Events\SessionApiKeysRevoked` (`userId`,
+  `reason` — um `SessionEndReason` — e `apiKeyUuids`) e a linha
+  `api_keys.session_keys.revoked` no canal `request_log` (uuids, motivo,
+  pessoa; nunca segredo).
+- **Chave de sessão não gera chave que dure mais que ela:** a chave criada
+  pela API com uma chave de sessão nasce presa à mesma sessão, e a rotação
+  herda o vínculo.
+- **Só na sessão de quem cria:** `createForSession` recusa
+  (`InvalidArgumentException`) a sessão que não é de `$user`, e cada prova de
+  confirmação vale para uma criação só (`LogicException` na segunda).
 
 ## O que o pacote instala sozinho
 
@@ -707,6 +811,8 @@ liga, sem nenhuma linha no `bootstrap/app.php`:
 | Quem o limite conta | `TenantRateLimitSubject` (a chave, ou a conta com `RATE_LIMIT_API_BY=tenant`) |
 | Conta atual da requisição | o `ResolveTenant` define a conta da chave como conta atual (o escopo das contas filtra por ela) e a desfaz no fim da requisição |
 | De quem é a `Idempotency-Key` | `TenantIdempotencyScope` (conta + chave de API; na sessão, conta + pessoa) — ver [Idempotência](#idempotência-idempotency-key) |
+| Chaves de sessão | listener de `SessionsEnded` (revoga na hora), `TouchSessionApiKeys` no grupo `web` (com `ACCOUNTS_WEB_MIDDLEWARE`) e a rotina `api-keys:prune-session-keys` agendada — ver [Chaves de API de sessão](#chaves-de-api-de-sessão) |
+| Confirmação da criação | a política de `api_keys.creation_confirmation` conferida no boot: `live` mais fraco que senha + código não sobe |
 
 Os aliases só entram se o aplicativo não declarou um de mesmo nome, e um
 render próprio do aplicativo no `bootstrap/app.php` roda antes do envelope do
