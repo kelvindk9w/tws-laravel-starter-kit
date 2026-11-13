@@ -17,8 +17,12 @@ use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
  *   2. MIME REAL via finfo (conteúdo) contra a allowlist por tipo (config).
  *      PDF é só PDF; imagem é só imagem. Qualquer outro MIME → fora.
  *   3. Extensão declarada divergente do conteúdo → fora.
- *   4. Conteúdo varrido por marcadores de script (<?php, <?=, <script,
- *      shebang) → fora (polyglot embutido).
+ *   4. Conteúdo varrido por marcadores de script → fora (polyglot embutido).
+ *      Os LONGOS (<?php, <script) no arquivo inteiro, em todo tipo. Os
+ *      CURTOS (<?=, #!/) no arquivo inteiro só nos tipos de TEXTO; nos
+ *      binários, só no cabeçalho (primeiros 1024 bytes) — em dados
+ *      comprimidos (JPEG, PNG, PDF, MP4, OGG, ZIP) 3 bytes fixos aparecem
+ *      por acaso, e varrer o arquivo inteiro recusava fotos legítimas.
  *   5. PDF com JavaScript/ações automáticas (/JS, /JavaScript, /OpenAction,
  *      /AA) → fora. Política do dono: suspeita = não aceita.
  *   6. Imagens: decodificadas e RE-ENCODADAS via GD (segunda camada — mesmo
@@ -42,12 +46,52 @@ final class FileSecurityValidator
     ];
 
     /**
-     * Marcadores de script/executável embutido (varredura case-insensitive
-     * em qualquer tipo). Achou = polyglot/suspeita = rejeitado.
+     * Marcadores LONGOS de script embutido: procurados no arquivo inteiro, em
+     * todo tipo (varredura case-insensitive). Em dados aleatórios a chance de
+     * aparecerem por acaso é desprezível (<?php: ~7×10⁻¹² por posição;
+     * <script: ~9×10⁻¹⁶), então valem como defesa contra polyglot em qualquer
+     * posição. Achou = suspeita = rejeitado.
      *
      * @var list<string>
      */
-    private const SCRIPT_MARKERS = ['<?php', '<?=', '<script', '#!/'];
+    private const SCRIPT_MARKERS_LONG = ['<?php', '<script'];
+
+    /**
+     * Marcadores CURTOS (3 bytes): procurados no arquivo inteiro só nos tipos
+     * de TEXTO (MIME_TEXT_*); nos binários, só nos primeiros
+     * SHORT_MARKERS_BINARY_WINDOW bytes. Em dados comprimidos uma sequência
+     * fixa de 3 bytes aparece, em média, uma vez a cada ~16,7 milhões de
+     * posições: com os dois marcadores, uma foto de 2 MB tinha perto de 1
+     * chance em 4 de ser recusada por engano (na medição com fotos reais,
+     * 9 de 20). Num binário, o disfarce que engana um interpretador lido do
+     * começo precisa estar no cabeçalho — é ali que a procura continua.
+     *
+     * @var list<string>
+     */
+    private const SCRIPT_MARKERS_SHORT = ['<?=', '#!/'];
+
+    /**
+     * Quantos bytes do começo de um binário recebem a procura dos marcadores
+     * curtos.
+     */
+    private const SHORT_MARKERS_BINARY_WINDOW = 1024;
+
+    /**
+     * MIMEs de TEXTO, além de todo `text/*` e de todo `+xml`/`+json`: neles
+     * os marcadores curtos são procurados no arquivo inteiro.
+     *
+     * @var list<string>
+     */
+    private const MIME_TEXT_EXACT = [
+        'application/json',
+        'application/xml',
+        'application/csv',
+        'application/javascript',
+        'application/x-httpd-php',
+        'application/x-php',
+        'application/x-sh',
+        'image/svg+xml',
+    ];
 
     /**
      * Tokens de dicionário PDF que indicam JavaScript ou ações automáticas.
@@ -80,7 +124,7 @@ final class FileSecurityValidator
 
         $this->ensureExtensionMatches($declaredExtension, $canonicalExtension);
 
-        $this->ensureNoEmbeddedScript($content);
+        $this->ensureNoEmbeddedScript($content, $mime);
 
         if ($type === 'pdf') {
             $this->ensurePdfHasNoAutoActions($content);
@@ -172,18 +216,48 @@ final class FileSecurityValidator
     }
 
     /**
-     * 4. Marcadores de script embutido em qualquer posição do arquivo
-     *    (polyglot: começa como imagem/PDF, carrega código executável junto).
+     * 4. Marcadores de script embutido (polyglot: começa como imagem/PDF,
+     *    carrega código executável junto). Os longos em qualquer posição de
+     *    qualquer tipo; os curtos em qualquer posição só no texto e, no
+     *    binário, só no cabeçalho (ver SCRIPT_MARKERS_SHORT).
+     *
+     *    Imagem: a re-geração pela GD (passo 6) descarta o arquivo original
+     *    inteiro, então a procura no binário é defesa em profundidade.
+     *    PDF: o passo 5 continua barrando JavaScript e ações automáticas.
      */
-    private function ensureNoEmbeddedScript(string $content): void
+    private function ensureNoEmbeddedScript(string $content, string $mime): void
     {
         $haystack = strtolower($content);
 
-        foreach (self::SCRIPT_MARKERS as $marker) {
+        foreach (self::SCRIPT_MARKERS_LONG as $marker) {
             if (str_contains($haystack, $marker)) {
                 $this->reject('embedded_script');
             }
         }
+
+        $shortHaystack = $this->isTextMime($mime)
+            ? $haystack
+            : substr($haystack, 0, self::SHORT_MARKERS_BINARY_WINDOW);
+
+        foreach (self::SCRIPT_MARKERS_SHORT as $marker) {
+            if (str_contains($shortHaystack, $marker)) {
+                $this->reject('embedded_script');
+            }
+        }
+    }
+
+    /**
+     * MIME de texto: `text/*`, os sufixos estruturados `+xml`/`+json` e a
+     * lista MIME_TEXT_EXACT. O resto é tratado como binário.
+     */
+    private function isTextMime(string $mime): bool
+    {
+        $mime = strtolower(trim(explode(';', $mime, 2)[0]));
+
+        return str_starts_with($mime, 'text/')
+            || str_ends_with($mime, '+xml')
+            || str_ends_with($mime, '+json')
+            || in_array($mime, self::MIME_TEXT_EXACT, true);
     }
 
     /**
