@@ -389,7 +389,8 @@ final class DeliverySender
             'created_at' => $event->occurred_at->toIso8601ZuluString(),
             'account' => Accounts::current()?->uuid,
             'project' => $event->project?->uuid,
-            'data' => $event->payload,
+            // Objeto continua objeto (inclusive `{}`): o corpo como foi gravado.
+            'data' => $event->payloadForDelivery(),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 

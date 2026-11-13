@@ -22,7 +22,9 @@ use Twstec\Kit\Foundation\Identifiers\RoutesByUuid;
  * corpo e no cabeçalho `X-Webhook-Id`, igual em toda tentativa e em todo
  * reenvio — é por ele que o receptor deduplica.
  *
- * O corpo (`payload`) é CIFRADO no banco (cast `encrypted:array`).
+ * O corpo (`payload`) é CIFRADO no banco (cast `encrypted:array`). Para o
+ * envio, payloadForDelivery() devolve o corpo com os objetos preservados —
+ * `{}` continua `{}`, nunca vira `[]`.
  *
  * @property int $id
  * @property string $uuid
@@ -69,6 +71,25 @@ class WebhookEvent extends Model
             'payload' => 'encrypted:array',
             'occurred_at' => 'datetime',
         ];
+    }
+
+    /**
+     * O corpo como o receptor deve recebê-lo: o JSON gravado, lido com os
+     * objetos preservados (um objeto vazio continua `{}`; o atributo
+     * `payload`, por ser array PHP, não distingue `{}` de `[]`). O corpo
+     * inteiro vazio sai como objeto — `data` é sempre objeto ou lista.
+     */
+    public function payloadForDelivery(): mixed
+    {
+        $raw = $this->getAttributes()['payload'] ?? null;
+
+        if (! is_string($raw) || $raw === '') {
+            return new \stdClass;
+        }
+
+        $decoded = json_decode($this->fromEncryptedString($raw), false, 512, JSON_THROW_ON_ERROR);
+
+        return $decoded === [] ? new \stdClass : $decoded;
     }
 
     /**

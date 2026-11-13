@@ -254,3 +254,23 @@ it('com Http::fake, o envio segue as mesmas regras (sem redirect, assinatura no 
 
     expect(deliveryOf($endpoint)->status)->toBe(DeliveryStatus::Succeeded);
 });
+
+it('objeto continua objeto no corpo enviado, inclusive vazio; lista continua lista', function (): void {
+    $owner = $this->owner();
+    receiverEndpoint($this, $owner);
+
+    Webhooks::dispatch($this->accountOf($owner), 'order.created', [
+        'metadata' => new stdClass,
+        'cliente' => ['extras' => (object) []],
+        'itens' => [],
+        'tags' => ['a', 'b'],
+    ]);
+    // O corpo inteiro vazio: `data` sai objeto.
+    Webhooks::dispatch($this->accountOf($owner), 'order.created', []);
+
+    [$primeiro, $segundo] = $this->receiver->requests();
+
+    expect($primeiro['body'])->toContain('"data":{"metadata":{},"cliente":{"extras":{}},"itens":[],"tags":["a","b"]}')
+        ->and($segundo['body'])->toContain('"data":{}')
+        ->and($segundo['body'])->not->toContain('"data":[]');
+});
