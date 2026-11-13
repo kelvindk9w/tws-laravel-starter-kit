@@ -185,6 +185,17 @@ Códigos por status: `400 bad_request`, `401 unauthorized`, `403 forbidden`,
 `422 validation_failed`, `429 too_many_requests`, `503 service_unavailable`,
 e `server_error` para qualquer 5xx.
 
+**Código próprio num 5xx** (2.3): só a exceção que se declara pública com
+`Twstec\Kit\Foundation\Http\Exceptions\Contracts\ProvidesServerErrorCode`
+(por exemplo, uma `HttpException(503)` com `apiErrorCode()` =
+`provider_not_configured`) leva o código dela; a mensagem é
+`api.errors.<code>` do `lang/*/api.php` do aplicativo ou, sem ela, a
+genérica — **nunca** a mensagem da exceção. O código tem de ser um
+identificador estável (`^[a-z][a-z0-9_]{0,63}$`); fora disso, vale o
+genérico. Exceção não tratada (ou só com `ProvidesApiErrorCode`) continua com
+o código e a mensagem genéricos. Cabeçalhos da exceção (`Retry-After`)
+seguem na resposta.
+
 Códigos próprios, mais específicos que o do status (a exceção implementa
 `Twstec\Kit\Foundation\Http\Exceptions\Contracts\ProvidesApiErrorCode`):
 os da [idempotência](#idempotência-idempotency-key) — `400

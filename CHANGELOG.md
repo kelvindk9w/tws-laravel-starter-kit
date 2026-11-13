@@ -55,7 +55,32 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (720) e `API_KEYS_EXPIRY_MAX_DAYS` (3650). A API v1 continua recebendo
   `expires_at`.
 
+- **Código próprio em respostas 5xx da API (`twstec/kit-foundation`).** A
+  exceção que implementa `Http\Exceptions\Contracts\ProvidesServerErrorCode`
+  (por exemplo, uma `HttpException(503)` com o código
+  `provider_not_configured`) leva o código dela no envelope de erro, com a
+  mensagem `api.errors.<code>` do aplicativo ou a genérica — nunca a
+  mensagem da exceção; código fora de `^[a-z][a-z0-9_]{0,63}$` vira o
+  genérico. Exceção não tratada continua `server_error`/`service_unavailable`.
+- **Referrer-Policy mais restrita por rota (`twstec/kit-foundation`).**
+  Middleware `referrer.policy:<política>` (ou o cabeçalho na própria
+  resposta): o `SecurityHeaders` mantém a política da rota só se ela não for
+  mais frouxa que a padrão em nenhum caso (`Security\ReferrerPolicy`); mais
+  frouxa, não comparável ou desconhecida, vale a padrão. Política
+  desconhecida no middleware é erro de programação.
+- **Retenção dos eventos de webhook sem entrega (`twstec/kit-webhooks`).**
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` (vazio = `WEBHOOKS_PRUNE_DAYS`),
+  `--days-without-deliveries` no `webhooks:prune` e o lote do expurgo
+  `WEBHOOKS_PRUNE_BATCH` (500).
+
 ### Alterado
+
+- **Todo evento de webhook é gravado (`twstec/kit-webhooks`).** Sem endpoint
+  que o assine, `Webhooks::dispatch()` grava o evento do mesmo jeito, sem
+  entrega nem fila, para consulta; com endpoint, nada muda (entrega, tentativas
+  com requisição e resposta). O retorno passa a ser sempre o evento
+  (`WebhookEvent`, antes `?WebhookEvent` — `null` quando ninguém assinava); o
+  `uuid` dele é o id do `X-Webhook-Id`.
 
 - **Telas de chaves (`twstec/kit-foundation`, controller React e componente
   Livewire dos starters).** O formulário de criação troca a data de validade
@@ -67,6 +92,17 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   aplicar os arquivos de starter não quebra a tela.
 - **Testes dos starters que criam chave pelo painel** passam a dizer o
   ambiente (`api_keys.environment`) e a mandar `expiry_unit`.
+
+### Corrigido
+
+- **Objeto vazio no corpo do webhook (`twstec/kit-webhooks`).** `{}` (um
+  `stdClass`, inclusive aninhado) chegava ao receptor como `[]`; agora o corpo
+  é lido no envio com os objetos preservados
+  (`WebhookEvent::payloadForDelivery()`), e o corpo inteiro vazio sai
+  `"data": {}`. Listas seguem listas.
+- **Nginx de produção dos starters repassa a Referrer-Policy da resposta.**
+  O `add_header` fixo da borda somava um segundo cabeçalho e o navegador
+  ficava com ele, desfazendo a política mais restrita da rota.
 
 ### Aplicar à mão em projeto já criado (arquivos de starter não chegam pelo Composer)
 
@@ -93,8 +129,25 @@ escolha da validade e a confirmação por ambiente nas telas:
   E2E `tests/e2e/api-key-scopes.spec.js`.
 - **`.env.example` dos dois starters:** `API_KEYS_TEST_CREATION_CONFIRMATION`
   (comentada), `API_KEYS_EXPIRY_MAX_HOURS`, `API_KEYS_EXPIRY_MAX_DAYS`,
-  `API_KEYS_SESSION_TOUCH_SECONDS` e `API_KEYS_SESSION_KEYS_PRUNE_SCHEDULE`
-  (todas têm padrão no config; o arquivo só documenta).
+  `API_KEYS_SESSION_TOUCH_SECONDS`, `API_KEYS_SESSION_KEYS_PRUNE_SCHEDULE`,
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` (comentada) e
+  `WEBHOOKS_PRUNE_BATCH` (todas têm padrão no config; o arquivo só
+  documenta).
+- **`docker/nginx/prod.conf` dos dois starters:** o `map
+  $upstream_http_referrer_policy $kit_referrer_policy` no topo, `add_header
+  Referrer-Policy $kit_referrer_policy always;` no lugar do valor fixo e
+  `fastcgi_hide_header Referrer-Policy;` no `location` do PHP — sem isso, a
+  política mais restrita de uma rota não chega ao navegador em produção.
+  Reconstrua a imagem do nginx. Teste: `tests/Feature/Architecture/ProductionDockerFilesTest.php`.
+- **Quem publicou o `config/webhooks.php`:** acrescente
+  `prune.days_without_deliveries` e `prune.batch` (sem eles, valem os padrões
+  do pacote).
+- **Atenção ao volume de webhooks:** depois do `composer update`, todo evento
+  disparado é gravado — com ou sem endpoint. Ajuste
+  `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` se o aplicativo dispara muito sem
+  endpoints. Código que conferia `Webhooks::dispatch(...) === null` para saber
+  se havia endpoint passa a nunca entrar nesse ramo (consulte
+  `$evento->deliveries()->exists()`).
 - **Quem publicou o `config/api_keys.php`** (`--tag=accounts-config`):
   acrescente os blocos `expiry`, `creation_confirmation` e `session_keys`
   (ou publique de novo); sem eles valem os padrões do pacote — em `test`, o

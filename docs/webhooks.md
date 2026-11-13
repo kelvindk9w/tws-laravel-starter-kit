@@ -61,8 +61,20 @@ Webhooks::dispatch($conta, 'order.shipped', [...], $projeto);
   falha da fila nunca sobe para quem disparou.
 - O corpo do evento é **cifrado** no banco (`APP_KEY`). Não ponha nele o que
   o receptor não deve ver.
-- Sem endpoint que assine o evento, nada é gravado e a chamada devolve
-  `null`.
+- **Todo evento é gravado** (2.3), com ou sem endpoint que o assine: sem
+  endpoint, fica só o evento, sem entrega nem fila, para consulta
+  (`WebhookEvent::query()->where('uuid', $uuid)` na conta dele; o corpo em
+  `payload`). A chamada devolve sempre o evento; o `uuid` dele é o mesmo id
+  que vai no corpo e no `X-Webhook-Id` quando há entrega. O volume cresce com
+  cada evento disparado: ver a retenção própria dos eventos sem entrega,
+  abaixo.
+- **Objeto continua objeto** no JSON enviado, inclusive vazio: passe
+  `new \stdClass()` (ou `(object) []`) onde o receptor deve ver `{}` — o
+  corpo é guardado como foi codificado e lido no envio com os objetos
+  preservados (`WebhookEvent::payloadForDelivery()`). Array PHP vazio é
+  lista (`[]`); o corpo inteiro vazio sai como `"data": {}`. Dado que já
+  chegou ao aplicativo decodificado como array associativo perdeu a
+  diferença: decodifique como objeto, ou converta o vazio, antes do disparo.
 
 ## O que o receptor recebe
 
@@ -387,7 +399,11 @@ conta, geridos por quem é dela).
   de `WEBHOOKS_PRUNE_DAYS` (30) dias sem entrega em aberto (pendente, em
   envio ou aguardando nova tentativa). Entrega **pausada** não segura o
   evento além desse prazo: dentro dele, reativar o endpoint a envia; depois,
-  ela sai com o evento.
+  ela sai com o evento. Os eventos **sem entrega** (nenhum endpoint os
+  assinava) têm prazo próprio, `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES`
+  (vazio = o de `WEBHOOKS_PRUNE_DAYS`; também `--days-without-deliveries` no
+  comando). O expurgo apaga em lotes de `WEBHOOKS_PRUNE_BATCH` (500), uma
+  transação por lote.
 
 ## Configuração
 
@@ -413,6 +429,7 @@ muda (ver [personalizacao.md](personalizacao.md)). Variáveis (todas no
 | `WEBHOOKS_QUEUE` / `WEBHOOKS_QUEUE_CONNECTION` | padrão | fila dos envios |
 | `WEBHOOKS_OUTBOX_SCHEDULE` | `* * * * *` | `webhooks:dispatch-pending` (vazio desliga, com aviso) |
 | `WEBHOOKS_PRUNE_SCHEDULE` / `WEBHOOKS_PRUNE_DAYS` | `20 4 * * *` / 30 | `webhooks:prune` |
+| `WEBHOOKS_PRUNE_DAYS_WITHOUT_DELIVERIES` / `WEBHOOKS_PRUNE_BATCH` | vazio (= `WEBHOOKS_PRUNE_DAYS`) / 500 | retenção dos eventos sem entrega e o lote do expurgo |
 
 A fila e o agendador precisam estar rodando (no Docker do kit, os serviços
 `queue` e `scheduler`).
