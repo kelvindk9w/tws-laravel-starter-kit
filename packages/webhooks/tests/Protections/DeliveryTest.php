@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Tracing\Models\OutboundHttpLog;
 use Twstec\Kit\Webhooks\Delivery\DeliverySender;
 use Twstec\Kit\Webhooks\Enums\AttemptOutcome;
@@ -61,6 +62,7 @@ it('entrega o evento assinado: o receptor confere a assinatura com o exemplo da 
             'type' => 'order.created',
             'account' => $this->accountOf($owner)->uuid,
             'project' => null,
+            'project_codigo_publico' => null,
             'data' => ['order' => ['id' => 'ped-123', 'total' => 1990]],
         ]);
 
@@ -74,6 +76,26 @@ it('entrega o evento assinado: o receptor confere a assinatura com o exemplo da 
         ->and($attempt->response_excerpt)->toBe('{"received":true}')
         ->and($attempt->destination_ip)->toBe('127.0.0.1')
         ->and($attempt->duration_ms)->toBeInt();
+});
+
+it('evento de um projeto: o topo do corpo leva o uuid em `project` e o código público em `project_codigo_publico`', function (): void {
+    $owner = $this->owner();
+    [$endpoint] = receiverEndpoint($this, $owner);
+    $project = $this->inAccountOf($owner, fn () => Project::createWithPublicCodeRetry(['name' => 'Loja']));
+
+    $event = Webhooks::dispatch($this->accountOf($owner), 'order.created', ['n' => 1], $project);
+
+    $requests = $this->receiver->requests();
+    $body = json_decode($requests[0]['body'], true);
+
+    expect($requests)->toHaveCount(1)
+        ->and($requests[0]['verified_with'])->toBe([0])
+        ->and(array_keys($body))->toBe(['id', 'type', 'created_at', 'account', 'project', 'project_codigo_publico', 'data'])
+        ->and($body['id'])->toBe($event->uuid)
+        ->and($body['project'])->toBe((string) $project->uuid)
+        ->and($body['project_codigo_publico'])->toBe((string) $project->codigo_publico)
+        ->and($body['project_codigo_publico'])->toStartWith('PRJ-')
+        ->and(deliveryOf($endpoint)->status)->toBe(DeliveryStatus::Succeeded);
 });
 
 it('conecta no IP CONFERIDO, sem resolver o nome de novo: um nome que o DNS do sistema não conhece (.invalid) é entregue', function (): void {
