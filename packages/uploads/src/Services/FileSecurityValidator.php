@@ -23,8 +23,13 @@ use Twstec\Kit\Uploads\Exceptions\UploadRejectedException;
  *      binários, só no cabeçalho (primeiros 1024 bytes) — em dados
  *      comprimidos (JPEG, PNG, PDF, MP4, OGG, ZIP) 3 bytes fixos aparecem
  *      por acaso, e varrer o arquivo inteiro recusava fotos legítimas.
- *   5. PDF com JavaScript/ações automáticas (/JS, /JavaScript, /OpenAction,
- *      /AA) → fora. Política do dono: suspeita = não aceita.
+ *   5. PDF com JavaScript, ações automáticas, lançamento de programa ou
+ *      arquivo anexado (/JS, /JavaScript, /OpenAction, /AA, /Launch,
+ *      /EmbeddedFile) → fora. Procurados só onde o leitor de PDF lê objetos:
+ *      fora dos dados de stream (onde fotos comprimidas formavam /JS e /AA
+ *      por acaso), com nomes #xx decodificados e dentro dos streams de
+ *      objetos (/ObjStm), descomprimidos. Stream de objetos que não dá para
+ *      ler → fora. Política do dono: suspeita = não aceita.
  *   6. Imagens: decodificadas e RE-ENCODADAS via GD (segunda camada — mesmo
  *      que um payload desconhecido escape da varredura, ele não sobrevive à
  *      re-geração dos pixels). Imagem que a GD não decodifica → fora.
@@ -94,13 +99,27 @@ final class FileSecurityValidator
     ];
 
     /**
-     * Tokens de dicionário PDF que indicam JavaScript ou ações automáticas.
-     * Casados com fronteira de delimitador PDF (espaço, '/', '()', '<>', '[]',
-     * '%' ou fim) para não confundir com nomes mais longos.
+     * Tokens de dicionário PDF que indicam JavaScript, ações automáticas,
+     * lançamento de programa ou arquivo anexado. Casados com fronteira de
+     * delimitador PDF (espaço, '/', '()', '<>', '[]', '{}', '%' ou fim) para
+     * não confundir com nomes mais longos.
      *
      * @var list<string>
      */
-    private const PDF_DANGEROUS_TOKENS = ['/JavaScript', '/JS', '/OpenAction', '/AA'];
+    private const PDF_DANGEROUS_TOKENS = ['/JavaScript', '/JS', '/OpenAction', '/AA', '/Launch', '/EmbeddedFile', '/EmbeddedFiles'];
+
+    /**
+     * Filtros de stream que a varredura não lê. Stream de objetos com um
+     * deles (sozinho ou encadeado com o FlateDecode) = não dá para conferir
+     * = rejeitado.
+     */
+    private const PDF_UNREADABLE_FILTERS = '/\/(?:ASCIIHexDecode|AHx|ASCII85Decode|A85|LZWDecode|LZW|RunLengthDecode|RL|CCITTFaxDecode|CCF|JBIG2Decode|DCTDecode|DCT|JPXDecode|Crypt)(?=[\s\(\)<>\[\]\{\}\/%]|$)/';
+
+    /**
+     * Teto do conteúdo DESCOMPRIMIDO de todos os streams de objetos de um PDF
+     * (proteção contra "zip bomb"). Acima dele = rejeitado.
+     */
+    private const PDF_OBJECT_STREAMS_MAX_BYTES = 20 * 1024 * 1024;
 
     /**
      * @param  string  $content  Bytes brutos do arquivo.
@@ -261,20 +280,261 @@ final class FileSecurityValidator
     }
 
     /**
-     * 5. PDF com JavaScript embutido ou ações automáticas = REJEITADO
-     *    (política: suspeita = não aceita).
+     * 5. PDF com JavaScript embutido, ações automáticas, lançamento de
+     *    programa ou arquivo anexado = REJEITADO (política: suspeita = não
+     *    aceita). A procura é nos OBJETOS do PDF (pdfObjectText), não nos
+     *    dados binários dos streams.
      */
     private function ensurePdfHasNoAutoActions(string $content): void
     {
+        $objects = $this->pdfObjectText($content);
+
         foreach (self::PDF_DANGEROUS_TOKENS as $token) {
             // Fronteira de delimitador PDF: o token só casa como objeto de
             // dicionário, não como substring de um nome maior (ex.: /AAbc).
-            $pattern = '/'.preg_quote($token, '/').'(?=[\s\(\)<>\[\]\/%]|$)/';
+            $pattern = '/'.preg_quote($token, '/').'(?=[\s\(\)<>\[\]\{\}\/%]|$)/';
 
-            if (preg_match($pattern, $content) === 1) {
+            if (preg_match($pattern, $objects) === 1) {
                 $this->reject('pdf_auto_action');
             }
         }
+    }
+
+    /**
+     * O texto do PDF que um leitor interpreta como OBJETOS:
+     *
+     *   - tudo o que está fora dos dados de stream (dicionários, arrays,
+     *     trailer). Os dados de um stream (foto, fonte, página comprimida)
+     *     ficam de fora: neles /JS e /AA aparecem por acaso. O começo de um
+     *     stream é a palavra "stream" depois de um dicionário (">>"), fora de
+     *     string e de comentário — "stream" escrito dentro de uma string
+     *     não esconde nada;
+     *   - os dados de um stream só ficam de fora quando o /Length (direto ou
+     *     num objeto inteiro) aponta exatamente para o "endstream" e eles não
+     *     trazem outro "endstream" nem um cabeçalho de objeto ("12 0 obj"),
+     *     que um leitor tolerante leria como objetos. Senão, entram inteiros;
+     *   - os streams de OBJETOS (/Type/ObjStm, ou /First e /N inteiros, que
+     *     é o que leitores como o pdf.js conferem), descomprimidos
+     *     (FlateDecode, até PDF_OBJECT_STREAMS_MAX_BYTES no total). O que não
+     *     dá para ler = rejeitado;
+     *   - com os nomes escritos em hexadecimal decodificados (/J#53 = /JS).
+     */
+    private function pdfObjectText(string $content): string
+    {
+        $objects = '';
+        $budget = self::PDF_OBJECT_STREAMS_MAX_BYTES;
+        $offset = 0;
+
+        while (($stream = $this->nextPdfStream($content, $offset)) !== null) {
+            [$keyword, $dataStart] = $stream;
+
+            // O pedaço desde o fim do stream anterior: os objetos sem stream
+            // e o dicionário DESTE stream (o único dicionário de stream dele).
+            $chunk = $this->decodePdfNames(substr($content, $offset, $keyword - $offset));
+            [$dataEnd, $next, $exact] = $this->pdfStreamEnd($content, $dataStart, $chunk);
+            $data = substr($content, $dataStart, $dataEnd - $dataStart);
+
+            $objects .= $chunk."\n";
+
+            if (! $exact || str_contains($data, 'endstream') || preg_match('/\d+\s+\d+\s+obj(?![A-Za-z0-9])/', $data) === 1) {
+                $objects .= $this->decodePdfNames($data)."\n";
+            }
+
+            if ($this->isPdfObjectStream($chunk)) {
+                $decoded = $this->decodePdfObjectStream($data, $chunk, $budget);
+                $budget -= strlen($decoded);
+                $objects .= $this->decodePdfNames($decoded)."\n";
+            }
+
+            $offset = $next;
+        }
+
+        return $objects.$this->decodePdfNames((string) substr($content, $offset));
+    }
+
+    /**
+     * O próximo começo de stream a partir de $offset: a palavra "stream"
+     * seguida de fim de linha, logo depois de um ">>" (só espaço ou
+     * comentário no meio), fora de string literal e de comentário.
+     *
+     * @return array{0: int, 1: int}|null Posição da palavra e do primeiro byte dos dados.
+     */
+    private function nextPdfStream(string $content, int $offset): ?array
+    {
+        $size = strlen($content);
+        $afterDictionary = false;
+        $i = $offset;
+
+        while ($i < $size) {
+            $char = $content[$i];
+
+            if ($char === '(') {
+                $i = $this->skipPdfString($content, $i);
+                $afterDictionary = false;
+            } elseif ($char === '%') {
+                $i += strcspn($content, "\r\n", $i);
+            } elseif ($char === '>' && ($content[$i + 1] ?? '') === '>') {
+                $afterDictionary = true;
+                $i += 2;
+            } elseif (str_contains(" \t\r\n\f\0", $char)) {
+                $i++;
+            } elseif ($afterDictionary && $char === 's' && substr_compare($content, 'stream', $i, 6) === 0
+                && preg_match('/\G(?:\r\n|\n|\r)/', $content, $eol, 0, $i + 6) === 1) {
+                return [$i, $i + 6 + strlen($eol[0])];
+            } else {
+                $afterDictionary = false;
+                $i += 1 + strcspn($content, "(%>s \t\r\n\f\0", $i + 1);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Pula uma string literal "( ... )" do PDF (parênteses aninhados e
+     * escapes com barra invertida). Devolve a posição depois do ")" final
+     * (ou o fim do arquivo).
+     */
+    private function skipPdfString(string $content, int $start): int
+    {
+        $size = strlen($content);
+        $depth = 0;
+        $i = $start;
+
+        while ($i < $size) {
+            $i += strcspn($content, '()\\', $i);
+
+            if ($i >= $size) {
+                break;
+            }
+
+            if ($content[$i] === '\\') {
+                $i += 2;
+
+                continue;
+            }
+
+            $depth += $content[$i] === '(' ? 1 : -1;
+            $i++;
+
+            if ($depth === 0) {
+                return $i;
+            }
+        }
+
+        return $size;
+    }
+
+    /**
+     * Onde terminam os dados do stream que começa em $dataStart, onde a
+     * leitura continua e se o fim veio do /Length. Vale o /Length do
+     * dicionário (direto, ou o inteiro de um objeto "N G obj ... endobj")
+     * quando ele bate com um "endstream" logo depois; senão, o primeiro
+     * "endstream" (sem nenhum, o stream vai até o fim do arquivo).
+     *
+     * @return array{0: int, 1: int, 2: bool}
+     */
+    private function pdfStreamEnd(string $content, int $dataStart, string $dictionary): array
+    {
+        $size = strlen($content);
+        $length = null;
+
+        if (preg_match_all('/\/Length\s+(\d+)(?:\s+(\d+)\s+R)?/', $dictionary, $lengths, PREG_SET_ORDER) > 0) {
+            $last = end($lengths);
+
+            if (($last[2] ?? '') === '') {
+                $length = (int) $last[1];
+            } elseif (preg_match('/(?<!\d)'.$last[1].'\s+'.$last[2].'\s+obj\s*(\d+)\s*endobj/', $content, $object) === 1) {
+                $length = (int) $object[1];
+            }
+        }
+
+        if ($length !== null && $dataStart + $length <= $size
+            && preg_match('/\G\s*endstream/', $content, $end, 0, $dataStart + $length) === 1) {
+            return [$dataStart + $length, $dataStart + $length + strlen($end[0]), true];
+        }
+
+        $end = strpos($content, 'endstream', $dataStart);
+
+        return $end === false ? [$size, $size, false] : [$end, $end + strlen('endstream'), false];
+    }
+
+    /**
+     * Stream de objetos: declarado (/Type/ObjStm) ou com o que um leitor
+     * confere para tratá-lo como um (/First e /N inteiros diretos).
+     */
+    private function isPdfObjectStream(string $dictionary): bool
+    {
+        return preg_match('/\/ObjStm(?=[\s\(\)<>\[\]\{\}\/%]|$)/', $dictionary) === 1
+            || (preg_match('/\/First\s+\d+(?!\s+\d+\s+R)/', $dictionary) === 1
+                && preg_match('/\/N\s+\d+(?!\s+\d+\s+R)/', $dictionary) === 1);
+    }
+
+    /**
+     * O conteúdo de um stream de objetos: sem filtro, os próprios bytes; com
+     * FlateDecode, descomprimido até o que resta de $budget (zlib). Outro filtro,
+     * parâmetros de decodificação (preditor), dado corrompido ou cifrado,
+     * ou acima do teto = não dá para conferir = REJEITADO.
+     */
+    private function decodePdfObjectStream(string $data, string $dictionary, int $budget): string
+    {
+        if (preg_match(self::PDF_UNREADABLE_FILTERS, $dictionary) === 1
+            || preg_match('/\/(?:DecodeParms|DP)(?=[\s\(\)<>\[\]\{\}\/%]|$)/', $dictionary) === 1) {
+            $this->reject('pdf_auto_action');
+        }
+
+        if (preg_match('/\/(?:FlateDecode|Fl)(?=[\s\(\)<>\[\]\{\}\/%]|$)/', $dictionary) !== 1) {
+            if (preg_match('/\/Filter(?=[\s\(\)<>\[\]\{\}\/%]|$)/', $dictionary) === 1) {
+                $this->reject('pdf_auto_action');
+            }
+
+            return $data;
+        }
+
+        $inflate = function_exists('inflate_init') ? @inflate_init(ZLIB_ENCODING_DEFLATE) : false;
+
+        if ($inflate === false) {
+            $this->reject('pdf_auto_action');
+        }
+
+        // Em pedaços de 1 KB, conferindo o teto a cada um: um pedaço não
+        // passa de ~1 MB descomprimido (a razão máxima do deflate é ~1:1032),
+        // então a memória nunca vai muito além do teto.
+        $decoded = '';
+
+        foreach (str_split($data, 1024) as $piece) {
+            $out = @inflate_add($inflate, $piece, ZLIB_SYNC_FLUSH);
+
+            if ($out === false) {
+                $this->reject('pdf_auto_action');
+            }
+
+            $decoded .= $out;
+
+            if (strlen($decoded) > $budget) {
+                $this->reject('pdf_auto_action');
+            }
+
+            if (inflate_get_status($inflate) === ZLIB_STREAM_END) {
+                break;
+            }
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Nomes PDF com caracteres em hexadecimal (#xx) decodificados — /J#53 é
+     * o mesmo nome que /JS para o leitor. Decodifica todo #xx do texto (fora
+     * de nome, só deixa a procura mais desconfiada).
+     */
+    private function decodePdfNames(string $text): string
+    {
+        if (! str_contains($text, '#')) {
+            return $text;
+        }
+
+        return (string) preg_replace_callback('/#([0-9A-Fa-f]{2})/', static fn (array $hex): string => chr((int) hexdec($hex[1])), $text);
     }
 
     /**
