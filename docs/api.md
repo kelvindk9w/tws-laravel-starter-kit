@@ -200,10 +200,11 @@ Códigos próprios, mais específicos que o do status (a exceção implementa
 `Twstec\Kit\Foundation\Http\Exceptions\Contracts\ProvidesApiErrorCode`):
 os da [idempotência](#idempotência-idempotency-key) — `400
 idempotency_key_missing`, `400 idempotency_key_invalid`, `409
-idempotency_request_in_progress` e `422 idempotency_key_reused` — e os da
+idempotency_request_in_progress` e `422 idempotency_key_reused` —, os da
 [escalada de privilégio](#sem-escalada-de-privilégio-pela-api) — `403
 api_key_scope_exceeded`, `403 api_key_projects_exceeded` e `403
-api_key_expiry_exceeded`.
+api_key_expiry_exceeded` — e o da [exclusão de projeto
+recusada](#exclusão-de-projeto-recusada) — `409 project_deletion_refused`.
 
 Exemplo de 422:
 
@@ -250,13 +251,37 @@ consulta sai filtrada pela conta da chave (escopo da conta — ver
 | `DELETE /api/v1/api-keys/{uuid}` | `api-keys:revoke` | revogação irreversível |
 | `POST /api/v1/api-keys/{uuid}/rotate` | `api-keys:rotate` | **ação sensível**; `grace_period_minutes` no corpo; aceita `Idempotency-Key` sem guardar a secreta |
 | `PUT /api/v1/api-keys/{uuid}/projects` | `api-keys:assign` | vínculo N:N (lista vazia = conta toda) |
-| `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome; o `POST` aceita `Idempotency-Key` |
+| `GET/POST /api/v1/projects` + `GET/PUT/DELETE /api/v1/projects/{uuid}` | `projects:*` | CRUD; projeto nasce só com nome; o `POST` aceita `Idempotency-Key`; o `DELETE` pode ser recusado com `409` ([abaixo](#exclusão-de-projeto-recusada)) |
 | `POST /api/v1/uploads` | `uploads:create` | do pacote `twstec/kit-uploads`, no mesmo grupo (ver [Uploads](uploads.md#endpoints)); aceita `Idempotency-Key` sem guardar a URL assinada |
 
 Além do scope, o **vínculo da chave com projetos** limita o que ela alcança (ver
 [Projetos](tenancy.md#projetos-multi-empresa-organizacional)): toda rota de `api-keys` e o
 `POST /projects` exigem chave **sem vínculo** — a chave vinculada recebe 403 mesmo com `*:*`,
 salvo para rotacionar ou revogar **a si mesma**.
+
+### Exclusão de projeto recusada
+
+Desde a 2.4, o aplicativo pode impedir a exclusão de um projeto (ex.: projeto
+com cobranças) registrando regras — o gancho e o exemplo estão em
+[Impedir a exclusão de um projeto](tenancy.md#impedir-a-exclusão-de-um-projeto).
+O `DELETE /api/v1/projects/{uuid}` recusado não apaga nada e responde `409`:
+
+| Situação | `code` | `message` |
+|---|---|---|
+| Uma regra do aplicativo impede | `project_deletion_refused` | o motivo da regra (traduzido; com mais de uma, os motivos em sequência) |
+| Um registro do aplicativo aponta para o projeto (chave estrangeira) e nenhuma regra o declarou | `conflict` (o genérico do 409) | `api_keys.projects.deletion_referenced` |
+
+```json
+{
+  "error": {
+    "code": "project_deletion_refused",
+    "message": "O projeto tem cobranças e não pode ser excluído.",
+    "correlation_id": "01a0…"
+  }
+}
+```
+
+Antes da 2.4, a recusa do banco por chave estrangeira saía como `500`.
 
 ### Sem escalada de privilégio pela API
 
@@ -370,7 +395,7 @@ usam o modo **sem corpo** (abaixo).
 |---|---|---|
 | Primeira requisição com a chave | a da rota | sim |
 | Mesma chave, mesma requisição, já concluída | **replay**: o mesmo status e o mesmo corpo, byte a byte, com `Idempotent-Replayed: true` e `X-Original-Correlation-Id` | não |
-| Mesma chave, requisição **diferente** (corpo, caminho, query ou método) | `422` `idempotency_key_reused` | não |
+| Mesma chave, requisição **diferente** (corpo, caminho, query, método ou um [cabeçalho de contexto](#cabeçalhos-de-contexto-na-impressão) configurado) | `422` `idempotency_key_reused` | não |
 | Mesma chave ainda **em processamento** | `409` `idempotency_request_in_progress` com `Retry-After: 1` (ou, com `IDEMPOTENCY_WAIT_MS`, espera curta e o replay) | não |
 | Chave fora do formato, ou dois cabeçalhos | `400` `idempotency_key_invalid` | não |
 | Rota com `required` e sem a chave | `400` `idempotency_key_missing` | não |
@@ -430,9 +455,52 @@ Tabela `idempotency_keys` (migration do foundation):
   - **Outro conteúdo** (ou JSON inválido): o tipo de mídia e o SHA-256 dos
     bytes.
 
+  - **Cabeçalhos de contexto** (só os configurados — ver
+    [abaixo](#cabeçalhos-de-contexto-na-impressão)): o nome em minúsculas e
+    os valores como vieram; ausente e vazio são diferentes. Sem
+    configuração, a forma canônica é a de sempre.
+
   Na dúvida a forma canônica **distingue**: duas requisições equivalentes
   podem dar hashes diferentes (o cliente recebe `422` e usa outra chave), mas
   duas requisições que o aplicativo leria diferente nunca dão o mesmo hash.
+
+### Cabeçalhos de contexto na impressão
+
+Quando um cabeçalho decide **sobre o que** a escrita age — por exemplo,
+`X-Project` escolhendo o projeto de uma cobrança —, a mesma chave com o mesmo
+corpo e outro valor nesse cabeçalho é outra operação. Sem configuração, ela
+recebia o replay da primeira (o cabeçalho não entra na impressão). Desde a
+2.4, uma lista de cabeçalhos entra na impressão e a troca dá o mesmo `422`
+`idempotency_key_reused` do corpo diferente:
+
+```php
+// Global: vale em toda rota com o middleware (no .env, separados por vírgula).
+// IDEMPOTENCY_FINGERPRINT_HEADERS=X-Project
+
+// Por rota: soma-se à lista global (nunca a tira).
+Route::post('cobrancas', [CobrancaController::class, 'store'])
+    ->middleware(HandleIdempotencyKey::using(required: true, transactional: true, headers: ['X-Project']));
+
+// ou, na string: 'idempotent:required,transactional,headers=X-Project|X-Outro'
+```
+
+| Requisição repetida com a mesma chave e o mesmo corpo | Resultado |
+|---|---|
+| `X-Project` igual | replay |
+| `X-Project` diferente, ausente ou vazio (a primeira tinha um valor) | `422` `idempotency_key_reused`, sem executar |
+| cabeçalho fora da lista | ignorado (como antes) |
+
+- O nome do cabeçalho não diferencia maiúsculas; o **valor**, sim (na dúvida,
+  distingue). Só o hash é guardado, nunca o valor.
+- Nome inválido (vazio, com espaço ou `:`) na rota ou na configuração é erro
+  de montagem (`500` e a exceção no log), nunca um cabeçalho ignorado em
+  silêncio.
+- `RouteIdempotency::of($rota)->headers` (os da rota) e
+  `->fingerprintHeaders()` (globais + rota) servem às travas do projeto.
+- Ligar a lista numa rota já em uso muda a impressão das requisições novas:
+  a repetição de uma chave criada **antes** da mudança recebe `422` (direção
+  segura — nunca um replay errado). Cada chave vence em
+  `IDEMPOTENCY_TTL_HOURS`.
 - **A resposta: CIFRADA** com o encrypter do Laravel (AES-256-CBC com MAC,
   chave `APP_KEY`; a rotação com `APP_PREVIOUS_KEYS` continua decifrando).
   Só os cabeçalhos `Content-Type`, `Content-Language` e `Location` vão junto,
@@ -631,7 +699,7 @@ it('toda escrita de pagamentos exige idempotent:required,transactional', functio
   `IDEMPOTENCY_METHODS` (padrão `POST` e `PATCH`; `PUT` e `DELETE` não passam
   pelo middleware);
 - `of($rota)` devolve as opções da rota (`required`, `withhold`,
-  `transactional`, `keep`) ou `null`;
+  `transactional`, `keep`, `headers`) ou `null`;
 - vale o alias, a string de `HandleIdempotencyKey::using()` e o middleware
   vindo de um grupo; rota que o tira com `withoutMiddleware` conta como sem
   ele; parâmetro inválido na rota é erro, como no próprio middleware.
@@ -669,6 +737,7 @@ uma execução antiga que termina tarde não sobrescreve a nova.
 | Variável | Padrão | O que faz |
 |---|---|---|
 | `IDEMPOTENCY_METHODS` | `POST,PATCH` | métodos em que a chave é lida |
+| `IDEMPOTENCY_FINGERPRINT_HEADERS` | vazio | cabeçalhos de contexto que entram na impressão da requisição, em toda rota (ex.: `X-Project`); a rota acrescenta os dela com `headers=` |
 | `IDEMPOTENCY_TTL_HOURS` | `24` | validade da chave, desde a primeira execução |
 | `IDEMPOTENCY_ABANDONED_TAKEOVER_SECONDS` | `0` | rotas comuns: prazo para retomar uma execução sem resultado registrado; `0` = nunca (falha fechada) |
 | `IDEMPOTENCY_LOCK_SECONDS` | `120` | modo transacional: prazo para retomar uma execução abandonada (segura: nada confirmado) |

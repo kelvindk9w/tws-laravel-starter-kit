@@ -377,7 +377,10 @@ final class DeliverySender
 
     /**
      * O CORPO enviado (e assinado): o id do evento (para deduplicar), o tipo,
-     * quando aconteceu, a conta e o projeto (uuid) e os dados.
+     * quando aconteceu, a conta (uuid), o projeto (uuid em `project` e o
+     * código público PRJ-… em `project_codigo_publico`; os dois `null` sem
+     * projeto) e os dados. Campo novo só se acrescenta: nenhum dos que já
+     * existem sai ou muda (quem consome confere a assinatura e lê por nome).
      */
     public static function body(WebhookDelivery $delivery): string
     {
@@ -389,6 +392,7 @@ final class DeliverySender
             'created_at' => $event->occurred_at->toIso8601ZuluString(),
             'account' => Accounts::current()?->uuid,
             'project' => $event->project?->uuid,
+            'project_codigo_publico' => $event->project?->codigo_publico,
             // Objeto continua objeto (inclusive `{}`): o corpo como foi gravado.
             'data' => $event->payloadForDelivery(),
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);

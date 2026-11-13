@@ -86,8 +86,16 @@ X-Webhook-Id: 0199a0c4-5d1e-7a3b-9f10-2b6c8d4e7a11
 X-Webhook-Event: order.created
 X-Webhook-Signature: t=1767225600,v1=5f2b…
 
-{"id":"0199a0c4-5d1e-7a3b-9f10-2b6c8d4e7a11","type":"order.created","created_at":"2026-01-01T00:00:00Z","account":"…","project":null,"data":{"order":{"id":"…","total":1990}}}
+{"id":"0199a0c4-5d1e-7a3b-9f10-2b6c8d4e7a11","type":"order.created","created_at":"2026-01-01T00:00:00Z","account":"…","project":"0199a0c4-…","project_codigo_publico":"PRJ-7K2M4Q","data":{"order":{"id":"…","total":1990}}}
 ```
+
+- **Topo do corpo:** `id`, `type`, `created_at`, `account` (uuid da
+  conta), `project` (uuid do projeto do evento) e `project_codigo_publico`
+  (o código público dele, `PRJ-…`, o mesmo que as telas e a API mostram —
+  desde a 2.4), e os dados em `data`. Evento sem projeto: `project` e
+  `project_codigo_publico` saem `null`. Campo novo no topo só se
+  **acrescenta** (nenhum sai ou muda de tipo): leia por nome e ignore o que
+  não conhece.
 
 - **`id`** (corpo e `X-Webhook-Id`): o identificador do EVENTO, o mesmo em
   toda tentativa e em todo reenvio manual. **Deduplique por ele**: a entrega

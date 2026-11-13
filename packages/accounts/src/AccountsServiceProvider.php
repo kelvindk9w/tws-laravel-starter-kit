@@ -42,6 +42,7 @@ use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyGenerator;
 use Twstec\Kit\Accounts\ApiKeys\Support\PepperWarnings;
 use Twstec\Kit\Accounts\Deletion\AccountDeletion;
 use Twstec\Kit\Accounts\Deletion\DeletionImpediments;
+use Twstec\Kit\Accounts\Tenancy\Deletion\ProjectDeletionImpediments;
 use Twstec\Kit\Accounts\Tenancy\Middleware\ResolveTenant;
 use Twstec\Kit\Accounts\Tenancy\Support\TenantIdempotencyScope;
 use Twstec\Kit\Accounts\Tenancy\Support\TenantRateLimitSubject;
@@ -182,6 +183,7 @@ final class AccountsServiceProvider extends ServiceProvider
         // Impedimentos de exclusão (ponto de extensão do aplicativo e dos
         // outros pacotes): um registro por processo.
         $this->app->singleton(DeletionImpediments::class);
+        $this->app->singleton(ProjectDeletionImpediments::class);
 
         // O caminho único de exclusão de pessoa e de conta: guarda, entre a
         // pergunta e o `delete()`, quais contas podem sair agora.

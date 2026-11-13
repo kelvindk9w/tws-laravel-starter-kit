@@ -512,6 +512,7 @@ ação **tentada**, quem, a conta e o alvo:
 | O papel não permite (`authorize()`) | 403, `accounts.authorization.denied` | a ação tentada, motivo = a mesma mensagem |
 | Chave ou projeto fora da conta atual (`apiKey()`, `project()`) | 404 comum — **idêntico** para "de outra conta" e "não existe" (a guarda não consulta outra conta para distinguir) | a ação tentada, o uuid tentado (só se for uuid), motivo `accounts.authorization.not_found` |
 | Projeto de fora da conta no vínculo da chave (`foreignProjects()`) | erro de validação `api_keys.projects.invalid` | `api_key.created` ou `api_key.projects_synced` |
+| Exclusão de projeto recusada por uma regra do aplicativo ou pelo banco (`projectDeletionRefused()`, 2.4 — ver [Impedir a exclusão de um projeto](#impedir-a-exclusão-de-um-projeto)) | o motivo na tela, no lugar do aviso de sucesso | `project.deleted`, o uuid do projeto, motivo = a mensagem mostrada |
 
 As ações: `api_key.created`, `api_key.rotated`, `api_key.revoked`,
 `api_key.projects_synced` (`ApiKeys\Enums\ApiKeyAttempt`) e
@@ -641,6 +642,64 @@ restrição — `Project::visibleToApiKey()`). Fora do recorte é sempre a mesma
 `ModelNotFoundException` (404 uniforme). `create($criador, $nome)`, `update`
 (só `name` e `status`) e `delete` recebem quem criou ou o projeto já achado por
 um recorte. Testes: `tests/Feature/Tenancy/ProjectServiceTest.php`.
+
+### Impedir a exclusão de um projeto
+
+Desde a 2.4, o aplicativo registra **regras que impedem a exclusão** de um
+projeto (ex.: projeto com cobranças, pedidos ou registros guardados por lei).
+O `ProjectService::delete()` — o caminho da API v1 e das telas dos dois
+starters — pergunta a todas **antes** de o projeto sair; havendo um
+impedimento, nada sai.
+
+```php
+use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
+use Twstec\Kit\Accounts\Tenancy\Contracts\ProjectDeletionCheck;
+use Twstec\Kit\Accounts\Tenancy\Models\Project;
+
+final class ProjetoComPedidosNaoSai implements ProjectDeletionCheck
+{
+    public function impediments(Project $project): iterable
+    {
+        if (Pedido::query()->where('project_id', $project->getKey())->exists()) {
+            yield new DeletionImpediment('project_has_orders', __('app.projetos.tem_pedidos'));
+        }
+    }
+}
+```
+
+Registro, em qualquer dos dois lugares (somam-se):
+
+- **configuração:** `config/accounts.php` do aplicativo →
+  `'projects' => ['deletion_checks' => [ProjetoComPedidosNaoSai::class]]`
+  (classes resolvidas pelo container a cada consulta);
+- **código**, no `boot()` de um service provider:
+  `app(Twstec\Kit\Accounts\Tenancy\Deletion\ProjectDeletionImpediments::class)->register(...)`
+  — a instância, a classe ou um `Closure(Project): iterable<DeletionImpediment>`.
+
+Regras do contrato: a regra **só lê** (nada de apagar, avisar ou gravar);
+roda na conta do projeto (as consultas saem filtradas por ela); exceção dela
+**não** é engolida (a exclusão para); a mensagem do `DeletionImpediment` é a
+que o usuário lê — traduzida, sem dado pessoal de terceiros — e o `code`
+(snake_case) é para teste, log e decisão de tela.
+
+O que acontece na recusa (`Tenancy\Exceptions\ProjectDeletionRefusedException`,
+um 409):
+
+| Onde | Regra do aplicativo impediu | Registro aponta para o projeto e nenhuma regra o declarou (chave estrangeira) |
+| --- | --- | --- |
+| API v1 (`DELETE /api/v1/projects/{uuid}`) | `409` `project_deletion_refused`, `message` = os motivos | `409` `conflict` genérico, `message` = `api_keys.projects.deletion_referenced` — **nunca** o 500 do erro bruto do banco |
+| Telas (React e Livewire) | o motivo, no lugar do aviso de sucesso | a mesma mensagem genérica |
+| Trilha | `project.deleted` `denied` (só pelas telas; a API fica no `request_logs`, como os outros 4xx) | idem |
+
+A rede da chave estrangeira roda a exclusão num ponto de salvamento: a
+transação de quem chamou continua utilizável (no PostgreSQL, sem isso, ela
+ficaria abortada), e o log ganha `accounts.projects.deletion.undeclared_reference`
+(só o SQLSTATE e o uuid do projeto). Declarar a regra é o caminho certo: o
+cliente recebe o motivo próprio, e não o genérico.
+
+A exclusão da **conta inteira** não passa por estas regras (ela leva os
+projetos junto e tem os impedimentos dela, em `accounts.deletion.checks` —
+ver [Impedimentos de exclusão](#impedimentos-de-exclusão)).
 
 ## Migração da 1.x
 
