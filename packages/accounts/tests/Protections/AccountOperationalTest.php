@@ -24,8 +24,8 @@ it('opera quando o dono está ativo e com o e-mail confirmado', function (): voi
 it('conta de empresa responde pelo dono da conta, não por um membro', function (): void {
     $dono = $this->owner();
     $membro = $this->owner();
-    $empresa = servicoDeContasOperacional()->createAccount('Empresa', $dono);
-    servicoDeContasOperacional()->addMember($empresa, $membro, AccountRole::Member);
+    $empresa = app(AccountService::class)->createAccount('Empresa', $dono);
+    app(AccountService::class)->addMember($empresa, $membro, AccountRole::Member);
 
     // Membro bloqueado não tira a conta de operação.
     $membro->forceFill(['status' => UserStatus::Blocked])->save();
@@ -79,8 +79,3 @@ it('opera de novo assim que o dono confirma o e-mail', function (): void {
 
     expect($conta->fresh()->isOperational())->toBeTrue();
 });
-
-function servicoDeContasOperacional(): AccountService
-{
-    return app(AccountService::class);
-}
