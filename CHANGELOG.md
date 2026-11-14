@@ -16,7 +16,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
   aplicava dentro do `ResolveTenant`, agora única e pública: o middleware a
   usa, com o mesmo comportamento e a mesma recusa muda, e o aplicativo que
   precisar saber se a conta opera chama o método em vez de repetir a
-  expressão. Sem quebra, sem migration e sem arquivo de starter a aplicar.
+  expressão. Sem quebra, sem migration e nenhum arquivo de starter obrigatório; o
+  caso novo do `ResolveTenantTest` (Livewire) é opcional.
   Ver [Tenancy](docs/tenancy.md#a-conta-opera).
 
 ## [2.4.0] — 2026-11-13

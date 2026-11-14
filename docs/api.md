@@ -47,7 +47,8 @@ chave — quem a criou, enquanto for membro ativo; senão o dono da conta — é
 chamada o `ResolveTenant` confere o dono da conta da chave: conta
 bloqueada/pendente ou, com a verificação de e-mail ligada (padrão), sem e-mail
 confirmado recebe o mesmo 401 mudo de chave inválida (na conta pessoal, o dono
-é a própria pessoa — a regra da 1.x). Na prática uma conta nova nem chega a ter
+é a própria pessoa — a regra da 1.x). A regra é pública e única:
+[`Account::isOperational()`](tenancy.md#a-conta-opera). Na prática uma conta nova nem chega a ter
 chave antes de confirmar — chaves só nascem pelo painel, que exige a
 confirmação; a checagem na API cobre a conta que já tinha chave quando a
 exigência foi ligada. Ver

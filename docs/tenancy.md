@@ -56,8 +56,10 @@ está ativo (`isActive()`) e não tem a confirmação de e-mail pendente
 o e-mail não confirmado não barra). Só o **dono** conta: membro bloqueado não
 tira a conta de operação.
 
-A API a usa no `ResolveTenant` (conta que não opera recebe a mesma recusa
-muda da credencial inválida). O aplicativo que precise da mesma resposta
+O kit aplica a regra **só na API**: o `ResolveTenant` a usa (conta que não
+opera recebe a mesma recusa muda da credencial inválida). No painel ela não é
+consultada: o `ResolveCurrentAccount` não a usa, e os membros de uma conta de
+empresa cujo dono foi bloqueado continuam entrando. O aplicativo que precise da mesma resposta
 (cobrar, emitir, aceitar chamadas) chama o método — não copia a expressão:
 
 ```php
@@ -66,7 +68,10 @@ if (! $account->isOperational()) {
 }
 ```
 
-O método lê o dono pela relação `owner` (uma consulta, guardada no model).
+O método lê o dono pela relação `owner` (uma consulta, guardada no model), e
+o resultado reflete o dono **já carregado na instância**: num objeto de vida
+longa (job, worker, comando), use `$account->fresh()` ou descarregue a relação
+(`$account->unsetRelation('owner')`) antes de perguntar de novo.
 
 ## Papéis
 
