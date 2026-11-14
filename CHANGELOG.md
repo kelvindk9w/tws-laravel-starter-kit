@@ -6,6 +6,18 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+## [2.5.0] — 2026-11-14
+
+Versão menor, sem quebra de assinatura: a regra pública "a conta opera"
+(`Account::isOperational()`, em `twstec/kit-accounts`), que o `ResolveTenant`
+passa a usar no lugar da expressão própria (mesmo comportamento, mesma
+recusa muda), e a correção da CVE-2026-128083 no lock do starter React
+(`laravel/framework` 13.40.0). Sem migration e nenhum arquivo de starter
+obrigatório para aplicar à mão em projeto já criado: o caso novo do
+`ResolveTenantTest` (Livewire) é opcional; o lock do starter React só importa
+a quem quiser alinhar o `composer.lock` do projeto (`composer update
+laravel/framework`). Atualize todos os pacotes `twstec/*` juntos.
+
 ### Adicionado
 
 - **Regra pública "a conta opera" (`twstec/kit-accounts`).**
@@ -3455,7 +3467,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.4.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.5.0...desenvolvimento
+[2.5.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.1.0...v2.2.0
