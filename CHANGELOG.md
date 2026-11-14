@@ -6,6 +6,20 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Regra pública "a conta opera" (`twstec/kit-accounts`).**
+  `Account::isOperational()` responde se a conta pode operar: a conta
+  responde pelo dono, e o dono precisa existir, ser uma pessoa do kit
+  (`AuthUser`), estar ativo e não ter a confirmação de e-mail pendente
+  (respeitando `auth.email_verification.required`). É a regra que a API já
+  aplicava dentro do `ResolveTenant`, agora única e pública: o middleware a
+  usa, com o mesmo comportamento e a mesma recusa muda, e o aplicativo que
+  precisar saber se a conta opera chama o método em vez de repetir a
+  expressão. Sem quebra, sem migration e nenhum arquivo de starter obrigatório; o
+  caso novo do `ResolveTenantTest` (Livewire) é opcional.
+  Ver [Tenancy](docs/tenancy.md#a-conta-opera).
+
 ## [2.4.0] — 2026-11-13
 
 Versão menor, sem quebra de assinatura: limites da API por conta (cota por

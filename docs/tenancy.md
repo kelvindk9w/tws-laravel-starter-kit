@@ -47,6 +47,32 @@ e são instalados pela migration; como os outros gatilhos do kit, não protegem
 de quem é dono do esquema no PostgreSQL (separação de papéis é decisão de
 infraestrutura).
 
+### A conta opera
+
+A conta responde pelo dono. `Account::isOperational()` é a **regra única** do
+kit para saber se ela opera: o dono existe, é uma pessoa do kit (`AuthUser`),
+está ativo (`isActive()`) e não tem a confirmação de e-mail pendente
+(`EmailVerification::pendingFor()`; com `AUTH_EMAIL_VERIFICATION_REQUIRED=false`
+o e-mail não confirmado não barra). Só o **dono** conta: membro bloqueado não
+tira a conta de operação.
+
+O kit aplica a regra **só na API**: o `ResolveTenant` a usa (conta que não
+opera recebe a mesma recusa muda da credencial inválida). No painel ela não é
+consultada: o `ResolveCurrentAccount` não a usa, e os membros de uma conta de
+empresa cujo dono foi bloqueado continuam entrando. O aplicativo que precise da mesma resposta
+(cobrar, emitir, aceitar chamadas) chama o método — não copia a expressão:
+
+```php
+if (! $account->isOperational()) {
+    // a conta não opera agora
+}
+```
+
+O método lê o dono pela relação `owner` (uma consulta, guardada no model), e
+o resultado reflete o dono **já carregado na instância**: num objeto de vida
+longa (job, worker, comando), use `$account->fresh()` ou descarregue a relação
+(`$account->unsetRelation('owner')`) antes de perguntar de novo.
+
 ## Papéis
 
 Papéis **fixos**. A matriz (`AccountRole::allows()`), também disponível no Gate
