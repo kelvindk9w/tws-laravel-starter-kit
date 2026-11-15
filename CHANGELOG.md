@@ -80,8 +80,9 @@ procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
   found` quer dizer nome errado); ache o nome pelo passo 1 de "Migrar uma
   instalação que já roda" (`docs/producao.md`) e defina
   `PROD_COMPOSE_PROJECT_NAME`/`PROD_POSTGRES_VOLUME`. Criar o volume ali sobe
-  uma segunda stack, com um banco vazio. O volume do Redis continua do projeto
-  (agora de nome fixo).
+  uma segunda stack, com um banco vazio; quem já criou e subiu volta ao
+  estado normal por "Desfazer uma troca errada", no mesmo documento. O volume
+  do Redis continua do projeto (agora de nome fixo).
 - **PostgreSQL 18 no layout da imagem (starters, desenvolvimento e
   produção; o ambiente de desenvolvimento do monorepo).** O volume passa a ser
   montado em `/var/lib/postgresql` (o `VOLUME` da imagem 18) com
@@ -124,23 +125,31 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
-1. Anote o nome do projeto e o do volume do banco que a produção usa hoje,
-   com os dois comandos do documento, só de leitura. O dos containers basta
-   quando dá uma linha só na pasta da produção e o volume dela também está
-   no dos volumes com o rótulo do Compose (o que o arquivo anterior criou);
-   senão — duas linhas na mesma pasta, um volume que você mesmo criou ou
-   nenhum container —, o banco de antes é o volume com o rótulo. Com dois
-   volumes do projeto com o rótulo, o documento mostra o que cada um tem; na
-   dúvida, pare. É esse o volume: **não crie outro**. Se a produção subia com
-   `-p`, use `-p <projeto do passo 1>` nos comandos com o arquivo antigo
-   (passos 2 e 3, e ao voltar atrás: sem ele, o `stop` sai sem erro e não
-   para nada); com o arquivo novo, nunca.
-2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar),
-   com `umask 077` (o arquivo tem todos os dados, inclusive pessoais).
+**Antes do passo 1, a conferência do documento** (três comandos só de
+leitura: qual arquivo está na pasta, os containers `postgres` com o estado e
+os volumes com o rótulo do Compose) confirma o estado normal: o arquivo
+anterior na pasta, uma linha só da pasta da produção, no ar, e o volume dela
+com o rótulo do Compose e o mesmo projeto. Se ela falhar (uma troca já foi
+tentada: o arquivo novo na pasta, um volume criado à mão, uma stack errada
+no ar), não siga: "Desfazer uma troca errada", no documento, volta ao estado
+normal sem pôr dois PostgreSQL no volume e sem apagar nada — e para, se a
+stack errada serviu o site (dados dos dois lados). Com outro volume do
+projeto com o rótulo (pasta renomeada, clone), o documento mostra o que cada
+um tem; se a stack de hoje está no mais novo, ou na dúvida, pare.
+
+1. Anote o projeto e o volume da linha da conferência, **os dois da mesma
+   linha**. É esse o volume: **não crie outro**. O projeto vale nos passos 2
+   e 3, no `-p` dos comandos com o arquivo antigo (que não tem `name:`; sem o
+   `-p`, uma pasta com outro nome faz o `stop` sair sem erro e sem parar
+   nada), e no passo 5; com o arquivo novo, nunca `-p`.
+2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar,
+   com o `-p` do passo 1), com `umask 077` (o arquivo tem todos os dados,
+   inclusive pessoais).
 3. Pare o `postgres` antigo, ainda com o arquivo antigo:
-   `docker compose -f docker-compose.prod.yml stop -t 120 postgres` (sem `-v`
-   e sem `down`). O container antigo só tem 10 s para desligar; parado, ele
-   não fica no ar ao lado do novo se o nome do projeto sair errado.
+   `docker compose -p <projeto do passo 1> -f docker-compose.prod.yml stop -t 120 postgres`
+   (sem `-v` e sem `down`). O container antigo só tem 10 s para desligar;
+   parado, ele não fica no ar ao lado do novo se o nome do projeto sair
+   errado.
 4. Traga os arquivos acima.
 5. No `.env` ao lado do `docker-compose.prod.yml`, defina
    `PROD_COMPOSE_PROJECT_NAME` e `PROD_POSTGRES_VOLUME` com os valores do
@@ -156,7 +165,7 @@ em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
 Nenhum passo deixa o banco para trás: os dados não se movem, o volume é o
 mesmo e o diretório também. Voltar atrás é pôr o arquivo anterior de volta,
-na mesma pasta.
+na mesma pasta, e subir com `-p <projeto do passo 1>`.
 
 - **Atenção ao editar à mão — mude a montagem e o `PGDATA` juntos.** Só um
   dos dois cria um banco **novo e vazio**, sem erro (o log mostra `init
@@ -166,8 +175,8 @@ na mesma pasta.
   da imagem 18, `<volume>/18/docker`. Nos dois casos o banco de verdade fica
   intacto em `<volume>/pgdata`: corrija e suba de novo.
 - **No servidor, com o arquivo novo, nada de `-p` nem `COMPOSE_PROJECT_NAME`**:
-  os dois passam por cima do `name:` do arquivo. Nunca mude o `PROD_POSTGRES_VOLUME` depois do
-  primeiro deploy (outro nome é outro banco).
+  os dois passam por cima do `name:` do arquivo. Nunca mude o
+  `PROD_POSTGRES_VOLUME` depois do primeiro deploy (outro nome é outro banco).
 
 ## [2.5.0] — 2026-11-14
 
