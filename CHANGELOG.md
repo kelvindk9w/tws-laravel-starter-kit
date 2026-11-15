@@ -32,7 +32,9 @@ procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
   paralelas) e o processo principal fora do OOM killer (`oom_score_adj`
   `-1000`, `PROD_POSTGRES_OOM_SCORE_ADJ`, com `PG_OOM_ADJUST_FILE`/
   `PG_OOM_ADJUST_VALUE` devolvendo as conexões ao normal, como indica a
-  documentação do PostgreSQL). Docker rootless: `PROD_POSTGRES_OOM_SCORE_ADJ=0`.
+  documentação do PostgreSQL). Os processos do `docker compose exec` no
+  `postgres` (healthcheck, `psql`, `pg_dump`) herdam o `-1000`; o Docker
+  rootless ignora o valor e usa o do daemon (o `up` não quebra).
 - **Teto de memória dos serviços PHP de produção (starters).**
   `PROD_APP_MEMORY_LIMIT`, `PROD_WORKER_MEMORY_LIMIT` (`horizon` ou `queue`) e
   `PROD_SCHEDULER_MEMORY_LIMIT` viram o `mem_limit` de cada container. Padrão

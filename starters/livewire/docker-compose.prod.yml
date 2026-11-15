@@ -334,8 +334,10 @@ services:
     # matar o processo principal (postmaster) derruba o banco. -1000 o tira da
     # lista; o PG_OOM_ADJUST_* abaixo devolve os processos filhos (as conexões)
     # ao normal (0) — a configuração que a documentação do PostgreSQL indica
-    # ("Linux Memory Overcommit"). Docker rootless não deixa baixar o valor:
-    # ali, PROD_POSTGRES_OOM_SCORE_ADJ=0.
+    # ("Linux Memory Overcommit"). Os processos do `docker compose exec` aqui
+    # (healthcheck, psql, pg_dump) herdam o -1000: um psql que traz um
+    # resultado enorme faz o kernel matar OUTRO processo. Docker rootless
+    # ignora o valor e usa o do daemon: o `up` não quebra, a regra só não vale.
     oom_score_adj: ${PROD_POSTGRES_OOM_SCORE_ADJ:--1000}
     environment:
       POSTGRES_DB: ${PROD_POSTGRES_DB:-tws_starter}

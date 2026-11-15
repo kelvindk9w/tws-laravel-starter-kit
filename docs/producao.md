@@ -568,8 +568,15 @@ Ajustes do `docker-compose.prod.yml`, cada um por variável (no shell ou no
   normal, para o kernel ainda poder escolhê-los — exatamente o que a
   documentação do PostgreSQL indica
   ([Linux Memory Overcommit](https://www.postgresql.org/docs/current/kernel-resources.html#LINUX-MEMORY-OVERCOMMIT)).
-  Baixar o valor exige privilégio (`CAP_SYS_RESOURCE`): no Docker rootless,
-  use `PROD_POSTGRES_OOM_SCORE_ADJ=0`.
+  **Os processos do `docker compose exec` no `postgres` herdam o `-1000`** — o
+  healthcheck (`pg_isready`), o `exec psql`, o `exec pg_dump` — e também ficam
+  fora do OOM killer. O psql guarda o resultado inteiro de uma consulta na
+  memória: um `SELECT` enorme pelo `exec` cresce sem poder ser escolhido, e o
+  kernel mata **outro** processo (uma conexão do banco, o PHP). Para consulta
+  grande, busque em partes (`\set FETCH_COUNT 1000` no psql) ou exporte com
+  `\copy`. **Docker rootless** ignora o valor e usa o do próprio daemon
+  ([`specconv` do moby](https://github.com/moby/moby/blob/master/daemon/internal/rootless/specconv/specconv_linux.go)):
+  o `up` não quebra, a proteção só não tem efeito.
 - **Sem teto de memória no `postgres`**, de propósito: no teto, o kernel
   mataria processos do banco. O teto vai nos serviços PHP (abaixo).
 
