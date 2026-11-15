@@ -653,12 +653,13 @@ PostgreSQL no volume de verdade e sem apagar nada.
    documento. Com o `nginx` só em `Created` (as portas estavam ocupadas pela
    stack antiga) ou sem `nginx`, o site não passou por ela: siga.
 3. **Derrube a stack errada** pelos rótulos (vale com qualquer arquivo na
-   pasta; sem `-v`) e confira que nenhum container dela ficou — o último
-   comando não pode mostrar nada:
+   pasta; sem `-v`), tire a rede dela e confira que nenhum container dela
+   ficou — o último comando não pode mostrar nada:
 
    ```bash
    docker ps -q --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker stop -t 120
    docker ps -aq --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker rm
+   docker network ls -q --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker network rm
    docker ps -a --filter label=com.docker.compose.project=<projeto errado> --format '{{.Names}}'
    ```
 
