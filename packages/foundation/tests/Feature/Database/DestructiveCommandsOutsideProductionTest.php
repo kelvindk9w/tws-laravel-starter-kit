@@ -52,3 +52,22 @@ it('o opt-out vem da variável DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION e é 
 
     expect(config('security.database.allow_destructive_commands_in_production'))->toBeTrue();
 });
+
+it('o opt-out só liga com true: 1, yes, on ou um valor torto não liberam apagar o banco', function (string $value, bool $allowed): void {
+    $_SERVER['DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION'] = $value;
+    $_ENV['DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION'] = $value;
+    $this->refreshApplication();
+
+    expect(config('security.database.allow_destructive_commands_in_production'))->toBe($allowed);
+})->with([
+    'true' => ['true', true],
+    'TRUE' => ['TRUE', true],
+    '(true)' => ['(true)', true],
+    '1' => ['1', false],
+    'yes' => ['yes', false],
+    'on' => ['on', false],
+    'no' => ['no', false],
+    'false' => ['false', false],
+    'vazio' => ['', false],
+    'torto' => ['ture', false],
+]);

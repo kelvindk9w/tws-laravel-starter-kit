@@ -248,8 +248,10 @@ return [
         // migration, com backup antes) ou para a instalação descartável que
         // recria o banco de propósito (demo hospedada). Passe só no comando
         // que precisa (`-e DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true`);
-        // cada comando destrutivo que roda com ele grava aviso no log.
-        'allow_destructive_commands_in_production' => (bool) env('DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION', false),
+        // cada comando destrutivo que roda com ele grava aviso no log. Só
+        // `true` liga (o env() do Laravel converte `true`/`(true)`): `1`,
+        // `yes`, `on` ou um valor torto não liberam apagar o banco.
+        'allow_destructive_commands_in_production' => env('DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION', false) === true,
     ],
 
     // --- Redirecionamento "de volta" (open redirect) ---------------------------
