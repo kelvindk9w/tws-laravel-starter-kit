@@ -425,16 +425,31 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
    Sai uma linha por projeto: `<projeto> <volume> <pasta>`, em geral
    `meu-projeto meu-projeto_postgres_data /srv/meu-projeto`. Use a linha da
    pasta da sua produção. É esse o volume do banco: **não crie outro**.
-2. **Um backup antes** (recomendado; o arquivo tem todos os dados — guarde-o
-   fora do repositório):
+2. **Um backup antes** (recomendado). O `umask 077` faz o arquivo nascer
+   legível só por você: ele tem todos os dados, inclusive pessoais. Guarde-o
+   fora do repositório e apague quando não precisar mais:
 
    ```bash
-   docker compose -f docker-compose.prod.yml exec -T postgres pg_dumpall -U <PROD_POSTGRES_USER> > antes-da-migracao.sql
+   (umask 077 && docker compose -f docker-compose.prod.yml exec -T postgres pg_dumpall -U <PROD_POSTGRES_USER> > antes-da-migracao.sql)
    ```
 
-3. **Traga os arquivos novos do starter** (a lista está no `CHANGELOG.md`, na
+3. **Pare o PostgreSQL antigo, ainda com o arquivo antigo** (sem `-v` e sem
+   `down`):
+
+   ```bash
+   docker compose -f docker-compose.prod.yml stop -t 120 postgres
+   docker compose -f docker-compose.prod.yml logs --tail 3 postgres
+   ```
+
+   O log tem que terminar em `database system is shut down`. O container
+   antigo só tem os 10 s padrão do Docker para desligar; o `-t 120` dá tempo
+   para o checkpoint. E, parado, ele não fica no ar ao lado do novo se o nome
+   do projeto sair errado — dois servidores no mesmo volume corrompem o banco,
+   e o antigo não tem a trava. Daqui até o passo 7 o site fica sem banco: faça
+   numa janela de manutenção.
+4. **Traga os arquivos novos do starter** (a lista está no `CHANGELOG.md`, na
    versão desta mudança), reaplicando as suas mudanças locais.
-4. **Fixe o nome do projeto e o do volume com os valores do passo 1**, no
+5. **Fixe o nome do projeto e o do volume com os valores do passo 1**, no
    `.env` ao lado do arquivo (onde ficam os outros `PROD_*`):
 
    ```dotenv
@@ -444,18 +459,17 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
    Se esse `.env` tiver `COMPOSE_PROJECT_NAME`, tire (ele passaria por cima).
    **O nome do projeto tem que ser o de hoje**: assim o Compose recria os
-   containers no lugar, parando o PostgreSQL antigo antes de subir o novo. Com
-   outro nome, ele subiria uma segunda stack ao lado da antiga, as duas no
-   mesmo volume — e o `postgres` antigo não tem a trava.
-5. **Confira**: o `name:` do projeto e o do `postgres_data` têm que ser os do
+   containers no lugar. Com outro nome, ele subiria uma segunda stack ao lado
+   da antiga (o app antigo ainda no ar, nas mesmas portas).
+6. **Confira**: o `name:` do projeto e o do `postgres_data` têm que ser os do
    passo 1, com `external: true`:
 
    ```bash
    docker compose -f docker-compose.prod.yml config | sed -n -e '/^name:/p' -e '/^  postgres_data:/,/external/p'
    ```
 
-6. **Suba**: `docker compose -f docker-compose.prod.yml up -d --build`.
-7. **Confirme que o banco é o de antes**:
+7. **Suba**: `docker compose -f docker-compose.prod.yml up -d --build`.
+8. **Confirme que o banco é o de antes**:
 
    ```bash
    docker compose -f docker-compose.prod.yml logs postgres | grep -E 'Skipping initialization|init process complete'
@@ -468,9 +482,12 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
    verdade continua intacto no volume do passo 1 — corrija o arquivo e suba de
    novo.
 
-**Voltar atrás:** o arquivo anterior, na mesma pasta e com o mesmo nome de
-projeto, lê o mesmo volume (os dados estão no mesmo diretório): ponha-o de
-volta e `up -d`. **O volume anônimo** que o layout antigo deixava (só o
+**Voltar atrás:** pare o `postgres` com o arquivo novo
+(`docker compose -f docker-compose.prod.yml stop postgres`, que já espera
+2 min), ponha o arquivo anterior de volta, na mesma pasta e com o mesmo nome de
+projeto (se tirou um `COMPOSE_PROJECT_NAME` no passo 5, devolva-o: o arquivo
+anterior não tem `name:`), e `up -d`. Ele lê o mesmo volume (os dados estão no
+mesmo diretório). **O volume anônimo** que o layout antigo deixava (só o
 diretório vazio `data`, sem dado) pode ficar.
 
 **Desenvolvimento** (o `compose.yaml` do projeto criado): só o layout muda —

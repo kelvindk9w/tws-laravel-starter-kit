@@ -125,18 +125,22 @@ em `docs/producao.md`, "Migrar uma instalação que já roda"):
 1. Anote o nome do projeto e o do volume do banco que a produção usa hoje (o
    comando do documento acha os dois pelos containers, com qualquer arquivo
    na pasta). É esse o volume: **não crie outro**.
-2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar).
-3. Traga os arquivos acima.
-4. No `.env` ao lado do `docker-compose.prod.yml`, defina
+2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar),
+   com `umask 077` (o arquivo tem todos os dados, inclusive pessoais).
+3. Pare o `postgres` antigo, ainda com o arquivo antigo:
+   `docker compose -f docker-compose.prod.yml stop -t 120 postgres` (sem `-v`
+   e sem `down`). O container antigo só tem 10 s para desligar; parado, ele
+   não fica no ar ao lado do novo se o nome do projeto sair errado.
+4. Traga os arquivos acima.
+5. No `.env` ao lado do `docker-compose.prod.yml`, defina
    `PROD_COMPOSE_PROJECT_NAME` e `PROD_POSTGRES_VOLUME` com os valores do
    passo 1 (e tire um `COMPOSE_PROJECT_NAME`, se houver). **O nome do projeto
-   tem que ser o de hoje:** assim o Compose para o PostgreSQL antigo antes de
-   subir o novo. Com outro nome, subiria uma segunda stack no mesmo volume — e
-   o `postgres` antigo não tem a trava.
-5. Confira com `docker compose -f docker-compose.prod.yml config` o `name:` e
+   tem que ser o de hoje:** assim o Compose recria os containers no lugar, em
+   vez de subir uma segunda stack.
+6. Confira com `docker compose -f docker-compose.prod.yml config` o `name:` e
    o `postgres_data` (`external: true`).
-6. `docker compose -f docker-compose.prod.yml up -d --build`.
-7. Nos logs do `postgres`, tem que aparecer `Skipping initialization` e
+7. `docker compose -f docker-compose.prod.yml up -d --build`.
+8. Nos logs do `postgres`, tem que aparecer `Skipping initialization` e
    **nunca** `init process complete`; se aparecer, pare na hora — o banco de
    verdade continua intacto no volume do passo 1.
 
