@@ -623,16 +623,18 @@ Para quando a conferência de
 [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda) mostra
 que o arquivo novo já subiu uma stack com outro nome de projeto — em geral
 depois de um `external volume ... not found` resolvido com um
-`docker volume create`. Essa stack errada usa o volume criado à mão, que
-nasceu vazio; o banco de verdade continua intacto no volume com o rótulo do
+`docker volume create`. Essa stack errada usa, em geral, o volume criado à
+mão, que nasceu vazio; o banco de verdade continua no volume com o rótulo do
 Compose. Os passos abaixo voltam ao estado normal sem nunca pôr dois
 PostgreSQL no volume de verdade e sem apagar nada.
 
-1. **Anote os dois projetos**, pelos comandos da conferência. O **projeto
-   errado** é o da linha cujo volume não aparece no terceiro comando (o volume
-   criado à mão). O **projeto de hoje** e o **volume de hoje** são os do
-   terceiro comando: o volume do seu projeto com o rótulo do Compose, e o
-   projeto do rótulo, que é o da stack antiga. Sem a linha do projeto errado,
+1. **Anote os projetos**, pelos comandos da conferência. O **projeto de
+   hoje** e o **volume de hoje** são os do terceiro comando: o volume do seu
+   projeto com o rótulo do Compose, e o projeto do rótulo, que é o da stack
+   antiga. O **projeto errado** é o de qualquer outra linha da pasta no
+   segundo comando — em geral com o volume criado à mão, que não aparece no
+   terceiro, mas também com o volume de hoje, se o arquivo novo subiu com ele
+   e outro nome de projeto. Sem a linha do projeto errado,
    a stack errada não está no servidor (não subiu, ou já foi derrubada): pule
    para o passo 4 — mas, se ela chegou a servir o site, pare, como no passo 2.
 2. **Veja se o site passou pela stack errada**, antes de derrubá-la (o
