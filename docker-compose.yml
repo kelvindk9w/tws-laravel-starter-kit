@@ -116,10 +116,14 @@ services:
       POSTGRES_DB: ${DB_DATABASE:-tws_starter}
       POSTGRES_USER: ${DB_USERNAME:-tws}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?rode scripts/preparar-dev (cria o .env da raiz com as senhas de desenvolvimento)}
-      # PGDATA explícito dentro do volume nomeado (persistência garantida).
-      PGDATA: /var/lib/postgresql/data/pgdata
+      # O layout do PostgreSQL 18: o volume nomeado em /var/lib/postgresql (o
+      # VOLUME da imagem; sem volume anônimo a mais) e os dados em
+      # <volume>/pgdata, o mesmo diretório do layout anterior — o banco que já
+      # existe sobe sem mover nada. Nunca troque só a montagem nem tire o
+      # PGDATA: o PostgreSQL criaria um banco novo e vazio, sem aviso.
+      PGDATA: /var/lib/postgresql/pgdata
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       # Cria o banco da suíte de testes (tws_starter_test) na primeira subida.
       - ./starters/livewire/docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
     ports:
