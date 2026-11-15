@@ -124,9 +124,14 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
-1. Anote o nome do projeto e o do volume do banco que a produção usa hoje (o
-   comando do documento acha os dois pelos containers, com qualquer arquivo
-   na pasta). É esse o volume: **não crie outro**. Se a produção subia com
+1. Anote o nome do projeto e o do volume do banco que a produção usa hoje,
+   com os dois comandos do documento, só de leitura. O dos containers basta
+   quando dá uma linha só na pasta da produção e o volume dela também está
+   no dos volumes com o rótulo do Compose (o que o arquivo anterior criou);
+   senão — duas linhas na mesma pasta, um volume que você mesmo criou ou
+   nenhum container —, o banco de antes é o volume com o rótulo. Com dois
+   volumes do projeto com o rótulo, o documento mostra o que cada um tem; na
+   dúvida, pare. É esse o volume: **não crie outro**. Se a produção subia com
    `-p`, use `-p <projeto do passo 1>` nos comandos com o arquivo antigo
    (passos 2 e 3, e ao voltar atrás: sem ele, o `stop` sai sem erro e não
    para nada); com o arquivo novo, nunca.
