@@ -445,11 +445,10 @@ banco criado pelo Compose e montado em `/var/lib/postgresql/data`). Os dados
 não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
 1. **Anote o nome do projeto e o do volume do banco que a produção usa hoje.**
-   O comando procura pelos containers `postgres` do Compose (no ar ou
-   parados), então funciona com qualquer arquivo na pasta — inclusive depois
-   de trocar pelo novo — e nos dois layouts: o volume em
+   São dois comandos, os dois só de leitura. O primeiro olha os containers
+   `postgres` do Compose (no ar ou parados) e mostra o volume montado em
    `/var/lib/postgresql/data` (o arquivo anterior) ou, só quando não há
-   montagem nenhuma ali, em `/var/lib/postgresql` (o arquivo novo):
+   montagem nenhuma ali, o de `/var/lib/postgresql` (o arquivo novo):
 
    ```bash
    docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
@@ -459,12 +458,53 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
    Sai uma linha por container: `<projeto> <volume> <pasta>`, em geral
    `meu-projeto meu-projeto_postgres_data /srv/meu-projeto` (um container
    avulso de `run` repete a linha; num bind mount, sai o caminho no host no
-   lugar do volume). Use a linha da pasta da sua produção. É esse o volume do banco: **não crie outro**. Se a
-   produção subia com `-p`, ponha `-p <projeto do passo 1>` em todo comando
-   com o arquivo antigo (passos 2 e 3, e ao voltar atrás) — sem ele, o
-   Compose procura outro projeto: o `exec` falha e o `stop` sai sem erro, sem
-   parar nada —, e nunca com o arquivo novo, que tira o nome do
+   lugar do volume).
+
+   O segundo olha os volumes, e acha o do banco mesmo sem container. O volume
+   que o Compose criou com o arquivo anterior tem os rótulos dele (o projeto e
+   `com.docker.compose.volume=postgres_data`); um volume de `docker volume
+   create` não tem rótulo, e o arquivo novo não cria volume:
+
+   ```bash
+   docker volume ls --filter label=com.docker.compose.volume=postgres_data --format '{{.Label "com.docker.compose.project"}} {{.Name}}'
+   ```
+
+   Sai uma linha por volume, `<projeto> <volume>`, de todos os projetos do
+   servidor que têm um `postgres_data`. **O primeiro comando basta** quando dá
+   uma linha só na pasta da produção e o volume dela também aparece no
+   segundo: é o caso de quem ainda roda o arquivo anterior ou já trocou por
+   este passo a passo. **Senão, vale o segundo**: duas linhas na mesma pasta,
+   um volume que você mesmo criou (ele não aparece no segundo) ou nenhuma
+   linha → o banco de antes é o volume com o rótulo do Compose (o do seu
+   projeto, se o servidor tem outros). É esse o volume do banco: **não crie
+   outro**. Se a produção subia com `-p`, ponha `-p <projeto do passo 1>` em
+   todo comando com o arquivo antigo (passos 2 e 3, e ao voltar atrás) — sem
+   ele, o Compose procura outro projeto: o `exec` falha e o `stop` sai sem
+   erro, sem parar nada —, e nunca com o arquivo novo, que tira o nome do
    `PROD_COMPOSE_PROJECT_NAME`.
+
+   **Dois volumes do seu projeto com o rótulo** (a pasta foi renomeada, ou um
+   clone noutra pasta subiu o arquivo anterior, e o Compose criou um segundo
+   volume, vazio, com outro nome de projeto): veja o que cada um tem antes de
+   escolher. O comando abaixo abre cada volume num container descartável, sem
+   rede e só leitura, e mostra a data de criação, o tamanho dos dados e a
+   última escrita do PostgreSQL (o `pg_control`, gravado a cada checkpoint);
+   nada sobe e nada muda:
+
+   ```bash
+   for v in $(docker volume ls -q --filter label=com.docker.compose.volume=postgres_data); do
+     docker run --rm --network none -v "$v:/v:ro" postgres:18-alpine sh -c \
+       'echo "$0 criado $1 dados $(du -sh /v/pgdata/base 2>/dev/null | cut -f1) escrita $(date -r /v/pgdata/global/pg_control "+%F %T %Z" 2>/dev/null)"' \
+       "$v" "$(docker volume inspect --format '{{.CreatedAt}}' "$v")"
+   done
+   ```
+
+   O banco de antes é o mais antigo e com mais dados; o criado por engano é
+   mais novo e pequeno (só o esquema que o `migrate` cria, uns 30 MB de
+   dados). A última escrita diz até quando cada um foi usado. Se o segundo
+   também recebeu uso de verdade (dados dos dois lados), ou se não ficar
+   claro, **pare e confira antes de seguir**: não suba nada com nenhum dos
+   dois e não apague nenhum.
 2. **Um backup antes** (recomendado). O `umask 077` faz o arquivo nascer
    legível só por você: ele tem todos os dados, inclusive pessoais. Guarde-o
    fora do repositório e apague quando não precisar mais:
