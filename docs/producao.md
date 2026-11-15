@@ -374,7 +374,9 @@ o de verdade ficava esquecido num volume:
   crie e o `up` sobe uma segunda stack, com um banco vazio que o `migrate`
   preenche com o esquema — e quem derruba a stack antiga para liberar as portas
   passa a servir o banco vazio. Ache o nome pelo passo 1 de
-  [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda).
+  [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda); se
+  já criou o volume e subiu, veja
+  [Desfazer uma troca errada](#desfazer-uma-troca-errada).
 - **O layout do PostgreSQL 18.** A imagem 18 declara o volume em
   `/var/lib/postgresql` (e não mais em `/var/lib/postgresql/data`; ver a
   [página da imagem](https://hub.docker.com/_/postgres)). Montado no caminho
@@ -447,81 +449,103 @@ Para o projeto que roda com o `docker-compose.prod.yml` anterior (volume do
 banco criado pelo Compose e montado em `/var/lib/postgresql/data`). Os dados
 não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
-1. **Anote o nome do projeto e o do volume do banco que a produção usa hoje.**
-   São dois comandos, os dois só de leitura. O primeiro olha os containers
-   `postgres` do Compose (no ar ou parados) e mostra o volume montado em
-   `/var/lib/postgresql/data` (o arquivo anterior) ou, só quando não há
-   montagem nenhuma ali, o de `/var/lib/postgresql` (o arquivo novo):
+**Antes de começar, confira o estado do servidor.** O passo a passo supõe o
+estado normal: o arquivo anterior na pasta e a stack de hoje servindo. São
+três comandos, só de leitura, na pasta da produção. O primeiro diz qual
+arquivo está ali (`0`: o anterior; `1`: o novo):
 
-   ```bash
-   docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
-     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ $v := "" }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ if not $v }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ end }}{{ $v }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
-   ```
+```bash
+grep -c 'external: true' docker-compose.prod.yml
+```
 
-   Sai uma linha por container: `<projeto> <volume> <pasta>`, em geral
-   `meu-projeto meu-projeto_postgres_data /srv/meu-projeto` (um container
-   avulso de `run` repete a linha; num bind mount, sai o caminho no host no
-   lugar do volume).
+O segundo olha os containers `postgres` do Compose, no ar ou parados:
 
-   O segundo olha os volumes, e acha o do banco mesmo sem container. O volume
-   que o Compose criou com o arquivo anterior tem os rótulos dele (o projeto e
-   `com.docker.compose.volume=postgres_data`); um volume de `docker volume
-   create` não tem rótulo, e o arquivo novo não cria volume:
+```bash
+docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
+  | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ $v := "" }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ if not $v }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ end }}{{ $v }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }} {{ .State.Status }}'
+```
 
-   ```bash
-   docker volume ls --filter label=com.docker.compose.volume=postgres_data --format '{{.Label "com.docker.compose.project"}} {{.Name}}'
-   ```
+Sai uma linha por container: `<projeto> <volume> <pasta> <estado>`, em geral
+`meu-projeto meu-projeto_postgres_data /srv/meu-projeto running`. O volume é o
+montado em `/var/lib/postgresql/data` (o arquivo anterior) ou, só quando não
+há montagem nenhuma ali, o de `/var/lib/postgresql` (o arquivo novo); num bind
+mount, sai o caminho no host. Um container avulso de `run` repete a linha.
 
-   Sai uma linha por volume, `<projeto> <volume>`, de todos os projetos do
-   servidor que têm um `postgres_data`. **O primeiro comando basta** quando dá
-   uma linha só na pasta da produção e o volume dela também aparece no
-   segundo: é o caso de quem ainda roda o arquivo anterior ou já trocou por
-   este passo a passo. **Senão, vale o segundo**: duas linhas na mesma pasta,
-   um volume que você mesmo criou (ele não aparece no segundo) ou nenhuma
-   linha → o banco de antes é o volume com o rótulo do Compose (o do seu
-   projeto, se o servidor tem outros). É esse o volume do banco: **não crie
-   outro**. Se a produção subia com `-p`, ponha `-p <projeto do passo 1>` em
-   todo comando com o arquivo antigo (passos 2 e 3, e ao voltar atrás) — sem
-   ele, o Compose procura outro projeto: o `exec` falha e o `stop` sai sem
-   erro, sem parar nada —, e nunca com o arquivo novo, que tira o nome do
-   `PROD_COMPOSE_PROJECT_NAME`.
+O terceiro olha os volumes que o Compose criou para um `postgres_data`, de
+todos os projetos do servidor, uma linha por volume (`<projeto> <volume>`). O
+volume que o arquivo anterior criou tem esses rótulos; um volume de
+`docker volume create` não tem, e o arquivo novo não cria o volume do banco
+(só os do Redis e do `app_public`):
 
-   **Dois volumes do seu projeto com o rótulo** (a pasta foi renomeada, ou um
-   clone noutra pasta subiu o arquivo anterior, e o Compose criou um segundo
-   volume, vazio, com outro nome de projeto): veja o que cada um tem antes de
-   escolher. O comando abaixo abre cada volume num container descartável, sem
-   rede e só leitura, e mostra a data de criação, o tamanho dos dados e a
-   última escrita do PostgreSQL (o `pg_control`, gravado a cada checkpoint);
-   nada sobe e nada muda:
+```bash
+docker volume ls --filter label=com.docker.compose.volume=postgres_data --format '{{.Label "com.docker.compose.project"}} {{.Name}}'
+```
 
-   ```bash
-   for v in $(docker volume ls -q --filter label=com.docker.compose.volume=postgres_data); do
-     docker run --rm --network none -v "$v:/v:ro" postgres:18-alpine sh -c \
-       'echo "$0 criado $1 dados $(du -sh /v/pgdata/base 2>/dev/null | cut -f1) escrita $(date -r /v/pgdata/global/pg_control "+%F %T %Z" 2>/dev/null)"' \
-       "$v" "$(docker volume inspect --format '{{.CreatedAt}}' "$v")"
-   done
-   ```
+O estado é o normal quando, ao mesmo tempo:
 
-   O banco de antes é o mais antigo e com mais dados; o criado por engano é
-   mais novo e pequeno (só o esquema que o `migrate` cria, uns 30 MB de
-   dados). A última escrita diz até quando cada um foi usado. Se o segundo
-   também recebeu uso de verdade (dados dos dois lados), ou se não ficar
-   claro, **pare e confira antes de seguir**: não suba nada com nenhum dos
-   dois e não apague nenhum.
+- o primeiro dá `0`;
+- o segundo dá **uma linha só** na pasta da produção, e ela está `running`;
+- o volume dessa linha aparece no terceiro, **com o mesmo projeto**;
+- o terceiro não mostra outro volume do seu projeto (ou mostra, e o conteúdo
+  confirma o da linha; veja abaixo).
+
+Um volume sem rótulo que nenhuma linha usa (o criado à mão, depois de
+desfeita uma troca errada) não atrapalha. Se a única linha da pasta está
+parada, suba a produção de hoje
+(`docker compose -p <projeto da linha> -f docker-compose.prod.yml up -d`) e
+confira de novo. Qualquer outra resposta — o arquivo novo já na pasta, duas
+linhas na mesma pasta, o volume da linha fora do terceiro comando ou com
+outro projeto — quer dizer que uma troca já foi tentada: **não siga daqui**;
+vá para [Desfazer uma troca errada](#desfazer-uma-troca-errada).
+
+**Outro volume do seu projeto no terceiro comando** (a pasta foi renomeada,
+ou um clone noutra pasta subiu o arquivo anterior, e o Compose criou um
+segundo volume, vazio, com outro nome de projeto): veja o que cada um tem. O
+comando abre cada volume num container descartável, sem rede e com o volume
+só leitura; o container cria e apaga um volume anônimo temporário (o que a
+imagem declara) e não baixa imagem (`--pull never`: usa a do seu `postgres`).
+Ele mostra a criação do volume (no fuso do servidor, com o deslocamento no
+fim), o tamanho dos dados e a última escrita do PostgreSQL (o `pg_control`,
+gravado a cada checkpoint; em UTC):
+
+```bash
+for v in $(docker volume ls -q --filter label=com.docker.compose.volume=postgres_data); do
+  docker run --rm --pull never --network none -v "$v:/v:ro" postgres:18-alpine sh -c \
+    'echo "$0 criado $1 dados $(du -sh /v/pgdata/base 2>/dev/null | cut -f1) escrita $(date -u -r /v/pgdata/global/pg_control "+%F %T UTC" 2>/dev/null)"' \
+    "$v" "$(docker volume inspect --format '{{.CreatedAt}}' "$v")"
+done
+```
+
+O volume da linha tem que ser o mais antigo e com os dados; o outro, mais
+novo e pequeno (só o esquema que o `migrate` cria, uns 30 MB de dados). Se for
+o contrário — a stack que serve hoje está no volume novo —, ou se não ficar
+claro, **pare e confira antes de seguir**: os dois volumes foram criados pelo
+Compose, e a stack de hoje pode ter recebido uso de verdade, com dados dos
+dois lados; juntar os dados fica fora deste documento. Não suba nada com o
+outro volume e não apague nenhum.
+
+1. **Anote o projeto e o volume da linha da conferência** — os dois da
+   **mesma** linha. É esse o volume do banco: **não crie outro**. Esse
+   projeto vale nos passos 2 e 3, no `-p` dos comandos com o arquivo anterior
+   (ele não tem `name:`; sem o `-p`, uma pasta com nome diferente do projeto
+   — a produção subia com `-p` ou `COMPOSE_PROJECT_NAME` — faz o Compose
+   procurar outro projeto: o `exec` falha e o `stop` sai sem erro, sem parar
+   nada), e no passo 5, no `PROD_COMPOSE_PROJECT_NAME` (com o arquivo novo,
+   nunca `-p`). O volume vale no passo 5.
 2. **Um backup antes** (recomendado). O `umask 077` faz o arquivo nascer
    legível só por você: ele tem todos os dados, inclusive pessoais. Guarde-o
    fora do repositório e apague quando não precisar mais:
 
    ```bash
-   (umask 077 && docker compose -f docker-compose.prod.yml exec -T postgres pg_dumpall -U <PROD_POSTGRES_USER> > antes-da-migracao.sql)
+   (umask 077 && docker compose -p <projeto do passo 1> -f docker-compose.prod.yml exec -T postgres pg_dumpall -U <PROD_POSTGRES_USER> > antes-da-migracao.sql)
    ```
 
 3. **Pare o PostgreSQL antigo, ainda com o arquivo antigo** (sem `-v` e sem
    `down`):
 
    ```bash
-   docker compose -f docker-compose.prod.yml stop -t 120 postgres
-   docker compose -f docker-compose.prod.yml logs --tail 3 postgres
+   docker compose -p <projeto do passo 1> -f docker-compose.prod.yml stop -t 120 postgres
+   docker compose -p <projeto do passo 1> -f docker-compose.prod.yml logs --tail 3 postgres
    ```
 
    O log tem que terminar em `database system is shut down`. O container
@@ -567,11 +591,13 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
 **Voltar atrás:** pare o `postgres` com o arquivo novo
 (`docker compose -f docker-compose.prod.yml stop postgres`, que já espera
-2 min), ponha o arquivo anterior de volta, na mesma pasta e com o mesmo nome de
-projeto (se tirou um `COMPOSE_PROJECT_NAME` no passo 5, devolva-o: o arquivo
-anterior não tem `name:`), e `up -d`. Ele lê o mesmo volume (os dados estão no
-mesmo diretório). **O volume anônimo** que o layout antigo deixava (só o
-diretório vazio `data`, sem dado) pode ficar.
+2 min), ponha o arquivo anterior de volta, na mesma pasta, e suba com o
+projeto do passo 1
+(`docker compose -p <projeto do passo 1> -f docker-compose.prod.yml up -d`).
+Ele lê o mesmo volume (os dados estão no mesmo diretório). Se tirou um
+`COMPOSE_PROJECT_NAME` no passo 5, devolva-o, para os comandos sem `-p`. **O
+volume anônimo** que o layout antigo deixava (só o diretório vazio `data`, sem
+dado) pode ficar.
 
 **Desenvolvimento** (o `compose.yaml` do projeto criado): só o layout muda —
 copie o serviço `postgres` do `docker/dev/compose.yaml` do starter (a montagem
@@ -590,6 +616,83 @@ um banco **novo e vazio**, sem erro (o log mostra `init process complete`):
 
 Nos dois casos o banco de verdade continua intacto em `<volume>/pgdata`:
 corrija o arquivo e suba de novo.
+
+### Desfazer uma troca errada
+
+Para quando a conferência de
+[Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda) mostra
+que o arquivo novo já subiu uma stack com outro nome de projeto — em geral
+depois de um `external volume ... not found` resolvido com um
+`docker volume create`. Essa stack errada usa o volume criado à mão, que
+nasceu vazio; o banco de verdade continua intacto no volume com o rótulo do
+Compose. Os passos abaixo voltam ao estado normal sem nunca pôr dois
+PostgreSQL no volume de verdade e sem apagar nada.
+
+1. **Anote os dois projetos**, pelos comandos da conferência. O **projeto
+   errado** é o da linha cujo volume não aparece no terceiro comando (o volume
+   criado à mão). O **projeto de hoje** e o **volume de hoje** são os do
+   terceiro comando: o volume do seu projeto com o rótulo do Compose, e o
+   projeto do rótulo, que é o da stack antiga. Sem a linha do projeto errado,
+   a stack errada não está no servidor (não subiu, ou já foi derrubada): pule
+   para o passo 4 — mas, se ela chegou a servir o site, pare, como no passo 2.
+2. **Veja se o site passou pela stack errada**, antes de derrubá-la (o
+   `docker rm` do passo 3 apaga a pista):
+
+   ```bash
+   docker ps -a --filter label=com.docker.compose.project=<projeto errado> --format '{{.Label "com.docker.compose.service"}} {{.Status}}'
+   ```
+
+   Se o `nginx` aparece `Up` ou `Exited`, ele chegou a rodar com as portas da
+   produção e serviu o site a partir do banco vazio: trate como uso de
+   verdade (alguém pode ter se cadastrado ou pago ali). O mesmo se a stack
+   errada já foi derrubada e o site ficou no ar com ela. Nesse caso, **pare
+   aqui**: há dados dos dois lados. Não apague nenhum volume e não suba a
+   stack antiga ao lado da errada; juntar os dados fica fora deste
+   documento. Com o `nginx` só em `Created` (as portas estavam ocupadas pela
+   stack antiga) ou sem `nginx`, o site não passou por ela: siga.
+3. **Derrube a stack errada** pelos rótulos (vale com qualquer arquivo na
+   pasta; sem `-v`) e confira que nenhum container dela ficou — o último
+   comando não pode mostrar nada:
+
+   ```bash
+   docker ps -q --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker stop -t 120
+   docker ps -aq --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker rm
+   docker ps -a --filter label=com.docker.compose.project=<projeto errado> --format '{{.Names}}'
+   ```
+
+   Os volumes dela ficam: o criado à mão e os do Redis e do `app_public`
+   dela.
+4. **Ponha o arquivo anterior de volta**, na mesma pasta.
+5. **Suba a stack de hoje com ele**, pelo projeto de hoje. O `-p` acerta o
+   nome com qualquer pasta e com ou sem `COMPOSE_PROJECT_NAME`, e o arquivo
+   anterior monta o volume de hoje (`<projeto de hoje>_postgres_data`):
+
+   ```bash
+   docker compose -p <projeto de hoje> -f docker-compose.prod.yml up -d
+   ```
+
+6. **Confira** que só um PostgreSQL usa o volume de hoje e que o banco é o de
+   antes:
+
+   ```bash
+   docker ps --filter volume=<volume de hoje> --format '{{.Names}} {{.Status}}'
+   docker compose -p <projeto de hoje> -f docker-compose.prod.yml logs --since 10m postgres | grep -E 'Skipping initialization|init process complete'
+   ```
+
+   O primeiro mostra uma linha só, a do `postgres` de hoje; o segundo,
+   `Skipping initialization` e **nunca** `init process complete`. E o site
+   mostra os dados de antes.
+7. **Recomece** pela conferência de
+   [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda):
+   agora ela passa.
+
+**O volume criado à mão** fica até o passo 8 da migração confirmar o banco.
+Depois, se o site não passou pela stack errada (passo 2), ele só tem o
+esquema e o que o app gravou sozinho, e pode ser apagado, junto com os do
+Redis e do `app_public` da stack errada:
+`docker volume rm <volume criado à mão> <projeto errado>_redis_data <projeto errado>_app_public`.
+Confira os nomes antes, um por um: nunca o volume do passo 1. O Docker recusa
+apagar um volume que um container usa, mas não protege um volume livre.
 
 ### Um servidor por volume
 
