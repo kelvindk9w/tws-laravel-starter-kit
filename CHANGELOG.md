@@ -11,27 +11,14 @@ dois starters passa a ter nome de projeto fixo e o volume do banco externo,
 com nome fixo; o PostgreSQL 18 usa o layout da imagem (no desenvolvimento
 também), recusa um segundo servidor no mesmo volume e ganha desligamento
 limpo, `/dev/shm` maior e proteção contra o OOM killer. O
-`twstec/kit-foundation` recusa em produção os comandos que apagam o banco.
-Sem migration. **Há arquivos de starter para aplicar à mão** e um
+`twstec/kit-foundation` passa a recusar em produção os comandos que apagam o
+banco (muda o comportamento de quem os roda lá; ver "Alterado"). Sem
+migration. **Há arquivos de starter para aplicar à mão** e um
 procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
 "Migrar uma instalação que já roda").
 
 ### Adicionado
 
-- **Comandos que apagam o banco recusados em produção
-  (`twstec/kit-foundation`).** Com `APP_ENV=production`, `db:wipe`,
-  `migrate:fresh`, `migrate:refresh`, `migrate:reset` e `migrate:rollback`
-  saem com código 1 e `This command is prohibited from running in this
-  environment.`, **mesmo com `--force`**, sem tocar no banco
-  (`Twstec\Kit\Foundation\Database\DestructiveCommands`, com o
-  `DB::prohibitDestructiveCommands()` do Laravel). A saída diz como liberar e
-  a tentativa grava aviso no log. O `migrate` comum continua; fora de produção
-  nada muda; desligar as guardas de produção não libera. Opt-out para **um**
-  comando planejado (ex.: desfazer uma migration, com backup antes):
-  `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true` (só `true` liga: `1`,
-  `yes` ou um valor torto, não; cada comando que roda com ele grava aviso no
-  log). Ver
-  `docs/producao.md`, "Comandos que apagam o banco".
 - **Um servidor PostgreSQL por volume (starters, produção).** O serviço
   `postgres` começa por uma trava (`flock`) num arquivo do volume, segura pelo
   PostgreSQL enquanto ele roda: `docker compose run postgres` sem comando,
@@ -51,6 +38,28 @@ procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
   `PROD_SCHEDULER_MEMORY_LIMIT` viram o `mem_limit` de cada container. Padrão
   `0`, sem teto (o kit não sabe o tamanho do servidor); como escolher o valor
   em `docs/producao.md`, "Memória dos serviços PHP".
+
+### Alterado
+
+- **Comandos que apagam o banco agora são recusados em produção
+  (`twstec/kit-foundation`) — muda o comportamento de quem os roda.** Com
+  `APP_ENV=production`, `db:wipe`, `migrate:fresh`, `migrate:refresh`,
+  `migrate:reset` e `migrate:rollback` saem com código 1 e `This command is
+  prohibited from running in this environment.`, **mesmo com `--force`**, sem
+  tocar no banco (`Twstec\Kit\Foundation\Database\DestructiveCommands`, com o
+  `DB::prohibitDestructiveCommands()` do Laravel). A saída diz como liberar e
+  a tentativa grava aviso no log. O `migrate` comum continua; fora de produção
+  nada muda; desligar as guardas de produção não libera. Chega pelo Composer:
+  **quem roda esses comandos em produção passa a ter falha** — o reset da demo
+  hospedada (`migrate:fresh`), um script de deploy que desfaz migration, uma
+  automação de limpeza. Para liberar, `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true`
+  só no comando que precisa (`docker compose -f docker-compose.prod.yml run
+  --rm -e DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true migrate php artisan
+  migrate:rollback --step=1 --force`, com backup antes), ou de vez na
+  instalação descartável que recria o banco de propósito (ver `docs/demo.md`,
+  demo hospedada). Só `true` liga (`1`, `yes` ou um valor torto, não), cada
+  comando que roda com ele grava aviso no log, e com a configuração em cache
+  vale o valor do cache. Ver `docs/producao.md`, "Comandos que apagam o banco".
 
 ### Corrigido
 
@@ -140,11 +149,6 @@ na mesma pasta.
   `<volume>/data/pgdata`; a montagem nova sem `PGDATA` inicializa no padrão
   da imagem 18, `<volume>/18/docker`. Nos dois casos o banco de verdade fica
   intacto em `<volume>/pgdata`: corrija e suba de novo.
-- **Atenção a automação que roda `migrate:fresh`, `migrate:rollback` ou
-  `db:wipe` com `APP_ENV=production`** (reset de demonstração, script de
-  deploy): passa a falhar com código 1. Instalação descartável que recria o
-  banco de propósito liga `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true`
-  (ver `docs/demo.md`, demo hospedada).
 - **No servidor, nada de `-p` nem `COMPOSE_PROJECT_NAME`**: os dois passam por
   cima do `name:` do arquivo. Nunca mude o `PROD_POSTGRES_VOLUME` depois do
   primeiro deploy (outro nome é outro banco).
