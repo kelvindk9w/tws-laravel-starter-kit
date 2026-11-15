@@ -165,8 +165,8 @@ na mesma pasta.
   `<volume>/data/pgdata`; a montagem nova sem `PGDATA` inicializa no padrão
   da imagem 18, `<volume>/18/docker`. Nos dois casos o banco de verdade fica
   intacto em `<volume>/pgdata`: corrija e suba de novo.
-- **No servidor, nada de `-p` nem `COMPOSE_PROJECT_NAME`**: os dois passam por
-  cima do `name:` do arquivo. Nunca mude o `PROD_POSTGRES_VOLUME` depois do
+- **No servidor, com o arquivo novo, nada de `-p` nem `COMPOSE_PROJECT_NAME`**:
+  os dois passam por cima do `name:` do arquivo. Nunca mude o `PROD_POSTGRES_VOLUME` depois do
   primeiro deploy (outro nome é outro banco).
 
 ## [2.5.0] — 2026-11-14

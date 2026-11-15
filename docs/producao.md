@@ -410,8 +410,9 @@ Outro nome? Defina `PROD_POSTGRES_VOLUME` (e, se quiser, o
 `PROD_COMPOSE_PROJECT_NAME`) **antes** do primeiro `up`, no shell ou no `.env`
 ao lado do arquivo, como os outros `PROD_*`. Depois do primeiro deploy,
 **nunca mude**: outro nome de volume é outro banco; outro nome de projeto é
-outra stack. No servidor, nada de `-p` nem de `COMPOSE_PROJECT_NAME` (no shell
-ou no `.env`): os dois passam por cima do `name:` do arquivo.
+outra stack. No servidor, com o arquivo novo, nada de `-p` nem de
+`COMPOSE_PROJECT_NAME` (no shell ou no `.env`): os dois passam por cima do
+`name:` do arquivo.
 
 Para ver o que o arquivo vai usar, antes de qualquer `up`:
 
