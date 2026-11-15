@@ -116,8 +116,10 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 - **Testes:** `tests/Feature/Architecture/ProductionDockerFilesTest.php` e
   `tests/Feature/Architecture/DevelopmentEnvironmentFilesTest.php` (os dois
   starters), que travam o que está acima.
-- **`README.md`** do starter (opcional): a linha de produção cita o
-  `docker volume create`.
+- **`README.md`** do starter (opcional): a linha de produção separa o
+  servidor novo (cria o volume do banco uma vez, antes do primeiro `up`) do
+  servidor que já rodava o arquivo anterior (não cria volume; acha o de hoje
+  pelo passo 1 abaixo e o informa nas variáveis).
 
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
