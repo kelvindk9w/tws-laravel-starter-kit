@@ -12,11 +12,31 @@
 #   - migrate (one-shot), worker de fila e scheduler como containers dedicados;
 #   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco).
 #
+# ANTES DO PRIMEIRO `up`, UMA VEZ SÓ: crie o volume do banco (ver "VOLUME DO
+# BANCO" abaixo e docs/producao.md, "Volumes e o banco em produção"):
+#
+#   docker volume create <PROD_POSTGRES_VOLUME>
+#
 # PACOTES DO KIT: vêm do Composer (Packagist), como qualquer dependência; o
 # build é o do docker/php/Dockerfile (ver o cabeçalho dele).
 #
 # BANCO: o nome padrão (PROD_POSTGRES_DB) é o do projeto — o instalador o
 # grava na criação; troque-o no .env.prod, se quiser outro.
+#
+# NOME DO PROJETO FIXO (`name:`, logo abaixo; PROD_COMPOSE_PROJECT_NAME, com o
+# nome do projeto como padrão — o instalador o grava na criação): sem ele, o
+# Compose usava o nome da PASTA, e subir de outra pasta (um clone novo, a pasta
+# renomeada, uma pasta por versão) criava OUTRA stack. Não ponha
+# COMPOSE_PROJECT_NAME no .env do servidor nem use `-p`: os dois passam por
+# cima do `name:`.
+#
+# VOLUME DO BANCO EXTERNO E COM NOME FIXO (PROD_POSTGRES_VOLUME; padrão
+# <nome do projeto>_postgres_data, o nome que o Compose dava ao volume quando o
+# projeto rodava com esse nome): o Compose NÃO o cria nem o apaga (nem no
+# `down -v`). Sem o volume, o `up` falha com `external volume "..." not found`
+# — antes, ele criava um volume vazio e o PostgreSQL subia um banco novo, sem
+# aviso, com o banco de verdade esquecido no volume antigo. Mudar o nome
+# depois do primeiro deploy é apontar para outro banco: nunca.
 #
 # CONFIGURAÇÃO: as variáveis PROD_* abaixo podem ser definidas num arquivo
 # .env.prod (ver .env.prod.example) ou no ambiente do shell. Onde a variável
@@ -53,6 +73,8 @@
 # ATENÇÃO: o Compose SEMPRE usa o .env da raiz para interpolar ${VAR} — por
 # isso aqui só existem nomes PROD_* (nunca presentes no .env de dev).
 # =============================================================================
+
+name: ${PROD_COMPOSE_PROJECT_NAME:-tws-starter}
 
 # Ambiente compartilhado dos containers PHP (app, queue, scheduler, migrate).
 x-app-env: &app-env
@@ -265,9 +287,17 @@ services:
       POSTGRES_DB: ${PROD_POSTGRES_DB:-tws_starter}
       POSTGRES_USER: ${PROD_POSTGRES_USER:-tws}
       POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD:?defina PROD_POSTGRES_PASSWORD (sem valor padrao - ver .env.prod.example)}
-      PGDATA: /var/lib/postgresql/data/pgdata
+      # O LAYOUT DO POSTGRESQL 18: o volume montado em /var/lib/postgresql (o
+      # VOLUME da imagem 18 — montar em /var/lib/postgresql/data deixava um
+      # volume anônimo a cada container) e os dados em <volume>/pgdata, o MESMO
+      # diretório do layout anterior (volume em /var/lib/postgresql/data com
+      # PGDATA=/var/lib/postgresql/data/pgdata). Por isso o volume existente
+      # sobe sem mover nada. NUNCA troque só a montagem nem tire o PGDATA: nos
+      # dois casos o PostgreSQL não acha os dados e cria um banco NOVO e vazio,
+      # sem aviso (ver docs/producao.md, "Volumes e o banco em produção").
+      PGDATA: /var/lib/postgresql/pgdata
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     # SEM `ports:` — banco inacessível fora da rede interna.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PROD_POSTGRES_USER:-tws} -d ${PROD_POSTGRES_DB:-tws_starter}"]
@@ -351,6 +381,14 @@ networks:
     driver: bridge
 
 volumes:
+  # O BANCO: externo e com nome fixo (ver o cabeçalho, "VOLUME DO BANCO
+  # EXTERNO"). O Compose não o cria — `docker volume create` uma vez, no
+  # provisionamento — e nunca o apaga, nem no `down -v`.
   postgres_data:
+    name: ${PROD_POSTGRES_VOLUME:-tws-starter_postgres_data}
+    external: true
+  # Fila, sessões e cache (o registro de tudo fica no banco): do projeto, que
+  # tem nome fixo; o Compose o cria na primeira subida.
   redis_data:
+  # O public/ da imagem, sincronizado pelo app a cada subida: nenhum estado.
   app_public:

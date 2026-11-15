@@ -14,12 +14,48 @@ declare(strict_types=1);
 //   anterior sai), e falha ali para a subida;
 // - Redis, app e nginx têm healthcheck, e quem depende deles espera o
 //   "pronto", não só o "iniciado" (projeto criado sem Redis: sem redis e
-//   horizon, com o worker `queue`).
+//   horizon, com o worker `queue`);
+// - o banco não some por engano: o nome do projeto é fixo, o volume do banco é
+//   externo e com nome fixo (o `up` sem ele falha, em vez de criar um banco
+//   vazio) e o PostgreSQL usa o layout do 18 que lê o volume existente.
 // =============================================================================
 
 function productionFile(string $path): string
 {
     return (string) file_get_contents(base_path($path));
+}
+
+/**
+ * Cada serviço do compose de produção: as linhas do bloco dele (a indentação
+ * do primeiro serviço é a de todos — 2 espaços no Livewire, 4 no React).
+ *
+ * @return array<string, string>
+ */
+function productionServices(string $compose): array
+{
+    $lines = explode("\n", (string) strstr($compose, "services:\n"));
+    preg_match('/^( +)\S/', $lines[1] ?? '', $indent);
+    $service = [];
+    $current = null;
+
+    foreach (array_slice($lines, 1) as $line) {
+        if ($line !== '' && ! str_starts_with($line, ' ') && ! str_starts_with($line, '#')) {
+            break;
+        }
+
+        if (preg_match('/^'.($indent[1] ?? '  ').'([a-z][\w-]*):$/', $line, $key) === 1) {
+            $current = $key[1];
+            $service[$current] = '';
+
+            continue;
+        }
+
+        if ($current !== null) {
+            $service[$current] .= $line."\n";
+        }
+    }
+
+    return $service;
 }
 
 it('o nginx de produção só atende os nomes do site: o resto leva 444 ou o TLS recusado, e o redirect não reflete Host inventado', function (): void {
@@ -62,30 +98,7 @@ it('o public/ é sincronizado no volume do nginx: o que sobrou da versão anteri
 
 it('Redis, app e nginx de produção têm healthcheck, e quem depende deles espera o pronto', function (): void {
     $compose = productionFile('docker-compose.prod.yml');
-
-    // Cada serviço: as linhas do bloco dele (a indentação do primeiro serviço
-    // é a de todos — 2 espaços no Livewire, 4 no React).
-    $lines = explode("\n", (string) strstr($compose, "services:\n"));
-    preg_match('/^( +)\S/', $lines[1] ?? '', $indent);
-    $service = [];
-    $current = null;
-
-    foreach (array_slice($lines, 1) as $line) {
-        if ($line !== '' && ! str_starts_with($line, ' ') && ! str_starts_with($line, '#')) {
-            break;
-        }
-
-        if (preg_match('/^'.($indent[1] ?? '  ').'([a-z][\w-]*):$/', $line, $key) === 1) {
-            $current = $key[1];
-            $service[$current] = '';
-
-            continue;
-        }
-
-        if ($current !== null) {
-            $service[$current] .= $line."\n";
-        }
-    }
+    $service = productionServices($compose);
 
     // Projeto criado sem Redis: sem os serviços redis e horizon; a fila é o
     // worker `queue` (queue:work), que espera o app pronto.
@@ -172,3 +185,33 @@ it('o PHP das imagens de desenvolvimento e de produção desliga o progresso de 
     // O arquivo entra mesmo na imagem (o Dockerfile o copia para o conf.d).
     expect(productionFile('docker/php/Dockerfile'))->toContain('COPY '.$ini.' /usr/local/etc/php/conf.d/');
 })->with(['docker/php/php-dev.ini', 'docker/php/php-prod.ini']);
+
+it('o banco de produção não some por engano: nome do projeto fixo e volume do banco externo, com nome fixo', function (): void {
+    $compose = productionFile('docker-compose.prod.yml');
+
+    // O nome do projeto não vem mais da pasta (subir de outra pasta criava
+    // outra stack e outro volume, vazio).
+    expect($compose)->toMatch('/^name: \$\{PROD_COMPOSE_PROJECT_NAME:-[a-z0-9][a-z0-9_-]*\}$/m');
+
+    // O volume do banco: externo (o Compose não cria um vazio nem o apaga no
+    // `down -v`) e com nome fixo, que não depende do nome do projeto.
+    preg_match('/^volumes:\n(.*)\z/ms', $compose, $volumes);
+    preg_match('/^( +)postgres_data:\n((?:\1 +\S.*\n)+)/m', $volumes[1] ?? '', $database);
+
+    expect($database[2] ?? '')->toMatch('/^\s+name: \$\{PROD_POSTGRES_VOLUME:-[a-z0-9][a-z0-9_.-]*_postgres_data\}$/m')
+        ->toMatch('/^\s+external: true$/m')
+        ->not->toContain('COMPOSE_PROJECT_NAME');
+
+    // O serviço usa esse volume.
+    expect(productionServices($compose)['postgres'] ?? '')->toMatch('/^\s+- postgres_data:\/var\/lib\/postgresql$/m');
+});
+
+it('o PostgreSQL de produção usa o layout do 18 que lê o volume existente (montagem em /var/lib/postgresql e os dados em pgdata)', function (): void {
+    $postgres = productionServices(productionFile('docker-compose.prod.yml'))['postgres'] ?? '';
+
+    // Os dados ficam em <volume>/pgdata, como no layout anterior: trocar só a
+    // montagem, ou tirar o PGDATA, criaria um banco novo e vazio.
+    expect($postgres)->toMatch('/^\s+PGDATA: \/var\/lib\/postgresql\/pgdata$/m')
+        ->toMatch('/^\s+- postgres_data:\/var\/lib\/postgresql$/m')
+        ->not->toMatch('/^\s+[^#\s].*\/var\/lib\/postgresql\/data/m');
+});

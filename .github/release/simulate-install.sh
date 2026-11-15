@@ -213,6 +213,11 @@ created_project() {
     grep -qx "APP_URL=$(sed -n 's/^APP_URL=//p' .env)" .env.example
     grep -q "PROD_POSTGRES_DB:-$database}" docker-compose.prod.yml
     if grep -q 'PROD_POSTGRES_DB:-tws_starter' docker-compose.prod.yml; then echo 'docker-compose.prod.yml com o banco do starter'; exit 1; fi
+    # O nome do projeto do Compose de produção e o volume externo do banco,
+    # fixos e com o nome do projeto (nunca os do starter).
+    grep -qx "name: \${PROD_COMPOSE_PROJECT_NAME:-$name}" docker-compose.prod.yml
+    grep -q "name: \${PROD_POSTGRES_VOLUME:-${name}_postgres_data}" docker-compose.prod.yml
+    if grep -q 'tws-starter' docker-compose.prod.yml; then echo 'docker-compose.prod.yml com o nome de projeto ou o volume do starter'; exit 1; fi
     grep -qx 'RATE_LIMIT_SENSITIVE=30' .env
 
     # A identidade do projeto, não a do kit, no .env e no .env.example (o
