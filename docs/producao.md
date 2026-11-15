@@ -447,11 +447,13 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 1. **Anote o nome do projeto e o do volume do banco que a produção usa hoje.**
    O comando procura pelos containers `postgres` do Compose (no ar ou
    parados), então funciona com qualquer arquivo na pasta — inclusive depois
-   de trocar pelo novo:
+   de trocar pelo novo — e nos dois layouts: o volume em
+   `/var/lib/postgresql/data` (o arquivo anterior) ou, sem ele, em
+   `/var/lib/postgresql` (o arquivo novo):
 
    ```bash
    docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
-     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ .Name }}{{ end }}{{ end }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
+     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ $v := "" }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ $v = .Name }}{{ end }}{{ end }}{{ if not $v }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql" }}{{ $v = .Name }}{{ end }}{{ end }}{{ end }}{{ $v }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
    ```
 
    Sai uma linha por projeto: `<projeto> <volume> <pasta>`, em geral
