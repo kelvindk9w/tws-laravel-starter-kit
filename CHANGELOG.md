@@ -126,7 +126,10 @@ em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
 1. Anote o nome do projeto e o do volume do banco que a produção usa hoje (o
    comando do documento acha os dois pelos containers, com qualquer arquivo
-   na pasta). É esse o volume: **não crie outro**.
+   na pasta). É esse o volume: **não crie outro**. Se a produção subia com
+   `-p`, use `-p <projeto do passo 1>` nos comandos com o arquivo antigo
+   (passos 2 e 3, e ao voltar atrás: sem ele, o `stop` sai sem erro e não
+   para nada); com o arquivo novo, nunca.
 2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar),
    com `umask 077` (o arquivo tem todos os dados, inclusive pessoais).
 3. Pare o `postgres` antigo, ainda com o arquivo antigo:

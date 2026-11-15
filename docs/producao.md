@@ -458,7 +458,12 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
    Sai uma linha por projeto: `<projeto> <volume> <pasta>`, em geral
    `meu-projeto meu-projeto_postgres_data /srv/meu-projeto`. Use a linha da
-   pasta da sua produção. É esse o volume do banco: **não crie outro**.
+   pasta da sua produção. É esse o volume do banco: **não crie outro**. Se a
+   produção subia com `-p`, ponha `-p <projeto do passo 1>` em todo comando
+   com o arquivo antigo (passos 2 e 3, e ao voltar atrás) — sem ele, o
+   Compose procura outro projeto: o `exec` falha e o `stop` sai sem erro, sem
+   parar nada —, e nunca com o arquivo novo, que tira o nome do
+   `PROD_COMPOSE_PROJECT_NAME`.
 2. **Um backup antes** (recomendado). O `umask 077` faz o arquivo nascer
    legível só por você: ele tem todos os dados, inclusive pessoais. Guarde-o
    fora do repositório e apague quando não precisar mais:
