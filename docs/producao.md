@@ -330,6 +330,19 @@ docker compose -f docker-compose.prod.yml run --rm \
   migrate php artisan migrate:rollback --step=1 --force
 ```
 
+**Com a configuração em cache, o `-e` não tem efeito.** Se a sua imagem roda
+`php artisan config:cache` (ou `optimize`) no build ou no entrypoint — a do kit
+não roda —, vale o valor guardado no cache, e o comando continua recusado
+(falha fechada, mas confunde). Limpe o cache no próprio container descartável,
+no mesmo comando (só ele perde o cache; a imagem e os outros containers não
+mudam):
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm \
+  -e DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true \
+  migrate sh -c 'php artisan config:clear && php artisan migrate:rollback --step=1 --force'
+```
+
 Nunca ponha `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true` no `.env.prod`
 de uma instalação com dado real. A instalação descartável que recria o banco
 de propósito (a [demo hospedada](demo.md#demo-pública-hospedada-banco-efêmero-e-reset))
