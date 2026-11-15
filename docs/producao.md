@@ -423,13 +423,19 @@ docker compose -f docker-compose.prod.yml config | sed -n -e '/^name:/p' -e '/^ 
 padrões.** Os padrões de produção (`<nome do projeto>` e
 `<nome do projeto>_postgres_data`) são os mesmos nomes da stack e do volume de
 desenvolvimento: o `up` assume os containers de desenvolvimento e sobe com o
-banco de desenvolvimento. Para testar a produção localmente, use outros nomes
-(e um volume só para o teste):
+banco de desenvolvimento. E ali o `PROD_COMPOSE_PROJECT_NAME` não basta para
+fugir disso: o `.env` de desenvolvimento, na mesma pasta, tem
+`COMPOSE_PROJECT_NAME=<nome>` (o instalador grava), que vence o `name:` do
+arquivo ([precedência do nome do projeto](https://docs.docker.com/compose/how-tos/project-name/)).
+Para testar a produção localmente, troque o nome com `-p` — ali ele não faz
+mal; no servidor, nunca — e o volume com um só para o teste, em **todo**
+comando desse teste:
 
 ```bash
 docker volume create meu-projeto-prod-local_postgres_data
-PROD_COMPOSE_PROJECT_NAME=meu-projeto-prod-local PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data \
-  docker compose -f docker-compose.prod.yml up -d --build
+export PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data
+docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml config | sed -n 1p   # name: meu-projeto-prod-local
+docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml up -d --build
 ```
 
 ### Migrar uma instalação que já roda
