@@ -117,7 +117,11 @@ instalação com dado real, e precisa de:
    que o que um visitante escreveu não fique para o próximo.
 3. **Opt-out declarado**: em `APP_ENV=production` a demonstração não existe
    (fail-closed, abaixo); a demo hospedada liga `DEMO_ALLOW_IN_PRODUCTION=true`
-   e aceita o aviso no log a cada boot.
+   e aceita o aviso no log a cada boot. O reset também depende de um
+   opt-out: em produção, o `migrate:fresh` é recusado mesmo com `--force`
+   (ver [Produção](producao.md#comandos-que-apagam-o-banco-recusados-em-produção));
+   a demo hospedada liga `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true`,
+   e cada reset grava aviso no log.
 4. **Imagem própria**: a imagem de produção do starter não leva a demo
    (`--no-dev`). A demo hospedada é um deploy à parte, que instala o pacote
    de propósito.

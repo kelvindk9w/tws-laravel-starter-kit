@@ -273,6 +273,47 @@ do disco `public`: um armazenamento externo (S3 e afins, com a URL pública
 dele) ou um volume nomeado montado em `/var/www/html/storage/app/public` no
 `app` **e** no `nginx` (no nginx, só leitura).
 
+## Comandos que apagam o banco: recusados em produção
+
+Em `APP_ENV=production`, `db:wipe`, `migrate:fresh`, `migrate:refresh`,
+`migrate:reset` e `migrate:rollback` são **recusados, mesmo com `--force`**:
+saem com código 1 e `This command is prohibited from running in this
+environment.`, sem tocar no banco. A saída diz como liberar e a tentativa
+grava aviso no log. O `php artisan migrate` de sempre (que só acrescenta)
+continua rodando. Fora de produção nada muda (o desenvolvimento e a suíte de
+testes, que usa `migrate:fresh`, seguem como antes). Quem aplica é o
+`twstec/kit-foundation`, sozinho
+(`Twstec\Kit\Foundation\Database\DestructiveCommands`, com o
+`DB::prohibitDestructiveCommands()` do Laravel); desligar as guardas de
+produção (`SECURITY_PRODUCTION_GUARDS=false`) não libera.
+
+**Por que o banco precisava disso.** O kit desvia esses comandos para o papel
+de migração, o dono do banco (ver
+[Papéis do PostgreSQL](#papéis-do-postgresql-migração--aplicação)). Nos
+containers de longa duração (`app`, `horizon`, `scheduler`) o próprio
+PostgreSQL recusa, porque o papel da aplicação não é dono de nada. Mas o
+container `migrate` recebe a senha do dono: ali, um `migrate:fresh --force`
+apagava todas as tabelas sem perguntar.
+
+**Nunca rode outro comando no container `migrate`** (`docker compose -f
+docker-compose.prod.yml run migrate <outro comando>`): tudo o que roda nele
+roda como dono do banco. Para consultar o banco, entre no PostgreSQL que já
+está no ar (ver [Volumes e o banco em produção](#volumes-e-o-banco-em-produção)).
+
+**A única exceção, planejada: desfazer uma migration.** Primeiro um backup;
+depois, o opt-out só neste comando, que grava aviso no log:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm \
+  -e DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true \
+  migrate php artisan migrate:rollback --step=1 --force
+```
+
+Nunca ponha `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true` no `.env.prod`
+de uma instalação com dado real. A instalação descartável que recria o banco
+de propósito (a [demo hospedada](demo.md#demo-pública-hospedada-banco-efêmero-e-reset))
+é a que liga o opt-out de vez.
+
 ## A imagem de produção: como ela é construída e o que vai dentro
 
 `docker/php/Dockerfile` (target `prod`) e `docker/nginx/Dockerfile` (target
