@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Twstec\Kit\Foundation\Database;
 
 use Illuminate\Console\Events\CommandStarting;
-use Illuminate\Foundation\Application;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -71,7 +71,15 @@ final class DestructiveCommands
      */
     public static function prohibited(Application $app): bool
     {
-        return $app->isProduction() && ! self::allowedInProductionByOptOut();
+        return self::production($app) && ! self::allowedInProductionByOptOut();
+    }
+
+    /**
+     * APP_ENV=production? (o contrato da aplicação não tem `isProduction()`.)
+     */
+    private static function production(Application $app): bool
+    {
+        return $app->environment('production') === true;
     }
 
     /**
@@ -90,7 +98,7 @@ final class DestructiveCommands
      */
     public static function commandStarting(Application $app, CommandStarting $event): void
     {
-        if (! $app->isProduction() || ! in_array($event->command, self::COMMANDS, true)) {
+        if (! self::production($app) || ! in_array($event->command, self::COMMANDS, true)) {
             return;
         }
 
