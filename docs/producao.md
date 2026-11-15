@@ -448,17 +448,18 @@ não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
    O comando procura pelos containers `postgres` do Compose (no ar ou
    parados), então funciona com qualquer arquivo na pasta — inclusive depois
    de trocar pelo novo — e nos dois layouts: o volume em
-   `/var/lib/postgresql/data` (o arquivo anterior) ou, sem ele, em
-   `/var/lib/postgresql` (o arquivo novo):
+   `/var/lib/postgresql/data` (o arquivo anterior) ou, só quando não há
+   montagem nenhuma ali, em `/var/lib/postgresql` (o arquivo novo):
 
    ```bash
    docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
-     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ $v := "" }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ $v = .Name }}{{ end }}{{ end }}{{ if not $v }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql" }}{{ $v = .Name }}{{ end }}{{ end }}{{ end }}{{ $v }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
+     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ $v := "" }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ if not $v }}{{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql" }}{{ $v = or .Name .Source }}{{ end }}{{ end }}{{ end }}{{ $v }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
    ```
 
-   Sai uma linha por projeto: `<projeto> <volume> <pasta>`, em geral
-   `meu-projeto meu-projeto_postgres_data /srv/meu-projeto`. Use a linha da
-   pasta da sua produção. É esse o volume do banco: **não crie outro**. Se a
+   Sai uma linha por container: `<projeto> <volume> <pasta>`, em geral
+   `meu-projeto meu-projeto_postgres_data /srv/meu-projeto` (um container
+   avulso de `run` repete a linha; num bind mount, sai o caminho no host no
+   lugar do volume). Use a linha da pasta da sua produção. É esse o volume do banco: **não crie outro**. Se a
    produção subia com `-p`, ponha `-p <projeto do passo 1>` em todo comando
    com o arquivo antigo (passos 2 e 3, e ao voltar atrás) — sem ele, o
    Compose procura outro projeto: o `exec` falha e o `stop` sai sem erro, sem
