@@ -17,7 +17,10 @@ declare(strict_types=1);
 //   horizon, com o worker `queue`);
 // - o banco não some por engano: o nome do projeto é fixo, o volume do banco é
 //   externo e com nome fixo (o `up` sem ele falha, em vez de criar um banco
-//   vazio) e o PostgreSQL usa o layout do 18 que lê o volume existente.
+//   vazio) e o PostgreSQL usa o layout do 18 que lê o volume existente;
+// - um servidor por volume (a trava recusa o segundo PostgreSQL no mesmo
+//   volume), desligamento limpo, /dev/shm maior e o postmaster fora do OOM
+//   killer; os serviços PHP com teto de memória por variável.
 // =============================================================================
 
 function productionFile(string $path): string
@@ -214,4 +217,52 @@ it('o PostgreSQL de produção usa o layout do 18 que lê o volume existente (mo
     expect($postgres)->toMatch('/^\s+PGDATA: \/var\/lib\/postgresql\/pgdata$/m')
         ->toMatch('/^\s+- postgres_data:\/var\/lib\/postgresql$/m')
         ->not->toMatch('/^\s+[^#\s].*\/var\/lib\/postgresql\/data/m');
+});
+
+it('o PostgreSQL de produção recusa um segundo servidor no mesmo volume e tem desligamento limpo, /dev/shm e OOM ajustados', function (): void {
+    $postgres = productionServices(productionFile('docker-compose.prod.yml'))['postgres'] ?? '';
+
+    // A trava: o servidor (o comando `postgres` ou só as opções dele) só sobe
+    // segurando o flock de um arquivo no volume; sem ele, sai com erro antes
+    // do entrypoint da imagem. Outro comando (psql, pg_dump) passa direto.
+    expect($postgres)->toMatch('/^\s+entrypoint:$/m')
+        ->toContain('postgres | -*)')
+        ->toContain('exec 9>>/var/lib/postgresql/.postgres-server.lock')
+        ->toContain('if ! flock -n 9; then')
+        ->toMatch('/^\s+exit 1$/m')
+        ->toContain('exec docker-entrypoint.sh "$$@"')
+        // O `entrypoint` apaga o comando da imagem: ele precisa voltar.
+        ->toMatch('/^\s+command: \[postgres\]$/m');
+
+    // Os ajustes, por variável, com o padrão documentado no .env.prod.example.
+    expect($postgres)->toMatch('/^\s+stop_grace_period: \$\{PROD_POSTGRES_STOP_GRACE_PERIOD:-2m\}$/m')
+        ->toMatch('/^\s+shm_size: \$\{PROD_POSTGRES_SHM_SIZE:-256mb\}$/m')
+        ->toMatch('/^\s+oom_score_adj: \$\{PROD_POSTGRES_OOM_SCORE_ADJ:--1000\}$/m')
+        // As conexões voltam ao normal: só o postmaster fica fora do OOM killer.
+        ->toMatch('/^\s+PG_OOM_ADJUST_FILE: \/proc\/self\/oom_score_adj$/m')
+        ->toMatch('/^\s+PG_OOM_ADJUST_VALUE: ["\']0["\']$/m')
+        // O banco não ganha teto: no teto, o kernel mataria processos do banco.
+        ->not->toContain('mem_limit');
+
+    $example = productionFile('.env.prod.example');
+
+    foreach (['PROD_POSTGRES_STOP_GRACE_PERIOD=2m', 'PROD_POSTGRES_SHM_SIZE=256mb', 'PROD_POSTGRES_OOM_SCORE_ADJ=-1000'] as $variable) {
+        expect($example)->toContain('# '.$variable);
+    }
+});
+
+it('os serviços PHP de produção têm teto de memória por variável, sem teto por padrão', function (): void {
+    $services = productionServices(productionFile('docker-compose.prod.yml'));
+    $limits = [
+        'app' => 'PROD_APP_MEMORY_LIMIT',
+        // Projeto criado sem Redis: o worker é o `queue`, no lugar do horizon.
+        (isset($services['horizon']) ? 'horizon' : 'queue') => 'PROD_WORKER_MEMORY_LIMIT',
+        'scheduler' => 'PROD_SCHEDULER_MEMORY_LIMIT',
+    ];
+    $example = productionFile('.env.prod.example');
+
+    foreach ($limits as $service => $variable) {
+        expect($services[$service] ?? '')->toMatch('/^\s+mem_limit: \$\{'.$variable.':-0\}$/m');
+        expect($example)->toContain('# '.$variable.'=');
+    }
 });

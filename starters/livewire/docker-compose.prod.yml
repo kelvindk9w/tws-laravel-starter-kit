@@ -220,6 +220,10 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    # Teto de memória deste container (0 = sem teto, o padrão: o kit não sabe
+    # o tamanho do servidor). Com teto, o excesso para aqui, e não no banco.
+    # Ver docs/producao.md, "Memória dos serviços PHP".
+    mem_limit: ${PROD_APP_MEMORY_LIMIT:-0}
     restart: unless-stopped
     networks:
       - backend
@@ -283,10 +287,54 @@ services:
 
   postgres:
     image: postgres:18-alpine
+    # UM SERVIDOR POR VOLUME: antes do entrypoint da imagem, uma trava (flock)
+    # num arquivo do volume, mantida pelo PostgreSQL enquanto ele roda. Um
+    # segundo servidor no mesmo volume — `docker compose run postgres` sem
+    # comando, `--scale postgres=2`, outra stack apontando para o mesmo volume
+    # — é RECUSADO na hora, em vez de subir e corromper o banco. O PostgreSQL
+    # não se protege disso sozinho: cada container tem o próprio espaço de
+    # processos, e o postmaster.pid não serve de trava entre containers.
+    # Comando que não é o servidor (`run --rm postgres psql ...`) passa direto.
+    # A trava some com o processo: não sobra trava velha depois de um `kill`.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        case "$${1:-}" in
+          postgres | -*)
+            exec 9>>/var/lib/postgresql/.postgres-server.lock
+            if ! flock -n 9; then
+              echo "[postgres] RECUSADO: outro servidor PostgreSQL ja usa este volume (docs/producao.md)." >&2
+              exit 1
+            fi
+            ;;
+        esac
+        exec docker-entrypoint.sh "$$@"
+      - postgres-volume-lock
+    # O `entrypoint` acima apaga o comando padrão da imagem: ele volta aqui.
+    command: [postgres]
+    # Tempo para o desligamento limpo (a imagem para o PostgreSQL com SIGINT, o
+    # "fast shutdown", que grava um checkpoint antes de sair). O padrão do
+    # Docker, 10 s, mata o processo no meio de um checkpoint grande, e a subida
+    # seguinte passa pela recuperação de falha.
+    stop_grace_period: ${PROD_POSTGRES_STOP_GRACE_PERIOD:-2m}
+    # O /dev/shm do container (padrão do Docker: 64 MB). O PostgreSQL usa
+    # memória compartilhada POSIX nas consultas paralelas; pouco espaço = erro
+    # "could not resize shared memory segment ... No space left on device".
+    shm_size: ${PROD_POSTGRES_SHM_SIZE:-256mb}
+    # Memória acabando no servidor: o OOM killer do Linux escolhe quem matar, e
+    # matar o processo principal (postmaster) derruba o banco. -1000 o tira da
+    # lista; o PG_OOM_ADJUST_* abaixo devolve os processos filhos (as conexões)
+    # ao normal (0) — a configuração que a documentação do PostgreSQL indica
+    # ("Linux Memory Overcommit"). Docker rootless não deixa baixar o valor:
+    # ali, PROD_POSTGRES_OOM_SCORE_ADJ=0.
+    oom_score_adj: ${PROD_POSTGRES_OOM_SCORE_ADJ:--1000}
     environment:
       POSTGRES_DB: ${PROD_POSTGRES_DB:-tws_starter}
       POSTGRES_USER: ${PROD_POSTGRES_USER:-tws}
       POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD:?defina PROD_POSTGRES_PASSWORD (sem valor padrao - ver .env.prod.example)}
+      PG_OOM_ADJUST_FILE: /proc/self/oom_score_adj
+      PG_OOM_ADJUST_VALUE: "0"
       # O LAYOUT DO POSTGRESQL 18: o volume montado em /var/lib/postgresql (o
       # VOLUME da imagem 18 — montar em /var/lib/postgresql/data deixava um
       # volume anônimo a cada container) e os dados em <volume>/pgdata, o MESMO
@@ -349,6 +397,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Teto de memória deste container (0 = sem teto, o padrão: o kit não sabe
+    # o tamanho do servidor). Com teto, o excesso para aqui, e não no banco.
+    # Ver docs/producao.md, "Memória dos serviços PHP".
+    mem_limit: ${PROD_WORKER_MEMORY_LIMIT:-0}
     restart: unless-stopped
     networks:
       - backend
@@ -372,6 +424,10 @@ services:
     depends_on:
       app:
         condition: service_healthy
+    # Teto de memória deste container (0 = sem teto, o padrão: o kit não sabe
+    # o tamanho do servidor). Com teto, o excesso para aqui, e não no banco.
+    # Ver docs/producao.md, "Memória dos serviços PHP".
+    mem_limit: ${PROD_SCHEDULER_MEMORY_LIMIT:-0}
     restart: unless-stopped
     networks:
       - backend
