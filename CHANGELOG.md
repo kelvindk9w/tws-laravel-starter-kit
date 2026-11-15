@@ -64,8 +64,13 @@ procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
   o apaga (nem no `down -v`), e sem ele o `up` falha com `external volume
   "<nome>" not found`. O instalador grava os dois padrões com o nome do
   projeto criado. Servidor novo: `docker volume create <nome>` uma vez, antes
-  do primeiro `up`. O volume do Redis continua do projeto (agora de nome
-  fixo).
+  do primeiro `up`. **Servidor que já rodava o arquivo anterior: NÃO crie
+  volume** — o banco já está no volume de hoje (lá, o `external volume ... not
+  found` quer dizer nome errado); ache o nome pelo passo 1 de "Migrar uma
+  instalação que já roda" (`docs/producao.md`) e defina
+  `PROD_COMPOSE_PROJECT_NAME`/`PROD_POSTGRES_VOLUME`. Criar o volume ali sobe
+  uma segunda stack, com um banco vazio. O volume do Redis continua do projeto
+  (agora de nome fixo).
 - **PostgreSQL 18 no layout da imagem (starters, desenvolvimento e
   produção; o ambiente de desenvolvimento do monorepo).** O volume passa a ser
   montado em `/var/lib/postgresql` (o `VOLUME` da imagem 18) com
@@ -88,8 +93,9 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
   o `PGDATA: /var/lib/postgresql/pgdata` e a montagem
   `postgres_data:/var/lib/postgresql`; o `mem_limit` no `app`, no `horizon`
   (ou `queue`) e no `scheduler`. Troque `tws-starter`/`tws-starter-react` nos
-  padrões pelo nome do projeto — ou defina as variáveis, como no passo a passo
-  abaixo.
+  padrões pelos valores do passo 1 (o projeto e o volume que a produção usa
+  hoje) — ou defina as variáveis, como no passo a passo abaixo. **Não crie
+  volume** num servidor que já roda.
 - **`.env.prod.example`:** os blocos novos (comandos que apagam o banco, "O
   BANCO NÃO SOME" e "O SERVIÇO POSTGRES E A MEMÓRIA DOS SERVIÇOS PHP").
 - **`compose.yaml`** (o `docker/dev/compose.yaml` do starter): no serviço
@@ -105,8 +111,9 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
-1. Com a stack de hoje no ar, anote o nome do projeto e o do volume do banco
-   (o `docker inspect` do documento devolve os dois).
+1. Anote o nome do projeto e o do volume do banco que a produção usa hoje (o
+   comando do documento acha os dois pelos containers, com qualquer arquivo
+   na pasta). É esse o volume: **não crie outro**.
 2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar).
 3. Traga os arquivos acima.
 4. No `.env` ao lado do `docker-compose.prod.yml`, defina

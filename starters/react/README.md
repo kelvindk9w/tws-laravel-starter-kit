@@ -317,7 +317,10 @@ instalador (require-dev) não entram. O CI constrói as duas imagens e confere
 a do app com `.github/images/check-react-app.sh` (job "Imagens de produção do
 starter React") — e, na simulação da instalação publicada, constrói as
 imagens do projeto criado e passa a mesma conferência. Para subir a stack completa: `docker-compose.prod.yml` e
-`.env.prod.example` (os mesmos do Livewire, com o banco `tws_starter_react`),
-depois de criar, uma vez, o volume do banco
-(`docker volume create <nome do projeto>_postgres_data`) — ver [docs/producao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/producao.md).
+`.env.prod.example` (os mesmos do Livewire, com o banco `tws_starter_react`);
+num servidor novo, depois de criar, uma vez, o volume do banco
+(`docker volume create <nome do projeto>_postgres_data`). **Servidor que já
+rodava o arquivo anterior: NÃO crie volume** — o banco já está no volume de
+hoje; ache o nome pelo passo 1 de "Migrar uma instalação que já roda" e defina
+`PROD_COMPOSE_PROJECT_NAME`/`PROD_POSTGRES_VOLUME` — ver [docs/producao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/producao.md).
 

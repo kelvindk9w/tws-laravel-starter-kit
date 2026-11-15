@@ -12,10 +12,16 @@
 #   - migrate (one-shot), worker de fila e scheduler como containers dedicados;
 #   - volumes nomeados persistentes (reiniciar NUNCA reseta o banco).
 #
-# ANTES DO PRIMEIRO `up`, UMA VEZ SÓ: crie o volume do banco (ver "VOLUME DO
-# BANCO" abaixo e docs/producao.md, "Volumes e o banco em produção"):
+# ANTES DO PRIMEIRO `up` (ver "VOLUME DO BANCO" abaixo e docs/producao.md,
+# "Volumes e o banco em produção"):
 #
-#   docker volume create <PROD_POSTGRES_VOLUME>
+#   - SERVIDOR NOVO (nunca rodou este projeto): crie o volume do banco, uma vez
+#     só — `docker volume create <PROD_POSTGRES_VOLUME>`.
+#   - SERVIDOR QUE JÁ RODAVA O ARQUIVO ANTERIOR: NÃO crie volume — o banco já
+#     está no volume de hoje. Ache o nome do projeto e o do volume pelo passo 1
+#     de "Migrar uma instalação que já roda" (docs/producao.md) e defina
+#     PROD_COMPOSE_PROJECT_NAME e PROD_POSTGRES_VOLUME com eles. Criar um
+#     volume ali sobe uma SEGUNDA stack, com um banco VAZIO.
 #
 # PACOTES DO KIT: vêm do Composer (Packagist), como qualquer dependência; o
 # build é o do docker/php/Dockerfile (ver o cabeçalho dele).
@@ -35,8 +41,10 @@
 # projeto rodava com esse nome): o Compose NÃO o cria nem o apaga (nem no
 # `down -v`). Sem o volume, o `up` falha com `external volume "..." not found`
 # — antes, ele criava um volume vazio e o PostgreSQL subia um banco novo, sem
-# aviso, com o banco de verdade esquecido no volume antigo. Mudar o nome
-# depois do primeiro deploy é apontar para outro banco: nunca.
+# aviso, com o banco de verdade esquecido no volume antigo. Num servidor que
+# JÁ RODA, esse erro quer dizer que o nome não é o do volume de hoje: não crie
+# volume, ache o certo (ver acima). Mudar o nome depois do primeiro deploy é
+# apontar para outro banco: nunca.
 #
 # CONFIGURAÇÃO: as variáveis PROD_* abaixo podem ser definidas num arquivo
 # .env.prod (ver .env.prod.example) ou no ambiente do shell. Onde a variável

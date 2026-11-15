@@ -7,7 +7,7 @@
 > ambiente de desenvolvimento.
 
 `docker-compose.prod.yml` é autocontido: em um servidor com Docker instalado,
-depois de criar o volume do banco (uma vez, item 3 abaixo),
+depois de criar o volume do banco (servidor novo, uma vez; item 3 abaixo),
 `docker compose -f docker-compose.prod.yml up -d --build` sobe tudo — app
 PHP-FPM com OPcache (imagem imutável), nginx nas portas 80/443 (TLS com
 certificado **autoassinado** embutido na imagem), migrate one-shot,
@@ -30,12 +30,17 @@ Para produção real:
    (ver [Papéis do PostgreSQL](#papéis-do-postgresql-migração--aplicação)). Defina
    `PROD_*` no shell ou no `.env` ao lado do `docker-compose.prod.yml` (o Compose interpola `${PROD_*}` dali
    — ver cabeçalho do `docker-compose.prod.yml` e `.env.prod.example`).
-3. **O volume do banco, uma vez, antes do primeiro `up`:**
+3. **Servidor novo — o volume do banco, uma vez, antes do primeiro `up`:**
    `docker volume create <nome>`, com o nome do `PROD_POSTGRES_VOLUME`
    (padrão: `<nome do projeto>_postgres_data`; o instalador grava). O volume é
    externo: sem ele, o `up` falha, em vez de subir um banco vazio. O nome do
    projeto também é fixo (`PROD_COMPOSE_PROJECT_NAME`, padrão: o nome do
-   projeto). Ver [Volumes e o banco em produção](#volumes-e-o-banco-em-produção).
+   projeto). **Servidor que já rodava o arquivo anterior: NÃO crie volume** — o banco já
+   está no volume de hoje; ache o nome pelo passo 1 de
+   [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda) e
+   defina `PROD_COMPOSE_PROJECT_NAME`/`PROD_POSTGRES_VOLUME` com ele. Criar um
+   volume ali sobe uma segunda stack, com um banco vazio.
+   Ver [Volumes e o banco em produção](#volumes-e-o-banco-em-produção).
 4. TLS real: monte seus certificados (`server.crt`/`server.key`) em
    `/etc/nginx/certs` — ver comentário no `docker-compose.prod.yml`.
    O nginx só atende os **nomes do site**: o host da `PROD_APP_URL` ou, com
@@ -349,6 +354,14 @@ o de verdade ficava esquecido num volume:
   are never removed", na
   [referência do `docker compose down`](https://docs.docker.com/reference/cli/docker/compose/down/)).
   Sem ele, o `up` falha com `external volume "<nome>" not found`, e nada sobe.
+  **Num servidor que já roda, esse erro quer dizer nome errado**, não volume
+  faltando: o banco está no volume de hoje, com outro nome (a pasta com
+  maiúsculas ou pontos, que o Compose normalizava; um `-p`; um
+  `COMPOSE_PROJECT_NAME`; o padrão antigo do arquivo). **Não crie volume**:
+  crie e o `up` sobe uma segunda stack, com um banco vazio que o `migrate`
+  preenche com o esquema — e quem derruba a stack antiga para liberar as portas
+  passa a servir o banco vazio. Ache o nome pelo passo 1 de
+  [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda).
 - **O layout do PostgreSQL 18.** A imagem 18 declara o volume em
   `/var/lib/postgresql` (e não mais em `/var/lib/postgresql/data`; ver a
   [página da imagem](https://hub.docker.com/_/postgres)). Montado no caminho
@@ -367,6 +380,12 @@ o Redis desconecta os usuários e perde jobs pendentes, não dados do banco. O
 `app_public` não guarda estado (o `app` o sincroniza a cada subida).
 
 ### Servidor novo
+
+**Só para servidor que nunca rodou o projeto.** Servidor que já rodava o
+arquivo anterior: **NÃO crie volume** — o banco já está no volume de hoje;
+siga [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda)
+(o passo 1 acha o nome; defina `PROD_COMPOSE_PROJECT_NAME` e
+`PROD_POSTGRES_VOLUME` com ele).
 
 ```bash
 # uma vez, com o nome do PROD_POSTGRES_VOLUME (padrão: <nome do projeto>_postgres_data)
@@ -393,15 +412,19 @@ Para o projeto que roda com o `docker-compose.prod.yml` anterior (volume do
 banco criado pelo Compose e montado em `/var/lib/postgresql/data`). Os dados
 não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
-1. **Com a stack de hoje no ar, anote o nome do projeto e o do volume do
-   banco** (na pasta de sempre, com o arquivo de hoje):
+1. **Anote o nome do projeto e o do volume do banco que a produção usa hoje.**
+   O comando procura pelos containers `postgres` do Compose (no ar ou
+   parados), então funciona com qualquer arquivo na pasta — inclusive depois
+   de trocar pelo novo:
 
    ```bash
-   docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ .Name }}{{ end }}{{ end }}' \
-     $(docker compose -f docker-compose.prod.yml ps -q postgres)
+   docker ps -a --filter label=com.docker.compose.service=postgres --format '{{.ID}}' \
+     | xargs -r docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }} {{ range .Mounts }}{{ if eq .Destination "/var/lib/postgresql/data" }}{{ .Name }}{{ end }}{{ end }} {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
    ```
 
-   Sai `<projeto> <volume>`, em geral `meu-projeto meu-projeto_postgres_data`.
+   Sai uma linha por projeto: `<projeto> <volume> <pasta>`, em geral
+   `meu-projeto meu-projeto_postgres_data /srv/meu-projeto`. Use a linha da
+   pasta da sua produção. É esse o volume do banco: **não crie outro**.
 2. **Um backup antes** (recomendado; o arquivo tem todos os dados — guarde-o
    fora do repositório):
 
