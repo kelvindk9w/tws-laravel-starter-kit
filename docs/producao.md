@@ -665,9 +665,13 @@ PostgreSQL no volume de verdade e sem apagar nada.
 4. **Ponha o arquivo anterior de volta**, na mesma pasta.
 5. **Suba a stack de hoje com ele**, pelo projeto de hoje. O `-p` acerta o
    nome com qualquer pasta e com ou sem `COMPOSE_PROJECT_NAME`, e o arquivo
-   anterior monta o volume de hoje (`<projeto de hoje>_postgres_data`):
+   anterior monta o volume de hoje (`<projeto de hoje>_postgres_data`). O
+   `desde` guarda a hora, para o passo 6 ler só o log desta subida (o
+   container antigo, se só estava parado, guarda o log de sempre, com o
+   `init process complete` do primeiro dia):
 
    ```bash
+   desde=$(date -u +%Y-%m-%dT%H:%M:%SZ)
    docker compose -p <projeto de hoje> -f docker-compose.prod.yml up -d
    ```
 
@@ -676,12 +680,12 @@ PostgreSQL no volume de verdade e sem apagar nada.
 
    ```bash
    docker ps --filter volume=<volume de hoje> --format '{{.Names}} {{.Status}}'
-   docker compose -p <projeto de hoje> -f docker-compose.prod.yml logs --since 10m postgres | grep -E 'Skipping initialization|init process complete'
+   docker compose -p <projeto de hoje> -f docker-compose.prod.yml logs --since "$desde" postgres | grep -E 'Skipping initialization|init process complete'
    ```
 
-   O primeiro mostra uma linha só, a do `postgres` de hoje; o segundo,
-   `Skipping initialization` e **nunca** `init process complete`. E o site
-   mostra os dados de antes.
+   O primeiro mostra uma linha só, a do `postgres` de hoje; o segundo (no
+   mesmo terminal do passo 5), `Skipping initialization` e **nunca**
+   `init process complete`. E o site mostra os dados de antes.
 7. **Recomece** pela conferência de
    [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda):
    agora ela passa.
