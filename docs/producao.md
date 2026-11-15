@@ -419,6 +419,19 @@ Para ver o que o arquivo vai usar, antes de qualquer `up`:
 docker compose -f docker-compose.prod.yml config | sed -n -e '/^name:/p' -e '/^  postgres_data:/,/external/p'
 ```
 
+**Na máquina de desenvolvimento, não rode o compose de produção com os
+padrões.** Os padrões de produção (`<nome do projeto>` e
+`<nome do projeto>_postgres_data`) são os mesmos nomes da stack e do volume de
+desenvolvimento: o `up` assume os containers de desenvolvimento e sobe com o
+banco de desenvolvimento. Para testar a produção localmente, use outros nomes
+(e um volume só para o teste):
+
+```bash
+docker volume create meu-projeto-prod-local_postgres_data
+PROD_COMPOSE_PROJECT_NAME=meu-projeto-prod-local PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data \
+  docker compose -f docker-compose.prod.yml up -d --build
+```
+
 ### Migrar uma instalação que já roda
 
 Para o projeto que roda com o `docker-compose.prod.yml` anterior (volume do
