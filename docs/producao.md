@@ -490,8 +490,8 @@ O estado é o normal quando, ao mesmo tempo:
   confirma o da linha; veja abaixo).
 
 Um volume sem rótulo que nenhuma linha usa (o criado à mão, depois de
-desfeita uma troca errada) não atrapalha. Se a única linha da pasta está
-parada, suba a produção de hoje
+desfeita uma troca errada) não atrapalha. Se tudo bate, mas a única linha da
+pasta está parada, suba a produção de hoje com o arquivo anterior
 (`docker compose -p <projeto da linha> -f docker-compose.prod.yml up -d`) e
 confira de novo. Qualquer outra resposta — o arquivo novo já na pasta, duas
 linhas na mesma pasta, o volume da linha fora do terceiro comando ou com
