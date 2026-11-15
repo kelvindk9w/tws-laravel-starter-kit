@@ -429,14 +429,16 @@ fugir disso: o `.env` de desenvolvimento, na mesma pasta, tem
 `COMPOSE_PROJECT_NAME=<nome>` (o instalador grava), que vence o `name:` do
 arquivo ([precedência do nome do projeto](https://docs.docker.com/compose/how-tos/project-name/)).
 Para testar a produção localmente, troque o nome com `-p` — ali ele não faz
-mal; no servidor, nunca — e o volume com um só para o teste, em **todo**
-comando desse teste:
+mal; no servidor, nunca — e o volume com um só para o teste, os dois em
+**todo** comando desse teste. Não confie num `export` da variável: ele vale só
+naquele terminal, e num terminal novo o `-p` sem ela sobe o `postgres` de
+teste no volume de desenvolvimento, ao lado do `postgres` de lá, que não tem a
+trava — dois servidores no mesmo banco:
 
 ```bash
 docker volume create meu-projeto-prod-local_postgres_data
-export PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data
-docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml config | sed -n 1p   # name: meu-projeto-prod-local
-docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml up -d --build
+PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml config | sed -n -e '/^name:/p' -e '/^  postgres_data:/,/external/p'
+PROD_POSTGRES_VOLUME=meu-projeto-prod-local_postgres_data docker compose -p meu-projeto-prod-local -f docker-compose.prod.yml up -d --build
 ```
 
 ### Migrar uma instalação que já roda
