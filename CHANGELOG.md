@@ -125,45 +125,68 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
-**Duas regras valem em toda a migração.** O banco é o volume, não a pasta:
-um container de outra pasta ou de outro projeto pode montar o mesmo volume. E,
-antes de subir qualquer PostgreSQL, nenhum container no ar pode usar o volume
-(o `postgres` do arquivo anterior não tem a trava, e dois servidores no mesmo
-volume corrompem o banco): no documento, todo comando que sobe ou religa o
-`postgres` vem com essa conferência na frente, que imprime `PARE` e não sobe
-nada.
+**Três regras valem em toda a migração e no "Desfazer".** O banco é o
+volume, não a pasta: um container de outra pasta ou de outro projeto pode
+montar o mesmo volume. Antes de subir qualquer PostgreSQL, nenhum container no
+ar pode usar o volume (o `postgres` do arquivo anterior não tem a trava, e
+dois servidores no mesmo volume corrompem o banco): na migração e no
+"Desfazer", todo comando que sobe ou religa o `postgres` vem com essa
+conferência na frente, que imprime `PARE` e não sobe nada. Ficam fora, com
+razão, o "Servidor novo" (volume novo, sem outro servidor), o desenvolvimento
+local e "Acessar o banco" (`psql` e `pg_dump` não são servidor; o
+`postgres` do arquivo novo tem a trava, que recusa o segundo). E antes de
+parar ou remover um `postgres`, guarde o que cada um sabe: todo outro
+`postgres` que monta ou montou o volume de hoje (de `run`, de outro projeto,
+de outra pasta, de um `docker run` avulso; no ar, parado ou reiniciando) pode
+ter sido um segundo servidor. O PostgreSQL reconfere o `postmaster.pid` a
+cada minuto; quando um de dois servidores no mesmo volume para e apaga esse
+arquivo, o outro se derruba (`lock file is invalid`) e volta pelo checkpoint
+do primeiro, descartando as próprias escritas já confirmadas. Por isso, antes
+de parar ou remover qualquer `postgres`, o documento tira um backup de cada
+`postgres` no ar no volume e guarda o log de cada container que o monta (o
+`docker rm`, e o `up` que recria o container, apagam o log); se houve dois
+servidores, manda conferir os dados contra os backups. Ele nunca garante que
+o banco esteja inteiro: o dano de dois servidores ao mesmo tempo pode ter
+acontecido antes de qualquer passo, e reconciliar e restaurar ficam fora (a
+seção "O que a migração não resolve" lista os limites).
 
 **Antes do passo 1, a conferência do documento** (quatro comandos só de
 leitura: o volume e o projeto de hoje, pelo rótulo do Compose; todo container
 que monta esse volume, de qualquer pasta e em qualquer estado; quem está com
 as portas do site; e qual arquivo está na pasta, pela montagem do banco no
-`config`) confirma o estado normal: só a stack de hoje monta o volume, o
-`postgres` dela no ar, o `nginx` dela com as portas e o arquivo anterior na
-pasta. Se ela falhar (outro projeto no volume, outra stack com as portas, o
-arquivo novo na pasta), não siga: "Desfazer uma troca errada", no documento,
-derruba as stacks erradas e sobe a de hoje sem pôr dois PostgreSQL no volume
-e sem apagar nada — e para se uma stack errada serviu o site gravando noutro
-volume (dados dos dois lados). Se dois servidores usaram o volume de hoje ao
-mesmo tempo, ele tira antes um backup de cada um e confere o banco (o log e
-os dados): escritas podem ter sumido mesmo sem erro. Com dois volumes do projeto com o rótulo
-(pasta renomeada, clone), o documento mostra o que cada um tem; se a stack de
-hoje está no mais novo, ou na dúvida, pare. Volume de hoje sem rótulo
-(restaurado ou criado à mão no passado): a conferência não o reconhece; pare
-e confira à mão.
+`config`) confirma o estado normal: só o `postgres` da stack de hoje monta o
+volume, no ar, o `nginx` dela com as portas e o arquivo anterior na pasta. Um
+`run` que não foi servidor (`psql`, `pg_dump`) pode ser removido. Se ela
+falhar (outro projeto, um container sem projeto ou um `run` que foi servidor
+no volume; outra stack com as portas; o arquivo novo na pasta), não siga:
+"Desfazer uma troca errada", no documento, guarda um backup de cada
+`postgres` no ar no volume (com as escritas congeladas, se há mais de um) e o
+log de cada um que o monta, mostra numa linha do tempo se houve dois
+servidores, derruba o que é errado e para o `postgres` de hoje por último,
+sem pausa, sobe a stack de hoje sem pôr dois PostgreSQL no volume e sem
+apagar dado — e para se uma stack errada serviu o site gravando noutro volume
+(dados dos dois lados). Com dois servidores, ele manda conferir os dados
+contra os backups: escritas podem ter sumido mesmo sem erro no log. Com dois
+volumes do projeto com o rótulo (pasta renomeada, clone), o documento mostra
+o que cada um tem; se a stack de hoje está no mais novo, ou na dúvida, pare.
+Volume de hoje sem rótulo (restaurado ou criado à mão no passado): a
+conferência não o reconhece; pare e confira à mão.
 
 1. Anote o projeto de hoje e o volume de hoje, da conferência. É esse o
    volume: **não crie outro**. O projeto vale nos passos 2 e 3, no `-p` dos
    comandos com o arquivo antigo (que não tem `name:`; sem o `-p`, uma pasta
    com outro nome faz o `stop` sair sem erro e sem parar nada), e no passo 5;
    com o arquivo novo, nunca `-p`.
-2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar,
-   com o `-p` do passo 1), com `umask 077` (o arquivo tem todos os dados,
-   inclusive pessoais).
+2. Faça um backup (obrigatório: é o da terceira regra), por `pg_dumpall` pelo
+   `exec` no `postgres` que está no ar, com o `-p` do passo 1, com
+   `umask 077` (o arquivo tem todos os dados, inclusive pessoais).
 3. Pare o `postgres` antigo, ainda com o arquivo antigo:
    `docker compose -p <projeto do passo 1> -f docker-compose.prod.yml stop -t 120 postgres`
-   (sem `-v` e sem `down`). O container antigo só tem 10 s para desligar;
-   parado, ele não fica no ar ao lado do novo se o nome do projeto sair
-   errado.
+   (sem `-v` e sem `down`), e guarde o log dele num arquivo privado (o passo 7
+   recria o container), procurando nele `not properly shut down`,
+   `lock file is invalid`, `PANIC`, `invalid` e `corrupt`. O container antigo
+   só tem 10 s para desligar; parado, ele não fica no ar ao lado do novo se o
+   nome do projeto sair errado.
 4. Traga os arquivos acima.
 5. No `.env` ao lado do `docker-compose.prod.yml`, defina
    `PROD_COMPOSE_PROJECT_NAME` e `PROD_POSTGRES_VOLUME` com os valores do
@@ -175,14 +198,18 @@ e confira à mão.
 7. Com a conferência na frente (nenhum container no ar no volume do passo
    1), `docker compose -f docker-compose.prod.yml up -d --build`.
 8. Nos logs do `postgres`, tem que aparecer `Skipping initialization` e
-   **nunca** `init process complete`; se aparecer, pare na hora — o banco de
-   verdade continua intacto no volume do passo 1.
+   **nunca** `init process complete`, `lock file is invalid`, `PANIC`,
+   `invalid` ou `corrupt`. Com `init process complete`, pare na hora (com um
+   backup antes: o site pode ter gravado no banco novo) — o banco de verdade
+   continua intacto no volume do passo 1; corrija e suba de novo pelo comando
+   do passo 7.
 
 Nenhum passo deixa o banco para trás: os dados não se movem, o volume é o
-mesmo e o diretório também. Voltar atrás é parar o `postgres` com o arquivo
-novo (`docker compose -f docker-compose.prod.yml stop postgres`), pôr o
-arquivo anterior de volta, na mesma pasta, e subir com
-`-p <projeto do passo 1>`, com a conferência na frente.
+mesmo e o diretório também. Voltar atrás é tirar um backup e guardar o log
+(terceira regra), parar o `postgres` com o arquivo novo
+(`docker compose -f docker-compose.prod.yml stop postgres`), pôr o arquivo
+anterior de volta, na mesma pasta, e subir com `-p <projeto do passo 1>`,
+com a conferência na frente.
 
 - **Atenção ao editar à mão — mude a montagem e o `PGDATA` juntos.** Só um
   dos dois cria um banco **novo e vazio**, sem erro (o log mostra `init
