@@ -449,7 +449,7 @@ Para o projeto que roda com o `docker-compose.prod.yml` anterior (volume do
 banco criado pelo Compose e montado em `/var/lib/postgresql/data`). Os dados
 não se movem: o arquivo novo lê o mesmo volume, no mesmo diretório.
 
-Três regras valem nesta seção e na próxima:
+Quatro regras valem nesta seção e na próxima:
 
 - **O banco é o volume, não a pasta.** Um container de outra pasta, ou de
   outro nome de projeto, pode montar o mesmo volume: o que conta é quem monta
@@ -468,14 +468,24 @@ Três regras valem nesta seção e na próxima:
   reconfere o `postmaster.pid` a cada minuto
   ([`postmaster.c`](https://github.com/postgres/postgres/blob/REL_18_STABLE/src/backend/postmaster/postmaster.c)).
   Quando um de dois servidores no mesmo volume para e apaga esse arquivo, o
-  outro se derruba (`lock file is invalid`) e volta, pela política de
-  reinício, a partir do checkpoint do primeiro, descartando as próprias
-  escritas já confirmadas. Por isso, antes de parar ou remover qualquer
+  outro se derruba (`lock file is invalid`) na reconferência seguinte, que
+  pode vir a qualquer instante, e volta, pela política de reinício, a partir
+  do checkpoint do primeiro, descartando as próprias escritas já confirmadas
+  — ou não volta (`PANIC`). Por isso, antes de parar ou remover qualquer
   `postgres`, os passos tiram um backup de cada `postgres` no ar no volume e
   guardam o log de cada container que o monta (o `docker rm`, e o `up` que
   recria o container, apagam o log); se houve dois servidores, mandam
   conferir os dados contra os backups. Nenhum passo garante que o banco esteja
   inteiro: veja [O que a migração não resolve](#o-que-a-migração-não-resolve).
+- **Com mais de um PostgreSQL no ar no mesmo volume, nenhum para limpo.**
+  `stop`, `down`, `restart`, `rm -s`, SIGTERM ou SIGINT apagam o
+  `postmaster.pid` no fim da parada, e o que continua no ar se derruba na
+  reconferência seguinte (terceira regra). Os errados saem por `docker kill`,
+  depois do backup e do log da terceira regra: o SIGKILL não grava checkpoint
+  nem apaga o `postmaster.pid`, e o Docker não religa um container morto
+  assim, com `restart: unless-stopped`
+  ([`daemon/kill.go` do moby](https://github.com/moby/moby/blob/master/daemon/kill.go)).
+  A parada normal só vale para o último servidor no volume.
 
 **Antes de começar, confira o estado do servidor.** O passo a passo supõe o
 estado normal: o arquivo anterior na pasta, e a stack de hoje servindo o site
@@ -619,8 +629,9 @@ outro volume e não apague nenhum.
    do projeto sair errado — dois servidores no mesmo volume corrompem o banco,
    e o antigo não tem a trava. O `grep` conta a história do banco: nada, siga.
    `not properly shut down` (com `invalid record`, o fim do WAL na
-   recuperação) é uma queda antiga — falta de luz, `kill` —, da qual o
-   PostgreSQL se recuperou. `lock file is invalid`, `PANIC` ou `corrupt`
+   recuperação) em geral é uma queda antiga — falta de luz, `kill` —, da qual
+   o PostgreSQL se recuperou; mas é também o que um segundo servidor registra
+   ao subir num volume em uso ([O que a migração não resolve](#o-que-a-migração-não-resolve)). `lock file is invalid`, `PANIC` ou `corrupt`
    dizem que outro servidor usou o volume em algum momento, ou que o banco
    estragou: escritas podem ter sumido naquela época, e a migração não piora
    nem desfaz isso ([O que a migração não resolve](#o-que-a-migração-não-resolve));
@@ -673,12 +684,16 @@ outro volume e não apague nenhum.
    bem: pare e veja
    [O que a migração não resolve](#o-que-a-migração-não-resolve).
 
-**Voltar atrás:** tire um backup e guarde o log (terceira regra; o `up` com o
-arquivo anterior recria o container), pare o `postgres` com o arquivo novo (o
-`stop` dele já espera 2 min), ponha o arquivo anterior de volta, na mesma
-pasta, e suba com o projeto do passo 1, com a conferência na frente:
+**Voltar atrás:** confira que só o `postgres` de hoje está no ar no volume (o
+primeiro comando dá uma linha; mais de uma, não pare nada: quarta regra, vá
+para [Desfazer uma troca errada](#desfazer-uma-troca-errada)), tire um backup
+e guarde o log (terceira regra; o `up` com o arquivo anterior recria o
+container), pare o `postgres` com o arquivo novo (o `stop` dele já espera
+2 min), ponha o arquivo anterior de volta, na mesma pasta, e suba com o
+projeto do passo 1, com a conferência na frente:
 
 ```bash
+docker ps --filter volume=<volume do passo 1> --format '{{.Names}}'
 (umask 077 && docker compose -f docker-compose.prod.yml exec -T postgres pg_dumpall -U <PROD_POSTGRES_USER> > antes-de-voltar.sql)
 docker compose -f docker-compose.prod.yml stop postgres
 (umask 077 && docker compose -f docker-compose.prod.yml logs -t postgres > antes-de-voltar.log)
@@ -808,12 +823,30 @@ consertam ([O que a migração não resolve](#o-que-a-migração-não-resolve)).
    dois servidores. Com dois servidores, siga, mas o passo 7 confere os dados
    contra os backups.
 4. **Se a pasta tem o arquivo novo, ponha o anterior de volta.**
-5. **Pare tudo o que sai e, logo em seguida, o `postgres` de hoje; só depois
-   remova.** O de hoje para por último e sem pausa: no ar, ele se derrubaria
-   sozinho até um minuto depois de o último errado parar e voltaria pelo
-   checkpoint dele, descartando as próprias escritas (terceira regra); parado
-   por você antes disso, ele grava o próprio checkpoint. Uma linha por stack
-   errada e uma por container errado, e a do `postgres` de hoje por último:
+5. **Tire o que sai, sem parar limpo um servidor ao lado de outro** (quarta
+   regra); só depois remova. Veja quantos `postgres` estão no ar no volume de
+   hoje:
+
+   ```bash
+   docker ps --filter volume=<volume de hoje> --format '{{.Names}}'
+   ```
+
+   Mais de uma linha: mate os errados, um por um, até restar um só — o de
+   hoje, se ele está no ar; senão, o da stack que serviu o site — e rode o
+   comando de cima de novo, até sair uma linha:
+
+   ```bash
+   docker kill <postgres errado>
+   ```
+
+   Parar limpo um errado com outro no ar derrubaria o que ficou em qualquer
+   instante, pelo checkpoint do errado, ou de vez (terceira regra); morto por
+   `kill`, ele não mexe no outro, e o que gravou fica no backup dele, do
+   passo 3 — se estiver lá: o backup de um servidor pode não ter todas as
+   escritas dele ([O que a migração não resolve](#o-que-a-migração-não-resolve)).
+   Com um servidor só no volume, a parada normal vale, sem pressa. Pare o
+   resto: uma linha por stack errada e uma por container errado, e a do
+   `postgres` de hoje por último:
 
    ```bash
    docker ps -q --filter label=com.docker.compose.project=<projeto errado> | xargs -r docker stop -t 120
@@ -862,7 +895,8 @@ consertam ([O que a migração não resolve](#o-que-a-migração-não-resolve)).
    passo 3 — por exemplo, as linhas mais recentes das tabelas que mais
    recebem escrita, em cada backup e no banco. Faltou dado, ou apareceu um
    desses erros: tire um backup do `postgres` de hoje, se ele está no ar
-   (terceira regra), e pare-o
+   (terceira regra; o comando do passo 2 da migração, com o `-p` do projeto
+   de hoje e outro nome de arquivo), e pare-o
    (`docker compose -p <projeto de hoje> -f docker-compose.prod.yml stop postgres`);
    reconciliar e restaurar ficam fora deste documento. Sem dois servidores e
    sem erro, siga.
@@ -881,12 +915,13 @@ apagar um volume que um container usa, mas não protege um volume livre.
 ### O que a migração não resolve
 
 A migração e o "Desfazer" não põem dois servidores no volume, guardam o que
-cada servidor sabe antes de parar qualquer um e acusam o que acharem. Não vão
+cada servidor sabe antes de parar qualquer um, não param limpo um servidor ao
+lado de outro e acusam o que acharem. Não vão
 além disto:
 
 - **Dois servidores ao mesmo tempo, antes do documento.** O dano acontece
-  enquanto os dois gravam e quando um deles para (terceira regra): escritas
-  confirmadas somem, ou o banco não volta (`PANIC`). Os passos acusam (o log,
+  enquanto os dois gravam e quando um deles para limpo (terceira regra):
+  escritas confirmadas somem, ou o banco não volta (`PANIC`). Os passos acusam (o log,
   a linha do tempo) e guardam backups, mas o que um servidor descartou antes
   deles não está em nenhum backup tirado aqui — só num anterior ao segundo
   servidor.
@@ -899,9 +934,36 @@ além disto:
 - **Container sem projeto do Compose** no volume (um `docker run` avulso): é
   tratado pelo nome, com a terceira regra, mas o documento não sabe quem o
   criou nem o que gravou.
-- **Log que não existe mais** (container removido ou recriado, log rotacionado
-  pelo Docker): sem ele, a linha do tempo não acusa um segundo servidor do
-  passado.
+- **Log que não existe mais, ou que não se lê** (container removido ou
+  recriado, log rotacionado, driver de log que o `docker logs` não lê): a
+  linha do tempo não acusa um segundo servidor do passado, e o
+  `grep -c 'starting PostgreSQL'` da conferência dá `0` até num `run` que é
+  servidor — o que leva ao `docker rm -f` dele, sem backup. Quando o
+  `docker logs <nome>` não mostra nada, trate o `run` como servidor e vá para
+  o "Desfazer".
+- **O padrão de erro é estreito.** As buscas pegam as mensagens de
+  recuperação e de página estragada acima; não pegam, entre outras,
+  `invalid memory alloc request size`, `invalid lp`,
+  `could not access status of transaction`, `missing chunk number`,
+  `from before relfrozenxid`, `could not read block` e
+  `control file contains invalid database cluster state`. Depois de dois
+  servidores, leia o log inteiro do `postgres`, não só o resultado do `grep`:
+  um `FATAL` ou `PANIC`, ou um `ERROR` que não vem de uma consulta da
+  aplicação, é banco estragado.
+- **`not properly shut down` nem sempre é queda antiga**: é também o que um
+  segundo servidor registra ao subir num volume em uso. Na dúvida, trate
+  como os outros sinais do passo 3 da migração: escritas podem ter sumido
+  naquela época.
+- **O congelamento supõe o serviço `postgres`.** Um servidor de outra stack
+  com outro nome de serviço seria parado limpo junto com o resto (contra a
+  quarta regra), e um projeto auxiliar que monta o volume (backup,
+  monitoramento) para inteiro. Com uma stack assim no segundo comando,
+  congele à mão: pare só o que grava pelo site, nunca um servidor.
+- **O backup de um servidor pode não ter as próprias escritas.** Com dois
+  servidores, cada um lê do disco páginas que o outro gravou por cima, e o
+  `pg_dumpall` de um pode sair sem parte do que ele mesmo confirmou. Um dado
+  que não está no banco nem em nenhum backup se perdeu; só um backup anterior
+  ao segundo servidor o tem.
 - **Escrita depois do backup.** O `pg_dumpall` é o retrato do momento em que
   começa; congelar as stacks reduz, mas uma conexão de fora (um `psql`
   aberto, outro servidor) continua gravando.
@@ -910,7 +972,9 @@ além disto:
   mão.
 
 Em qualquer desses casos — ou se a conferência dos dados mostrar falta —,
-pare: daqui em diante é restaurar de um backup, por quem conhece os dados.
+pare: daqui em diante é restaurar de um backup, por quem conhece os dados. O
+que falta para resolver cada limite está na
+[issue #134](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues/134).
 
 ### Um servidor por volume
 
