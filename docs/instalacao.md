@@ -429,7 +429,7 @@ o starter trazia:
 | `.env.example` | `APP_URL`, `PLATFORM_OFFICIAL_URL`, `DB_DATABASE`, `SESSION_COOKIE` e a identidade (`APP_NAME`, `PLATFORM_NAME`, `PLATFORM_VERSION=0.1.0`, sem o repositório e a empresa do kit) do projeto (as senhas geradas ficam só no `.env`) |
 | `.devcontainer/devcontainer.json` | o nome do projeto no Dev Container |
 | `phpunit.pgsql.xml` | o banco da suíte `<banco>_test` — o mesmo que o `db-init` do `compose.yaml` cria |
-| `docker-compose.prod.yml` | o nome padrão do banco de produção (`PROD_POSTGRES_DB`) |
+| `docker-compose.prod.yml` | o nome padrão do banco de produção (`PROD_POSTGRES_DB`), do projeto (`PROD_COMPOSE_PROJECT_NAME`) e do volume do banco, externo (`PROD_POSTGRES_VOLUME`, `<nome>_postgres_data` — crie-o uma vez no servidor; ver [Volumes e o banco em produção](producao.md#volumes-e-o-banco-em-produção)) |
 | `composer.json` | `name` = `<vendor>/<nome>` (`TWS_KIT_VENDOR`, padrão `app`), `license` = `proprietary` (`TWS_KIT_LICENSE`: um identificador SPDX como `MIT` ou `Apache-2.0`), sem a descrição, a página, o suporte, as palavras-chave e a versão do starter; o `content-hash` do `composer.lock` acompanha |
 | `LICENSE` → `NOTICE-KIT-MIT.txt` | a licença MIT do kit vira o aviso que a MIT exige manter, com um cabeçalho dizendo que ela não é a licença do projeto — o projeto escolhe a dele (o `license` do `composer.json` e, se quiser, um `LICENSE` próprio) |
 | `.github/workflows/ci.yml` | o CI base (sem sobrescrever um que exista) |

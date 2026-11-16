@@ -69,12 +69,17 @@ beforeEach(function (): void {
     ]));
 
     file_put_contents($this->project.'/docker-compose.prod.yml', implode("\n", [
+        'name: ${PROD_COMPOSE_PROJECT_NAME:-tws-starter-react}',
         'x-app-env: &app-env',
         '    DB_DATABASE: ${PROD_POSTGRES_DB:-tws_starter_react}',
         'services:',
         '    postgres:',
         '        environment:',
         '            POSTGRES_DB: ${PROD_POSTGRES_DB:-tws_starter_react}',
+        'volumes:',
+        '    postgres_data:',
+        '        name: ${PROD_POSTGRES_VOLUME:-tws-starter-react_postgres_data}',
+        '        external: true',
         '',
     ]));
 
@@ -136,6 +141,15 @@ it('troca os valores do starter pelos do projeto — e nenhum segredo vai para o
     // O banco padrão de produção.
     expect(substr_count(($this->read)('docker-compose.prod.yml'), '${PROD_POSTGRES_DB:-loja_da_maria}'))->toBe(2)
         ->and(($this->read)('docker-compose.prod.yml'))->not->toContain('tws_starter');
+
+    // O nome do projeto do Compose de produção e o do volume externo do banco
+    // ficam fixos, com o nome do projeto: subir de outra pasta não cria outra
+    // stack nem um banco vazio.
+    expect(($this->read)('docker-compose.prod.yml'))
+        ->toContain("name: \${PROD_COMPOSE_PROJECT_NAME:-loja-da-maria}\n")
+        ->toContain("name: \${PROD_POSTGRES_VOLUME:-loja-da-maria_postgres_data}\n")
+        ->toContain("external: true\n")
+        ->not->toContain('tws-starter');
 });
 
 it('o projeto nasce com o nome dele no .env, no .env.example e no Dev Container — nada da identidade do kit', function (): void {
