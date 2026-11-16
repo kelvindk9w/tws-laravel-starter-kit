@@ -125,23 +125,35 @@ Nenhuma migration. Os arquivos (de `starters/livewire/` ou `starters/react/`):
 **Instalação de produção que já roda — passo a passo** (detalhes e comandos
 em `docs/producao.md`, "Migrar uma instalação que já roda"):
 
-**Antes do passo 1, a conferência do documento** (três comandos só de
-leitura: qual arquivo está na pasta, os containers `postgres` com o estado e
-os volumes com o rótulo do Compose) confirma o estado normal: o arquivo
-anterior na pasta, uma linha só da pasta da produção, no ar, e o volume dela
-com o rótulo do Compose e o mesmo projeto. Se ela falhar (uma troca já foi
-tentada: o arquivo novo na pasta, um volume criado à mão, uma stack errada
-no ar), não siga: "Desfazer uma troca errada", no documento, volta ao estado
-normal sem pôr dois PostgreSQL no volume e sem apagar nada — e para, se a
-stack errada serviu o site (dados dos dois lados). Com outro volume do
-projeto com o rótulo (pasta renomeada, clone), o documento mostra o que cada
-um tem; se a stack de hoje está no mais novo, ou na dúvida, pare.
+**Duas regras valem em toda a migração.** O banco é o volume, não a pasta:
+um container de outra pasta ou de outro projeto pode montar o mesmo volume. E,
+antes de subir qualquer PostgreSQL, nenhum container no ar pode usar o volume
+(o `postgres` do arquivo anterior não tem a trava, e dois servidores no mesmo
+volume corrompem o banco): no documento, todo comando que sobe ou religa o
+`postgres` vem com essa conferência na frente, que imprime `PARE` e não sobe
+nada.
 
-1. Anote o projeto e o volume da linha da conferência, **os dois da mesma
-   linha**. É esse o volume: **não crie outro**. O projeto vale nos passos 2
-   e 3, no `-p` dos comandos com o arquivo antigo (que não tem `name:`; sem o
-   `-p`, uma pasta com outro nome faz o `stop` sair sem erro e sem parar
-   nada), e no passo 5; com o arquivo novo, nunca `-p`.
+**Antes do passo 1, a conferência do documento** (quatro comandos só de
+leitura: o volume e o projeto de hoje, pelo rótulo do Compose; todo container
+que monta esse volume, de qualquer pasta e em qualquer estado; quem está com
+as portas do site; e qual arquivo está na pasta, pela montagem do banco no
+`config`) confirma o estado normal: só a stack de hoje monta o volume, o
+`postgres` dela no ar, o `nginx` dela com as portas e o arquivo anterior na
+pasta. Se ela falhar (outro projeto no volume, outra stack com as portas, o
+arquivo novo na pasta), não siga: "Desfazer uma troca errada", no documento,
+derruba as stacks erradas e sobe a de hoje sem pôr dois PostgreSQL no volume
+e sem apagar nada — e para se uma stack errada serviu o site gravando noutro
+volume (dados dos dois lados). Com dois volumes do projeto com o rótulo
+(pasta renomeada, clone), o documento mostra o que cada um tem; se a stack de
+hoje está no mais novo, ou na dúvida, pare. Volume de hoje sem rótulo
+(restaurado ou criado à mão no passado): a conferência não o reconhece; pare
+e confira à mão.
+
+1. Anote o projeto de hoje e o volume de hoje, da conferência. É esse o
+   volume: **não crie outro**. O projeto vale nos passos 2 e 3, no `-p` dos
+   comandos com o arquivo antigo (que não tem `name:`; sem o `-p`, uma pasta
+   com outro nome faz o `stop` sair sem erro e sem parar nada), e no passo 5;
+   com o arquivo novo, nunca `-p`.
 2. Faça um backup (`pg_dumpall` pelo `exec` no `postgres` que está no ar,
    com o `-p` do passo 1), com `umask 077` (o arquivo tem todos os dados,
    inclusive pessoais).
@@ -158,14 +170,17 @@ um tem; se a stack de hoje está no mais novo, ou na dúvida, pare.
    vez de subir uma segunda stack.
 6. Confira com `docker compose -f docker-compose.prod.yml config` o `name:` e
    o `postgres_data` (`external: true`).
-7. `docker compose -f docker-compose.prod.yml up -d --build`.
+7. Com a conferência na frente (nenhum container no ar no volume do passo
+   1), `docker compose -f docker-compose.prod.yml up -d --build`.
 8. Nos logs do `postgres`, tem que aparecer `Skipping initialization` e
    **nunca** `init process complete`; se aparecer, pare na hora — o banco de
    verdade continua intacto no volume do passo 1.
 
 Nenhum passo deixa o banco para trás: os dados não se movem, o volume é o
-mesmo e o diretório também. Voltar atrás é pôr o arquivo anterior de volta,
-na mesma pasta, e subir com `-p <projeto do passo 1>`.
+mesmo e o diretório também. Voltar atrás é parar o `postgres` com o arquivo
+novo (`docker compose -f docker-compose.prod.yml stop postgres`), pôr o
+arquivo anterior de volta, na mesma pasta, e subir com
+`-p <projeto do passo 1>`, com a conferência na frente.
 
 - **Atenção ao editar à mão — mude a montagem e o `PGDATA` juntos.** Só um
   dos dois cria um banco **novo e vazio**, sem erro (o log mostra `init
