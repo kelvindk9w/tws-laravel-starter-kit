@@ -143,7 +143,9 @@ pasta. Se ela falhar (outro projeto no volume, outra stack com as portas, o
 arquivo novo na pasta), não siga: "Desfazer uma troca errada", no documento,
 derruba as stacks erradas e sobe a de hoje sem pôr dois PostgreSQL no volume
 e sem apagar nada — e para se uma stack errada serviu o site gravando noutro
-volume (dados dos dois lados). Com dois volumes do projeto com o rótulo
+volume (dados dos dois lados). Se dois servidores usaram o volume de hoje ao
+mesmo tempo, ele tira antes um backup de cada um e confere o banco (o log e
+os dados): escritas podem ter sumido mesmo sem erro. Com dois volumes do projeto com o rótulo
 (pasta renomeada, clone), o documento mostra o que cada um tem; se a stack de
 hoje está no mais novo, ou na dúvida, pare. Volume de hoje sem rótulo
 (restaurado ou criado à mão no passado): a conferência não o reconhece; pare

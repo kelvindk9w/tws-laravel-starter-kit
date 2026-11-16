@@ -697,8 +697,19 @@ dois PostgreSQL no volume de hoje e sem apagar nada.
      dois lados. **Pare aqui**: não apague nenhum volume e não suba nada;
      juntar os dados fica fora deste documento;
    - **o `postgres` dela monta o volume de hoje**: o que ela gravou está no
-     banco de verdade, e não há outro lado. Siga; mas dois servidores podem
-     ter aberto o banco ao mesmo tempo, e o passo 6 confere;
+     banco de verdade, e não há outro volume. Siga. Mas, se o `postgres` de
+     hoje também está no ar (no segundo comando, dois `postgres` `running`),
+     são dois servidores no mesmo banco, e cada um vê uma parte das escritas
+     do outro: antes do passo 3, tire um backup **de cada um**, pelo nome do
+     container no segundo comando:
+
+     ```bash
+     (umask 077 && docker exec <nome do container> pg_dumpall -U <PROD_POSTGRES_USER> > backup-<nome do container>.sql)
+     ```
+
+     O passo 6 confere o banco; se ele não voltar, ou se faltar dado, é
+     desses backups (ou de um anterior) que se recupera — juntar os dois fica
+     fora deste documento;
    - **não serviu**: siga.
 3. **Derrube cada stack errada** pelos rótulos (vale com qualquer arquivo na
    pasta; sem `-v`), tire a rede dela e confira que nenhum container dela
@@ -737,12 +748,15 @@ dois PostgreSQL no volume de hoje e sem apagar nada.
    docker compose -p <projeto de hoje> -f docker-compose.prod.yml logs --since "$desde" postgres | grep -E 'Skipping initialization|init process complete|PANIC|invalid|corrupt'
    ```
 
-   O primeiro mostra uma linha só, a do `postgres` de hoje; o segundo (no
-   mesmo terminal do passo 5), `Skipping initialization` e **nunca**
+   O primeiro mostra uma linha só, a do `postgres` de hoje, `Up`
+   (`Restarting` é o PostgreSQL recusando o banco); o segundo (no mesmo
+   terminal do passo 5), `Skipping initialization` e **nunca**
    `init process complete`, `PANIC`, `invalid` ou `corrupt`. Confira os dados
-   no site. Se uma stack errada montava o volume de hoje (passo 2), confira com
-   mais cuidado: com um desses erros, ou na dúvida, pare e restaure de um
-   backup antes de seguir.
+   no site. Se dois servidores usaram o volume de hoje ao mesmo tempo (passo
+   2), escritas podem ter sumido mesmo sem erro no log: compare com os
+   backups do passo 2. Com um desses erros, ou na dúvida, pare o `postgres`
+   (`docker compose -p <projeto de hoje> -f docker-compose.prod.yml stop postgres`)
+   e recupere de um backup antes de seguir.
 7. **Recomece** pela conferência de
    [Migrar uma instalação que já roda](#migrar-uma-instalação-que-já-roda):
    agora ela passa.
