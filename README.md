@@ -6,7 +6,10 @@ Base estrutural reutilizável para projetos Laravel — segurança primeiro, Doc
 
 > **Versão estável (linha 2.x).** A 2.x segue o [SemVer](https://semver.org/lang/pt-BR/):
 > correções nas versões de correção, novidades compatíveis nas menores, e
-> quebra só numa 3.0. O que ficou para depois está no [roteiro](docs/roadmap.md).
+> quebra só numa 3.0. A exceção é de segurança: uma versão menor pode passar a
+> recusar uma operação perigosa. Ela só acrescenta essa recusa, vem sempre
+> declarada no [CHANGELOG](CHANGELOG.md) e tem uma forma documentada de
+> desligar. O que ficou para depois está no [roteiro](docs/roadmap.md).
 
 ## Comece aqui
 

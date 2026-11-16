@@ -1,6 +1,6 @@
 # Estado do kit e roteiro
 
-> Atualizado em 2026-11-14, para a versão **2.5.0**.
+> Atualizado em 2026-11-16, para a versão **2.6.0**.
 > Este documento diz onde o kit está, o que entrou na **2.0.0** e o que fica
 > para depois. O histórico detalhado de cada versão está no
 > [CHANGELOG](../CHANGELOG.md).
@@ -10,7 +10,9 @@
 A linha **2.x** é **estável** e segue o
 [SemVer](https://semver.org/lang/pt-BR/): correções nas versões de correção
 (2.0.x), novidades compatíveis nas menores (2.x) e quebra de compatibilidade
-só numa 3.0.
+só numa 3.0. A exceção é de segurança: uma versão menor pode passar a recusar
+uma operação perigosa. Ela só acrescenta essa recusa, vem sempre declarada no
+[CHANGELOG](../CHANGELOG.md) e tem uma forma documentada de desligar.
 
 | Frente | Estado |
 |---|---|

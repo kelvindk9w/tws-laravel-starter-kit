@@ -6,16 +6,29 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
-O banco de produção não some mais sem aviso. O `docker-compose.prod.yml` dos
-dois starters passa a ter nome de projeto fixo e o volume do banco externo,
-com nome fixo; o PostgreSQL 18 usa o layout da imagem (no desenvolvimento
-também), recusa um segundo servidor no mesmo volume e ganha desligamento
-limpo, `/dev/shm` maior e proteção contra o OOM killer. O
-`twstec/kit-foundation` passa a recusar em produção os comandos que apagam o
-banco (muda o comportamento de quem os roda lá; ver "Alterado"). Sem
-migration. **Há arquivos de starter para aplicar à mão** e um
-procedimento para a instalação que já roda (abaixo e em `docs/producao.md`,
-"Migrar uma instalação que já roda").
+## [2.6.0] — 2026-11-16
+
+Versão menor com **uma exceção de segurança declarada**, do tipo que a
+promessa de versão do README admite (uma recusa nova a uma operação perigosa,
+com forma documentada de desligar): com `APP_ENV=production`, o
+`twstec/kit-foundation` passa a recusar `db:wipe`,
+`migrate:fresh`, `migrate:refresh`, `migrate:reset` e `migrate:rollback`,
+**mesmo com `--force`**. Quem depende de algum deles em produção desliga a
+recusa com `DB_ALLOW_DESTRUCTIVE_COMMANDS_IN_PRODUCTION=true` (só `true`
+liga), passado só no comando que precisa (ver "Alterado"). O resto da versão
+é o banco de produção que não some mais sem aviso: o
+`docker-compose.prod.yml` dos dois starters passa a ter nome de projeto fixo e
+o volume do banco externo, com nome fixo; o PostgreSQL 18 usa o layout da
+imagem (no desenvolvimento também), recusa um segundo servidor no mesmo volume
+e ganha desligamento limpo, `/dev/shm` maior e proteção contra o OOM killer; e
+os serviços PHP de produção ganham um teto de memória opcional. Sem migration.
+**Há arquivos de starter para aplicar à mão** em projeto já criado (a lista
+está em "Aplicar à mão em projeto já criado", abaixo) e, para a instalação de
+produção que já roda, o passo a passo de `docs/producao.md`, "Migrar uma
+instalação que já roda" — num servidor que já roda, **não crie volume**. As
+limitações conhecidas da migração estão na
+[issue #134](https://github.com/kelvindk9w/tws-laravel-starter-kit/issues/134).
+Atualize todos os pacotes `twstec/*` juntos.
 
 ### Adicionado
 
@@ -3698,7 +3711,8 @@ e Filament 5 (super admin), testada contra PostgreSQL 18.
   ponta com Playwright, build das imagens de produção obrigatório para
   promover código.
 
-[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.5.0...desenvolvimento
+[Não publicado]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.6.0...desenvolvimento
+[2.6.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/kelvindk9w/tws-laravel-starter-kit/compare/v2.2.0...v2.3.0
