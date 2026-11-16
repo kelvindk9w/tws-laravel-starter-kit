@@ -683,7 +683,7 @@ dois PostgreSQL no volume de hoje e sem apagar nada.
    do passo 3 apaga a pista):
 
    ```bash
-   docker ps -a --filter label=com.docker.compose.project=<projeto errado> --format '{{.Label "com.docker.compose.service"}} {{.Status}} {{.Mounts}}'
+   docker ps -a --no-trunc --filter label=com.docker.compose.project=<projeto errado> --format '{{.Label "com.docker.compose.service"}} {{.Status}} {{.Mounts}}'
    ```
 
    Ela **serviu o site** se o `nginx` dela aparece `Up` ou `Exited`; e também
