@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Twstec\Kit\Webhooks\Inbound;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 use Twstec\Kit\Foundation\Logging\CorrelationContext;
 use Twstec\Kit\Foundation\Logging\Redactor;
 use Twstec\Kit\Webhooks\Enums\InboundDispatchOutcome;
@@ -38,6 +40,16 @@ use Twstec\Kit\Webhooks\Models\InboundWebhookEvent;
  *
  * Respostas: 202 (aceito) ou 200 (repetição, nada reprocessado). Um reenvio
  * de aviso que ainda espera a fila tenta pôr na fila na hora.
+ *
+ * Fonte no modo `authorization` (Enums\InboundMode): os passos 1 a 5 são os
+ * mesmos, com as mesmas recusas; depois, no lugar de 6 e 7, o handler de
+ * autorização roda NA REQUISIÇÃO (sem fila) e a resposta dele — código e
+ * corpo JSON — vai ao provedor sem interpretação. O registro do recebimento
+ * é gravado antes (sem o corpo; a mesma chamada repetida soma `attempts` e
+ * chega ao handler de novo — deduplicar é com ele). Exceção do handler:
+ * 500 sem corpo. O tempo do handler vai para o log, com aviso acima do
+ * orçamento.
+ *
  * Nenhum log desta classe leva corpo, cabeçalho ou segredo — e o contexto
  * ainda passa pelo Redactor do kit.
  */
@@ -94,6 +106,10 @@ final class InboundReceiver
             $this->log('warning', 'webhooks.inbound.malformed', $request, $name, ['problem' => $exception->getMessage()]);
 
             return $this->empty(Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($source->authorizes()) {
+            return $this->authorize($source, $inbound, $verification, $parsed, $now, $request);
         }
 
         $hash = hash('sha256', $inbound->body);
@@ -188,6 +204,136 @@ final class InboundReceiver
         }
 
         return strlen($id) > 255 ? 'sha256:'.hash('sha256', $id) : $id;
+    }
+
+    /**
+     * O modo `authorization`: grava o registro do recebimento (sem o corpo),
+     * chama o handler na requisição e devolve a resposta dele, sem
+     * interpretar. Nada de fila; nada de deduplicação (é com o handler).
+     */
+    private function authorize(InboundSource $source, InboundRequest $inbound, VerificationResult $verification, ParsedEvent $parsed, Carbon $now, Request $request): Response
+    {
+        $hash = hash('sha256', $inbound->body);
+        $eventId = self::eventId($parsed->id ?? $verification->eventId, $hash);
+        $type = $parsed->type === null ? null : mb_substr($parsed->type, 0, 150);
+
+        // O registro do recebimento, SEM o corpo — nem com `store_payload`.
+        // `processing` com `queued_at` e `locked_until` nulos: nenhuma rodada
+        // nem job o pega (ele não espera a fila).
+        $record = new InboundWebhookEvent;
+        $record->forceFill([
+            'uuid' => $record->newUniqueId(),
+            'source' => $source->name,
+            'event_id' => $eventId,
+            'event_type' => $type,
+            'occurred_at' => $parsed->occurredAt,
+            'status' => InboundStatus::Processing,
+            'attempts' => 0,
+            'payload' => null,
+            'payload_hash' => $hash,
+            'received_at' => $now,
+        ]);
+        $record->setCreatedAt($now)->setUpdatedAt($now);
+
+        InboundWebhookEvent::query()->insertOrIgnore($record->getAttributes());
+
+        $stored = InboundWebhookEvent::query()
+            ->where('source', $source->name)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if ($stored === null) {
+            // Só se alguém apagou o registro no meio: o provedor tenta de novo.
+            return $this->empty(Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        if (! hash_equals($stored->payload_hash, $hash)) {
+            $this->log('warning', 'webhooks.inbound.duplicate_mismatch', $request, $source->name, ['event' => $stored->uuid]);
+        }
+
+        // Cada chamada que chega ao handler conta (a repetida também).
+        InboundWebhookEvent::query()->whereKey($stored->getKey())->increment('attempts', 1, [
+            'status' => InboundStatus::Processing->value,
+            'updated_at' => $now,
+        ]);
+
+        $event = new InboundEvent(
+            source: $stored->source,
+            id: $stored->event_id,
+            type: $type,
+            occurredAt: $parsed->occurredAt,
+            payload: $parsed->payload,
+            receivedAt: CarbonImmutable::instance($now),
+            receipt: $stored->uuid,
+            attempt: $stored->attempts + 1,
+        );
+
+        $budget = $source->authorizationBudgetMs();
+        $started = (int) hrtime(true);
+
+        try {
+            $answer = $source->authorizationHandler()->authorize($event);
+            // Dentro do try: corpo que não vira JSON é falha do handler.
+            $response = new JsonResponse($answer->body, $answer->status);
+        } catch (Throwable $exception) {
+            $elapsed = self::elapsedMs($started);
+
+            InboundWebhookEvent::query()->whereKey($stored->getKey())->update([
+                'status' => InboundStatus::Failed->value,
+                'last_error' => mb_substr($exception::class, 0, 255),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            // Só a classe: a mensagem pode levar dado do evento. A resposta
+            // não leva nem a classe.
+            $this->log('warning', 'webhooks.inbound.authorization_failed', $request, $source->name, [
+                'event' => $stored->uuid,
+                'exception' => $exception::class,
+                'duration_ms' => $elapsed,
+            ]);
+            $this->budget($elapsed, $budget, $request, $source->name, $stored->uuid);
+
+            return $this->empty(Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        $elapsed = self::elapsedMs($started);
+
+        InboundWebhookEvent::query()->whereKey($stored->getKey())->update([
+            'status' => InboundStatus::Processed->value,
+            'processed_at' => Carbon::now(),
+            'last_error' => null,
+            'updated_at' => Carbon::now(),
+        ]);
+
+        $this->log('info', 'webhooks.inbound.authorized', $request, $source->name, [
+            'event' => $stored->uuid,
+            'type' => $type,
+            'status' => $answer->status,
+            'duration_ms' => $elapsed,
+            'budget_ms' => $budget,
+        ]);
+        $this->budget($elapsed, $budget, $request, $source->name, $stored->uuid);
+
+        return $response;
+    }
+
+    /**
+     * Acima do orçamento: aviso (nada é interrompido — o handler já voltou).
+     */
+    private function budget(int $elapsed, int $budget, Request $request, string $source, string $event): void
+    {
+        if ($elapsed > $budget) {
+            $this->log('warning', 'webhooks.inbound.authorization_over_budget', $request, $source, [
+                'event' => $event,
+                'duration_ms' => $elapsed,
+                'budget_ms' => $budget,
+            ]);
+        }
+    }
+
+    private static function elapsedMs(int $started): int
+    {
+        return intdiv((int) hrtime(true) - $started, 1_000_000);
     }
 
     /**

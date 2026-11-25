@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Twstec\Kit\Webhooks\Inbound;
 
 use Symfony\Component\HttpFoundation\IpUtils;
+use Twstec\Kit\Webhooks\Enums\InboundMode;
 use Twstec\Kit\Webhooks\Inbound\Contracts\EventParser;
+use Twstec\Kit\Webhooks\Inbound\Contracts\InboundAuthorizationHandler;
 use Twstec\Kit\Webhooks\Inbound\Contracts\InboundWebhookHandler;
 use Twstec\Kit\Webhooks\Inbound\Contracts\Verifier;
 use Twstec\Kit\Webhooks\Inbound\Verifiers\VerifierFactory;
@@ -25,6 +27,14 @@ use Twstec\Kit\Webhooks\Inbound\Verifiers\VerifierFactory;
  *         handler: PagamentosHandler::class,
  *         parser: new JsonEventParser(idPath: 'id', typePath: 'event'),
  *     ));
+ *
+ * O MODO (`mode`, Enums\InboundMode): `queue` (o padrão — o handler
+ * `InboundWebhookHandler` roda na fila) ou `authorization` (o handler
+ * `InboundAuthorizationHandler` responde na própria requisição, com o
+ * orçamento de tempo `budgetMs`). Handler que não implementa o contrato do
+ * modo, opção de fila (`storePayload`, `tries`, `backoff`, `queue`,
+ * `connection`) no modo `authorization` e `budgetMs` no modo `queue` são
+ * erro de configuração (503 na rota) — nunca ignorados em silêncio.
  */
 final readonly class InboundSource
 {
@@ -36,14 +46,15 @@ final readonly class InboundSource
     public array $allowedIps;
 
     /**
-     * @param  class-string<InboundWebhookHandler>|InboundWebhookHandler  $handler
+     * @param  class-string<InboundWebhookHandler|InboundAuthorizationHandler>|InboundWebhookHandler|InboundAuthorizationHandler  $handler  o contrato do modo
      * @param  list<string>  $allowedIps  IPs e faixas CIDR (IPv4 e IPv6); vazio = qualquer origem
      * @param  list<int>|null  $backoff  espera antes de cada nova tentativa do job, em segundos
+     * @param  int|null  $budgetMs  só no modo `authorization`: o orçamento de tempo do handler, em milissegundos
      */
     public function __construct(
         public string $name,
         public Verifier $verifier,
-        public string|InboundWebhookHandler $handler,
+        public string|InboundWebhookHandler|InboundAuthorizationHandler $handler,
         public EventParser $parser = new JsonEventParser,
         array $allowedIps = [],
         public ?int $maxBodyBytes = null,
@@ -53,14 +64,20 @@ final readonly class InboundSource
         public ?string $queue = null,
         public ?string $connection = null,
         public ?int $rateLimitPerMinute = null,
+        public InboundMode $mode = InboundMode::Queue,
+        public ?int $budgetMs = null,
     ) {
         if (preg_match(self::NAME_PATTERN, $name) !== 1) {
             throw new InvalidSourceConfiguration("Nome de fonte inválido: use minúsculas, dígitos, - e _ (até 64), como na URL ({$name}).");
         }
 
-        if (is_string($handler) && (! class_exists($handler) || ! is_subclass_of($handler, InboundWebhookHandler::class))) {
-            throw new InvalidSourceConfiguration("Fonte {$name}: o handler precisa implementar ".InboundWebhookHandler::class.'.');
-        }
+        self::checkMode($name, $mode, $handler, [
+            'store_payload' => $storePayload === true,
+            'tries' => $tries !== null,
+            'backoff' => $backoff !== null,
+            'queue' => $queue !== null,
+            'connection' => $connection !== null,
+        ], $budgetMs);
 
         $ips = [];
 
@@ -92,6 +109,7 @@ final readonly class InboundSource
         $handler = $config['handler'] ?? null;
         $parser = $config['parser'] ?? null;
         $event = $config['event'] ?? [];
+        $mode = $config['mode'] ?? null;
 
         if (! is_array($verifier)) {
             throw new InvalidSourceConfiguration("Fonte {$name}: falta o verifier.");
@@ -105,12 +123,18 @@ final readonly class InboundSource
             throw new InvalidSourceConfiguration("Fonte {$name}: o parser precisa implementar ".EventParser::class.'.');
         }
 
+        $mode = $mode === null || $mode === '' ? InboundMode::Queue : (is_string($mode) ? InboundMode::tryFrom($mode) : null);
+
+        if ($mode === null) {
+            throw new InvalidSourceConfiguration("Fonte {$name}: modo desconhecido; use ".implode(' ou ', array_map(static fn (InboundMode $case): string => $case->value, InboundMode::cases())).'.');
+        }
+
         /** @var array<string, mixed> $eventOptions */
         $eventOptions = is_array($event) ? $event : [];
 
         /**
          * @var array<string, mixed> $verifier
-         * @var class-string<InboundWebhookHandler> $handler
+         * @var class-string<InboundWebhookHandler|InboundAuthorizationHandler> $handler
          * @var class-string<EventParser>|null $parser
          */
         return new self(
@@ -126,7 +150,41 @@ final readonly class InboundSource
             queue: is_string($config['queue'] ?? null) && $config['queue'] !== '' ? $config['queue'] : null,
             connection: is_string($config['connection'] ?? null) && $config['connection'] !== '' ? $config['connection'] : null,
             rateLimitPerMinute: self::int($config['rate_limit_per_minute'] ?? null),
+            mode: $mode,
+            budgetMs: self::int($config['budget_ms'] ?? null),
         );
+    }
+
+    /**
+     * O handler implementa o contrato do MODO; no modo `authorization`, nada
+     * de opção de fila (o handler roda na requisição, sem nova tentativa — a
+     * opção daria a impressão errada de que há); no modo `queue`, nada de
+     * orçamento de tempo (ele é do handler na requisição).
+     *
+     * @param  array<string, bool>  $queueOptions  opção => está definida
+     */
+    private static function checkMode(string $name, InboundMode $mode, string|InboundWebhookHandler|InboundAuthorizationHandler $handler, array $queueOptions, ?int $budgetMs): void
+    {
+        $contract = $mode === InboundMode::Authorization ? InboundAuthorizationHandler::class : InboundWebhookHandler::class;
+        $implements = is_string($handler)
+            ? class_exists($handler) && is_subclass_of($handler, $contract)
+            : $handler instanceof $contract;
+
+        if (! $implements) {
+            throw new InvalidSourceConfiguration($mode === InboundMode::Authorization
+                ? "Fonte {$name}: no modo authorization, o handler precisa implementar {$contract}."
+                : "Fonte {$name}: o handler precisa implementar {$contract}.");
+        }
+
+        $defined = array_keys(array_filter($queueOptions));
+
+        if ($mode === InboundMode::Authorization && $defined !== []) {
+            throw new InvalidSourceConfiguration("Fonte {$name}: no modo authorization o handler responde na requisição, sem fila e sem nova tentativa do kit; tire ".implode(', ', $defined).'.');
+        }
+
+        if ($mode === InboundMode::Queue && $budgetMs !== null) {
+            throw new InvalidSourceConfiguration("Fonte {$name}: budget_ms só vale no modo authorization (o handler da fila tem o tempo máximo do job, webhooks.inbound.timeout).");
+        }
     }
 
     /**
@@ -151,14 +209,60 @@ final readonly class InboundSource
         return $parser;
     }
 
+    /**
+     * O handler da FILA. Fonte no modo `authorization` lança (o job nunca
+     * chama o handler de autorização — ele responde só na requisição).
+     *
+     * @throws InvalidSourceConfiguration
+     */
     public function handler(): InboundWebhookHandler
     {
-        if ($this->handler instanceof InboundWebhookHandler) {
-            return $this->handler;
+        if ($this->mode !== InboundMode::Queue) {
+            throw new InvalidSourceConfiguration("Fonte {$this->name}: está no modo {$this->mode->value}; o handler dela não roda na fila.");
         }
 
-        /** @var InboundWebhookHandler */
-        return app()->make($this->handler);
+        $handler = is_string($this->handler) ? app()->make($this->handler) : $this->handler;
+
+        if (! $handler instanceof InboundWebhookHandler) {
+            throw new InvalidSourceConfiguration("Fonte {$this->name}: o handler precisa implementar ".InboundWebhookHandler::class.'.');
+        }
+
+        return $handler;
+    }
+
+    /**
+     * O handler de AUTORIZAÇÃO (modo `authorization`), resolvido pelo
+     * container a cada requisição. Fonte em outro modo lança.
+     *
+     * @throws InvalidSourceConfiguration
+     */
+    public function authorizationHandler(): InboundAuthorizationHandler
+    {
+        if ($this->mode !== InboundMode::Authorization) {
+            throw new InvalidSourceConfiguration("Fonte {$this->name}: está no modo {$this->mode->value}; não há handler de autorização.");
+        }
+
+        $handler = is_string($this->handler) ? app()->make($this->handler) : $this->handler;
+
+        if (! $handler instanceof InboundAuthorizationHandler) {
+            throw new InvalidSourceConfiguration("Fonte {$this->name}: no modo authorization, o handler precisa implementar ".InboundAuthorizationHandler::class.'.');
+        }
+
+        return $handler;
+    }
+
+    public function authorizes(): bool
+    {
+        return $this->mode === InboundMode::Authorization;
+    }
+
+    /**
+     * O orçamento de tempo do handler de autorização, em milissegundos: o da
+     * fonte ou o do pacote (`webhooks.inbound.authorization_budget_ms`).
+     */
+    public function authorizationBudgetMs(): int
+    {
+        return max(1, $this->budgetMs ?? (int) config('webhooks.inbound.authorization_budget_ms', 2000));
     }
 
     public function permits(?string $ip): bool
@@ -176,8 +280,16 @@ final readonly class InboundSource
         return max(1, $this->maxBodyBytes ?? (int) config('webhooks.inbound.max_body_bytes', 262144));
     }
 
+    /**
+     * Guardar o corpo (cifrado)? No modo `authorization`, nunca — nem com o
+     * padrão do pacote ligado: o registro do recebimento fica sem o corpo.
+     */
     public function storesPayload(): bool
     {
+        if ($this->mode === InboundMode::Authorization) {
+            return false;
+        }
+
         return $this->storePayload ?? (bool) config('webhooks.inbound.store_payload', false);
     }
 

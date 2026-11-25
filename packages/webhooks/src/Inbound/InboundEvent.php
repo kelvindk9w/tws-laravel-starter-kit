@@ -7,8 +7,9 @@ namespace Twstec\Kit\Webhooks\Inbound;
 use Carbon\CarbonImmutable;
 
 /**
- * O EVENTO RECEBIDO que o handler do aplicativo recebe — já verificado e não
- * duplicado.
+ * O EVENTO RECEBIDO que o handler do aplicativo recebe — já verificado; no
+ * modo `queue` (o padrão), também não duplicado. No modo `authorization`, a
+ * mesma chamada repetida chega de novo (deduplicar é com o handler).
  *
  * - `source`: o nome da fonte (`asaas`, `pagamentos`…), o da URL.
  * - `id`: o id do evento no provedor (o que deduplica, com a fonte). Sem id
@@ -19,7 +20,9 @@ use Carbon\CarbonImmutable;
  *   kit — trate como entrada não confiável.
  * - `receivedAt`: quando chegou aqui; `receipt`: o uuid do registro de
  *   recebimento (webhook_inbound_events), para correlacionar.
- * - `attempt`: a tentativa de processamento (1 na primeira).
+ * - `attempt`: a tentativa de processamento (1 na primeira). No modo
+ *   `authorization`, quantas vezes a chamada com este id chegou ao handler
+ *   (mais que 1 = o provedor repetiu; sob chamadas simultâneas, aproximado).
  *
  * `__debugInfo` esconde o payload (um `dump()` não o imprime).
  */
