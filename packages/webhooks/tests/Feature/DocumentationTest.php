@@ -5,8 +5,10 @@ declare(strict_types=1);
 // =============================================================================
 // O EXEMPLO DE VERIFICAÇÃO da documentação é o mesmo código que a suíte usa:
 // docs/webhooks.md mostra a função do examples/verify-signature.php (PHP) e
-// a do receptor do E2E dos starters (Node), sem divergir. Só no monorepo (os
-// testes não vão no pacote publicado).
+// a do receptor do E2E dos starters (Node), sem divergir; e
+// docs/webhooks-entrada.md mostra o handler de autorização do
+// examples/authorization-handler.php. Só no monorepo (os testes não vão no
+// pacote publicado).
 // =============================================================================
 
 $monorepo = dirname(__DIR__, 4);
@@ -46,3 +48,16 @@ it('a doc mostra a função Node de verificação idêntica à do receptor do E2
         ->and($livewire)->toContain($function)
         ->and($semTipos($react))->toContain($function);
 })->skip(! is_file($monorepo.'/docs/webhooks.md'), 'fora do monorepo');
+
+it('a doc dos webhooks de entrada mostra o handler de autorização idêntico ao exemplo testado', function () use ($monorepo): void {
+    $doc = (string) file_get_contents($monorepo.'/docs/webhooks-entrada.md');
+    $example = (string) file_get_contents(dirname(__DIR__, 2).'/examples/authorization-handler.php');
+
+    // Os `use` e a classe, como estão no exemplo (sem o docblock dele).
+    preg_match_all('/^use [^;]+;$/m', $example, $uses);
+    $class = trim(substr($example, (int) strpos($example, 'final class ExampleAuthorizationHandler')));
+
+    expect($uses[0])->toHaveCount(5)
+        ->and($class)->toStartWith('final class ExampleAuthorizationHandler')
+        ->and(webhooksDocBlocks($doc, 'php'))->toContain(implode("\n", $uses[0])."\n\n".$class);
+})->skip(! is_file($monorepo.'/docs/webhooks-entrada.md'), 'fora do monorepo');

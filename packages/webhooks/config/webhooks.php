@@ -131,9 +131,12 @@ return [
     // (senão 404) → allowlist de IP da fonte (403) → tamanho do corpo (413) →
     // VERIFICAÇÃO sobre o corpo cru (401, sem o motivo) → deduplicação no
     // banco por (fonte, id do evento) → fila. Responde 202 (aceito) ou 200
-    // (repetição). O corpo e os cabeçalhos de assinatura nunca vão para log
-    // nem trilha; o caminho entra sozinho nos caminhos de corpo assinado do
-    // filtro de ataques (security.validation.signed_body_paths).
+    // (repetição). Fonte no modo `authorization`: as mesmas recusas e, no
+    // lugar da deduplicação e da fila, o handler responde na própria
+    // requisição (código e corpo JSON dele, sem interpretação). O corpo e os
+    // cabeçalhos de assinatura nunca vão para log nem trilha; o caminho entra
+    // sozinho nos caminhos de corpo assinado do filtro de ataques
+    // (security.validation.signed_body_paths).
     // =========================================================================
     'inbound' => [
         // `false` tira a rota (e o caminho dos caminhos de corpo assinado).
@@ -168,6 +171,14 @@ return [
         'timeout' => (int) env('WEBHOOKS_INBOUND_TIMEOUT', 60),
         'queue' => env('WEBHOOKS_INBOUND_QUEUE'),
         'connection' => env('WEBHOOKS_INBOUND_QUEUE_CONNECTION'),
+
+        // Fontes no modo `authorization` (o handler responde na requisição):
+        // o ORÇAMENTO de tempo do handler, em milissegundos. O tempo de cada
+        // chamada vai para o log (`webhooks.inbound.authorized`); acima do
+        // orçamento, aviso (`webhooks.inbound.authorization_over_budget`).
+        // Nada é interrompido. Ajuste ao prazo que o provedor dá, com folga
+        // para a rede. Fonte: `budget_ms`.
+        'authorization_budget_ms' => (int) env('WEBHOOKS_INBOUND_AUTHORIZATION_BUDGET_MS', 2000),
 
         // `webhooks:prune-inbound`: o registro de deduplicação fica `days`
         // dias (a janela da deduplicação); o corpo guardado, `payload_days`.
@@ -208,6 +219,13 @@ return [
     //             'allowed_ips' => array_filter(explode(',', (string) env('PAGAMENTOS_WEBHOOK_IPS', ''))),
     //         ],
     //     ],
+    //
+    // `mode` escolhe o modo da fonte: `queue` (o padrão — 202 na hora e o
+    // handler `InboundWebhookHandler` na fila) ou `authorization` (o provedor
+    // espera a resposta: o handler `InboundAuthorizationHandler` roda na
+    // requisição e devolve o código e o corpo JSON; `budget_ms` é o
+    // orçamento de tempo dele; opção de fila nessa fonte é erro de
+    // configuração). Ver docs/webhooks-entrada.md, "Modo autorização".
     'inbound_sources' => [],
 
 ];

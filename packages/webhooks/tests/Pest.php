@@ -8,6 +8,10 @@ use Twstec\Kit\Webhooks\Tests\TestCase;
 // teste usa (e que docs/webhooks.md mostra).
 require_once dirname(__DIR__).'/examples/verify-signature.php';
 
+// O exemplo de handler de autorização (modo `authorization`) — o MESMO código
+// que docs/webhooks-entrada.md mostra.
+require_once dirname(__DIR__).'/examples/authorization-handler.php';
+
 // Apoio dos testes dos webhooks recebidos (fontes, assinaturas, log).
 require_once __DIR__.'/Support/inbound.php';
 

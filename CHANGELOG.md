@@ -6,6 +6,57 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Não publicado]
 
+### Adicionado
+
+- **Modo autorização nos webhooks de entrada (`twstec/kit-webhooks`).** Para
+  o provedor que pergunta e espera a resposta (pede autorização antes de
+  seguir com uma operação), a fonte ganha `'mode' => 'authorization'` em
+  `webhooks.inbound_sources` (pelo código, `mode:
+  InboundMode::Authorization` no `new InboundSource(...)`). Antes do
+  handler, o kit faz exatamente o que faz na fonte comum, com as mesmas
+  recusas e o mesmo log redigido: fonte desconhecida (`404`) ou mal
+  configurada (`503`), allowlist de IP (`403`), tamanho do corpo (`413`),
+  limite por minuto (`429`), verificação sobre o corpo cru com rotação de
+  segredo e janela de tempo (`401`) e leitura do evento (`400`). Depois, no
+  lugar da deduplicação e da fila, o handler novo
+  (`Inbound\Contracts\InboundAuthorizationHandler::authorize`, que recebe o
+  mesmo `InboundEvent`) roda **na própria requisição**, e o código HTTP
+  (2xx, 4xx ou 5xx) e o corpo JSON que ele devolve
+  (`Inbound\AuthorizationResponse`) vão ao provedor sem interpretação.
+  - **Sem fila.** Exceção do handler — e resposta que o kit não consegue
+    enviar (código 1xx/3xx, corpo que não vira JSON) — vira `500` sem corpo
+    (nem mensagem nem classe, nem com `APP_DEBUG`); o log
+    (`webhooks.inbound.authorization_failed`) e o registro levam só a classe.
+  - **Deduplicar e devolver a mesma resposta para a mesma chamada é com o
+    handler**: o kit não guarda a resposta, e a chamada repetida chega de
+    novo ao handler, com o mesmo `id` e `attempt` maior. O
+    `examples/authorization-handler.php` mostra como (decisão gravada com
+    INSERT de conflito ignorado e devolvida a cada repetição, também sob
+    corrida).
+  - **Registro do recebimento sem o corpo** (`webhook_inbound_events`, nem
+    com `store_payload`): `processed` quando o handler respondeu, `failed`
+    com a classe da exceção; `attempts` conta as chamadas.
+  - **Orçamento de tempo:** o tempo do handler vai para o log
+    (`webhooks.inbound.authorized`, com `duration_ms` e `budget_ms`) e,
+    acima do orçamento, aviso (`webhooks.inbound.authorization_over_budget`);
+    nada é interrompido. `budget_ms` na fonte ou
+    `WEBHOOKS_INBOUND_AUTHORIZATION_BUDGET_MS` (padrão 2000).
+  - **Erro de configuração (`503`):** `mode` desconhecido, handler que não
+    implementa o contrato do modo, opção de fila (`tries`, `backoff`,
+    `queue`, `connection`, `store_payload: true`) numa fonte de autorização
+    e `budget_ms` numa fonte comum. O job da fila nunca chama um handler de
+    autorização.
+  - O limite por minuto e o limite de borda continuam no armazenamento do
+    limitador (`cache.limiter`), como na fonte comum: para tirar o Redis
+    também desse caminho, aponte-o para outro armazenamento.
+  - Sem quebra: a fonte comum não muda (202/200, fila, deduplicação), e
+    nada muda para quem não declara `mode`. A propriedade
+    `InboundSource::$handler` passa a aceitar também um
+    `InboundAuthorizationHandler` (só no modo novo) e o construtor ganha
+    `mode` e `budgetMs` no fim, opcionais. Sem migration e nenhum arquivo
+    de starter para aplicar à mão. Ver
+    [webhooks de entrada](docs/webhooks-entrada.md#modo-autorização).
+
 ## [2.6.0] — 2026-11-16
 
 Versão menor com **uma exceção de segurança declarada**, do tipo que a

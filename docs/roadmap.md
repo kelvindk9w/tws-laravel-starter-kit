@@ -213,7 +213,11 @@ Os módulos novos entram como pacotes à parte, puxados por um projeto real:
 - **Webhooks de entrada (#75):** publicado na 2.1.0, no
   `twstec/kit-webhooks` — fontes com verificador
   plugável, janela de tempo, deduplicação no banco e fila; ver
-  [webhooks de entrada](webhooks-entrada.md).
+  [webhooks de entrada](webhooks-entrada.md). O **modo autorização** (o
+  provedor pergunta e espera a resposta: o handler responde na própria
+  requisição, sem fila, depois das mesmas recusas) está em
+  `desenvolvimento`, para a próxima versão menor; ver
+  [modo autorização](webhooks-entrada.md#modo-autorização).
 - **Login de app pelo navegador (#76):** desktop, mobile e CLI entram pelo
   login web, com o segundo fator, e recebem um token (device flow).
 - **`tws:upgrade` que aplica sozinho** o que não foi personalizado (a 2.0.0

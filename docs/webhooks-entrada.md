@@ -5,7 +5,10 @@ namespace `Twstec\Kit\Webhooks\Inbound\`. Recebe webhooks de provedores
 (gateway de pagamento, mensageria, assinatura de software) com a parte de
 segurança pronta: o aplicativo declara a **fonte** (nome, verificador,
 handler) e recebe no handler só o evento **verificado e não duplicado**, na
-fila.
+fila. Para o provedor que **pergunta e espera a resposta** (pede
+autorização antes de seguir com uma operação), a fonte tem o
+[modo autorização](#modo-autorização): as mesmas recusas, e o handler
+responde na própria requisição.
 
 > Os webhooks de **saída** (o aplicativo avisando outros sistemas) estão em
 > [webhooks.md](webhooks.md). Os dois lados moram no mesmo pacote, mas não
@@ -29,6 +32,9 @@ de ataques nos cabeçalhos e no caminho, trilha `request_logs`).
 | 6. **Deduplicação** no banco por (fonte, id do evento) | já recebido | `200 {"status":"duplicate"}` |
 | 7. Fila (job cifrado) | fila recusou | `202` — o registro fica esperando a fila e a rodada `webhooks:requeue-inbound` o põe lá (nunca `503`) |
 | — | tudo certo | `202 {"status":"accepted"}` |
+
+Fonte no [modo autorização](#modo-autorização): os passos 1 a 5 são os
+mesmos; no lugar de 6 e 7, o handler responde na requisição.
 
 O motivo de cada recusa vai **só para o log interno**
 (`webhooks.inbound.rejected`, com `source`, `reason`, `ip` e
@@ -67,6 +73,7 @@ return [
             'queue' => null,
             'connection' => null,
             'rate_limit_per_minute' => null,
+            // 'mode' => 'authorization' — ver "Modo autorização".
         ],
     ],
 ];
@@ -269,6 +276,146 @@ verificado e não duplicado. Regras:
 - Trabalho pesado ou de várias etapas: o handler pode disparar os próprios
   jobs.
 
+## Modo autorização
+
+Alguns provedores não só avisam: **perguntam**. Antes de executar uma
+operação, chamam o aplicativo e esperam, dentro de um prazo curto, a
+resposta — seguir ou não. Para eles, a fonte tem `'mode' => 'authorization'`:
+
+```php
+'inbound_sources' => [
+    'autorizacoes' => [
+        'mode' => 'authorization',
+        'verifier' => [
+            'driver' => 'header_token',
+            'header' => 'x-provedor-token',
+            'secrets' => [env('AUTORIZACOES_WEBHOOK_TOKEN'), env('AUTORIZACOES_WEBHOOK_TOKEN_PREVIOUS')],
+        ],
+        'handler' => App\Webhooks\AutorizacoesHandler::class,
+        'event' => ['id' => 'id', 'type' => 'type'],
+        'allowed_ips' => array_filter(explode(',', (string) env('AUTORIZACOES_WEBHOOK_IPS', ''))),
+        // O orçamento de tempo do handler, em ms (nulo = WEBHOOKS_INBOUND_AUTHORIZATION_BUDGET_MS).
+        'budget_ms' => 1500,
+    ],
+],
+```
+
+| | Fonte comum (`queue`, o padrão) | Modo `authorization` |
+| --- | --- | --- |
+| Antes do handler | fonte, IP, tamanho, limite por minuto, verificação, leitura (`404`/`503`/`403`/`413`/`429`/`401`/`400`) | **as mesmas recusas**, com o mesmo log redigido |
+| Handler | `Contracts\InboundWebhookHandler::handle`, **na fila** | `Contracts\InboundAuthorizationHandler::authorize`, **na requisição** |
+| Resposta ao provedor | `202 accepted` / `200 duplicate` | o código e o corpo JSON do handler, **sem mudança** |
+| Repetição (mesmo id) | o kit deduplica | chega de novo ao handler — **deduplicar é com ele** |
+| Falha do handler | nova tentativa na fila | `500` sem corpo (o provedor trata como falha) |
+| Registro do recebimento | `webhook_inbound_events` | o mesmo, **sem o corpo** (nem com `store_payload`) |
+| Fila | sim | **nenhuma** |
+
+### O handler de autorização
+
+Devolve um `Inbound\AuthorizationResponse`: o código HTTP (2xx, 4xx ou 5xx)
+e o corpo JSON que o provedor espera — o kit não lê nem muda nada dele.
+Este é o `examples/authorization-handler.php` do pacote (o mesmo código que
+a suíte testa), com a tabela de decisões do aplicativo descrita no docblock
+dele:
+
+```php
+use Illuminate\Container\Attributes\Config;
+use Illuminate\Support\Facades\DB;
+use Twstec\Kit\Webhooks\Inbound\AuthorizationResponse;
+use Twstec\Kit\Webhooks\Inbound\Contracts\InboundAuthorizationHandler;
+use Twstec\Kit\Webhooks\Inbound\InboundEvent;
+
+final class ExampleAuthorizationHandler implements InboundAuthorizationHandler
+{
+    public function __construct(
+        #[Config('services.example.authorization_max_amount')] private readonly int $maxAmount,
+    ) {}
+
+    public function authorize(InboundEvent $event): AuthorizationResponse
+    {
+        $amount = $event->get('operation.amount');
+
+        [$approved, $reason] = match (true) {
+            ! is_int($amount) || $amount <= 0 => [false, 'invalid_amount'],
+            $amount > $this->maxAmount => [false, 'over_limit'],
+            default => [true, null],
+        };
+
+        // Quem gravou primeiro decide; a repetição só lê.
+        DB::table('authorization_decisions')->insertOrIgnore([
+            'source' => $event->source,
+            'call_id' => $event->id,
+            'approved' => $approved,
+            'reason' => $reason,
+            'created_at' => now(),
+        ]);
+
+        $decision = DB::table('authorization_decisions')
+            ->where('source', $event->source)
+            ->where('call_id', $event->id)
+            ->first(['approved', 'reason']);
+
+        if ($decision !== null && (bool) $decision->approved) {
+            return new AuthorizationResponse(200, ['status' => 'APPROVED']);
+        }
+
+        return new AuthorizationResponse(200, ['status' => 'REFUSED', 'reason' => $decision->reason ?? 'unknown']);
+    }
+}
+```
+
+Regras:
+
+- **Deduplicar e devolver a mesma resposta é com o handler.** O kit não
+  guarda a resposta: a mesma chamada repetida (o provedor tentou de novo, a
+  rede caiu antes da resposta) chega ao handler de novo, com o mesmo `id`, o
+  mesmo `receipt` e `attempt` maior. Quando a resposta precisa ser a mesma,
+  grave a decisão no banco do aplicativo com INSERT de conflito ignorado
+  sobre (fonte, id) e responda a decisão **gravada**, como o exemplo — assim
+  duas chamadas iguais ao mesmo tempo respondem igual.
+- **Exceção vira `500` sem corpo** — nem a mensagem nem a classe saem, nem
+  com `APP_DEBUG`. Resposta que o kit não consegue enviar (código 1xx/3xx,
+  corpo que não vira JSON) também. O registro fica `failed` e o log
+  (`webhooks.inbound.authorization_failed`) leva só a classe; o kit não
+  repassa a exceção ao `report()` do aplicativo, porque a mensagem pode
+  levar dado do evento. O detalhe que importar, registre dentro do handler.
+- **Seja rápido.** O tempo de cada chamada vai para o log
+  (`webhooks.inbound.authorized`, nível info: fonte, uuid do registro, tipo,
+  código devolvido, `duration_ms`, `budget_ms`); acima do orçamento, aviso
+  (`webhooks.inbound.authorization_over_budget`, nível warning). **Nada é
+  interrompido**: o limite duro é o do PHP e do servidor web. Ajuste o
+  orçamento ao prazo que o provedor dá, com folga para a rede; trabalho
+  pesado vai para um job do aplicativo, depois de decidir.
+- **Valide o payload** e, com verificação fraca (token fixo), decida pelo
+  estado que o aplicativo conhece, não pelo valor que o corpo afirma.
+- **Não há conta corrente:** `Accounts::actingAs(...)` ou
+  `Accounts::asSystem('motivo', ...)` para tocar dado de conta.
+
+O **registro do recebimento** (`webhook_inbound_events`, sem o corpo) é
+gravado antes de chamar o handler e o `receipt` do evento é o uuid dele:
+`processing` durante a chamada; `processed` quando o handler respondeu
+(qualquer código); `failed` com a classe da exceção em `last_error`.
+`attempts` conta as chamadas com aquele id. Ele nunca espera fila (a rodada
+`webhooks:requeue-inbound` não o pega) e sai pela mesma retenção.
+
+São **erro de configuração** (`503`, motivo no log): `mode` desconhecido;
+handler que não implementa o contrato do modo; `tries`, `backoff`, `queue`,
+`connection` ou `store_payload: true` numa fonte de autorização (não há fila
+nem nova tentativa do kit — a opção daria a impressão errada); `budget_ms`
+numa fonte comum. O job da fila nunca chama um handler de autorização: uma
+fonte que passou para o modo `authorization` com evento ainda na fila faz o
+job falhar sem chamá-lo.
+
+**Fila e Redis.** O caminho do modo autorização não usa fila. O limite por
+minuto da fonte e o limite de borda do kit usam o armazenamento do limitador
+(`cache.limiter`, ou o cache padrão) — os mesmos da fonte comum; se ele é o
+Redis e o Redis cai, a requisição falha antes do handler. Para tirar o Redis
+também desse caminho, aponte `cache.limiter` para outro armazenamento (por
+exemplo, `database`).
+
+Pelo código, o mesmo com `mode: InboundMode::Authorization` (e `budgetMs:`)
+no `new InboundSource(...)` — ver a próxima seção.
+
 ## Registrar pelo código
 
 Para montar a fonte em código (verificador próprio, segredo vindo de outro
@@ -296,6 +443,8 @@ public function boot(): void
 
 Classes públicas: `InboundWebhooks` (`register`, `source`, `path`),
 `InboundSource`, `InboundEvent`, `Contracts\InboundWebhookHandler`,
+`Contracts\InboundAuthorizationHandler`, `AuthorizationResponse`,
+`Enums\InboundMode`,
 `Contracts\Verifier`, `Contracts\EventParser`, `VerificationResult`,
 `Rejection`, `JsonEventParser`, `ParsedEvent`, `InboundRequest` e os
 verificadores `Verifiers\SharedSecretHeader`, `HmacSignature`,
@@ -417,6 +566,7 @@ pendentes ficam guardados por pouco tempo) até alguém retomar à mão.
 | `WEBHOOKS_INBOUND_STORE_PAYLOAD` | `false` | Guardar o corpo, cifrado |
 | `WEBHOOKS_INBOUND_TRIES` / `_BACKOFF` / `_TIMEOUT` | `5` / `10,60,300,1800` / `60` | O job |
 | `WEBHOOKS_INBOUND_QUEUE` / `_QUEUE_CONNECTION` | — | Fila e conexão do job |
+| `WEBHOOKS_INBOUND_AUTHORIZATION_BUDGET_MS` | `2000` | Orçamento de tempo do handler no modo autorização (acima dele, aviso no log; nada é interrompido) |
 | `WEBHOOKS_INBOUND_RETENTION_DAYS` | `30` | Registro de deduplicação |
 | `WEBHOOKS_INBOUND_PAYLOAD_RETENTION_DAYS` | `7` | Corpo guardado |
 | `WEBHOOKS_INBOUND_PRUNE_SCHEDULE` | `35 4 * * *` | Agenda da retenção (vazio desliga, com aviso) |
@@ -429,7 +579,14 @@ configuração inválida), a rota inteira (404, sem sessão/cookie, 401 sem o
 motivo, deduplicação e a corrida entre a verificação e o INSERT, allowlist
 IPv4/IPv6 com e sem proxy confiável, 413, 429, fila fora do ar), que o
 corpo e o token não aparecem em log nem na trilha, a fila cifrada, o job
-idempotente, as novas tentativas e a retenção. No starter Livewire, contra
+idempotente, as novas tentativas e a retenção. O modo autorização
+(`tests/Inbound/AuthorizationTest.php`): cada recusa antes do handler, a
+configuração inválida, o código e o corpo do handler sem mudança, a
+exceção que vira `500` sem detalhe, nada na fila, o registro sem o corpo, a
+repetição que chega de novo ao handler, a rotação de segredo, o orçamento
+de tempo e a fonte comum sem mudança ao lado; e o exemplo
+(`tests/Inbound/AuthorizationExampleTest.php`), com a mesma resposta para a
+mesma chamada, inclusive sob corrida. No starter Livewire, contra
 o PostgreSQL: o mesmo evento quatro vezes ao mesmo tempo, em processos
 separados, processado uma vez
 (`tests/Feature/Webhooks/InboundConcurrencyTest.php`).

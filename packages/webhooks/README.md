@@ -26,7 +26,11 @@ cabeçalho, HMAC configurável, Standard Webhooks ou chave pública RSA/EC, com
 rotação de segredo e janela de tempo), **deduplica no banco** por (fonte, id
 do evento) com INSERT de conflito ignorado, responde 202/200 na hora e
 entrega o evento ao handler na **fila cifrada**, com novas tentativas. O
-corpo e os cabeçalhos de assinatura não vão para log nem trilha.
+corpo e os cabeçalhos de assinatura não vão para log nem trilha. Para o
+provedor que **pergunta e espera a resposta** (pede autorização antes de
+seguir), a fonte tem o **modo autorização**: as mesmas recusas e, no lugar
+da fila, o handler responde **na própria requisição** — o código e o corpo
+JSON dele vão ao provedor sem interpretação.
 
 Depende do [`twstec/kit-accounts`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/accounts) (o endpoint é da
 conta), do [`twstec/kit-auth`](https://github.com/kelvindk9w/tws-laravel-starter-kit/tree/desenvolvimento/packages/auth) (ação sensível) e do
@@ -52,8 +56,10 @@ de nada acima deles; um teste de arquitetura na suíte do pacote garante isso.
 | `Mail\EndpointDisabledMail` | O aviso de endpoint desativado, ao dono e aos admins da conta |
 | `Inbound\InboundWebhooks`, `InboundSource`, `InboundEvent`, `Contracts\InboundWebhookHandler` | Webhooks de ENTRADA: registrar uma fonte (pela configuração `webhooks.inbound_sources` ou pelo código), o evento que o handler recebe (id, tipo, ocorrido em, payload decodificado) e o contrato do handler |
 | `Inbound\Verifiers\SharedSecretHeader`, `HmacSignature`, `StandardWebhooks`, `PublicKeySignature` (`Contracts\Verifier`) | Os verificadores plugáveis (drivers `header_token`, `hmac`, `standard_webhooks`, `public_key`): corpo cru, tempo constante, rotação, janela de tempo, recusa sem segredo configurado |
+| `Inbound\Contracts\InboundAuthorizationHandler`, `AuthorizationResponse`, `Enums\InboundMode` | O modo autorização (`'mode' => 'authorization'`): o handler roda na requisição, sem fila, e devolve o código HTTP (2xx/4xx/5xx) e o corpo JSON que o kit entrega sem interpretar; exceção vira 500 sem detalhe; o registro do recebimento fica sem o corpo; o tempo do handler vai para o log, com aviso acima do orçamento (`budget_ms`). Deduplicar e repetir a resposta é com o handler |
 | `Inbound\InboundReceiver`, `ProcessInboundWebhook`, `Models\InboundWebhookEvent`, `Console\PruneInboundWebhooks` | O recebimento (404/403/413/401/400, deduplicação, 202/200, 503 com a fila fora), o job cifrado e idempotente, o registro de deduplicação (sem o corpo, ou com ele cifrado) e o `webhooks:prune-inbound` agendado |
 | `examples/verify-signature.php` | O exemplo de verificação para o receptor (tolerância de tempo, tempo constante) — o mesmo código que a suíte usa |
+| `examples/authorization-handler.php` | O exemplo de handler de autorização que devolve a mesma resposta para a mesma chamada (decisão gravada com INSERT de conflito ignorado) — o mesmo código que a suíte usa |
 
 ## Instalação
 
@@ -94,6 +100,36 @@ Para a **entrada**:
    valida o payload e, com verificação fraca (token fixo), reconsulta a API
    do provedor antes de mudar estado.
 3. Cadastre no provedor `https://<domínio>/webhooks/inbound/pagamentos`.
+
+Para o provedor que espera a resposta (**modo autorização**), a fonte
+ganha `'mode' => 'authorization'` (opcional: `'budget_ms' => 1500`, o
+orçamento de tempo do handler; o padrão é
+`WEBHOOKS_INBOUND_AUTHORIZATION_BUDGET_MS`, 2000) e o handler implementa
+`Inbound\Contracts\InboundAuthorizationHandler`:
+
+```php
+use Twstec\Kit\Webhooks\Inbound\AuthorizationResponse;
+use Twstec\Kit\Webhooks\Inbound\Contracts\InboundAuthorizationHandler;
+use Twstec\Kit\Webhooks\Inbound\InboundEvent;
+
+final class AutorizacoesHandler implements InboundAuthorizationHandler
+{
+    public function authorize(InboundEvent $event): AuthorizationResponse
+    {
+        // Valide o payload e decida; a mesma chamada pode chegar de novo
+        // (o kit não deduplica nem guarda a resposta).
+        return new AuthorizationResponse(200, ['status' => 'APPROVED']);
+    }
+}
+```
+
+Antes do handler, o kit faz o mesmo que na fonte comum (fonte, allowlist,
+tamanho, limite por minuto, verificação com rotação, leitura), com as
+mesmas recusas, e grava o registro do recebimento sem o corpo. Exceção do
+handler vira `500` sem detalhe. Opção de fila (`tries`, `backoff`, `queue`,
+`connection`, `store_payload`) numa fonte de autorização é erro de
+configuração (`503`). Para responder igual à mesma chamada, grave a decisão
+e devolva a gravada — `examples/authorization-handler.php`.
 
 Exemplos de HMAC, Standard Webhooks e chave pública em
 [docs/webhooks-entrada.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/webhooks-entrada.md).
