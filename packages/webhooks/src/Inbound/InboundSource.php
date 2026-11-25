@@ -166,9 +166,11 @@ final readonly class InboundSource
     private static function checkMode(string $name, InboundMode $mode, string|InboundWebhookHandler|InboundAuthorizationHandler $handler, array $queueOptions, ?int $budgetMs): void
     {
         $contract = $mode === InboundMode::Authorization ? InboundAuthorizationHandler::class : InboundWebhookHandler::class;
-        $implements = is_string($handler)
-            ? class_exists($handler) && is_subclass_of($handler, $contract)
-            : $handler instanceof $contract;
+        $implements = match (true) {
+            is_string($handler) => class_exists($handler) && is_subclass_of($handler, $contract),
+            $mode === InboundMode::Authorization => $handler instanceof InboundAuthorizationHandler,
+            default => $handler instanceof InboundWebhookHandler,
+        };
 
         if (! $implements) {
             throw new InvalidSourceConfiguration($mode === InboundMode::Authorization
