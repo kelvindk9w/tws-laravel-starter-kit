@@ -164,7 +164,10 @@ it('o registro do recebimento fica SEM o corpo — mesmo com store_payload ligad
         ->and($record->payload)->toBeNull()
         ->and($raw['payload'])->toBeNull()
         ->and($record->payload_hash)->toBe(hash('sha256', inboundBody('evt_registro', $marcador)))
-        ->and(json_encode($raw))->not->toContain($marcador);
+        ->and(json_encode($raw))->not->toContain($marcador)
+        // A fonte diz o mesmo a quem perguntar; a comum segue o padrão ligado.
+        ->and(InboundWebhooks::source('autorizacao')?->storesPayload())->toBeFalse()
+        ->and(InboundWebhooks::source('token')?->storesPayload())->toBeTrue();
 });
 
 it('a mesma chamada chega de novo ao handler: o kit não deduplica nem guarda a resposta', function (): void {
